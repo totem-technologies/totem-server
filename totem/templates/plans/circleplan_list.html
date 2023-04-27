@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1>Circle Plans</h1>
+    {% for plan in plans %}
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">{{ plan.name }}</h5>
+                <p class="card-text">{{ plan.description }}</p>
+                <a href="{% url 'plans:detail' plan.pk %}" class="btn btn-primary">View</a>
+            </div>
+        </div>
+    {% endfor %}
+{% endblock content %}

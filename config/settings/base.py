@@ -73,6 +73,7 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     "totem.users",
+    "plans",
     # Your stuff: custom apps go here
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
