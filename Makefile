@@ -1,4 +1,5 @@
 run:
+	npm run build
 	docker compose -f local.yml up --build
 
 test:

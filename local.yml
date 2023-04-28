@@ -33,3 +33,10 @@ services:
       - totem_local_postgres_data_backups:/backups
     env_file:
       - ./.envs/.local/.postgres
+
+  # assets:
+  #   build:
+  #     context: .
+  #     dockerfile: ./compose/local/assets/Dockerfile
+  #   image: totem_local_assets
+  #   container_name: totem_local_assets

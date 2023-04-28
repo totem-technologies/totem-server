@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+    font-family: "Erode";
+    src: url("../fonts/Erode-Bold.woff2");
+  }

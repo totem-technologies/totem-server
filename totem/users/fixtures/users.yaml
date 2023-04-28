@@ -1,0 +1,17 @@
+- {
+    "model": "users.user",
+    "pk": 2,
+    "fields":
+      {
+        "password": "argon2$argon2id$v=19$m=102400,t=2,p=8$eGZod29uZlIwOWlmYUZLeTVVTjdjNQ$nha2UhXclX3md11t6ZgjLAF3PcaOQhEAtfGmSF+hBLw",
+        "last_login": "2023-04-27T22:10:06.015Z",
+        "is_superuser": true,
+        "is_staff": true,
+        "is_active": true,
+        "date_joined": "2023-04-26T22:23:17.526Z",
+        "name": "",
+        "email": "admin@admin.com",
+        "groups": [],
+        "user_permissions": [],
+      },
+  }
