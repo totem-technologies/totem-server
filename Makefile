@@ -9,3 +9,5 @@ test:
 shell: 
 	docker-compose -f local.yml run --rm django bash
 
+migrate:
+	./manage makemigrations && ./manage.py migrate

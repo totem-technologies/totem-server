@@ -5,6 +5,6 @@
   </a>
   <h1 class="h1">{{object.name}}</h1>
   <p>{{object.description}}</p>
-  <p>{{object.content}}</p>
+  <p>{{object.content_html | safe }}</p>
 </div>
 {% endblock content %}
