@@ -10,4 +10,7 @@ shell:
 	docker-compose -f local.yml run --rm django bash
 
 migrate:
-	./manage makemigrations && ./manage.py migrate
+	./manage.py makemigrations && ./manage.py migrate
+
+deploy:
+	git push dokku main:master
