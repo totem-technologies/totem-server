@@ -22,7 +22,7 @@
 
   <body class="bg-primary flex flex-col h-screen">
     {% include 'header.html' %}
-    <div class="container prose lg:prose-xl max-w-prose m-auto pt-16 flex-grow">
+    <div class="container m-auto pt-16 flex-grow">
       {% if messages %}
         {% for message in messages %}
           <div class="alert alert-dismissible {% if message.tags %}alert-{{ message.tags }}{% endif %}">

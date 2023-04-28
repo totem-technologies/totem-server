@@ -6,3 +6,21 @@
     font-family: "Erode";
     src: url("../fonts/Erode-Bold.woff2");
   }
+
+@layer components {
+    .btn-primary {
+      @apply py-2 px-4 bg-tyellow text-tslate font-semibold rounded-lg shadow-md hover:bg-yellow-300 focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-opacity-75;
+    }
+    .section {
+        @apply py-10 mx-4;
+    }
+    .section-prose {
+        @apply prose lg:prose-xl prose-h1:font-serif max-w-prose section;
+    }
+    .h1 {
+        @apply text-6xl font-serif;
+    }
+    .h2 {
+        @apply text-2xl font-sans font-medium text-gray-900;
+    }
+}

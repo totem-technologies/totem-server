@@ -4,7 +4,7 @@ from . import views
 app_name = "films"
 
 urlpatterns = [
-    path("", views.PlanListView.as_view(), name="all"),
+    path("", views.PlanListView.as_view(), name="list"),
     path("<int:pk>/", views.PlanDetailView.as_view(), name="detail"),
     # path("plans/create/", views.PlanCreateView.as_view(), name="create"),
     # path("plans/<int:pk>/update/", views.PlanUpdateView.as_view(), name="update"),

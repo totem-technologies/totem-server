@@ -1,13 +1,42 @@
-{% extends "base.html" %}
-{% block content %}
-    <h1 class="font-serif">Circle Plans</h1>
+{% extends "base.html" %} {% block content %}
+<section class="text-gray-600 body-font overflow-hidden mx-auto max-w-5xl">
+  <h1 class="h1">Circle Plans</h1>
+  <div class="container px-5 py-24">
     {% for plan in object_list %}
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">{{ plan.name }}</h5>
-                <p class="card-text">{{ plan.description }}</p>
-                <a href="{% url 'plans:detail' plan.pk %}" class="btn btn-primary">View</a>
-            </div>
+
+    <div class="-my-8 divide-y-2 divide-gray-100">
+      <div class="py-8 flex flex-wrap md:flex-nowrap">
+        <div class="md:w-64 md:mb-0 mb-6 flex-shrink-0 flex flex-col">
+          <span class="mt-1 text-gray-500 text-sm"
+            >{{ plan.display_date|date:"d F, Y"}}</span
+          >
         </div>
-    {% endfor %}
+        <div class="md:flex-grow">
+          <a href="{% url 'plans:detail' plan.id %}"
+            ><h2 class="h2 mb-2">{{ plan.name }}</h2></a
+          >
+          <p class="leading-relaxed">{{plan.description}}</p>
+          <a
+            class="text-blue-500 inline-flex items-center mt-4"
+            href="{% url 'plans:detail' plan.id %}"
+            >Run Circle
+            <svg
+              class="w-4 h-4 ml-2"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+              fill="none"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M5 12h14"></path>
+              <path d="M12 5l7 7-7 7"></path>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor%}
+  </div>
+</section>
 {% endblock content %}

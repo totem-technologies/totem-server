@@ -1,6 +1,10 @@
-{% extends "base.html" %}
-{% block content %}
-    <h1 class="font-serif">{{object.name}}</h1>
-    <p>{{object.description}}</p>
-    <p>{{object.content}}</p>
+{% extends "base.html" %} {% block content %}
+<div class="section-prose m-auto">
+  <a class="no-underline" href="{% url 'plans:list' %}">
+    <h2 class="h2">Circle Plans</h2>
+  </a>
+  <h1 class="h1">{{object.name}}</h1>
+  <p>{{object.description}}</p>
+  <p>{{object.content}}</p>
+</div>
 {% endblock content %}

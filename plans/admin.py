@@ -7,12 +7,11 @@ from .models import CirclePlan
 @admin.register(CirclePlan)
 class CirclePlanAdmin(admin.ModelAdmin):
     list_display = (
-        'id',
-        'name',
-        'description',
-        'content',
-        'date_created',
-        'created_by',
+        "id",
+        "name",
+        "short_description",
+        "display_date",
+        "created_by",
     )
-    list_filter = ('date_created', 'created_by')
-    search_fields = ('name',)
+    list_filter = ("date_created", "created_by")
+    search_fields = ("name",)
