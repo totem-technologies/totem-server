@@ -23,8 +23,6 @@
   <body class="bg-primary flex flex-col h-screen">
     {% include 'header.html' %}
     <div class="container prose lg:prose-xl max-w-prose m-auto pt-16 flex-grow">
-      <h1 class="font-serif">Speak without interruption, listen and grow.</h1>
-
       {% if messages %}
         {% for message in messages %}
           <div class="alert alert-dismissible {% if message.tags %}alert-{{ message.tags }}{% endif %}">
@@ -33,11 +31,10 @@
           </div>
         {% endfor %}
       {% endif %}
-
       {% block content %}
       {% endblock content %}
-
     </div>
+
     {% include 'footer.html' %}
 
     {% block modal %}{% endblock modal %}

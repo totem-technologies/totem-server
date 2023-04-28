@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
-    <h1>Circle Plans</h1>
-    {% for plan in plans %}
+    <h1 class="font-serif">Circle Plans</h1>
+    {% for plan in object_list %}
         <div class="card">
             <div class="card-body">
                 <h5 class="card-title">{{ plan.name }}</h5>
