@@ -1,52 +1,57 @@
-{% load static i18n %}<!DOCTYPE html>
+{% load static i18n %}
+<!DOCTYPE html>
 {% get_current_language as LANGUAGE_CODE %}
 <html lang="{{ LANGUAGE_CODE }}">
   <head>
-    <meta charset="utf-8">
-    <meta http-equiv="x-ua-compatible" content="ie=edge">
-    <title>{% block title %}Totem{% endblock title %}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Behold My Awesome Project!">
-    <meta name="author" content="Bo">
+    <meta charset="utf-8" />
+    <meta http-equiv="x-ua-compatible" content="ie=edge" />
+    <title>Totem {% block title %}{% endblock title %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Behold My Awesome Project!" />
+    <meta name="author" content="Bo" />
 
-    <link rel="icon" href="{% static 'images/favicons/favicon.ico' %}">
-    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
-    {% block css %}
-    
-    {% endblock %}
-    {% block javascript %}
-      <script defer src="{% static 'js/project.js' %}"></script>
+    <link rel="icon" href="{% static 'images/favicons/favicon.ico' %}" />
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'images/favicons/apple-touch-icon.png'%}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'images/favicons/favicon-32x32.png'%}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'images/favicons/favicon-16x16.png'%}">
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet" />
+    {% block css %} {% endblock %} {% block javascript %}
+    <script defer src="{% static 'js/project.js' %}"></script>
     {% endblock javascript %}
-
   </head>
 
   <body class="bg-primary flex flex-col h-screen">
     {% include 'header.html' %}
-    <div class="container m-auto pt-16 flex-grow">
-      {% if messages %}
-        {% for message in messages %}
-          <div class="alert alert-dismissible {% if message.tags %}alert-{{ message.tags }}{% endif %}">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
-        {% endfor %}
-      {% endif %}
-      {% block content %}
+    <div class="container m-auto md:pt-16 flex-grow">
+      {% if messages %} 
+      {% for message in messages %}
+      <div
+        class="alert alert-dismissible {% if message.tags %}alert-{{ message.tags }}{% endif %}"
+      >
+        {{ message }}
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="alert"
+          aria-label="Close"
+        ></button>
+      </div>
+      {% endfor %} 
+      {% endif %} 
+      {% block content %} 
       {% endblock content %}
     </div>
 
-    {% include 'footer.html' %}
-
-    {% block modal %}{% endblock modal %}
-
+    {% include 'footer.html' %} 
+    {% block modal %}
+    {% endblock modal %} 
     {% block inline_javascript %}
-    {% comment %}
-    Script tags with only code, no src (defer by default). To run
-    with a "defer" so that you run inline code:
     <script>
-      window.addEventListener('DOMContentLoaded', () => {/* Run whatever you want */});
+      window.addEventListener("DOMContentLoaded", () => {
+        /* Run whatever you want */
+      });
     </script>
-    {% endcomment %}
     {% endblock inline_javascript %}
   </body>
 </html>
+

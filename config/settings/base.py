@@ -73,6 +73,7 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     "totem.users",
+    "totem.utils",
     "plans",
     # Your stuff: custom apps go here
 ]

@@ -9,13 +9,17 @@ from django.views.generic import TemplateView
 urlpatterns = [
     path("", TemplateView.as_view(template_name="pages/home.html"), name="home"),
     path("plans/", include("plans.urls", namespace="plans")),
-    path("about/", TemplateView.as_view(template_name="pages/about.html"), name="about"),
     # Django Admin, use {% url 'admin:index' %}
     path(settings.ADMIN_URL, admin.site.urls),
     # User management
     path("users/", include("totem.users.urls", namespace="users")),
     path("accounts/", include("allauth.urls")),
     # Your stuff: custom urls includes go here
+    path("team/", TemplateView.as_view(template_name="pages/team.html"), name="team"),
+    path("about/", TemplateView.as_view(template_name="pages/about.html"), name="about"),
+    path("how-it-works/", TemplateView.as_view(template_name="pages/how_it_works.html"), name="how-it-works"),
+    path("tos/", TemplateView.as_view(template_name="pages/tos.html"), name="tos"),
+    path("privacy/", TemplateView.as_view(template_name="pages/privacy.html"), name="privacy"),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 if settings.DEBUG:
     # Static file serving when using Gunicorn + Uvicorn for local web socket development

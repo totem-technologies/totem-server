@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% load markdown %}
+{% block content %}
+<div class="section-prose m-auto pt-10 px-5">
+    {% markdown 'pages/tos.md' %}
+</div>
+{% endblock content %}

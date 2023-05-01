@@ -13,4 +13,4 @@ migrate:
 	./manage.py makemigrations && ./manage.py migrate
 
 deploy:
-	git push dokku main:master
+	git push dokku
