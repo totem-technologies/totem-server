@@ -10,7 +10,7 @@ Please read these Terms carefully. By accessing, browsing or otherwise using the
 
 **Privacy Policy**
 
-Your use of, and participation in, the Services offered by the Company is subject to the terms set forth in our privacy policy located at [totem.org/privacy]({% url 'privacy' %}) (the **"Privacy Policy"**). Our Privacy Policy details how we collect and use your information.
+Your use of, and participation in, the Services offered by the Company is subject to the terms set forth in our privacy policy located at [totem.org/privacy]({% url 'pages:privacy' %}) (the **"Privacy Policy"**). Our Privacy Policy details how we collect and use your information.
 
 **Changes to the Terms of Use**
 
