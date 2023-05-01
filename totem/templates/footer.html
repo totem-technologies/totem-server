@@ -32,23 +32,23 @@
         </h2>
         <nav class="list-none md:mb-10">
           <li>
-            <a class="text-gray-600 hover:text-gray-800">About</a>
+            <a class="text-gray-600 hover:text-gray-800" href="{% url 'pages:about' %}">About</a>
           </li>
           <li>
-            <a class="text-gray-600 hover:text-gray-800">Team</a>
+            <a class="text-gray-600 hover:text-gray-800" href="{% url 'pages:team' %}">Team</a>
           </li>
           <li>
-            <a class="text-gray-600 hover:text-gray-800">How It Works</a>
+            <a class="text-gray-600 hover:text-gray-800" href="{% url 'pages:how-it-works' %}">How It Works</a>
           </li>
           <li>
-            <a class="text-gray-600 hover:text-gray-800" href="{% url 'tos' %}"
+            <a class="text-gray-600 hover:text-gray-800" href="{% url 'pages:tos' %}"
               >Terms of Service</a
             >
           </li>
           <li>
             <a
               class="text-gray-600 hover:text-gray-800"
-              href="{% url 'privacy' %}"
+              href="{% url 'pages:privacy' %}"
               >Privacy Policy</a
             >
           </li>

@@ -14,3 +14,8 @@ migrate:
 
 deploy:
 	git push dokku
+
+assets:
+	npm run dev
+
+.PHONY: run test shell migrate deploy assets

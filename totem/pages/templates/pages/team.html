@@ -1,0 +1,39 @@
+{% extends "base.html" %} {% load static %} {% block content %}
+<div class="section-prose m-auto pt-10 px-5">
+  <h1>Team Totem</h1>
+  <p>
+    These are a few of the people who have contributed their time to
+    make Totem a reality. We come from all walks of life and disciplines, but we are united 
+    in our belief that the world needs Totem in it. If you'd like to join
+    us, send me an email at bo@totem.org.
+  </p>
+  <p>
+    - Bo
+  </p>
+</div>
+<section class="text-gray-600 body-font">
+  <div class="container px-5 py-10 mx-auto">
+    <div class="flex flex-wrap -m-2">
+      {% for member in team %}
+      <div class="p-2 lg:w-1/3 md:w-1/2 w-full">
+        <div
+          class="h-full flex items-center border-gray-200 border p-4 rounded-lg"
+        >
+          <img
+            alt="team"
+            class="w-16 h-16 bg-gray-100 object-cover object-center flex-shrink-0 rounded-full mr-4"
+            src="{% static member.url %}"
+          />
+          <div class="flex-grow">
+            <h2 class="text-gray-900 title-font font-medium">
+              {{ member.name }}
+            </h2>
+            <p class="text-gray-500">{{ member.title }}</p>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock content %}
