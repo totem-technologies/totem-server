@@ -84,16 +84,12 @@ ADMIN_URL = env("DJANGO_ADMIN_URL")
 # # Anymail
 # # ------------------------------------------------------------------------------
 # # https://anymail.readthedocs.io/en/stable/installation/#installing-anymail
-# INSTALLED_APPS += ["anymail"]  # noqa: F405
+INSTALLED_APPS += ["anymail"]  # noqa: F405
 # # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
 # # https://anymail.readthedocs.io/en/stable/installation/#anymail-settings-reference
 # # https://anymail.readthedocs.io/en/stable/esps/mailgun/
-# EMAIL_BACKEND = "anymail.backends.mailgun.EmailBackend"
-# ANYMAIL = {
-#     "MAILGUN_API_KEY": env("MAILGUN_API_KEY"),
-#     "MAILGUN_SENDER_DOMAIN": env("MAILGUN_DOMAIN"),
-#     "MAILGUN_API_URL": env("MAILGUN_API_URL", default="https://api.mailgun.net/v3"),
-# }
+EMAIL_BACKEND = "anymail.backends.mailersend.EmailBackend"
+ANYMAIL = {"MAILERSEND_API_TOKEN": env("MAILGUN_API_KEY"), "MAILERSEND_BATCH_SEND_MODE": "use-bulk-email"}
 
 
 # LOGGING
