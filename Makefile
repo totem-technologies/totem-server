@@ -15,6 +15,9 @@ migrate:
 deploy:
 	git push dokku
 
+deploy-prod:
+	git push dokku-prod
+
 assets:
 	npm run dev
 
