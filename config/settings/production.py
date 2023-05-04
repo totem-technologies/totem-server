@@ -89,7 +89,7 @@ INSTALLED_APPS += ["anymail"]  # noqa: F405
 # # https://anymail.readthedocs.io/en/stable/installation/#anymail-settings-reference
 # # https://anymail.readthedocs.io/en/stable/esps/mailgun/
 EMAIL_BACKEND = "anymail.backends.mailersend.EmailBackend"
-ANYMAIL = {"MAILERSEND_API_TOKEN": env("MAILGUN_API_KEY"), "MAILERSEND_BATCH_SEND_MODE": "use-bulk-email"}
+ANYMAIL = {"MAILERSEND_API_TOKEN": env("MAILERSEND_API_TOKEN"), "MAILERSEND_BATCH_SEND_MODE": "use-bulk-email"}
 
 
 # LOGGING

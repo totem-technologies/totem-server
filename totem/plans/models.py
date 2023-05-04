@@ -1,3 +1,4 @@
+from django.urls import reverse
 from django.utils import timezone
 from django.db import models
 from django.conf import settings
@@ -25,3 +26,6 @@ class CirclePlan(models.Model):
 
     def __str__(self):
         return self.name
+
+    def get_absolute_url(self):
+        return reverse("plans:detail", kwargs={"pk": self.pk})
