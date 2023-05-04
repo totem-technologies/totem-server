@@ -12,4 +12,4 @@ class CourseAdmin(admin.ModelAdmin):
         "created_by",
     )
     list_filter = ("date_created", "created_by")
-    search_fields = ("name",)
+    search_fields = ("title",)
