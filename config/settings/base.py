@@ -74,7 +74,7 @@ LOCAL_APPS = [
     "totem.utils",
     "totem.plans",
     "totem.pages",
-    # Your stuff: custom apps go here
+    "totem.course",
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS

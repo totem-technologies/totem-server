@@ -1,0 +1,13 @@
+- {
+      "model": "course.course",
+      "pk": 1,
+      "fields":
+        {
+          "title": "My Course",
+          "description": "Hi!",
+          "created_by": 2,
+          "content": "# this is a course\r\n_It's not great, but it's mine_",
+          "date_created": "2023-05-04T20:12:55.986Z",
+          "date_modified": "2023-05-04T20:13:25.389Z",
+        },
+    },
