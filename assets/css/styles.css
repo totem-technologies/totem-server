@@ -2,44 +2,81 @@
 @tailwind components;
 @tailwind utilities;
 
-
 @font-face {
-    font-family: "Erode";
-    src: url("../fonts/Erode-Bold.woff2");
-  }
+  font-family: "Erode";
+  src: url("../fonts/Erode-Bold.woff2");
+}
 
 @layer components {
-    .btn-primary {
-      @apply py-2 px-4 bg-tyellow text-tslate font-semibold rounded-lg shadow-md hover:bg-yellow-300 focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-opacity-75;
-    }
-    .btn-danger {
-        @apply btn-primary bg-tpink;
-    }
-    .section {
-        @apply md:py-10 mx-4;
-    }
-    .section-prose {
-        @apply prose lg:prose-xl prose-h1:font-serif max-w-prose section;
-    }
-    .h1 {
-        @apply text-6xl font-serif;
-    }
-    .h2 {
-        @apply text-2xl font-sans font-medium text-gray-900;
-    }
-    .a {
-        @apply text-blue-500 underline;
-    }
-    input {
-        @apply my-2 rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-tyellow sm:text-sm sm:leading-6 !important;
-    }
-    label {
-        @apply text-sm font-medium leading-6 text-gray-900 !important;
-    }
-    input[type='email'] {
-        @apply w-full block;
-    }
-    input[type='password'] {
-        @apply w-full block;
-    }
+  .btn-primary {
+    @apply py-2 px-4 bg-tyellow text-tslate font-semibold rounded-lg shadow-md hover:bg-yellow-300 focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-opacity-75;
+  }
+  .btn-danger {
+    @apply btn-primary bg-tpink;
+  }
+  .section {
+    @apply md:py-10 mx-4;
+  }
+  .section-prose {
+    @apply prose lg:prose-xl prose-h1:font-serif max-w-prose section;
+  }
+  .h1 {
+    @apply text-6xl font-serif;
+  }
+  .h2 {
+    @apply text-2xl font-sans font-medium text-gray-900;
+  }
+  .a {
+    @apply text-blue-500 underline;
+  }
+  input {
+    @apply my-2 rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-tyellow sm:text-sm sm:leading-6 !important;
+  }
+  label {
+    @apply text-sm font-medium leading-6 text-gray-900 !important;
+  }
+  input[type="email"] {
+    @apply w-full block;
+  }
+  input[type="password"] {
+    @apply w-full block;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    135deg,
+    #f4dc92 0%,
+    #f4dc92 40%,
+    #ffffff 50%,
+    #f4dc92 60%,
+    #f4dc92 100%
+  );
+  background-repeat: no-repeat;
+  background-position: 0px;
+  background-size: 300%;
+}
+
+.shimmer:hover {
+  background-color: #f4dc92;
+  animation: light 1s;
+  -webkit-animation: light 1s;
+}
+
+@keyframes light {
+  0% {
+    background-position: -600px;
+  }
+  100% {
+    background-position: 0px;
+  }
+}
+
+@-webkit-keyframes light {
+  0% {
+    background-position: -600px;
+  }
+  100% {
+    background-position: 0px;
+  }
 }
