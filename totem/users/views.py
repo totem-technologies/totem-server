@@ -59,7 +59,7 @@ class LogInView(FormView):
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            return
+            return super().form_valid(form)
         next_url = reverse("home")
         url = self.request.build_absolute_uri(reverse("magic-login")) + get_query_string(user) + "&next=" + next_url
         send_mail(
