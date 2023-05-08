@@ -17,7 +17,7 @@ urlpatterns = [
     # User management
     path("users/", include("totem.users.urls", namespace="users")),
     path("accounts/", include("allauth.urls")),
-    path("auth/login/", LoginView.as_view(), name="magic-login"),
+    path("auth/link/", LoginView.as_view(), name="magic-login"),
     # Your stuff: custom urls includes go here
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 if settings.DEBUG:

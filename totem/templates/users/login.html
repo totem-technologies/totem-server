@@ -1,0 +1,19 @@
+{% extends "account/base.html" %}
+{% load i18n %}
+{% load account socialaccount %}
+{% block head_title %}
+  {% translate "Sign In" %}
+{% endblock %}
+{% block inner %}
+  <h2 class="h2">Sign in to your account</h2>
+  <div class="mt-5 ">
+    <p>
+      If you already have a Totem account, enter your email here to send a link that will log you in.
+    </p>
+    <form class="login mt-5" method="post">
+      {% csrf_token %}
+      {{ form }}
+      <button class="btn-primary mt-2 flex w-full justify-center" type="submit">Send Link</button>
+    </form>
+  </div>
+{% endblock %}

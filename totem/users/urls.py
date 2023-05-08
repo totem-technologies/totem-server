@@ -1,10 +1,11 @@
 from django.urls import path
 
-from totem.users.views import user_detail_view, user_redirect_view, user_update_view
+from totem.users.views import user_detail_view, user_redirect_view, user_update_view, LogInView
 
 app_name = "users"
 urlpatterns = [
     path("~redirect/", view=user_redirect_view, name="redirect"),
     path("~update/", view=user_update_view, name="update"),
     path("<int:pk>/", view=user_detail_view, name="detail"),
+    path("login/", LogInView.as_view(), name="login"),
 ]

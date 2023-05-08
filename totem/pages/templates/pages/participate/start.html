@@ -22,6 +22,7 @@
         </div>
       {% else %}
         <form class="section md:w-1/2 md:pl-10 pt-5" method="post">
+          <h2 class="h2 mb-3">Create Account</h2>
           {% csrf_token %}
           {{ form }}
           <button class="btn-primary mt-5 w-full justify-center" type="submit">Continue</button>
