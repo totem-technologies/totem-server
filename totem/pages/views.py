@@ -17,19 +17,22 @@ class Member:
     name: str
     title: str
     image: str
+    url: str
 
-    def url(self):
+    def imageurl(self):
         return f"images/team/{self.image}"
 
 
 class TeamView(TemplateView):
     team = [
-        Member(name="Bo Lopker", title="Executive Director, Keeper", image="bo.jpg"),
-        Member(name="Pam Lopker", title="Board Member", image="pam.jpg"),
-        Member(name="Gabe Kenny", title="User Research, Keeper", image="gabe.jpg"),
-        Member(name="Heather Gressett", title="Content Curator, Keeper", image="heather.jpg"),
-        Member(name="Steve Schalkhauser", title="Engineer, Phase 2", image="blank.jpg"),
-        Member(name="Steve Ansell", title="Engineer, Phase 2", image="blank.jpg"),
+        Member(name="Bo Lopker", title="Executive Director, Keeper", image="bo.jpg", url="pages:about"),
+        Member(name="Pam Lopker", title="Board Member", image="pam.jpg", url="pages:team-pam"),
+        Member(name="Gabe Kenny", title="User Research, Keeper", image="gabe.jpg", url="pages:keepers-gabe"),
+        Member(
+            name="Heather Gressett", title="Content Curator, Keeper", image="heather.jpg", url="pages:keepers-heather"
+        ),
+        Member(name="Steve Schalkhauser", title="Engineer, Phase 2", image="blank.jpg", url="pages:team"),
+        Member(name="Steve Ansell", title="Engineer, Phase 2", image="blank.jpg", url="pages:team"),
     ]
     template_name = "pages/team.html"
 

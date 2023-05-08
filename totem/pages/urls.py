@@ -12,6 +12,7 @@ urlpatterns = [
     path("privacy/", TemplateView.as_view(template_name="pages/privacy.html"), name="privacy"),
     path("keepers/gabe", TemplateView.as_view(template_name="pages/keepers/gabe.html"), name="keepers-gabe"),
     path("keepers/heather", TemplateView.as_view(template_name="pages/keepers/heather.html"), name="keepers-heather"),
+    path("team/pam", TemplateView.as_view(template_name="pages/pam.html"), name="team-pam"),
     path("participate/", view=views.ParticipateView.as_view(), name="participate"),
     path("participate/onboard", view=views.ParticipateOnboardView.as_view(), name="participate-onboard"),
 ]
