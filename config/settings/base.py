@@ -131,6 +131,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "totem.utils.middleware.robotnoindex",
 ]
 
 # STATIC
@@ -273,3 +274,6 @@ SOCIALACCOUNT_FORMS = {"signup": "totem.users.forms.UserSocialSignupForm"}
 SESAME_TOKEN_NAME = "token"
 SESAME_MAX_AGE = 60 * 30  # 30 minutes
 SESAME_TOKENS = ["sesame.tokens_v2"]
+
+
+ROBOTS_NO_INDEX = env.bool("ROBOT_NO_INDEX", False)
