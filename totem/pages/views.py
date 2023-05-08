@@ -1,5 +1,15 @@
 from dataclasses import dataclass
 from django.views.generic import TemplateView
+from django.views.generic import FormView
+from sesame.utils import get_query_string
+from django.urls import reverse, reverse_lazy
+from .forms import ParticipateLoginForm, ParticipateOnboardForm
+from django.contrib.auth import get_user_model
+from django.core.mail import send_mail
+from django.contrib.auth.mixins import LoginRequiredMixin
+
+
+User = get_user_model()
 
 
 @dataclass
@@ -111,3 +121,71 @@ class HowItWorksView(TemplateView):
         context = super().get_context_data(**kwargs)
         context["steps"] = self.steps
         return context
+
+
+def participant_email(name, link):
+    return f"""  
+Hi {name},
+I'm excited to get you started with Totem. I hope you'll like the Circle experience as much as I do.
+
+But first, in order for us to find the right group for you, we'll need to know a little more about you.
+
+Please follow the link to continue to the next step. It should take less than 2 minutes.
+
+Next step: {link}
+
+If you have any questions for me, just reply to this email.
+
+Yours
+- Bo, Executive Director of Totem
+    """
+
+
+class ParticipateView(FormView):
+    template_name = "pages/participate/start.html"
+    form_class = ParticipateLoginForm
+    success_url = reverse_lazy("pages:participate")
+    _email_key = "participate_email"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Get from query params (for testing) or session
+        context["email"] = self.request.session.get(self._email_key, self.request.GET.get("email"))
+        self.request.session.pop(self._email_key, None)
+        return context
+
+    def form_valid(self, form):
+        email = form.cleaned_data["email"].lower()
+        name = form.cleaned_data["name"]
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            user = User.objects.create_user(name=name, email=email, password=User.objects.make_random_password())  # type: ignore
+        next_url = reverse("pages:participate-onboard")
+        url = self.request.build_absolute_uri(reverse("magic-login")) + get_query_string(user) + "&next=" + next_url
+        send_mail(
+            "Welcome to Totem",
+            participant_email(name, url),
+            "bo@totem.org",
+            fail_silently=False,
+            recipient_list=[user.email],  # type: ignore
+        )
+        self.request.session[self._email_key] = email
+        return super().form_valid(form)
+
+
+class ParticipateOnboardView(LoginRequiredMixin, FormView):
+    template_name = "pages/participate/onboard.html"
+    form_class = ParticipateOnboardForm
+    success_url = reverse_lazy("pages:participate")
+    login_url = "/accounts/login/"
+    redirect_field_name = "redirect_to"
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["user"] = self.request.user
+        return kwargs
+
+    def form_valid(self, form: ParticipateOnboardForm):
+        form.save()
+        return super().form_valid(form)

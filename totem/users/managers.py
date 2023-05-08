@@ -1,5 +1,7 @@
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import UserManager as DjangoUserManager
+import string
+import secrets
 
 
 class UserManager(DjangoUserManager):
@@ -32,3 +34,16 @@ class UserManager(DjangoUserManager):
             raise ValueError("Superuser must have is_superuser=True.")
 
         return self._create_user(email, password, **extra_fields)
+
+    def make_random_password(self):
+        # From https://docs.python.org/3.10/library/secrets.html#recipes-and-best-practices
+        alphabet = string.ascii_letters + string.digits
+        while True:
+            password = "".join(secrets.choice(alphabet) for i in range(10))
+            if (
+                any(c.islower() for c in password)
+                and any(c.isupper() for c in password)
+                and sum(c.isdigit() for c in password) >= 3
+            ):
+                break
+        return password

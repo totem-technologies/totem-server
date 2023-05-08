@@ -21,3 +21,8 @@ class TestPages:
         url = reverse("pages:how-it-works")
         response = client.get(url)
         assert response.status_code == 200
+
+    def test_participate(self, client):
+        url = reverse("pages:participate")
+        response = client.get(url)
+        assert response.status_code == 200

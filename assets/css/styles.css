@@ -9,7 +9,7 @@
 
 @layer components {
   .btn-primary {
-    @apply py-2 px-4 bg-tyellow text-tslate font-semibold rounded-lg shadow-md hover:bg-yellow-300 focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-opacity-75;
+    @apply py-2 px-4 bg-tyellow text-tslate font-semibold rounded-lg shadow-md hover:bg-yellow-300 focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-opacity-75 text-center no-underline;
   }
   .btn-danger {
     @apply btn-primary bg-tpink;
@@ -17,11 +17,14 @@
   .section {
     @apply md:py-10 mx-4;
   }
+  .tprose {
+    @apply prose lg:prose-xl prose-h1:font-serif max-w-prose;
+  }
   .section-prose {
-    @apply prose lg:prose-xl prose-h1:font-serif max-w-prose section;
+    @apply tprose section;
   }
   .h1 {
-    @apply text-6xl font-serif;
+    @apply md:text-6xl text-4xl font-serif;
   }
   .h2 {
     @apply text-2xl font-sans font-medium text-gray-900;
@@ -35,10 +38,9 @@
   label {
     @apply text-sm font-medium leading-6 text-gray-900 !important;
   }
-  input[type="email"] {
-    @apply w-full block;
-  }
-  input[type="password"] {
+  input[type="email"],
+  input[type="password"],
+  input[type="text"] {
     @apply w-full block;
   }
 }

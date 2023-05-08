@@ -1,12 +1,12 @@
-{% extends "base.html" %} 
+{% extends "base.html" %}
 {% block content %}
-<div class="section-prose m-auto px-5">
-    {% if course %}
-    <h1>{{course.name}}</h1>
-    <p>{{course.description}}</p>
-    <p>{{course.content_html | safe }}</p>
-    {% else %}
-    <h1>Course not found</h1>
-    {% endif %}
-</div>
+    <div class="section-prose m-auto px-5">
+        {% if course %}
+            <h1>{{ course.name }}</h1>
+            <p>{{ course.description }}</p>
+            <p>{{ course.content_html | safe }}</p>
+        {% else %}
+            <h1>Course not found</h1>
+        {% endif %}
+    </div>
 {% endblock content %}

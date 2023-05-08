@@ -90,6 +90,7 @@ MIGRATION_MODULES = {"sites": "totem.contrib.sites.migrations"}
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
     "allauth.account.auth_backends.AuthenticationBackend",
+    "sesame.backends.ModelBackend",
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#auth-user-model
 AUTH_USER_MODEL = "users.User"
@@ -266,3 +267,9 @@ SOCIALACCOUNT_FORMS = {"signup": "totem.users.forms.UserSocialSignupForm"}
 
 # Your stuff...
 # ------------------------------------------------------------------------------
+
+# django-sesame
+# ------------------------------------------------------------------------------
+SESAME_TOKEN_NAME = "token"
+SESAME_MAX_AGE = 60 * 30  # 30 minutes
+SESAME_TOKENS = ["sesame.tokens_v2"]

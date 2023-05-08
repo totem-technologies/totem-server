@@ -1,6 +1,6 @@
 - {
     "model": "users.user",
-    "pk": 2,
+    "pk": 1,
     "fields":
       {
         "password": "argon2$argon2id$v=19$m=102400,t=2,p=8$eGZod29uZlIwOWlmYUZLeTVVTjdjNQ$nha2UhXclX3md11t6ZgjLAF3PcaOQhEAtfGmSF+hBLw",
