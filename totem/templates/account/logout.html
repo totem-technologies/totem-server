@@ -2,11 +2,11 @@
 {% load i18n %}
 {% block head_title %}
   {% translate "Log Out" %}
-{% endblock %}
+{% endblock head_title %}
 {% block inner %}
   <div class="sm:mx-auto sm:w-full sm:max-w-sm">
     <h1 class="h2">{% translate "Log Out" %}</h1>
-    <p class="pt-2">{% translate 'Are you sure you want to log out?' %}</p>
+    <p class="pt-2">{% translate "Are you sure you want to log out?" %}</p>
     <form method="post" action="{% url 'account_logout' %}">
       {% csrf_token %}
       {% if redirect_field_value %}
@@ -14,7 +14,7 @@
                name="{{ redirect_field_name }}"
                value="{{ redirect_field_value }}" />
       {% endif %}
-      <button class="btn-danger w-full mt-10" type="submit">{% translate 'Log Out' %}</button>
+      <button class="btn-danger w-full mt-10" type="submit">{% translate "Log Out" %}</button>
     </form>
   </div>
-{% endblock %}
+{% endblock inner %}
