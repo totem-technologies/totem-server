@@ -1,8 +1,8 @@
+import markdown as md
 from django import template
 from django.template import TemplateDoesNotExist
 from django.template.loader import render_to_string
 from django.utils.safestring import mark_safe
-import markdown as md
 
 register = template.Library()
 

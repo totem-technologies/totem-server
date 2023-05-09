@@ -1,13 +1,13 @@
 from dataclasses import dataclass
-from django.views.generic import TemplateView
-from django.views.generic import FormView
-from sesame.utils import get_query_string
-from django.urls import reverse, reverse_lazy
-from .forms import ParticipateLoginForm, ParticipateOnboardForm
-from django.contrib.auth import get_user_model
-from django.core.mail import send_mail
-from django.contrib.auth.mixins import LoginRequiredMixin
 
+from django.contrib.auth import get_user_model
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.mail import send_mail
+from django.urls import reverse, reverse_lazy
+from django.views.generic import FormView, TemplateView
+from sesame.utils import get_query_string
+
+from .forms import ParticipateLoginForm, ParticipateOnboardForm
 
 User = get_user_model()
 
@@ -73,13 +73,13 @@ person = """
 cycle = """
 <svg fill="currentColor"  class="w-12 h-12"  viewBox="0 0 397.037 397.037">
 <g>
-	<path d="M336.875,190.616c-18.765,0-34.035,15.264-34.035,34.035c0,57.514-46.783,104.315-104.315,104.315
-		c-57.517,0-104.318-46.802-104.318-104.315c0-45.252,28.727-84.358,70.283-98.527v12.439c0,11.181,5.503,21.65,14.727,28.021
-		c5.716,3.942,12.397,6.02,19.314,6.02c4.08,0,8.095-0.718,11.926-2.152l1.117-0.478l2.18-1.048l1.051-0.553l87.958-51.557
-		c11.541-5.72,18.963-17.606,18.963-30.52c0-12.91-7.422-24.809-18.963-30.517L214.804,4.224l-1.033-0.555l-2.144-1.021
-		l-1.099-0.465C206.686,0.729,202.644,0,198.524,0c-6.992,0-13.694,2.089-19.326,6.02c-9.211,6.35-14.715,16.822-14.715,28.021
-		v21.605C84.8,71.535,26.133,142.118,26.133,224.657c0,95.056,77.327,172.38,172.383,172.38c95.059,0,172.389-77.324,172.389-172.38
-		C370.904,205.88,355.64,190.616,336.875,190.616z"/>
+ <path d="M336.875,190.616c-18.765,0-34.035,15.264-34.035,34.035c0,57.514-46.783,104.315-104.315,104.315
+  c-57.517,0-104.318-46.802-104.318-104.315c0-45.252,28.727-84.358,70.283-98.527v12.439c0,11.181,5.503,21.65,14.727,28.021
+  c5.716,3.942,12.397,6.02,19.314,6.02c4.08,0,8.095-0.718,11.926-2.152l1.117-0.478l2.18-1.048l1.051-0.553l87.958-51.557
+  c11.541-5.72,18.963-17.606,18.963-30.52c0-12.91-7.422-24.809-18.963-30.517L214.804,4.224l-1.033-0.555l-2.144-1.021
+  l-1.099-0.465C206.686,0.729,202.644,0,198.524,0c-6.992,0-13.694,2.089-19.326,6.02c-9.211,6.35-14.715,16.822-14.715,28.021
+  v21.605C84.8,71.535,26.133,142.118,26.133,224.657c0,95.056,77.327,172.38,172.383,172.38c95.059,0,172.389-77.324,172.389-172.38
+  C370.904,205.88,355.64,190.616,336.875,190.616z"/>
 </g>
 </svg>
 """
@@ -127,7 +127,7 @@ class HowItWorksView(TemplateView):
 
 
 def participant_email(name, link):
-    return f"""  
+    return f"""
 Hi {name},
 I'm excited to get you started with Totem. I hope you'll like the Circle experience as much as I do.
 

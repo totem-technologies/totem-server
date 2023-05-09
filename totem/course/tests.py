@@ -1,6 +1,6 @@
+import pytest
 from django.test import TestCase
 from django.urls import reverse
-import pytest
 
 
 @pytest.mark.django_db

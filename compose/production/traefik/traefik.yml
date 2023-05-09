@@ -4,7 +4,7 @@ log:
 entryPoints:
   web:
     # http
-    address: ':80'
+    address: ":80"
     http:
       # https://docs.traefik.io/routing/entrypoints/#entrypoint
       redirections:
@@ -13,13 +13,13 @@ entryPoints:
 
   web-secure:
     # https
-    address: ':443'
+    address: ":443"
 
 certificatesResolvers:
   letsencrypt:
     # https://docs.traefik.io/master/https/acme/#lets-encrypt
     acme:
-      email: 'bo@totem.org'
+      email: "bo@totem.org"
       storage: /etc/traefik/acme/acme.json
       # https://docs.traefik.io/master/https/acme/#httpchallenge
       httpChallenge:
@@ -28,7 +28,7 @@ certificatesResolvers:
 http:
   routers:
     web-secure-router:
-      rule: 'Host(`totem.org`) || Host(`www.totem.org`)'
+      rule: "Host(`totem.org`) || Host(`www.totem.org`)"
       entryPoints:
         - web-secure
       middlewares:
@@ -39,7 +39,7 @@ http:
         certResolver: letsencrypt
 
     web-media-router:
-      rule: '(Host(`totem.org`) || Host(`www.totem.org`)) && PathPrefix(`/media/`)'
+      rule: "(Host(`totem.org`) || Host(`www.totem.org`)) && PathPrefix(`/media/`)"
       entryPoints:
         - web-secure
       middlewares:
@@ -53,7 +53,7 @@ http:
       # https://docs.traefik.io/master/middlewares/headers/#hostsproxyheaders
       # https://docs.djangoproject.com/en/dev/ref/csrf/#ajax
       headers:
-        hostsProxyHeaders: ['X-CSRFToken']
+        hostsProxyHeaders: ["X-CSRFToken"]
 
   services:
     django:

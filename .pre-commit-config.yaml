@@ -1,4 +1,4 @@
-exclude: '^docs/|/migrations/'
+exclude: "^docs/|/migrations/"
 default_stages: [commit]
 
 repos:
@@ -21,8 +21,8 @@ repos:
     rev: v3.0.0-alpha.6
     hooks:
       - id: prettier
-        args: ['--tab-width', '2', '--single-quote']
-        exclude: 'totem/templates/'
+        args: ["--tab-width", "2"]
+        exclude: "totem/templates/"
 
   - repo: https://github.com/asottile/pyupgrade
     rev: v3.3.1
@@ -39,11 +39,6 @@ repos:
     rev: 5.12.0
     hooks:
       - id: isort
-
-  - repo: https://github.com/PyCQA/flake8
-    rev: 6.0.0
-    hooks:
-      - id: flake8
 
 # sets up .pre-commit-ci.yaml to ensure pre-commit dependencies stay up to date
 ci:

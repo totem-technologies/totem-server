@@ -6,7 +6,7 @@ test:
 	docker-compose -f local.yml run --rm django coverage run -m pytest
 	docker-compose -f local.yml run --rm django coverage report
 
-shell: 
+shell:
 	docker-compose -f local.yml run --rm django bash
 
 migrate:

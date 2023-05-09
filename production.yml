@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 
 volumes:
   production_postgres_data: {}
@@ -44,8 +44,8 @@ services:
     volumes:
       - production_traefik:/etc/traefik/acme
     ports:
-      - '0.0.0.0:80:80'
-      - '0.0.0.0:443:443'
+      - "0.0.0.0:80:80"
+      - "0.0.0.0:443:443"
 
   redis:
     image: redis:6

@@ -1,6 +1,6 @@
-from django.forms import CharField, EmailField, Form
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractBaseUser
+from django.forms import CharField, EmailField, Form
 
 
 class ParticipateLoginForm(Form):

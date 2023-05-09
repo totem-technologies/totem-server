@@ -1,9 +1,8 @@
 {
-    "name": "Totem Web Server",
-    "scripts": {
-      "dokku": {
-        "postdeploy": "./manage.py migrate"
-      }
+  "name": "Totem Web Server",
+  "scripts": {
+    "dokku": {
+      "postdeploy": "./manage.py migrate"
     }
   }
-  
+}

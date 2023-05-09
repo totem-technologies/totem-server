@@ -1,7 +1,8 @@
+import secrets
+import string
+
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.models import UserManager as DjangoUserManager
-import string
-import secrets
 
 
 class UserManager(DjangoUserManager):

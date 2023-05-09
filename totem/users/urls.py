@@ -1,6 +1,6 @@
 from django.urls import path
 
-from totem.users.views import user_detail_view, user_redirect_view, user_update_view, LogInView
+from totem.users.views import LogInView, user_detail_view, user_redirect_view, user_update_view
 
 app_name = "users"
 urlpatterns = [

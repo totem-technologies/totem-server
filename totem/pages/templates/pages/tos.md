@@ -68,7 +68,7 @@ You further agree not to (i) upload any User Content that contains software viru
 
 The Company may, in its sole discretion, alter, remove, or refuse to display any of your User Content, and may forbid you from posting, uploading, storing, sharing, sending, or displaying your User Content to and via the Services.
 
-You agree that we are not responsible for, and do not endorse, User Content posted on the  
+You agree that we are not responsible for, and do not endorse, User Content posted on the
 Services. If you or your User Content violates these Terms, you shall bear legal responsibility. As between you and the Company, any User Content will be non-confidential and non-proprietary and we will not be liable for any use or disclosure of User Content. Your User Content will not be subject to any obligation of confidence on the part of the Company other than as set forth in our Privacy Policy and your privacy controls, and the Company will not be liable for any use or disclosure of any User Content you provide.
 
 **Links to Third Party Websites**

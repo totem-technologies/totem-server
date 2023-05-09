@@ -11,11 +11,7 @@ from django.urls import reverse
 from totem.users.forms import UserAdminChangeForm
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
-from totem.users.views import (
-    UserRedirectView,
-    UserUpdateView,
-    user_detail_view,
-)
+from totem.users.views import UserRedirectView, UserUpdateView, user_detail_view
 
 pytestmark = pytest.mark.django_db
 

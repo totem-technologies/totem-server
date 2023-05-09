@@ -1,9 +1,9 @@
+import markdown
+from django.conf import settings
+from django.db import models
+from django.template.defaultfilters import truncatechars
 from django.urls import reverse
 from django.utils import timezone
-from django.db import models
-from django.conf import settings
-from django.template.defaultfilters import truncatechars
-import markdown
 
 
 class CirclePlan(models.Model):
