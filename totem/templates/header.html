@@ -13,6 +13,9 @@
          href="{% url 'pages:how-it-works' %}">How It Works</a>
     </nav>
     <div class="inline-flex items-center md:mt-0 mt-5">
+      {% if user.is_staff %}
+        <a href="{% url 'admin:index' %}" class="mr-5">Admin</a>
+      {% endif %}
       {% if user.is_authenticated %}
         <a href="{% url 'account_logout' %}" class="mr-5">Logout</a>
       {% else %}
