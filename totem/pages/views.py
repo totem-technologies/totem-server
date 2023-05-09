@@ -192,3 +192,19 @@ class ParticipateOnboardView(LoginRequiredMixin, FormView):
     def form_valid(self, form: ParticipateOnboardForm):
         form.save()
         return super().form_valid(form)
+
+
+class HomeView(TemplateView):
+    template_name = "pages/home.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["quotes"] = [
+            "I appreciate having a space to express myself and not feel the need to validate or respond to others.",
+            "It was best experience.",
+            "I'm so glad I came, this is exactly what I've been needing.",
+            "This is definitely a safe and welcoming environment.",
+            "My expectations were exceeded 10000%.",
+            "YES!!! I love the safe space that was created.",
+        ]
+        return context

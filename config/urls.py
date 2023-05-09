@@ -8,7 +8,6 @@ from django.views.generic import TemplateView
 from sesame.views import LoginView
 
 urlpatterns = [
-    path("", TemplateView.as_view(template_name="pages/home.html"), name="home"),
     path("", include("totem.pages.urls", namespace="pages")),
     path("plans/", include("totem.plans.urls", namespace="plans")),
     path("course/", include("totem.course.urls", namespace="course")),
