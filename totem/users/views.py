@@ -54,13 +54,18 @@ class LogInView(FormView):
     form_class = LoginForm
     success_url = reverse_lazy("users:login")
 
+    def _message(self):
+        messages.success(self.request, "Check your email for a login link.")
+
     def form_valid(self, form):
         email = form.cleaned_data["email"].lower()
+        # Always set messsage no matter what
+        self._message()
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
             return super().form_valid(form)
-        next_url = reverse("home")
+        next_url = reverse("pages:home")
         url = self.request.build_absolute_uri(reverse("magic-login")) + get_query_string(user) + "&next=" + next_url
         send_mail(
             "Log in to Totem",
@@ -69,5 +74,5 @@ class LogInView(FormView):
             fail_silently=False,
             recipient_list=[user.email],  # type: ignore
         )
-        messages.success(self.request, "Check your email for a login link.")
+
         return super().form_valid(form)

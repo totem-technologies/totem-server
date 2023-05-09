@@ -45,7 +45,7 @@
     <div class="container m-auto md:pt-16 flex-grow">
       {% if messages %}
         {% for message in messages %}
-          <div class="max-w-2xl alert-dismissible bg-blue-100 border border-blue-500 text-blue-500 px-4 py-3 mb-5 rounded relative {% if message.tags %}alert-{{ message.tags }}{% endif %}"
+          <div class="max-w-2xl alert-dismissible m-auto bg-blue-100 border border-blue-500 text-blue-500 px-4 py-3 mb-5 rounded relative {% if message.tags %}alert-{{ message.tags }}{% endif %}"
                role="alert">
             <span class="block sm:inline">{{ message }}</span>
             <span class="absolute top-0 bottom-0 right-0 px-4 py-3" aria-label="Close">
