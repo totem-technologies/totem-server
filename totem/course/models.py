@@ -17,7 +17,7 @@ class Course(models.Model):
 
     @property
     def content_html(self):
-        md = markdown.Markdown(extensions=["toc"])
+        md = markdown.Markdown()
         return md.convert(self.content)
 
     @property
