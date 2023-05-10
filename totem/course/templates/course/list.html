@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load static %}
 {% block content %}
     {% if course %}
         <div class="section flex m-auto px-5">
@@ -18,9 +19,8 @@
     {% endif %}
 {% endblock content %}
 {% block inline_javascript %}
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tocbot/4.18.2/tocbot.min.js"></script>
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/tocbot/4.18.2/tocbot.css">
+    <script src="{% static 'js/tocbot.min.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'css/tocbot.min.css' %}">
     <style>
         .toc-link::before {
             content: none;
