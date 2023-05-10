@@ -1,4 +1,3 @@
-
 # define an alias for the specfic python version used in this file.
 FROM python:3.11.3-slim-bullseye as python
 

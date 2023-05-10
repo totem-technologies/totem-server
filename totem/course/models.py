@@ -17,7 +17,15 @@ class Course(models.Model):
 
     @property
     def content_html(self):
-        return markdown.markdown(self.content)
+        md = markdown.Markdown(extensions=["toc"])
+        return md.convert(self.content)
+
+    @property
+    def toc(self):
+        md = markdown.Markdown(extensions=["toc"])
+        _ = md.convert(self.content)
+        toc = md.toc
+        return toc
 
     def get_absolute_url(self):
         return reverse("course:list")

@@ -35,7 +35,8 @@
           sizes="16x16"
           href="{% static 'images/favicons/favicon-16x16.png' %}" />
     <link href="{% static 'css/styles.css' %}" rel="stylesheet" />
-    {% block css %}{% endblock %}
+    {% block css %}
+    {% endblock css %}
     {% block javascript %}
       <script defer src="{% static 'js/project.js' %}"></script>
     {% endblock javascript %}
