@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+    {% if script %}
+        <div class="section flex m-auto px-5">
+            <div class="w-72 max-sm:hidden">
+                <div class="pt-40 w-72 pr-5 script-toc">{{ script.toc | safe }}</div>
+            </div>
+            <div class="tprose flex-1 script-content">
+                <h1>{{ script.title }}</h1>
+                <p>{{ script.content_html | safe }}</p>
+            </div>
+        </div>
+    {% else %}
+        <div class="section-prose m-auto px-5">
+            <h1>Script not found</h1>
+        </div>
+    {% endif %}
+{% endblock content %}
+{% block inline_javascript %}
+    <script src="{% static 'js/tocbot.min.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'css/tocbot.min.css' %}">
+    <style>
+        .toc-link::before {
+            content: none;
+        }
+    </style>
+    <script>
+    tocbot.init({
+      tocSelector: '.script-toc',
+      contentSelector: '.script-content',
+      headingSelector: 'h1, h2, h3, h4, h5, h6',
+      positionFixedSelector: '.script-toc',
+      includeHtml: true,
+      includeTitleTags: false,
+      hasInnerContainers: false,
+      headingsOffset: 40,
+      scrollSmoothOffset: -40
+    });
+    </script>
+{% endblock inline_javascript %}

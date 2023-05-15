@@ -14,3 +14,10 @@ class TestCourseListView(TestCase):
         assert response.context["course"].title == "My Course"
         assert '<h1 id="this-is-a-course">this is a course</h1>' in response.context["course"].content_html
         assert '<a href="#this-is-a-course">' in response.context["course"].toc
+
+
+class TestScriptView(TestCase):
+    def test_script(self):
+        url = reverse("course:script")
+        response = self.client.get(url)
+        assert response.status_code == 200
