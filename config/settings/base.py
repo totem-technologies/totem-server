@@ -277,3 +277,8 @@ SESAME_TOKENS = ["sesame.tokens_v2"]
 
 
 ROBOTS_NO_INDEX = env.bool("ROBOT_NO_INDEX", False)
+
+# admin banner
+# ------------------------------------------------------------------------------
+ENVIRONMENT_NAME = env("ENVIRONMENT_NAME", default="Development")
+ENVIRONMENT_COLOR = env("ENVIRONMENT_COLOR", default="gray")
