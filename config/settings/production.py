@@ -1,3 +1,5 @@
+import socket
+
 from .base import *  # noqa
 from .base import env
 
@@ -7,6 +9,8 @@ from .base import env
 SECRET_KEY = env("DJANGO_SECRET_KEY")
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["totem.org", "totem.kbl.io"])
+hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
+ALLOWED_HOSTS += [".".join(ip.split(".")[:-1] + ["1"]) for ip in ips]
 
 # DATABASES
 # ------------------------------------------------------------------------------
