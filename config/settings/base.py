@@ -67,6 +67,7 @@ THIRD_PARTY_APPS = [
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
+    "taggit",
 ]
 
 LOCAL_APPS = [
@@ -75,6 +76,7 @@ LOCAL_APPS = [
     "totem.plans",
     "totem.pages",
     "totem.course",
+    "totem.repos",
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -282,3 +284,7 @@ ROBOTS_NO_INDEX = env.bool("ROBOT_NO_INDEX", False)
 # ------------------------------------------------------------------------------
 ENVIRONMENT_NAME = env("ENVIRONMENT_NAME", default="Development")
 ENVIRONMENT_COLOR = env("ENVIRONMENT_COLOR", default="gray")
+
+# django-taggit
+# ------------------------------------------------------------------------------
+TAGGIT_CASE_INSENSITIVE = True

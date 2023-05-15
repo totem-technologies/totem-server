@@ -11,6 +11,7 @@ urlpatterns = [
     path("", include("totem.pages.urls", namespace="pages")),
     path("plans/", include("totem.plans.urls", namespace="plans")),
     path("course/", include("totem.course.urls", namespace="course")),
+    path("repos/", include("totem.repos.urls", namespace="repos")),
     # Django Admin, use {% url 'admin:index' %}
     path(settings.ADMIN_URL, admin.site.urls),
     # User management

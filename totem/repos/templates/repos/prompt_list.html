@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+    <div class="section-prose m-auto pt-10 px-5">
+        <h1>Prompts</h1>
+        <ul>
+            {% for prompt in object_list %}
+                <li>{{ prompt.prompt }} - {{ prompt.tag_list }}</li>
+            {% empty %}
+                <li>No prompts yet.</li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endblock content %}
