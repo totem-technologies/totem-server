@@ -24,11 +24,11 @@
                        required>
             </div>
         </form>
-        <ul id="searchresults">
+        <ul id="searchresults" class="tprose">
         </ul>
     </div>
     <template id="prompttemplate">
-        <li class="list-none px-4 py-2 text-sm text-gray-700">{prompt} - {tags}</li>
+        <li class="px-4 py-2">{prompt} - {tags}</li>
     </template>
 {% endblock content %}
 {% block inline_javascript %}
