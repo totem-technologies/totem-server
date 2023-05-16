@@ -21,6 +21,5 @@ class PromptListView(ListView):
                     "tags": [tag.name for tag in prompt.tags.all()],
                 }
             )
-        context["promptjson"] = json
-        print(context["promptjson"])
+        context["search_data"] = json
         return context

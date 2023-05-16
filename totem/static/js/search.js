@@ -1,5 +1,5 @@
 (() => {
-  const data = JSON.parse(document.getElementById("promptjson").textContent);
+  const data = JSON.parse(document.getElementById("search_data").textContent);
   const template = document.getElementById("prompttemplate").innerHTML;
   let haystack = data.map((r) => `${r.prompt}¦${r.tags}`);
   let opts = {};
@@ -16,6 +16,15 @@
       finalhtml += html;
     }
     document.getElementById("searchresults").innerHTML += finalhtml;
+  }
+
+  function getTags() {
+    let tags = [];
+    for (let i = 0; i < data.length; i++) {
+      let prompt = data[i];
+      tags.push(prompt.tags);
+    }
+    return [...new Set(tags)];
   }
 
   window.searchnow = function () {
