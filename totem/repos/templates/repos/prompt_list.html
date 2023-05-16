@@ -1,13 +1,38 @@
 {% extends "base.html" %}
+{% load static %}
 {% block content %}
-    <div class="section-prose m-auto pt-10 px-5">
-        <h1>Prompts</h1>
-        <ul>
-            {% for prompt in object_list %}
-                <li>{{ prompt.prompt }} - {{ prompt.tag_list }}</li>
-            {% empty %}
-                <li>No prompts yet.</li>
-            {% endfor %}
+    <div class="section m-auto pt-10 px-5 max-w-3xl">
+        <h1 class="h1">Prompts</h1>
+        <form class="py-5">
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                    <svg aria-hidden="true"
+                         class="w-5 h-5 text-gray-500"
+                         fill="none"
+                         stroke="currentColor"
+                         viewBox="0 0 24 24"
+                         xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z">
+                        </path>
+                    </svg>
+                </div>
+                <input type="search"
+                       onkeyup="searchnow()"
+                       id="search"
+                       class="block w-full p-4 pl-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 "
+                       placeholder="Search prompts..."
+                       required>
+            </div>
+        </form>
+        <ul id="searchresults">
         </ul>
     </div>
+    <template id="prompttemplate">
+        <li class="list-none px-4 py-2 text-sm text-gray-700">{prompt} - {tags}</li>
+    </template>
 {% endblock content %}
+{% block inline_javascript %}
+    {{ promptjson|json_script:"promptjson" }}
+    <script src="{% static 'js/ufuzzy.min.js' %}"></script>
+    <script src="{% static 'js/fuzzy.js' %}"></script>
+{% endblock inline_javascript %}

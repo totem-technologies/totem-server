@@ -1,0 +1,1322 @@
+[
+  {
+    "model": "repos.prompt",
+    "pk": 1,
+    "fields": {
+      "prompt": "If you were an animal, what would you be and why?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.426Z",
+      "date_modified": "2023-05-15T22:05:01.346Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 2,
+    "fields": {
+      "prompt": "If you were a superhero, what would you be and why?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.428Z",
+      "date_modified": "2023-05-15T22:05:01.355Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 3,
+    "fields": {
+      "prompt": "If your mood were the weather, what would the forecast be and why?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.429Z",
+      "date_modified": "2023-05-15T22:05:01.362Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 4,
+    "fields": {
+      "prompt": "What feeling are you bringing to the circle today?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.430Z",
+      "date_modified": "2023-05-15T22:05:01.367Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 5,
+    "fields": {
+      "prompt": "What are you bringing with you to the circle today?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.430Z",
+      "date_modified": "2023-05-15T22:05:01.372Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 6,
+    "fields": {
+      "prompt": "Share something that made you laugh this week.",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.431Z",
+      "date_modified": "2023-05-15T22:05:01.377Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 7,
+    "fields": {
+      "prompt": "How did you see or experience kindness during the last week?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.431Z",
+      "date_modified": "2023-05-15T22:05:01.382Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 8,
+    "fields": {
+      "prompt": "What is one thing you are grateful for today?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.432Z",
+      "date_modified": "2023-05-15T22:05:01.386Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 9,
+    "fields": {
+      "prompt": "One rose and one thorn from this week?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.432Z",
+      "date_modified": "2023-05-15T22:05:01.389Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 10,
+    "fields": {
+      "prompt": "Is there anything you need to say, do, or let go of in order to be present here tonight?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.433Z",
+      "date_modified": "2023-05-15T22:05:01.393Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 11,
+    "fields": {
+      "prompt": "If you had an unexpected free day, what would you like to do?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.433Z",
+      "date_modified": "2023-05-15T22:05:01.396Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 12,
+    "fields": {
+      "prompt": "Why did I initially join this group? What has it given me? What do I want it to give me now?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.434Z",
+      "date_modified": "2023-05-15T22:05:01.401Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 13,
+    "fields": {
+      "prompt": "What do you need to say to be present right now?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.434Z",
+      "date_modified": "2023-05-15T22:05:01.404Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 14,
+    "fields": {
+      "prompt": "Share a happy childhood memory.",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.435Z",
+      "date_modified": "2023-05-15T22:05:01.799Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 15,
+    "fields": {
+      "prompt": "If you could be a superhero, what superpowers would you choose and why?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.436Z",
+      "date_modified": "2023-05-15T22:05:01.802Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 16,
+    "fields": {
+      "prompt": "How would your best friend describe you?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.436Z",
+      "date_modified": "2023-05-15T22:05:01.806Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 17,
+    "fields": {
+      "prompt": "When you leave this human body, how do you want to be remembered? (what do you want people to say about you? Legacy?)",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.436Z",
+      "date_modified": "2023-05-15T22:05:01.424Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 18,
+    "fields": {
+      "prompt": "When you hear the words, “Being fully supported,” what images, stories, people, etc are evoked?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.437Z",
+      "date_modified": "2023-05-15T22:05:01.429Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 19,
+    "fields": {
+      "prompt": "Share a time when you had to make a really difficult decision that came from your heart.",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.437Z",
+      "date_modified": "2023-05-15T22:05:01.433Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 20,
+    "fields": {
+      "prompt": "What has become apparent since our last meeting?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.438Z",
+      "date_modified": "2023-05-15T22:05:01.438Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 21,
+    "fields": {
+      "prompt": "Talk about a time when you made a difficult decision, but knew it was the right one, even when others questioned you.",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.438Z",
+      "date_modified": "2023-05-15T22:05:01.444Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 22,
+    "fields": {
+      "prompt": "Talk about an experience of connection or disconnection from this last year.",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.439Z",
+      "date_modified": "2023-05-15T22:05:01.449Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 23,
+    "fields": {
+      "prompt": "What do you notice/are you aware of in regard to how you are showing up in this circle? (is there anything that you want to change or anything that is getting in your way?)",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.439Z",
+      "date_modified": "2023-05-15T22:05:01.454Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 24,
+    "fields": {
+      "prompt": "Who has loved you and how do you know it? Who do you love and how do you show it?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.439Z",
+      "date_modified": "2023-05-15T22:05:01.459Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 25,
+    "fields": {
+      "prompt": "Tell us the story of what brings you to this chair?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.440Z",
+      "date_modified": "2023-05-15T22:05:01.462Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 26,
+    "fields": {
+      "prompt": "Tell us about a story or situation that made you love or hate the world.",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.441Z",
+      "date_modified": "2023-05-15T22:05:01.465Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 27,
+    "fields": {
+      "prompt": "Tell us about someone who inspired or inspires you to change for the better.",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.441Z",
+      "date_modified": "2023-05-15T22:05:01.471Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 28,
+    "fields": {
+      "prompt": "What in you right now needs to be attended to?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.442Z",
+      "date_modified": "2023-05-15T22:05:01.476Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 29,
+    "fields": {
+      "prompt": "What needs to be released into the circle today? What would you like to release into the circle today?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.442Z",
+      "date_modified": "2023-05-15T22:05:01.479Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 30,
+    "fields": {
+      "prompt": "What has been the most difficult thing for you to adjust to during the last few months?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.443Z",
+      "date_modified": "2023-05-15T22:05:01.484Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 31,
+    "fields": {
+      "prompt": "Talk about a time this week when you were out of your comfort zone.",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.444Z",
+      "date_modified": "2023-05-15T22:05:01.488Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 32,
+    "fields": {
+      "prompt": "What tickles your funny bone? What is something you can laugh at even in tough times?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.445Z",
+      "date_modified": "2023-05-15T22:05:01.492Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 33,
+    "fields": {
+      "prompt": "What is one personal strength you have had to lean on during difficult times?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.446Z",
+      "date_modified": "2023-05-15T22:05:01.496Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 34,
+    "fields": {
+      "prompt": "What is one thing that surprised you about yourself during the last few months?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.447Z",
+      "date_modified": "2023-05-15T22:05:01.500Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 35,
+    "fields": {
+      "prompt": "What is one way you have changed or had to change during the last few months?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.447Z",
+      "date_modified": "2023-05-15T22:05:01.505Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 36,
+    "fields": {
+      "prompt": "Where do you find support right now?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.448Z",
+      "date_modified": "2023-05-15T22:05:01.510Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 37,
+    "fields": {
+      "prompt": "What keeps you present?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.448Z",
+      "date_modified": "2023-05-15T22:05:01.548Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 38,
+    "fields": {
+      "prompt": "What are you grieving right now?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.449Z",
+      "date_modified": "2023-05-15T22:05:01.554Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 39,
+    "fields": {
+      "prompt": "How do you relieve or express your grief?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.450Z",
+      "date_modified": "2023-05-15T22:05:01.559Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 40,
+    "fields": {
+      "prompt": "How is anxiety, uncertainty, fear etc. manifesting in you - body, mind, and soul? (what is your relationship with…)",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.450Z",
+      "date_modified": "2023-05-15T22:05:01.565Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 41,
+    "fields": {
+      "prompt": "What intentional practices do you have to interrupt thoughts of hopelessness or anxiety.",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.451Z",
+      "date_modified": "2023-05-15T22:05:01.571Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 42,
+    "fields": {
+      "prompt": "What has life taught you recently?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.451Z",
+      "date_modified": "2023-05-15T22:05:01.575Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 43,
+    "fields": {
+      "prompt": "Who are you becoming and who is it for?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.452Z",
+      "date_modified": "2023-05-15T22:05:01.581Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 44,
+    "fields": {
+      "prompt": "What is the universe, god, higher self, etc. asking you to tune into during this phase of your life?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.452Z",
+      "date_modified": "2023-05-15T22:05:01.587Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 45,
+    "fields": {
+      "prompt": "What might be the next prompt to move things deeper tonight?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.453Z",
+      "date_modified": "2023-05-15T22:05:01.590Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 46,
+    "fields": {
+      "prompt": "What story is on your heart right now that you would like witnessed in the safety of this particular group?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.453Z",
+      "date_modified": "2023-05-15T22:05:01.596Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 47,
+    "fields": {
+      "prompt": "Who have you hurt that you could tell the Circle about? Who harmed you?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.454Z",
+      "date_modified": "2023-05-15T22:05:01.602Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 48,
+    "fields": {
+      "prompt": "If you had to admit something to yourself that you never had before what would it be and why have you held out in this long?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.454Z",
+      "date_modified": "2023-05-15T22:05:01.609Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 49,
+    "fields": {
+      "prompt": "Who do you need to forgive and what amends need to be lived/made?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.455Z",
+      "date_modified": "2023-05-15T22:05:01.616Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 50,
+    "fields": {
+      "prompt": "What are you currently terrified to feel and instead repress, suppress or escape?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.455Z",
+      "date_modified": "2023-05-15T22:05:01.622Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 51,
+    "fields": {
+      "prompt": "What passion could you call up, if you let go of your shame and the defenses you use to hide your feelings?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.456Z",
+      "date_modified": "2023-05-15T22:05:01.629Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 52,
+    "fields": {
+      "prompt": "How does anger play a role in your life?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.456Z",
+      "date_modified": "2023-05-15T22:05:01.634Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 53,
+    "fields": {
+      "prompt": "How do you use anger to try and protect yourself?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.457Z",
+      "date_modified": "2023-05-15T22:05:01.640Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 54,
+    "fields": {
+      "prompt": "How is anger shaping the life you want?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.457Z",
+      "date_modified": "2023-05-15T22:05:01.645Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 55,
+    "fields": {
+      "prompt": "Who are you when you are at your best? What two or three qualities do others see in you when you are at your most authentic?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.458Z",
+      "date_modified": "2023-05-15T22:05:01.650Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 56,
+    "fields": {
+      "prompt": "Where in your life do you rebel or abandon your values?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.458Z",
+      "date_modified": "2023-05-15T22:05:01.653Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 57,
+    "fields": {
+      "prompt": "What do you need from yourself and others for you to show us as your best and most authentic self?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.459Z",
+      "date_modified": "2023-05-15T22:05:01.657Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 58,
+    "fields": {
+      "prompt": "How do we want your values to be present in our circles?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.459Z",
+      "date_modified": "2023-05-15T22:05:01.661Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 59,
+    "fields": {
+      "prompt": "A time when you acted on your core values even though others were not.",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.460Z",
+      "date_modified": "2023-05-15T22:05:01.664Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 60,
+    "fields": {
+      "prompt": "What is a passion in your life?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.460Z",
+      "date_modified": "2023-05-15T22:05:01.668Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 61,
+    "fields": {
+      "prompt": "What do you keep returning to in your life?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.461Z",
+      "date_modified": "2023-05-15T22:05:01.854Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 62,
+    "fields": {
+      "prompt": "What touches your heart?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.461Z",
+      "date_modified": "2023-05-15T22:05:01.857Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 63,
+    "fields": {
+      "prompt": "What gives you hope?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.462Z",
+      "date_modified": "2023-05-15T22:05:01.860Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 64,
+    "fields": {
+      "prompt": "What demonstrates respect?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.462Z",
+      "date_modified": "2023-05-15T22:05:01.864Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 65,
+    "fields": {
+      "prompt": "What is one thing you can do for yourself in the next week?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.463Z",
+      "date_modified": "2023-05-15T22:05:01.690Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 66,
+    "fields": {
+      "prompt": "What has been an unexpected gift of this time?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.463Z",
+      "date_modified": "2023-05-15T22:05:01.725Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 67,
+    "fields": {
+      "prompt": "What gives you hope during this time?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.464Z",
+      "date_modified": "2023-05-15T22:05:01.699Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 68,
+    "fields": {
+      "prompt": "What is one thing that you can ask for this week? From a coworker, partner, friend, family member, or yourself?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.464Z",
+      "date_modified": "2023-05-15T22:05:01.703Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 69,
+    "fields": {
+      "prompt": "What is a source of hope for you right now?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.465Z",
+      "date_modified": "2023-05-15T22:05:01.707Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 70,
+    "fields": {
+      "prompt": "What brings you joy right now?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.465Z",
+      "date_modified": "2023-05-15T22:05:01.710Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 71,
+    "fields": {
+      "prompt": "What is helping you feel grounded, supported, and connected right now?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.466Z",
+      "date_modified": "2023-05-15T22:05:01.714Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 72,
+    "fields": {
+      "prompt": "What silver lining are you already identifying?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.466Z",
+      "date_modified": "2023-05-15T22:05:01.717Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 73,
+    "fields": {
+      "prompt": "Thinking of what you have been through over the last year, what message would you send back to your younger self, just prior to COVID-19?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.467Z",
+      "date_modified": "2023-05-15T22:05:01.720Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 74,
+    "fields": {
+      "prompt": "What are the words of allowance and encouragement that you would love to hear or offer to others?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.467Z",
+      "date_modified": "2023-05-15T22:05:01.722Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 76,
+    "fields": {
+      "prompt": "What word, phrase, motto, or belief has helped you to move through the challenges of these last few months?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.468Z",
+      "date_modified": "2023-05-15T22:05:01.728Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 77,
+    "fields": {
+      "prompt": "What did resilience look like for you growing up?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.469Z",
+      "date_modified": "2023-05-15T22:05:01.909Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 78,
+    "fields": {
+      "prompt": "What story is on your heart right now that you would like witnessed in the safety of this circle?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.470Z",
+      "date_modified": "2023-05-15T22:05:01.739Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 79,
+    "fields": {
+      "prompt": "What is coming forward in you for healing? Or what in you needs to be attended to?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.470Z",
+      "date_modified": "2023-05-15T22:05:01.747Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 80,
+    "fields": {
+      "prompt": "What would you not like to change about your life?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.471Z",
+      "date_modified": "2023-05-15T22:05:01.752Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 81,
+    "fields": {
+      "prompt": "Is there anything you need to say before the Circle closes?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.471Z",
+      "date_modified": "2023-05-15T22:05:01.756Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 82,
+    "fields": {
+      "prompt": "What will you be taking away from this circle tonight?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.472Z",
+      "date_modified": "2023-05-15T22:05:01.761Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 83,
+    "fields": {
+      "prompt": "A word of comment about what you are leaving with tonight.",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.472Z",
+      "date_modified": "2023-05-15T22:05:01.765Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 84,
+    "fields": {
+      "prompt": "Is there anything you came to the circle with tonight that you would like to leave behind?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.473Z",
+      "date_modified": "2023-05-15T22:05:01.770Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 85,
+    "fields": {
+      "prompt": "What feelings are you leaving the circle with tonight?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.473Z",
+      "date_modified": "2023-05-15T22:05:01.775Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 86,
+    "fields": {
+      "prompt": "What nuggets of wisdom will you be taking with you to support you as you continue on your journey?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.474Z",
+      "date_modified": "2023-05-15T22:05:01.781Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 87,
+    "fields": {
+      "prompt": "What did you hear today that you take away as your primary learning?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.474Z",
+      "date_modified": "2023-05-15T22:05:01.784Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 88,
+    "fields": {
+      "prompt": "How do you define community? Where are you finding it right now?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.474Z",
+      "date_modified": "2023-05-15T22:05:01.789Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 89,
+    "fields": {
+      "prompt": "What is one thing your coworkers may not know about you?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.475Z",
+      "date_modified": "2023-05-15T22:05:01.792Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 90,
+    "fields": {
+      "prompt": "In what ways can you cultivate hope with others this week for yourself or for others?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.476Z",
+      "date_modified": "2023-05-15T22:05:01.796Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 94,
+    "fields": {
+      "prompt": "What would you not want to change about your life?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.477Z",
+      "date_modified": "2023-05-15T22:05:01.810Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 95,
+    "fields": {
+      "prompt": "If you could talk to someone from your family who is no longer alive, who would it be and why?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.478Z",
+      "date_modified": "2023-05-15T22:05:01.815Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 97,
+    "fields": {
+      "prompt": "If you were an animal, what animal would you be and why?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.479Z",
+      "date_modified": "2023-05-15T22:05:01.818Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 98,
+    "fields": {
+      "prompt": "Name two things or people who always make you laugh.",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.479Z",
+      "date_modified": "2023-05-15T22:05:01.821Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 99,
+    "fields": {
+      "prompt": "I like to collect....",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.480Z",
+      "date_modified": "2023-05-15T22:05:01.824Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 100,
+    "fields": {
+      "prompt": "If you could have a face to face conversation with anyone, who would it be and why?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.480Z",
+      "date_modified": "2023-05-15T22:05:01.827Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 101,
+    "fields": {
+      "prompt": "Describe your ideal job.",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.480Z",
+      "date_modified": "2023-05-15T22:05:01.831Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 102,
+    "fields": {
+      "prompt": "Describe your favorite vacation.",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.481Z",
+      "date_modified": "2023-05-15T22:05:01.835Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 103,
+    "fields": {
+      "prompt": "If you could change anything about yourself what would it be?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.481Z",
+      "date_modified": "2023-05-15T22:05:01.842Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 104,
+    "fields": {
+      "prompt": "Imagine you are in conflict with a person who is important in your life. What values do you want to guide your conduct as you try to work out that conflict?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.482Z",
+      "date_modified": "2023-05-15T22:05:01.848Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 105,
+    "fields": {
+      "prompt": "What is your passion?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.482Z",
+      "date_modified": "2023-05-15T22:05:01.851Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 110,
+    "fields": {
+      "prompt": "What change would you like to see in your community? What can you do to promote that change?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.485Z",
+      "date_modified": "2023-05-15T22:05:01.868Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 111,
+    "fields": {
+      "prompt": "A time when you had to let go of control.",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.485Z",
+      "date_modified": "2023-05-15T22:05:01.872Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 112,
+    "fields": {
+      "prompt": "A time when you were outside of your comfort zone.",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.486Z",
+      "date_modified": "2023-05-15T22:05:01.876Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 113,
+    "fields": {
+      "prompt": "An experience in your life when you \"made lemonade out of lemons\".",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.486Z",
+      "date_modified": "2023-05-15T22:05:01.878Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 114,
+    "fields": {
+      "prompt": "An experience of transformation when, out of a crisis or difficulty, you discovered a gift in your life.",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.486Z",
+      "date_modified": "2023-05-15T22:05:01.883Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 115,
+    "fields": {
+      "prompt": "An experience of causing harm to someone and then dealing with it in a way you felt good about.",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.487Z",
+      "date_modified": "2023-05-15T22:05:01.887Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 116,
+    "fields": {
+      "prompt": "An experience of letting go of anger or resentment.",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.487Z",
+      "date_modified": "2023-05-15T22:05:01.891Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 117,
+    "fields": {
+      "prompt": "A time when you were in conflict with your parents or caregiver.",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.488Z",
+      "date_modified": "2023-05-15T22:05:01.895Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 118,
+    "fields": {
+      "prompt": "An experience where you discovered that someone was very different from the negative assumptions you first made about that person.",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.488Z",
+      "date_modified": "2023-05-15T22:05:01.899Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 119,
+    "fields": {
+      "prompt": "An experience of feeling that you did not fit in.",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.489Z",
+      "date_modified": "2023-05-15T22:05:01.904Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 121,
+    "fields": {
+      "prompt": "Describe a place now or in your past that brings you peace and sanctuary? What is it about this place that provides peace for you?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.490Z",
+      "date_modified": "2023-05-15T22:05:01.916Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 122,
+    "fields": {
+      "prompt": "How do you show love for yourself?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.490Z",
+      "date_modified": "2023-05-15T22:05:01.921Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 123,
+    "fields": {
+      "prompt": "How do you feel like the community has helped you? Hindered you?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.491Z",
+      "date_modified": "2023-05-15T22:05:01.925Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 124,
+    "fields": {
+      "prompt": "Tell us about your coming out experience and how that has brought you to where you are today?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.491Z",
+      "date_modified": "2023-05-15T22:05:01.933Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 125,
+    "fields": {
+      "prompt": "What is a song that brings you joy, solace or peace and why?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.492Z",
+      "date_modified": "2023-05-15T22:05:01.939Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 126,
+    "fields": {
+      "prompt": "What is your love language?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.492Z",
+      "date_modified": "2023-05-15T22:05:01.943Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 127,
+    "fields": {
+      "prompt": "What is something you'd like to say to the child-you?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.493Z",
+      "date_modified": "2023-05-15T22:05:01.949Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 128,
+    "fields": {
+      "prompt": "What do you do to remember and help yourself during hard times?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.493Z",
+      "date_modified": "2023-05-15T22:05:01.954Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 129,
+    "fields": {
+      "prompt": "What is a song that gives you respite and why?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.494Z",
+      "date_modified": "2023-05-15T22:05:01.958Z",
+      "notes": null
+    }
+  },
+  {
+    "model": "repos.prompt",
+    "pk": 130,
+    "fields": {
+      "prompt": "What is something you're looking forward to and why?",
+      "created_by": 1,
+      "date_created": "2023-05-15T21:48:05.494Z",
+      "date_modified": "2023-05-15T22:05:01.962Z",
+      "notes": null
+    }
+  }
+]
