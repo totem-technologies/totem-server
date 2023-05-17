@@ -8,6 +8,7 @@ class CoursePageAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "title",
+        "slug",
         "created_by",
     )
     list_filter = ("date_created", "created_by")
