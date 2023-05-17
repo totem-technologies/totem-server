@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+    {% if page %}
+        <div class="{% if page.enable_toc %}section{% else %}section-prose{% endif %} flex m-auto px-5">
+            {% if page.enable_toc %}
+                <div class="w-72 max-sm:hidden">
+                    <div class="pt-40 w-72 pr-5 page-toc">{{ page.toc | safe }}</div>
+                </div>
+            {% endif %}
+            <div class="tprose flex-1 page-content">
+                <h1>{{ page.title }}</h1>
+                <p>{{ page.content_html | safe }}</p>
+            </div>
+        </div>
+    {% else %}
+        <div class="section-prose m-auto px-5">
+            <h1>{{ page.type }} not found</h1>
+        </div>
+    {% endif %}
+{% endblock content %}
+{% block inline_javascript %}
+    {% if page.enable_toc %}
+        <script src="{% static 'js/tocbot.min.js' %}"></script>
+        <link rel="stylesheet" href="{% static 'css/tocbot.min.css' %}">
+        <style>
+        .toc-link::before {
+            content: none;
+        }
+        </style>
+        <script>
+            tocbot.init({
+                tocSelector: '.page-toc',
+                contentSelector: '.page-content',
+                headingSelector: 'h1, h2, h3, h4, h5, h6',
+                positionFixedSelector: '.page-toc',
+                includeHtml: true,
+                includeTitleTags: false,
+                hasInnerContainers: false,
+                headingsOffset: 40,
+                scrollSmoothOffset: -40
+            });
+        </script>
+    {% endif %}
+{% endblock inline_javascript %}

@@ -20,29 +20,17 @@ class MardownMixin:
         return toc
 
 
-class Course(MardownMixin, models.Model):
+class CoursePage(MardownMixin, models.Model):
     title = models.CharField(max_length=255)
-    description = models.TextField()
-    content = MarkdownField()
+    slug = models.SlugField(unique=True)
+    enable_toc = models.BooleanField(default=False)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    date_created = models.DateTimeField(auto_now_add=True)
-    date_modified = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return self.title
-
-    def get_absolute_url(self):
-        return reverse("course:list")
-
-
-class CircleScript(MardownMixin, models.Model):
-    title = models.CharField(max_length=255)
     content = MarkdownField()
     date_created = models.DateTimeField(auto_now_add=True)
     date_modified = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.title
+        return f"{self.title} - {self.slug}"
 
     def get_absolute_url(self):
-        return reverse("course:script")
+        return reverse("course:page", kwargs={"slug": self.slug})
