@@ -8,16 +8,14 @@ class TestCourseListView(TestCase):
     fixtures = ["users.yaml", "course.yaml"]
 
     def test_course(self):
-        url = reverse("course:list")
+        url = reverse("course:index")
         response = self.client.get(url)
         assert response.status_code == 200
-        assert response.context["course"].title == "My Course"
-        assert '<h1 id="this-is-a-course">this is a course</h1>' in response.context["course"].content_html
-        assert '<a href="#this-is-a-course">' in response.context["course"].toc
+        assert response.context["page"].title == "Keeper Guide"
+        assert '<h2 id="introduction">Introduction</h2>' in response.context["page"].content_html
+        assert '<a href="#introduction">' in response.context["page"].toc
 
-
-class TestScriptView(TestCase):
     def test_script(self):
-        url = reverse("course:script")
+        url = reverse("course:page", kwargs={"slug": "script"})
         response = self.client.get(url)
         assert response.status_code == 200
