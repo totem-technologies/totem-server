@@ -7,6 +7,16 @@
       Totem is a place where you can get grounded by sharing your stories with other people who understand you.
     </p>
   </div>
+  {% comment %} <section>
+    <div>
+      Join our waitlist:
+      <form class="inline-block" method="post" action="{% url 'email:waitlist' %}">
+        {% csrf_token %}
+        {{ waitlist_form }}
+        <button class="btn-primary" type="submit">Join</button>
+      </form>
+    </div>
+  </section> {% endcomment %}
   <section class="section max-w-5xl m-auto overflow-x-auto">
     <div class="grid grid-cols-[repeat(3,_minmax(270px,_1fr))] px-5 max-md:pt-10 max-md:min-w-fit">
       {% for quote in quotes %}

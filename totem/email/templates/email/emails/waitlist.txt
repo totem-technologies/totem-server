@@ -1,0 +1,3 @@
+Welcome to Totem!
+
+To confirm your email address, please click this link: {{email_base_url}}{{ ctx.subscribe_url }}

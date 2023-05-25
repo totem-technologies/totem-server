@@ -7,6 +7,7 @@ from django.urls import reverse, reverse_lazy
 from django.views.generic import FormView, TemplateView
 from sesame.utils import get_query_string
 
+from ..email.views import WaitListAddView
 from .forms import ParticipateLoginForm, ParticipateOnboardForm
 
 User = get_user_model()
@@ -207,4 +208,5 @@ class HomeView(TemplateView):
             "My expectations were exceeded 10000%.",
             "YES!!! I love the safe space that was created.",
         ]
+        context["waitlist_form"] = WaitListAddView().get_form_class()
         return context

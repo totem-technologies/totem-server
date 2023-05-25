@@ -10,7 +10,7 @@ shell:
 	docker-compose -f local.yml run --rm django bash
 
 dbshell:
-	docker-compose -f local.yml run --rm postgres bash
+	docker-compose -f local.yml exec postgres bash
 
 migrate:
 	./manage.py makemigrations && ./manage.py migrate
