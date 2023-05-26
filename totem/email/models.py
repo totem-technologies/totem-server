@@ -13,8 +13,8 @@ from totem.email.utils import send_mail
 
 class WaitList(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    email = models.EmailField(db_index=True, unique=True)  # type: ignore
-    name = models.CharField(max_length=255)
+    email = models.EmailField(db_index=True, unique=True, verbose_name="Your email")  # type: ignore
+    name = models.CharField(max_length=255, verbose_name="Your name")
     date_created = models.DateTimeField(auto_now_add=True)
     subscribed = models.BooleanField(default=False)
 
@@ -31,7 +31,7 @@ class WaitList(models.Model):
 
     @property
     def subscribe_url(self):
-        return reverse("email:waitlist_subscribe", kwargs={"id": self.id})
+        return reverse("email:waitlist_subscribe", kwargs={"id": str(self.id)})
 
     def subscribe(self):
         self.subscribed = True
