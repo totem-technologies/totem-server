@@ -28,7 +28,7 @@ assets:
 	python3 -m venv .venv
 
 install_local: .venv
-	source .venv/bin/activate && pip install -r requirements/local.txt
+	source .venv/bin/activate && pip install -Ur requirements/local.txt
 	npm install
 
 .PHONY: run test shell migrate deploy assets
