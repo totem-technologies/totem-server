@@ -4,8 +4,12 @@ from django.contrib import admin
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.urls import include, path
 from django.views import defaults as default_views
-from django.views.generic import TemplateView
 from sesame.views import LoginView
+
+
+def trigger_error(request):
+    division_by_zero = 1 / 0
+
 
 urlpatterns = [
     path("", include("totem.pages.urls", namespace="pages")),
@@ -20,6 +24,7 @@ urlpatterns = [
     path("accounts/", include("allauth.urls")),
     path("auth/link/", LoginView.as_view(), name="magic-login"),
     # Your stuff: custom urls includes go here
+    path("_testcrash/", trigger_error, name="crash"),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 if settings.DEBUG:
     # Static file serving when using Gunicorn + Uvicorn for local web socket development
