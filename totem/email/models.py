@@ -31,8 +31,16 @@ class WaitList(models.Model):
 
     @property
     def subscribe_url(self):
-        return reverse("email:waitlist_subscribe", kwargs={"id": str(self.id)})
+        return reverse("email:subscribe", kwargs={"id": str(self.id)})
+
+    @property
+    def unsubscribe_url(self):
+        return reverse("email:unsubscribe", kwargs={"id": str(self.id)})
 
     def subscribe(self):
         self.subscribed = True
+        self.save()
+
+    def unsubscribe(self):
+        self.subscribed = False
         self.save()

@@ -16,11 +16,6 @@
         <p>
           You don't have to use your legal name, whatever you like to be called is fine, but you do need to use a real email address. We will send you an invitation to join Totem.
         </p>
-        <p class="text-center mt-5 text-sm">
-          By continuing, you agree to our
-          <br>
-          <a class="underline" href="{% url 'pages:tos' %}">Terms of Service</a> and <a class="underline" href="{% url 'pages:privacy' %}">Privacy Policies</a>
-        </p>
       </div>
       <div class="p-10 md:w-1/3 bg-white rounded-xl max-md:mt-10 max-md:mx-2">
         <form method="post" action="{% url 'email:waitlist' %}">
@@ -28,6 +23,11 @@
           {{ waitlist_form }}
           <button class="btn-primary mt-2 w-full" type="submit">Join</button>
         </form>
+        <p class="text-center mt-5 text-xs text-gray-400">
+          By continuing, you agree to our
+          <br>
+          <a class="underline" href="{% url 'pages:tos' %}">Terms of Service</a> and <a class="underline" href="{% url 'pages:privacy' %}">Privacy Policies</a>
+        </p>
       </div>
     </div>
   </section> {% endcomment %}
@@ -89,5 +89,9 @@
         <a class="btn-primary w-full no-underline" href="{% url 'pages:team' %}">Meet the team</a>
       </div>
     </div>
+  </section>
+  <section class="section m-auto px-5 max-w-5xl">
+    <h1 class="h1">Frequently Asked Questions</h1>
+    {% include "pages/partials/_faqs.html" %}
   </section>
 {% endblock content %}
