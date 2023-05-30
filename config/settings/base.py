@@ -4,8 +4,6 @@ Base settings to build other settings files upon.
 from pathlib import Path
 
 import environ
-import sentry_sdk
-from sentry_sdk.integrations.django import DjangoIntegration
 
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
 # totem/
@@ -296,12 +294,16 @@ TAGGIT_CASE_INSENSITIVE = True
 
 # sentry
 # ------------------------------------------------------------------------------
-sentry_sdk.init(
-    dsn="https://fc28dfc40b014a8fa120aa1d9c279112@o1324443.ingest.sentry.io/4505270983065600",
-    integrations=[
-        DjangoIntegration(),
-    ],
-    environment=env("SENTRY_ENVIRONMENT", default="development"),
-    traces_sample_rate=0.1,
-    send_default_pii=True,
-)
+if not DEBUG:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+
+    sentry_sdk.init(
+        dsn="https://fc28dfc40b014a8fa120aa1d9c279112@o1324443.ingest.sentry.io/4505270983065600",
+        integrations=[
+            DjangoIntegration(),
+        ],
+        environment=env("SENTRY_ENVIRONMENT", default="development"),
+        traces_sample_rate=0.1,
+        send_default_pii=True,
+    )
