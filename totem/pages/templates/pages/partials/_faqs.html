@@ -1,8 +1,8 @@
 <div class="flow-root">
     <div class="mt-8 divide-y divide-tslate">
         {% for faq in faqs %}
-            <details class="group py-4 [&_summary::-webkit-details-marker]:hidden">
-                <summary class="flex cursor-pointer items-center justify-between text-gray-900">
+            <details class="group  [&_summary::-webkit-details-marker]:hidden">
+                <summary class="flex py-4 cursor-pointer items-center justify-between text-gray-900">
                     <h2 class="text-lg font-medium">{{ faq.question }}</h2>
                     <span class="relative h-5 w-5 shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg"
@@ -23,7 +23,7 @@
                         </svg>
                     </span>
                 </summary>
-                <p class="mt-4 leading-relaxed text-gray-700">{{ faq.answer }}</p>
+                <p class="mb-4 leading-relaxed text-gray-700">{{ faq.answer }}</p>
             </details>
         {% endfor %}
     </div>
