@@ -5,23 +5,20 @@
     <h1>Share, listen and grow. Without interruption.</h1>
     <p>Totem is a place where you can get grounded by sharing stories.</p>
   </div>
-  {% comment %} <section class="section m-auto max-w-5xl pt-10">
+  <section class="section m-auto max-w-5xl pt-10">
     <div class="md:flex justify-center items-center">
       <div class="px-10 md:w-1/2">
-        <h2 class="h2 pb-2">We are now inviting new participants.</h2>
+        <h2 class="h2 pb-2">Registration is now open. 🎉</h2>
         <p>
-          Please submit your name and email, then tell us about your interests. A Keeper will find the right space for you.
+          Sign up, then tell us about your interests. One of our Keepers will find the right space for <strong>you</strong>.
         </p>
         <br>
-        <p>
-          You don't have to use your legal name, whatever you like to be called is fine, but you do need to use a real email address. We will send you an invitation to join Totem.
-        </p>
       </div>
       <div class="p-10 md:w-1/3 bg-white rounded-xl max-md:mt-10 max-md:mx-2">
-        <form method="post" action="{% url 'email:waitlist' %}">
+        <form method="post" action="{% url 'users:login' %}">
           {% csrf_token %}
-          {{ waitlist_form }}
-          <button class="btn-primary mt-2 w-full" type="submit">Join</button>
+          {{ login_form }}
+          <button class="btn-primary mt-2 w-full shimmer" type="submit">Join</button>
         </form>
         <p class="text-center mt-5 text-xs text-gray-400">
           By continuing, you agree to our
@@ -30,7 +27,7 @@
         </p>
       </div>
     </div>
-  </section> {% endcomment %}
+  </section>
   <section class="section max-w-5xl m-auto overflow-x-auto">
     <div class="grid grid-cols-[repeat(3,_minmax(270px,_1fr))] px-5 max-md:pt-10 max-md:min-w-fit">
       {% for quote in quotes %}

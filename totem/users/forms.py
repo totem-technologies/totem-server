@@ -2,7 +2,7 @@ from allauth.account.forms import SignupForm
 from allauth.socialaccount.forms import SignupForm as SocialSignupForm
 from django.contrib.auth import forms as admin_forms
 from django.contrib.auth import get_user_model
-from django.forms import CharField, EmailField, Form
+from django.forms import CharField, EmailField, Form, HiddenInput
 from django.utils.translation import gettext_lazy as _
 
 User = get_user_model()
@@ -47,3 +47,5 @@ class UserSocialSignupForm(SocialSignupForm):
 
 class LoginForm(Form):
     email = EmailField()
+    after_login_url = CharField(required=False, widget=HiddenInput())
+    success_url = CharField(required=False, widget=HiddenInput())

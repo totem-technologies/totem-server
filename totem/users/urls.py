@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.generic import TemplateView
 
 from totem.users.views import LogInView, user_detail_view, user_redirect_view, user_update_view
 

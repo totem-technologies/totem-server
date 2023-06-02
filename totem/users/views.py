@@ -2,11 +2,13 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
-from django.core.mail import send_mail
 from django.urls import reverse, reverse_lazy
+from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import DetailView, FormView, RedirectView, UpdateView
 from sesame.utils import get_query_string
+
+from totem.email.utils import send_mail
 
 from .forms import LoginForm
 
@@ -57,21 +59,43 @@ class LogInView(FormView):
         messages.success(self.request, "Check your email for a login link.")
 
     def form_valid(self, form):
+        success_url = form.cleaned_data.get("success_url")
+        if success_url:
+            self.success_url = success_url
+        else:
+            # Always set message no matter what
+            self._message()
+
         email = form.cleaned_data["email"].lower()
-        # Always set messsage no matter what
-        self._message()
+
+        existing = False
+
         try:
             user = User.objects.get(email=email)
+            existing = True
         except User.DoesNotExist:
-            return super().form_valid(form)
-        next_url = reverse("pages:home")
-        url = self.request.build_absolute_uri(reverse("magic-login")) + get_query_string(user) + "&next=" + next_url
+            user = User.objects.create(email=email)
+
+        url = self.request.build_absolute_uri(reverse("magic-login")) + get_query_string(user)
+        url += "&next=" + form.cleaned_data.get("after_login_url", reverse("pages:home"))
+        if existing:
+            self.email_returning_user(user, url)
+        else:
+            self.email_new_user(user, url)
+        return super().form_valid(form)
+
+    def email_returning_user(self, user, url):
         send_mail(
-            "Log in to Totem",
-            "Welcome back! Click here to log in: " + url,
-            "noreply@totem.org",
-            fail_silently=False,
+            "Login to ✨Totem✨",
+            "old_login",
+            {"url": mark_safe(url)},
             recipient_list=[user.email],  # type: ignore
         )
 
-        return super().form_valid(form)
+    def email_new_user(self, user, url):
+        send_mail(
+            "Welcome to ✨Totem✨",
+            "new_login",
+            {"url": mark_safe(url)},
+            recipient_list=[user.email],  # type: ignore
+        )

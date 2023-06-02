@@ -1,0 +1,5 @@
+Welcome back to Totem!
+
+To continue, please click this link: {{ ctx.url }}
+
+If this was not you, please ignore this email.

@@ -22,6 +22,7 @@ urlpatterns = [
     # User management
     path("users/", include("totem.users.urls", namespace="users")),
     path("accounts/", include("allauth.urls")),
+    path("onboard/", include("totem.onboard.urls")),
     path("auth/link/", LoginView.as_view(), name="magic-login"),
     # Your stuff: custom urls includes go here
     path("_testcrash/", trigger_error, name="crash"),

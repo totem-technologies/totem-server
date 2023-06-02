@@ -1,23 +1,26 @@
 {% extends "base.html" %}
 {% load static %}
-
 {% block title %}User: {{ object.name }}{% endblock %}
-
 {% block content %}
-<div class="section rounded-2xl p-10 bg-white">
-      <h2 class="h2">{{ object.name }}</h2>
-      {% if object.name %}
-        <p>{{ object.name }}</p>
-      {% endif %}
-
-{% if object == request.user %}
-
-<div class="py-5">
-  <a class="btn btn-primary" href="{% url 'users:update' %}" role="button">My Info</a>
-  <a class="btn btn-primary" href="{% url 'account_email' %}" role="button">E-Mail</a>
-  <!-- Your Stuff: Custom user template urls -->
-</div>
-{% endif %}
-
-</div>
+  {% if object == request.user %}
+    <div class="section p-10 ">
+      <h1 class="h1">Hello {{ object.name|default:"friend" }}!</h1>
+      <p class="lead">This is your profile page.</p>
+      <div class="py-5">
+        <div class="mb-5">
+          <a class="btn btn-primary"
+             href="{% url 'onboard:index' %}"
+             role="button">Change Preferences</a>
+        </div>
+        {% comment %} <div>
+          <a class="btn btn-primary" href="{% url 'account_email' %}" role="button">E-Mail</a>
+        </div> {% endcomment %}
+        <!-- Your Stuff: Custom user template urls -->
+        {% comment %} <a class="btn" href="{% url 'users:delete' %}" role="button">Delete Account</a> {% endcomment %}
+      </div>
+    </div>
+  {% else %}
+    <h1 class="h1">404</h1>
+    <p>User not found</p>
+  {% endif %}
 {% endblock content %}
