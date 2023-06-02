@@ -86,7 +86,7 @@ class OnboardView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["name_form"] = OnboardNameForm(initial=self.request.user.__dict__)
+        context["name_form"] = OnboardNameForm(initial={"name": self.request.user.name})
         onboard = self.get_onboard_model()
         context["circle_form"] = OnboardCircleForm(initial=onboard.__dict__)
         context["extra_form"] = OnboardExtraForm(initial=onboard.__dict__)
