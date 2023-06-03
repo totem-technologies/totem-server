@@ -3,22 +3,13 @@
 {% get_current_language as LANGUAGE_CODE %}
 <html lang="{{ LANGUAGE_CODE }}">
   <head>
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-M6888FMBVP"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag() {
-        dataLayer.push(arguments);
-      }
-      gtag("js", new Date());
-
-      gtag("config", "G-M6888FMBVP");
-    </script>
     <meta charset="utf-8" />
     <meta http-equiv="x-ua-compatible" content="ie=edge" />
     <title>Totem
       {% block title %}
       {% endblock title %}
     </title>
+    {% include "_analytics.html" %}
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Community-first support groups." />
     <meta name="author" content="Bo" />
