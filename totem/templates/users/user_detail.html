@@ -3,20 +3,23 @@
 {% block title %}User: {{ object.name }}{% endblock %}
 {% block content %}
   {% if object == request.user %}
-    <div class="section p-10 m-auto">
+    <div class="section py-10">
       <h1 class="h1">Hello {{ object.name|default:"friend" }}!</h1>
     </div>
     <div class="section-prose">
       <p class="lead">
         We're excited to get started. Please hold on while our Keepers find a Circle for you. We'll be in contact soon.
       </p>
-      <p>In the meantime, you can check out these great resources we've put together:</p>
+      <p>
+        If you have any questions, please reach out to <a href="mailto:help@totem.org">help@totem.org</a>
+      </p>
+      {% comment %} <p>In the meantime, you can check out these great resources we've put together:</p>
       <ul>
         <li>Community Guidelines</li>
         <li>How Totem Works</li>
         <li>Meet the Team</li>
         <li>Find us on Instagram</li>
-      </ul>
+      </ul> {% endcomment %}
     </div>
     <div class="py-5 px-5">
       <div class="mb-5">
