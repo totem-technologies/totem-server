@@ -38,7 +38,7 @@ class OnboardCircleForm(Form):
         circle=_Circle(
             "Parenthood",
             "🐣",
-            "This Circle is about providing a nurturing environment for new parents to share the experiences, triumphs, and difficulties of rasing children.",
+            "This Circle is about providing a nurturing environment for parents to share the experiences, triumphs, and difficulties of rasing children.",
         ),
     )
     circle_sexuality = _CircleField(
