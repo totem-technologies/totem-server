@@ -9,7 +9,7 @@ pytz==2023.3  # https://github.com/stub42/pytz
 redis==4.5.5  # https://github.com/redis/redis-py
 uvicorn[standard]==0.22.0  # https://github.com/encode/uvicorn
 whitenoise==6.4.0  # https://github.com/evansd/whitenoise
-sentry-sdk[django]==1.24.0  # https://pypi.org/project/sentry-sdk/
+sentry-sdk[django]==1.25.0  # https://pypi.org/project/sentry-sdk/
 posthog<4.0.0  # https://pypi.org/project/posthog/
 
 # Django
