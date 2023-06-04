@@ -3,40 +3,42 @@
 {% block title %}User: {{ object.name }}{% endblock %}
 {% block content %}
   {% if object == request.user %}
-    <div class="section py-10">
-      <h1 class="h1">Hello {{ object.name|default:"friend" }}!</h1>
-    </div>
-    <div class="section-prose">
-      <p class="lead">
-        We're excited to get started. Please hold on while our Keepers find a Circle for you. We'll be in contact soon.
-      </p>
-      <p>
-        If you have any questions, please reach out to <a href="mailto:help@totem.org">help@totem.org</a>
-      </p>
-      {% comment %} <p>In the meantime, you can check out these great resources we've put together:</p>
+    <section class="section max-w-4xl m-auto">
+      <div class="py-10">
+        <h1 class="h1">Hello {{ object.name|default:"friend" }}!</h1>
+      </div>
+      <div class="tprose">
+        <p class="lead">
+          We're excited to get started. Please hold on while our Keepers find a Circle for you. We'll be in contact soon.
+        </p>
+        <p>
+          If you have any questions, please reach out to <a href="mailto:help@totem.org">help@totem.org</a>
+        </p>
+        {% comment %} <p>In the meantime, you can check out these great resources we've put together:</p>
       <ul>
         <li>Community Guidelines</li>
         <li>How Totem Works</li>
         <li>Meet the Team</li>
         <li>Find us on Instagram</li>
-      </ul> {% endcomment %}
-    </div>
-    <div class="py-5 px-5">
-      <div class="mb-5">
-        You can also change your preferences at any time:
-        <br>
-        <a class="md:w-1/3 btn btn-primary block mt-5"
-           href="{% url 'onboard:index' %}"
-           role="button">Change Preferences</a>
+        </ul> {% endcomment %}
       </div>
-      {% comment %} <div>
+      <div class="py-5">
+        <div class="mb-5">
+          You can also change your preferences at any time:
+          <br>
+          <a class="md:w-1/3 btn btn-primary block mt-5"
+             href="{% url 'onboard:index' %}"
+             role="button">Change Preferences</a>
+        </div>
+        {% comment %} <div>
           <a class="btn btn-primary" href="{% url 'account_email' %}" role="button">E-Mail</a>
-      </div> {% endcomment %}
-      <!-- Your Stuff: Custom user template urls -->
-      {% comment %} <a class="btn" href="{% url 'users:delete' %}" role="button">Delete Account</a> {% endcomment %}
-    </div>
-  {% else %}
-    <h1 class="h1">404</h1>
-    <p>User not found</p>
-  {% endif %}
+        </div> {% endcomment %}
+        <!-- Your Stuff: Custom user template urls -->
+        {% comment %} <a class="btn" href="{% url 'users:delete' %}" role="button">Delete Account</a> {% endcomment %}
+      </div>
+    {% else %}
+      <h1 class="h1">404</h1>
+      <p>User not found</p>
+    {% endif %}
+  </section>
 {% endblock content %}
