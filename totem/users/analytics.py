@@ -11,5 +11,6 @@ def identify_user(user):
         user.analytics_id(),
         {
             "environment": settings.ENVIRONMENT_NAME.lower(),
+            "staff": user.is_staff,
         },
     )
