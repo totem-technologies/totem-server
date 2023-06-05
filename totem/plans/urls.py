@@ -1,8 +1,22 @@
+from django.contrib.sitemaps import Sitemap
 from django.urls import path
 
 from . import views
+from .models import CirclePlan
 
 app_name = "plans"
+
+
+class PlansSitemap(Sitemap):
+    priority = 0.5
+    changefreq = "monthly"
+
+    def items(self):
+        return CirclePlan.objects.filter(published=True)
+
+    def lastmod(self, obj):
+        return obj.date_modified
+
 
 urlpatterns = [
     path("", views.PlanListView.as_view(), name="list"),

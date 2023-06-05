@@ -1,7 +1,31 @@
-from django.urls import path
+from django.contrib.sitemaps import Sitemap
+from django.urls import path, reverse
 from django.views.generic import RedirectView, TemplateView
 
 from . import views
+
+
+class PagesSitemap(Sitemap):
+    priority = 0.5
+    changefreq = "daily"
+
+    def items(self):
+        pages = [
+            "home",
+            "about",
+            "tos",
+            "privacy",
+            "team",
+            "how-it-works",
+            "keepers-gabe",
+            "keepers-heather",
+            "team-pam",
+        ]
+        return [f"pages:{page}" for page in pages]
+
+    def location(self, item):
+        return reverse(item)
+
 
 app_name = "pages"
 urlpatterns = [
@@ -15,6 +39,4 @@ urlpatterns = [
     path("keepers/gabe", TemplateView.as_view(template_name="pages/keepers/gabe.html"), name="keepers-gabe"),
     path("keepers/heather", TemplateView.as_view(template_name="pages/keepers/heather.html"), name="keepers-heather"),
     path("team/pam", TemplateView.as_view(template_name="pages/pam.html"), name="team-pam"),
-    path("participate/", view=views.ParticipateView.as_view(), name="participate"),
-    path("participate/onboard", view=views.ParticipateOnboardView.as_view(), name="participate-onboard"),
 ]

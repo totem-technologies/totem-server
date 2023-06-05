@@ -7,6 +7,8 @@ from django.utils import timezone
 
 
 class CirclePlan(models.Model):
+    ordering = ["-display_date"]
+
     name = models.CharField(max_length=255)
     description = models.TextField()
     content = models.TextField()
