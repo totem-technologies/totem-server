@@ -82,6 +82,7 @@ class LogInView(FormView):
             self.email_returning_user(user, url)
         else:
             self.email_new_user(user, url)
+        user.identify()
         return super().form_valid(form)
 
     def email_returning_user(self, user, url):

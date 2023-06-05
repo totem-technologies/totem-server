@@ -1,9 +1,12 @@
+from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.db.models import CharField, EmailField
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from totem.users.managers import UserManager
+
+from . import analytics
 
 
 class User(AbstractUser):
@@ -33,3 +36,9 @@ class User(AbstractUser):
 
         """
         return reverse("users:detail", kwargs={"pk": self.pk})
+
+    def identify(self):
+        analytics.identify_user(self)
+
+    def analytics_id(self):
+        return settings.ENVIRONMENT_NAME.lower() + "_" + str(self.pk)

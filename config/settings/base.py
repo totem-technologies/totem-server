@@ -308,3 +308,7 @@ if not DEBUG:
         traces_sample_rate=0.1,
         send_default_pii=True,
     )
+
+# posthog
+# ------------------------------------------------------------------------------
+POSTHOG_API_KEY = env("POSTHOG_API_KEY", default="phc_OJCztWvtlN5scoDe58jLipnOTCBugeidvZlni3FIy9z")
