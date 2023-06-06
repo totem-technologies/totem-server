@@ -7,6 +7,8 @@
     <div class="p-10 bg-white rounded-2xl">
         <h2 class="h2 pb-2">Totem Website</h2>
         <iframe width="100%"
+                id="website-metric-iframe"
+                name="WebsiteMetricIframe"
                 height="3000"
                 frameborder="0"
                 src="https://e.totem.org/embedded/BDfRaCvfIOe0vJ8iIGhHSPEeF81bmg?whitelabel"></iframe>
@@ -14,4 +16,11 @@
     <p class="text-sm pt-10 text-center">
         If nothing is showing up, you may need to disable ad blockers.
     </p>
+    <script type="text/javascript">
+        window.addEventListener('message', (e) => {
+            if (e.data.event === 'posthog:dimensions' && e.data.name === 'WebsiteMetricIframe') {
+                document.getElementById('website-metric-iframe').height = e.data.height
+            }
+        })
+    </script>
 {% endblock content %}
