@@ -1,9 +1,13 @@
 {% extends "base.html" %}
-
-{% block title %}Forbidden (403){% endblock %}
-
+{% block title %}
+    No Access
+{% endblock title %}
 {% block content %}
-<h1>Forbidden (403)</h1>
-
-<p>{% if exception %}{{ exception }}{% else %}You're not allowed to access this page.{% endif %}</p>
+    <h1 class="text-9xl h1 text-center">
+        4<span class="text-8xl">🚫</span>3
+    </h1>
+    <p class="text-center mt-4 text-xl">You do not have access to this page.</p>
+    <p class="text-center mt-4">
+        If you think this is a mistake, please <a class="a" href="mailto:bo@totem.org">contact us</a>.
+    </p>
 {% endblock content %}
