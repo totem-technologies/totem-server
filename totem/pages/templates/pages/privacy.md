@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last Updated: April 30, 2023**
+**Last Updated: June 6, 2023**
 
 Totem built the Totem app as a Freemium app. This SERVICE is provided by Totem at no cost and is intended for use as is.
 
@@ -18,9 +18,10 @@ The service does use third-party services that may collect information used to i
 
 Links to the privacy policy of third-party service providers used by the service:
 
-[Google Play Services](https://www.google.com/policies/privacy/)
-[Google Analytics for Firebase](https://firebase.google.com/policies/analytics)
-[Firebase Crashlytics](https://firebase.google.com/support/privacy/)
+- [Google Play Services](https://www.google.com/policies/privacy/)
+- [Google Analytics for Firebase](https://firebase.google.com/policies/analytics)
+- [Firebase Crashlytics](https://firebase.google.com/support/privacy/)
+- [Posthog](https://posthog.com/privacy)
 
 **Log Data**
 

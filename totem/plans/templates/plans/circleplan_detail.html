@@ -1,10 +1,14 @@
-{% extends "base.html" %} {% block content %}
-<div class="section-prose m-auto px-5">
-  <a class="no-underline" href="{% url 'plans:list' %}">
-    <h2 class="h2">Circle Plans</h2>
-  </a>
-  <h1>{{object.name}}</h1>
-  <p>{{object.description}}</p>
-  <p>{{object.content_html | safe }}</p>
-</div>
+{% extends "base.html" %}
+{% block title %}
+  Plans - {{ object.name }}
+{% endblock title %}
+{% block content %}
+  <div class="section-prose m-auto px-5">
+    <a class="no-underline" href="{% url 'plans:list' %}">
+      <h2 class="h2">Circle Plans</h2>
+    </a>
+    <h1>{{ object.name }}</h1>
+    <p>{{ object.description }}</p>
+    <p>{{ object.content_html | safe }}</p>
+  </div>
 {% endblock content %}
