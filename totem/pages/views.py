@@ -37,6 +37,12 @@ class TeamView(TemplateView):
             url=reverse_lazy("pages:keepers-heather"),
         ),
         Member(
+            name="Josie Maestre",
+            title="Keeper",
+            image="josie.jpg",
+            url=reverse_lazy("pages:keepers-josie"),
+        ),
+        Member(
             name="Steve Schalkhauser",
             title="Engineer, Phase 2",
             image="blank.jpg",
