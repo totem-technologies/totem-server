@@ -4,6 +4,7 @@
 <html lang="{{ LANGUAGE_CODE }}">
   <head>
     <meta charset="utf-8" />
+    <meta name="keywords" content="totem,circles" />
     <meta http-equiv="x-ua-compatible" content="ie=edge" />
     {# djlint:off #}
     <title>Totem Circles - {% block title %}Community-first support groups{% endblock title %}</title>
@@ -33,7 +34,7 @@
     {% endblock javascript %}
   </head>
   <body class="bg-primary flex flex-col h-screen">
-    {% include 'header.html' %}
+    {% include "header.html" %}
     <div class="container m-auto md:pt-16 flex-grow">
       {% if messages %}
         {% for message in messages %}
@@ -56,7 +57,7 @@
       {% block content %}
       {% endblock content %}
     </div>
-    {% include 'footer.html' %}
+    {% include "footer.html" %}
     {% block modal %}
     {% endblock modal %}
     {% block inline_javascript %}
