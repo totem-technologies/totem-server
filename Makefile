@@ -12,6 +12,9 @@ shell:
 dbshell:
 	docker-compose -f local.yml exec postgres bash
 
+sqlshell:
+	docker-compose -f local.yml exec postgres psql -U debug -d totem
+
 migrate:
 	./manage.py makemigrations && ./manage.py migrate
 
