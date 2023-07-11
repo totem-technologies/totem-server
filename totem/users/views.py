@@ -1,3 +1,5 @@
+from typing import Optional
+
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -31,7 +33,7 @@ class UserUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
 
     def get_success_url(self):
         assert self.request.user.is_authenticated  # for mypy to know that the user is authenticated
-        return self.request.user.get_absolute_url()
+        return self.request.user.get_absolute_url()  # type: ignore
 
     def get_object(self):
         return self.request.user
@@ -67,36 +69,56 @@ class LogInView(FormView):
             self._message()
 
         email = form.cleaned_data["email"].lower()
+        after_login_url = form.cleaned_data.get("after_login_url")
+        login(email, self.request, after_login_url=after_login_url)
 
-        existing = False
-
-        try:
-            user = User.objects.get(email=email)
-            existing = True
-        except User.DoesNotExist:
-            user = User.objects.create(email=email)
-
-        url = self.request.build_absolute_uri(reverse("magic-login")) + get_query_string(user)
-        url += "&next=" + form.cleaned_data.get("after_login_url", reverse("pages:home"))
-        if existing:
-            self.email_returning_user(user, url)
-        else:
-            self.email_new_user(user, url)
-        user.identify()
         return super().form_valid(form)
 
-    def email_returning_user(self, user, url):
-        send_mail(
-            "Login to ✨Totem✨",
-            "old_login",
-            {"url": mark_safe(url)},
-            recipient_list=[user.email],  # type: ignore
-        )
 
-    def email_new_user(self, user, url):
-        send_mail(
-            "Welcome to ✨Totem✨",
-            "new_login",
-            {"url": mark_safe(url)},
-            recipient_list=[user.email],  # type: ignore
-        )
+def email_returning_user(user, url):
+    send_mail(
+        "Login to ✨Totem✨",
+        "old_login",
+        {"url": mark_safe(url)},
+        recipient_list=[user.email],  # type: ignore
+    )
+
+
+def email_new_user(user, url):
+    send_mail(
+        "Welcome to ✨Totem✨",
+        "new_login",
+        {"url": mark_safe(url)},
+        recipient_list=[user.email],  # type: ignore
+    )
+
+
+def login(email: str, request, after_login_url: str | None = None, mobile: bool = False):
+    """Login a user by sending them a login link via email.
+
+    Args:
+        email (str): The email address to send the login link to.
+        after_login_url (str, optional): The URL to redirect to after the user logs in. Defaults to None.
+    """
+    existing = False
+
+    if not after_login_url:
+        after_login_url = reverse("pages:home")
+
+    try:
+        user = User.objects.get(email=email)
+        existing = True
+    except User.DoesNotExist:
+        user = User.objects.create(email=email)
+
+    if mobile:
+        url = "https://app.totem.org" + reverse("magic-login")
+    else:
+        url = request.build_absolute_uri(reverse("magic-login"))
+    url += get_query_string(user)
+    url += "&next=" + after_login_url
+    if existing:
+        email_returning_user(user, url)
+    else:
+        email_new_user(user, url)
+    user.identify()  # type: ignore

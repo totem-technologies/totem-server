@@ -7,6 +7,7 @@ from django.urls import include, path
 from django.views import defaults as default_views
 from sesame.views import LoginView
 
+from totem.api.api import api
 from totem.pages.urls import PagesSitemap
 from totem.plans.urls import PlansSitemap
 from totem.repos.urls import ReposSitemap
@@ -33,6 +34,8 @@ urlpatterns = [
     path("email/", include("totem.email.urls", namespace="email")),
     # Django Admin, use {% url 'admin:index' %}
     path(settings.ADMIN_URL, admin.site.urls),
+    # API
+    path("api/v1/", api.urls),  # type: ignore
     # User management
     path("users/", include("totem.users.urls", namespace="users")),
     path("accounts/", include("allauth.urls")),
