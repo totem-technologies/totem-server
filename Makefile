@@ -35,8 +35,8 @@ install_local: .venv
 	npm install
 
 pipcompile:
-	pip-compile --output-file requirements/local.txt requirements/local.in
-	pip-compile --output-file requirements/production.txt requirements/production.in
+	pip-compile --upgrade --output-file requirements/local.txt requirements/local.in
+	pip-compile --upgrade --output-file requirements/production.txt requirements/production.in
 
 pipsync:
 	pip-sync requirements/local.txt
