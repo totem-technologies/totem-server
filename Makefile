@@ -34,4 +34,11 @@ install_local: .venv
 	source .venv/bin/activate && pip install -Ur requirements/local.txt
 	npm install
 
+pipcompile:
+	pip-compile --output-file requirements/local.txt requirements/local.in
+	pip-compile --output-file requirements/production.txt requirements/production.in
+
+pipsync:
+	pip-sync requirements/local.txt
+
 .PHONY: run test shell migrate deploy assets
