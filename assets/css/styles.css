@@ -83,3 +83,9 @@
     background-position: 0px;
   }
 }
+
+
+/* Django */
+form .errorlist {
+  @apply text-red-700 text-sm;
+}
