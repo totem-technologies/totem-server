@@ -22,13 +22,13 @@ class TestUserAdmin:
         response = admin_client.post(
             url,
             data={
-                "email": "new-admin@example.com",
+                "email": "new-admin@totem.org",
                 "password1": "My_R@ndom-P@ssw0rd",
                 "password2": "My_R@ndom-P@ssw0rd",
             },
         )
         assert response.status_code == 302
-        assert User.objects.filter(email="new-admin@example.com").exists()
+        assert User.objects.filter(email="new-admin@totem.org").exists()
 
     def test_view_user(self, admin_client):
         user = User.objects.get(email="admin@example.com")

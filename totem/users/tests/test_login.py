@@ -13,19 +13,19 @@ class LogInViewTestCase(TestCase):
     def test_login_success(self):
         # Submit the login form with a valid email
         count = User.objects.count()
-        response = self.client.post(reverse("users:login"), {"email": "testuser@example.com"})
+        response = self.client.post(reverse("users:login"), {"email": "testuser@totem.org"})
 
         # Check that the response is a redirect to the success URL
         self.assertRedirects(response, reverse("users:login"))
 
         # Check that an email was sent
         self.assertEqual(len(mail.outbox), 1)
-        self.assertEqual(mail.outbox[0].to, ["testuser@example.com"])
+        self.assertEqual(mail.outbox[0].to, ["testuser@totem.org"])
         self.assertEqual(mail.outbox[0].subject, "Welcome to ✨Totem✨")
 
         # Check that a new user was created
         self.assertEqual(User.objects.count(), count + 1)
-        assert User.objects.get(email="testuser@example.com")
+        assert User.objects.get(email="testuser@totem.org")
 
     def test_login_existing_user(self):
         # Create an existing user

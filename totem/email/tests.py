@@ -35,4 +35,4 @@ def test_validate_email_blocked():
     assert validate_email_blocked("test@domain.com") is None
     assert validate_email_blocked("user@domain.com") is None
     with pytest.raises(ValidationError):
-        validate_email_blocked("test@example.com")
+        validate_email_blocked("test@data-backup-store.com")
