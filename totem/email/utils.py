@@ -25,7 +25,6 @@ def send_mail(
 
 
 def validate_email_blocked(value):
-    raise ValidationError("Sorry, but your email address is not allowed. ")
     for blocked in EMAIL_BLOCKLIST:
         if blocked in value:
-            raise ValidationError("Sorry, but your email address is not allowed. ")
+            raise ValidationError("Sorry, but your email address is not allowed.")
