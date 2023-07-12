@@ -70,7 +70,7 @@ class LogInView(FormView):
 
         email = form.cleaned_data["email"].lower()
         after_login_url = form.cleaned_data.get("after_login_url")
-        login(email, self.request, after_login_url=after_login_url)
+        login(email, self.request, after_login_url=after_login_url, name=form.cleaned_data.get("name"))
 
         return super().form_valid(form)
 
@@ -93,7 +93,7 @@ def email_new_user(user, url):
     )
 
 
-def login(email: str, request, after_login_url: str | None = None, mobile: bool = False):
+def login(email: str, request, after_login_url: str | None = None, mobile: bool = False, name: str | None = None):
     """Login a user by sending them a login link via email.
 
     Args:
@@ -110,6 +110,9 @@ def login(email: str, request, after_login_url: str | None = None, mobile: bool 
         existing = True
     except User.DoesNotExist:
         user = User.objects.create(email=email)
+        if name:
+            user.name = name  # type: ignore
+            user.save()
 
     if mobile:
         url = "https://app.totem.org" + reverse("magic-login")
@@ -122,3 +125,4 @@ def login(email: str, request, after_login_url: str | None = None, mobile: bool 
     else:
         email_new_user(user, url)
     user.identify()  # type: ignore
+    return user

@@ -13,7 +13,7 @@ class LogInViewTestCase(TestCase):
     def test_login_success(self):
         # Submit the login form with a valid email
         count = User.objects.count()
-        response = self.client.post(reverse("users:login"), {"email": "testuser@totem.org"})
+        response = self.client.post(reverse("users:login"), {"email": "testuser@totem.org", "name": "Test User"})
 
         # Check that the response is a redirect to the success URL
         self.assertRedirects(response, reverse("users:login"))
@@ -25,7 +25,7 @@ class LogInViewTestCase(TestCase):
 
         # Check that a new user was created
         self.assertEqual(User.objects.count(), count + 1)
-        assert User.objects.get(email="testuser@totem.org")
+        assert User.objects.get(email="testuser@totem.org", name="Test User")
 
     def test_login_existing_user(self):
         # Create an existing user
@@ -33,7 +33,7 @@ class LogInViewTestCase(TestCase):
         count = User.objects.count()
 
         # Submit the login form with an existing email
-        response = self.client.post(reverse("users:login"), {"email": user.email})
+        response = self.client.post(reverse("users:login"), {"email": user.email, "name": "Test User"})
 
         # Check that the response is a redirect to the success URL
         self.assertRedirects(response, reverse("users:login"))
@@ -43,8 +43,9 @@ class LogInViewTestCase(TestCase):
         self.assertEqual(mail.outbox[0].to, [user.email])
         self.assertEqual(mail.outbox[0].subject, "Login to ✨Totem✨")
 
-        # Check that no new user was created
+        # Check that no new user was created, and the name is not changed
         self.assertEqual(User.objects.count(), count)
+        assert user.name != "Test User"
 
     def test_login_failure(self):
         count = User.objects.count()
@@ -68,7 +69,12 @@ class LogInViewTestCase(TestCase):
         # Submit the login form with an existing email
         response = self.client.post(
             reverse("users:login"),
-            {"email": user.email, "after_login_url": "/foo", "success_url": reverse("pages:home")},
+            {
+                "email": user.email,
+                "name": "Test User",
+                "after_login_url": "/foo",
+                "success_url": reverse("pages:home"),
+            },
         )
 
         # Check that the response is a redirect to the success URL

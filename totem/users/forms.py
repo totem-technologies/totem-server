@@ -48,6 +48,7 @@ class UserSocialSignupForm(SocialSignupForm):
 
 
 class LoginForm(Form):
+    name = CharField(max_length=255)
     email = EmailField(validators=[validate_email_blocked])
     after_login_url = CharField(required=False, widget=HiddenInput())
     success_url = CharField(required=False, widget=HiddenInput())
