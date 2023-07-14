@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}
+    Circles - {{ object.title }}
+{% endblock title %}
+{% block content %}
+    <div class="section m-auto px-5">
+        <div>
+            <a class="no-underline items-center float-left space-x-2 flex"
+               href="{% url 'circles:list' %}">
+                <span class="align-middle">{% include "icons/arrow-left.svg" %}</span>
+                <h2 class="h2">All Circles</h2>
+            </a>
+        </div>
+    </div>
+    <div class="section m-auto  px-5">
+        <div class="rounded-2xl relative bg-gradient-to-r from-purple-500 to-pink-500">
+            <div class="p-10">
+                <div class="float-left">
+                    <a href="{{ object.type }}">{{ object.type }}</a>
+                </div>
+                <div class="float-right">{{ object.price }}</div>
+            </div>
+            <div class="md:p-20 pb-14 p-5 text-center space-y-3">
+                <h1 class="h1 pb-5">{{ object.title }}</h1>
+                <div>
+                    {% for tag in object.tags %}
+                        <a class="no-underline" href="{{ tag }}">
+                            <span class="badge badge-primary">{{ tag }}</span>
+                        </a>
+                    {% endfor %}
+                </div>
+                <div class="h2">{{ object.subtitle }}</div>
+                <div>
+                    By
+                    <strong><a href="{{ object.author }}">{{ object.author }}</a></strong>
+                </div>
+            </div>
+            <a class="btn-danger absolute bottom-5 left-5 shimmer" href="btn">RSVP</a>
+            <div style="height: 70px;"></div>
+            <img class="rounded-full absolute m-auto bottom-0 translate-y-1/2 left-1/2 -translate-x-1/2"
+                 width="200px"
+                 height="200px"
+                 src="{{ object.author_image_url }}"
+                 alt="{{ object.author }}" />
+        </div>
+        <div style="height: 120px;"></div>
+    </div>
+    <div class="section m-auto px-5">
+        <div class="h-1/2">Date: {{ object.datetime }}</div>
+        <div>Duration: {{ object.duration }}</div>
+        <div>Seats: 5</div>
+    </div>
+    <div class="section-prose m-auto px-5">
+        <p>{{ object.description }}</p>
+    </div>
+{% endblock content %}
