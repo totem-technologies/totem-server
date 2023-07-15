@@ -19,7 +19,7 @@ coverage<8.0.0  # https://github.com/nedbat/coveragepy
 black==23.7.0  # https://github.com/psf/black
 pylint-django==2.5.3  # https://github.com/PyCQA/pylint-django
 pre-commit<4  # https://github.com/pre-commit/pre-commit
-pip-tools<7
+pip-tools<8
 
 # Django
 # ------------------------------------------------------------------------------
