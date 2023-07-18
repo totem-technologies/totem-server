@@ -27,7 +27,9 @@ charset-normalizer==3.2.0
 click==8.1.4
     # via uvicorn
 cryptography==41.0.1
-    # via pyjwt
+    # via
+    #   django-anymail
+    #   pyjwt
 defusedxml==0.7.1
     # via python3-openid
 django==4.2.3
@@ -57,7 +59,7 @@ django-sesame==3.1
     # via -r requirements/base.in
 django-taggit==4.0.0
     # via -r requirements/base.in
-gunicorn==20.1.0
+gunicorn==21.1.0
     # via -r requirements/base.in
 h11==0.14.0
     # via uvicorn
@@ -75,6 +77,8 @@ monotonic==1.6
     # via posthog
 oauthlib==3.2.2
     # via requests-oauthlib
+packaging==23.1
+    # via gunicorn
 pillow==9.5.0
     # via -r requirements/base.in
 posthog==3.0.1
@@ -140,6 +144,3 @@ websockets==11.0.3
     # via uvicorn
 whitenoise==6.5.0
     # via -r requirements/base.in
-
-# The following packages are considered to be unsafe in a requirements file:
-# setuptools
