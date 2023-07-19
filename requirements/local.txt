@@ -6,8 +6,6 @@
 #
 anyio==3.7.1
     # via watchfiles
-appnope==0.1.3
-    # via ipython
 argon2-cffi==21.3.0
     # via -r requirements/base.in
 argon2-cffi-bindings==21.2.0
@@ -51,7 +49,9 @@ coverage==7.2.7
     #   -r requirements/local.in
     #   django-coverage-plugin
 cryptography==41.0.1
-    # via pyjwt
+    # via
+    #   django-anymail
+    #   pyjwt
 cssbeautifier==1.14.8
     # via djlint
 decorator==5.1.1
@@ -108,7 +108,7 @@ django-stubs-ext==4.2.2
     # via django-stubs
 django-taggit==4.0.0
     # via -r requirements/base.in
-djlint==1.31.1
+djlint==1.32.0
     # via -r requirements/local.in
 editorconfig==0.12.3
     # via
