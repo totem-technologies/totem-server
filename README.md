@@ -1,6 +1,9 @@
-# Totem Server
-
-[![Black code style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
+<div align="center">
+<h1>Totem Server</h1>
+<a href="https://github.com/ambv/black"><img alt="Black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
+<a href="https://github.com/totem-technologies/totem-server/actions/workflows/ci.yml"><img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/totem-technologies/totem-server/ci.yml?color=%2320A920&style=for-the-badge"></a>
+<p><em>Guided introspection groups at <a href="https://www.totem.org">totem.org</a></em></p>
+</div>
 
 ## Basic Commands
 
