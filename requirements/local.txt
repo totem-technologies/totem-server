@@ -26,6 +26,8 @@ black==23.7.0
     # via -r requirements/local.in
 build==0.10.0
     # via pip-tools
+cachetools==5.3.1
+    # via google-auth
 certifi==2023.5.7
     # via
     #   requests
@@ -38,7 +40,7 @@ cfgv==3.3.1
     # via pre-commit
 charset-normalizer==3.2.0
     # via requests
-click==8.1.4
+click==8.1.5
     # via
     #   black
     #   djlint
@@ -50,7 +52,7 @@ coverage==7.2.7
     # via
     #   -r requirements/local.in
     #   django-coverage-plugin
-cryptography==41.0.1
+cryptography==41.0.2
     # via pyjwt
 cssbeautifier==1.14.8
     # via djlint
@@ -118,7 +120,7 @@ executing==1.2.0
     # via stack-data
 factory-boy==3.2.1
     # via -r requirements/local.in
-faker==18.13.0
+faker==19.1.0
     # via factory-boy
 filelock==3.12.2
     # via virtualenv
@@ -128,6 +130,22 @@ flake8==6.0.0
     #   flake8-isort
 flake8-isort==6.0.0
     # via -r requirements/local.in
+google-api-core==2.11.1
+    # via google-api-python-client
+google-api-python-client==2.93.0
+    # via -r requirements/base.in
+google-auth==2.22.0
+    # via
+    #   google-api-core
+    #   google-api-python-client
+    #   google-auth-httplib2
+    #   google-auth-oauthlib
+google-auth-httplib2==0.1.0
+    # via google-api-python-client
+google-auth-oauthlib==1.0.0
+    # via -r requirements/base.in
+googleapis-common-protos==1.59.1
+    # via google-api-core
 gunicorn==20.1.0
     # via -r requirements/base.in
 h11==0.14.0
@@ -138,6 +156,10 @@ html-tag-names==0.1.2
     # via djlint
 html-void-elements==0.1.0
     # via djlint
+httplib2==0.22.0
+    # via
+    #   google-api-python-client
+    #   google-auth-httplib2
 httptools==0.6.0
     # via uvicorn
 identify==2.5.24
@@ -223,12 +245,22 @@ pre-commit==3.3.3
     # via -r requirements/local.in
 prompt-toolkit==3.0.39
     # via ipython
+protobuf==4.23.4
+    # via
+    #   google-api-core
+    #   googleapis-common-protos
 psycopg2==2.9.6
     # via -r requirements/base.in
 ptyprocess==0.7.0
     # via pexpect
 pure-eval==0.2.2
     # via stack-data
+pyasn1==0.5.0
+    # via
+    #   pyasn1-modules
+    #   rsa
+pyasn1-modules==0.3.0
+    # via google-auth
 pycodestyle==2.10.0
     # via flake8
 pycparser==2.21
@@ -249,6 +281,8 @@ pylint-django==2.5.3
     # via -r requirements/local.in
 pylint-plugin-utils==0.8.2
     # via pylint-django
+pyparsing==3.1.0
+    # via httplib2
 pyproject-hooks==1.0.0
     # via build
 pytest==7.4.0
@@ -287,15 +321,22 @@ requests==2.31.0
     # via
     #   django-allauth
     #   django-anymail
+    #   google-api-core
     #   posthog
     #   requests-oauthlib
 requests-oauthlib==1.3.1
-    # via django-allauth
-sentry-sdk[django]==1.28.0
+    # via
+    #   django-allauth
+    #   google-auth-oauthlib
+rsa==4.9
+    # via google-auth
+sentry-sdk[django]==1.28.1
     # via -r requirements/base.in
 six==1.16.0
     # via
     #   cssbeautifier
+    #   google-auth
+    #   google-auth-httplib2
     #   jsbeautifier
     #   posthog
     #   python-dateutil
@@ -329,16 +370,19 @@ typing-extensions==4.7.1
     #   django-stubs-ext
     #   mypy
     #   pydantic
-urllib3==2.0.3
+uritemplate==4.1.1
+    # via google-api-python-client
+urllib3==1.26.16
     # via
     #   django-anymail
+    #   google-auth
     #   requests
     #   sentry-sdk
 uvicorn[standard]==0.22.0
     # via -r requirements/base.in
 uvloop==0.17.0
     # via uvicorn
-virtualenv==20.23.1
+virtualenv==20.24.0
     # via pre-commit
 watchdog==3.0.0
     # via werkzeug

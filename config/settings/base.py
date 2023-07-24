@@ -1,6 +1,8 @@
 """
 Base settings to build other settings files upon.
 """
+import base64
+import json
 from pathlib import Path
 
 import environ
@@ -9,6 +11,12 @@ BASE_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
 # totem/
 APPS_DIR = BASE_DIR / "totem"
 env = environ.Env()
+
+
+def b64_json_env(key: str):
+    empty_json = "e30K"
+    return json.loads(base64.b64decode(env(key, default=empty_json)))
+
 
 READ_DOT_ENV_FILE = env.bool("DJANGO_READ_DOT_ENV_FILE", default=False)
 if READ_DOT_ENV_FILE:
@@ -314,3 +322,12 @@ if not DEBUG:
 # posthog
 # ------------------------------------------------------------------------------
 POSTHOG_API_KEY = env("POSTHOG_API_KEY", default="phc_OJCztWvtlN5scoDe58jLipnOTCBugeidvZlni3FIy9z")
+
+
+# google API
+# ------------------------------------------------------------------------------
+GOOGLE_SERVICE_JSON = b64_json_env("GOOGLE_SERVICE_JSON_B64")
+GOOGLE_CALENDAR_ID = env(
+    "GOOGLE_CALENDAR_ID",
+    default="c_ddf4458b375a1d28389aee93ed234ac1b51ee98ed37d09a8a22509a950bac115@group.calendar.google.com",
+)
