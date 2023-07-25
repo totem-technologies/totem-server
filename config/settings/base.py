@@ -35,6 +35,8 @@ DEBUG = env.bool("DJANGO_DEBUG", False)
 TIME_ZONE = "UTC"
 # https://docs.djangoproject.com/en/dev/ref/settings/#language-code
 LANGUAGE_CODE = "en-us"
+DATETIME_FORMAT = "jS M Y fA e"
+
 # https://docs.djangoproject.com/en/dev/ref/settings/#site-id
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#use-i18n
@@ -43,6 +45,7 @@ USE_I18N = True
 USE_TZ = True
 # https://docs.djangoproject.com/en/dev/ref/settings/#locale-paths
 LOCALE_PATHS = [str(BASE_DIR / "locale")]
+FORMAT_MODULE_PATH = ["totem.formats"]
 
 # DATABASES
 # ------------------------------------------------------------------------------
@@ -111,7 +114,7 @@ AUTH_USER_MODEL = "users.User"
 # https://docs.djangoproject.com/en/dev/ref/settings/#login-redirect-url
 LOGIN_REDIRECT_URL = "users:redirect"
 # https://docs.djangoproject.com/en/dev/ref/settings/#login-url
-LOGIN_URL = "account_login"
+LOGIN_URL = "users:login"
 
 # PASSWORDS
 # ------------------------------------------------------------------------------
@@ -146,6 +149,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "totem.utils.middleware.robotnoindex",
+    "totem.utils.middleware.TimezoneMiddleware",
 ]
 
 # STATIC

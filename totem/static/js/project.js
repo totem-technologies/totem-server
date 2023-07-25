@@ -4,3 +4,7 @@ dismiss_alert = function (e) {
 
 // initialize tooltips on DOM ready
 document.addEventListener("DOMContentLoaded", function () {});
+
+// Timezone settings
+const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone; // e.g. "America/New_York"
+document.cookie = `totem_timezone=${timezone}; SameSite=Strict`;

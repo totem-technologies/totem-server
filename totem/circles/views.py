@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
 
@@ -43,9 +44,14 @@ def detail(request, slug):
     circle = _get_circle(slug)
     if not circle.published and not request.user.is_staff:
         raise Http404
-    return render(request, "circles/detail.html", {"object": circle})
+    return render(
+        request,
+        "circles/detail.html",
+        {"object": circle, "attending": circle.attendees.contains(request.user)},
+    )
 
 
+@login_required
 def ics(request, slug):
     circle = _get_circle(slug)
     if not circle.published and not request.user.is_staff:
@@ -58,7 +64,9 @@ def ics(request, slug):
     return response
 
 
+@login_required
 def rsvp(request, slug):
+    # user = request.user
     if request.POST:
         circle = _get_circle(slug)
         if not circle.published and not request.user.is_staff:

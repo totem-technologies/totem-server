@@ -15,7 +15,7 @@ class Circle(SluggedModel):
     subtitle = models.CharField(max_length=2000)
     tags = TaggableManager()
     description = models.TextField()
-    image_url = models.URLField()
+    image_url = models.URLField(blank=True)
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, limit_choices_to={"is_staff": True})
     date_created = models.DateTimeField(auto_now_add=True)
     date_modified = models.DateTimeField(auto_now=True)
