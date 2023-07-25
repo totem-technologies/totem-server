@@ -1,7 +1,12 @@
 {% extends "base.html" %}
+{% load static %}
+{% load absurl %}
 {% block title %}
     Circles - {{ object.title }}
 {% endblock title %}
+{% block javascript %}
+    <script src="{% static 'js/atcb.min.js' %}"></script>
+{% endblock javascript %}
 {% block content %}
     <div class="section m-auto px-5">
         <div>
@@ -49,6 +54,9 @@
         <div class="h-1/2">Date: {{ object.datetime }}</div>
         <div>Duration: {{ object.duration }}</div>
         <div>Seats: 5</div>
+        <div>
+            <add-to-calendar-button name="Add to Calendar Button" hideCheckmark buttonStyle="round" startDate="{% now "Y-m-d" %}" subscribe icsFile="{% absurl 'circles:ics' slug='sfsd' %}" options="'Apple','Google','iCal','Outlook.com','Microsoft 365','Microsoft Teams','Yahoo'"></add-to-calendar-button>
+        </div>
     </div>
     <div class="section-prose m-auto px-5">
         <p>{{ object.description }}</p>
