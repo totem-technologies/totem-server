@@ -5,6 +5,7 @@ import googleapiclient.discovery
 from django.conf import settings
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
+from googleapiclient.discovery_cache.base import Cache
 from requests.auth import AuthBase
 
 
@@ -17,11 +18,21 @@ class OAuth(AuthBase):
         return r
 
 
+class MemoryCache(Cache):
+    _CACHE = {}
+
+    def get(self, url):
+        return MemoryCache._CACHE.get(url)
+
+    def set(self, url, content):
+        MemoryCache._CACHE[url] = content
+
+
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
 calid = settings.GOOGLE_CALENDAR_ID
 caldavurl = "https://apidata.googleusercontent.com/caldav/v2/" + calid + "/events"
 credentials = service_account.Credentials.from_service_account_info(settings.GOOGLE_SERVICE_JSON, scopes=SCOPES)
-service = googleapiclient.discovery.build("calendar", "v3", credentials=credentials)
+service = googleapiclient.discovery.build("calendar", "v3", credentials=credentials, cache=MemoryCache())
 client = caldav.DAVClient(caldavurl, auth=OAuth(credentials))
 
 # # events_result = service.events().list(calendarId=CAL_ID, singleEvents=True).execute()

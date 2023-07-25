@@ -32,6 +32,10 @@ class User(AbstractUser):
 
     objects = UserManager()
 
+    @property
+    def image(self):
+        return "https://picsum.photos/seed/picsum/300/300"
+
     def get_absolute_url(self) -> str:
         """Get URL for user's detail view.
 

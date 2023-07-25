@@ -21,6 +21,7 @@ app_name = "circles"
 urlpatterns = [
     path("", TemplateView.as_view(template_name="circles/list.html"), name="list"),
     path("<str:slug>/event.ics", views.ics, name="ics"),
+    path("<str:slug>/rsvp", views.rsvp, name="rsvp"),
     path("<str:slug>/", views.detail, name="detail"),
     # path("sitemap.xml", CirclesSitemap),
 ]

@@ -15,7 +15,7 @@ class SluggedModel(models.Model):
                 + random.sample(string.ascii_lowercase, 3)
             )
 
-            if not self.objects.filter(pk=newslug).exists():
+            if not self.__class__.objects.filter(slug=newslug).exists():
                 self.slug = newslug
 
         super().save(*args, **kwargs)
