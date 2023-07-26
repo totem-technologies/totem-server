@@ -19,7 +19,7 @@ coverage<8.0.0  # https://github.com/nedbat/coveragepy
 black==23.7.0  # https://github.com/psf/black
 pylint-django==2.5.3  # https://github.com/PyCQA/pylint-django
 pre-commit<4  # https://github.com/pre-commit/pre-commit
-pip-tools<7
+pip-tools<8
 
 # Django
 # ------------------------------------------------------------------------------
@@ -27,6 +27,6 @@ django-browser-reload<2  # https://github.com/adamchainz/django-browser-reload
 django-coverage-plugin<4  # https://github.com/nedbat/django_coverage_plugin
 django-debug-toolbar==4.1.0  # https://github.com/jazzband/django-debug-toolbar
 django-extensions==3.2.3  # https://github.com/django-extensions/django-extensions
-djlint==1.31.1  # https://pypi.org/project/djlint/
-factory-boy==3.2.1  # https://github.com/FactoryBoy/factory_boy
+djlint<2  # https://pypi.org/project/djlint/
+factory-boy<4  # https://github.com/FactoryBoy/factory_boy
 pytest-django==4.5.2  # https://github.com/pytest-dev/pytest-django

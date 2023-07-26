@@ -8,12 +8,8 @@ from django.urls import reverse
 
 User = get_user_model()
 
-import faker
-
 from .calendar import calendar
 from .models import Circle
-
-fake = faker.Faker()
 
 ICS_QUERY_PARAM = "key"
 
