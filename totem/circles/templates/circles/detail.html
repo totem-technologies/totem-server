@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% load static %}
+{% load absurl %}
+{% block title %}
+    Circles - {{ object.title }}
+{% endblock title %}
+{% block javascript %}
+    <script src="{% static 'js/atcb.min.js' %}"></script>
+{% endblock javascript %}
+{% block content %}
+    <div class="section m-auto px-5">
+        <div>
+            <a class="no-underline items-center float-left space-x-2 flex"
+               href="{% url 'circles:list' %}">
+                <span class="align-middle">{% include "icons/arrow-left.svg" %}</span>
+                <h2 class="h2">All Circles</h2>
+            </a>
+        </div>
+    </div>
+    <div class="section m-auto  px-5">
+        {% if not object.published %}
+            <div class="text-red-500 text-center pb-5">This circle is not published yet.</div>
+        {% endif %}
+        <div class="rounded-2xl relative bg-gradient-to-r from-purple-500 to-pink-500">
+            <div class="p-10">
+                <div class="float-left">
+                    <a href="{{ object.type }}">{{ object.type }}</a>
+                </div>
+                <div class="float-right">{{ object.price }}</div>
+            </div>
+            <div class="md:p-20 pb-14 p-5 text-center space-y-3">
+                <h1 class="h1 pb-3">{{ object.title }}</h1>
+                <div>
+                    {% for tag in object.tags.all %}
+                        <a class="no-underline" href="{{ tag }}">
+                            <span class="badge badge-primary">{{ tag }}</span>
+                        </a>
+                    {% endfor %}
+                </div>
+                <div class="h2">{{ object.subtitle }}</div>
+                <div>
+                    By
+                    <strong><a href="{{ object.author.get_absolute_url }}">{{ object.author.name }}</a></strong>
+                </div>
+            </div>
+            {% if attending %}
+                <form action="{% url 'circles:rsvp' slug=object.slug %}" method="post">
+                    {% csrf_token %}
+                    <button class="btn-danger absolute bottom-5 left-5"
+                            type="submit"
+                            value="Submit">Cancel</button>
+                </form>
+            {% else %}
+                <form action="{% url 'circles:rsvp' slug=object.slug %}" method="post">
+                    {% csrf_token %}
+                    <button class="btn-danger absolute bottom-5 left-5 shimmer"
+                            type="submit"
+                            value="Submit">Sign up</button>
+                </form>
+            {% endif %}
+            <div style="height: 70px;"></div>
+            <img class="rounded-full absolute m-auto bottom-0 translate-y-1/2 left-1/2 -translate-x-1/2"
+                 width="200px"
+                 height="200px"
+                 src="{{ object.author.image }}"
+                 alt="{{ object.author.name }}" />
+        </div>
+        <div style="height: 120px;"></div>
+    </div>
+    <div class=" m-auto px-5">
+        <div class="h-1/2">Starts: {{ object.start }}</div>
+        <div>Duration: {{ object.duration }}</div>
+        <div>Going: {{ object.number_of_attendees }}</div>
+        <div>
+            <add-to-calendar-button name="Add to Calendar Button" hideCheckmark buttonStyle="round" startDate="{% now "Y-m-d" %}" subscribe icsFile="{{ ics_url }}" options="'Apple','Google','iCal','Outlook.com','Microsoft 365','Microsoft Teams','Yahoo'"></add-to-calendar-button>
+        </div>
+    </div>
+    <div class="section-prose m-auto px-5">
+        <p>{{ object.description }}</p>
+    </div>
+{% endblock content %}

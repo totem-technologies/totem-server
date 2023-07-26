@@ -69,7 +69,7 @@ class LogInView(FormView):
             self._message()
 
         email = form.cleaned_data["email"].lower()
-        after_login_url = form.cleaned_data.get("after_login_url")
+        after_login_url = form.cleaned_data.get("after_login_url") or self.request.GET.get("next")
         login(email, self.request, after_login_url=after_login_url, name=form.cleaned_data.get("name"))
 
         return super().form_valid(form)
@@ -102,7 +102,7 @@ def login(email: str, request, after_login_url: str | None = None, mobile: bool 
     """
     existing = False
 
-    if not after_login_url:
+    if not after_login_url or after_login_url.startswith("http"):
         after_login_url = reverse("pages:home")
 
     try:
