@@ -5,7 +5,6 @@ from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.forms import BooleanField, CharField, Form, HiddenInput, Textarea, TextInput
 from django.shortcuts import redirect
-from django.urls import reverse
 from django.views.generic import TemplateView
 
 from .models import OnboardModel
@@ -89,7 +88,7 @@ class OnboardView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["name_form"] = OnboardNameForm(initial={"name": self.request.user.name})
+        context["name_form"] = OnboardNameForm(initial={"name": self.request.user.name})  # type: ignore
         onboard = self.get_onboard_model()
         context["circle_form"] = OnboardCircleForm(initial=onboard.__dict__)
         context["extra_form"] = OnboardExtraForm(initial=onboard.__dict__)
@@ -99,7 +98,7 @@ class OnboardView(LoginRequiredMixin, TemplateView):
         return OnboardModel.objects.get_or_create(user=self.request.user)[0]
 
     def get_success_url(self) -> str:
-        return self.request.user.get_absolute_url()
+        return self.request.user.get_absolute_url()  # type: ignore
 
     def post(self, request, *args, **kwargs):
         name_form = OnboardNameForm(request.POST)
@@ -109,19 +108,23 @@ class OnboardView(LoginRequiredMixin, TemplateView):
             self.request.user.name = name_form.cleaned_data.pop("name")
             self.request.user.save()
             onboard = self.get_onboard_model()
+            interests = []
             for key, value in circle_form.cleaned_data.items():
                 setattr(onboard, key, value)
+                if value:
+                    interests.append(key)
             for key, value in extra_form.cleaned_data.items():
                 setattr(onboard, key, value)
             onboard.onboarded = True
             onboard.save()
-            _notify_slack(self.request.user.name, request.build_absolute_uri(request.user.get_admin_url()))
+            admin_url = request.build_absolute_uri(request.user.get_admin_url())
+            _notify_slack(self.request.user.name, admin_url, interests)
             return redirect(self.get_success_url())
         else:
             return self.get(request, *args, **kwargs)
 
 
-def _notify_slack(user_name: str, url: str):
+def _notify_slack(user_name: str, url: str, interests: list[str]):
     if settings.SLACK_WEBHOOK_URL is None:
         return
 
@@ -129,8 +132,14 @@ def _notify_slack(user_name: str, url: str):
         "Content-type": "application/json",
     }
 
+    message = f"✨*{user_name} just onboarded!*✨\n They are interested in:\n"
+    for interest in interests:
+        message += f" · {interest}\n"
+
+    message += f"Say 'Hi ✌️' at: {url}"
+
     json_data = {
-        "text": f"{user_name} just onboarded! Say 'hi' at: {url}",
+        "text": message,
     }
 
     response = requests.post(

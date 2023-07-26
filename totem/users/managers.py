@@ -2,10 +2,11 @@ import secrets
 import string
 
 from django.contrib.auth.hashers import make_password
+from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import UserManager as DjangoUserManager
 
 
-class UserManager(DjangoUserManager):
+class UserManager(DjangoUserManager[AbstractUser]):
     """Custom manager for the User model."""
 
     def _create_user(self, email: str, password: str | None, **extra_fields):
