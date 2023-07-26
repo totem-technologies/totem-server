@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.mail import send_mail
+from django.shortcuts import render
 from django.urls import reverse, reverse_lazy
 from django.views.generic import FormView, TemplateView
 from sesame.utils import get_query_string
@@ -28,13 +29,22 @@ class TeamView(TemplateView):
         Member(name="Bo Lopker", title="Executive Director, Keeper", image="bo.jpg", url=reverse_lazy("pages:about")),
         Member(name="Pam Lopker", title="Board Member", image="pam.jpg", url=reverse_lazy("pages:team-pam")),
         Member(
-            name="Gabe Kenny", title="User Research, Keeper", image="gabe.jpg", url=reverse_lazy("pages:keepers-gabe")
+            name="Gabe Kenny",
+            title="User Research, Keeper",
+            image="gabe.jpg",
+            url=reverse_lazy("pages:keepers", kwargs={"name": "gabe"}),
         ),
         Member(
             name="Heather Gressett",
             title="Content Curator, Keeper",
             image="heather.jpg",
-            url=reverse_lazy("pages:keepers-heather"),
+            url=reverse_lazy("pages:keepers", kwargs={"name": "heather"}),
+        ),
+        Member(
+            name="Vanessa Robinson",
+            title="Keeper",
+            image="vanessa.jpg",
+            url=reverse_lazy("pages:keepers", kwargs={"name": "vanessa"}),
         ),
         # Member(
         #     name="Josie Maestre",
@@ -121,3 +131,7 @@ class HomeView(TemplateView):
             initial={"after_login_url": reverse("onboard:index"), "success_url": reverse("onboard:sent")}
         )
         return context
+
+
+def keepers(request, name):
+    return render(request, f"pages/keepers/{name}.html")
