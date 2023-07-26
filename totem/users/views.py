@@ -1,5 +1,5 @@
-from typing import Optional
-
+import requests
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -11,6 +11,7 @@ from django.views.generic import DetailView, FormView, RedirectView, UpdateView
 from sesame.utils import get_query_string
 
 from totem.email.utils import send_mail
+from totem.utils.slack import notify_slack
 
 from .forms import LoginForm
 
@@ -93,6 +94,10 @@ def email_new_user(user, url):
     )
 
 
+def _notify_slack():
+    notify_slack("Signup: A new person has signed up for ✨Totem✨!")
+
+
 def login(email: str, request, after_login_url: str | None = None, mobile: bool = False, name: str | None = None):
     """Login a user by sending them a login link via email.
 
@@ -124,5 +129,6 @@ def login(email: str, request, after_login_url: str | None = None, mobile: bool 
         email_returning_user(user, url)
     else:
         email_new_user(user, url)
+        _notify_slack()
     user.identify()  # type: ignore
     return user

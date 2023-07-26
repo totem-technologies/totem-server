@@ -7,6 +7,8 @@ from django.forms import BooleanField, CharField, Form, HiddenInput, Textarea, T
 from django.shortcuts import redirect
 from django.views.generic import TemplateView
 
+from totem.utils.slack import notify_slack
+
 from .models import OnboardModel
 
 
@@ -125,26 +127,8 @@ class OnboardView(LoginRequiredMixin, TemplateView):
 
 
 def _notify_slack(user_name: str, url: str, interests: list[str]):
-    if settings.SLACK_WEBHOOK_URL is None:
-        return
-
-    headers = {
-        "Content-type": "application/json",
-    }
-
-    message = f"✨*{user_name} just onboarded!*✨\n They are interested in:\n"
+    message = f"Onboarding: ✨*{user_name} just onboarded!*✨\n They are interested in:\n"
     for interest in interests:
         message += f" · {interest}\n"
-
     message += f"Say 'Hi ✌️' at: {url}"
-
-    json_data = {
-        "text": message,
-    }
-
-    response = requests.post(
-        settings.SLACK_WEBHOOK_URL,
-        headers=headers,
-        json=json_data,
-        timeout=10,
-    )
+    notify_slack(message)
