@@ -1,9 +1,10 @@
-import requests
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.messages.views import SuccessMessageMixin
+from django.core.exceptions import ObjectDoesNotExist
+from django.http import Http404
+from django.shortcuts import redirect
 from django.urls import reverse, reverse_lazy
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
@@ -105,30 +106,38 @@ def login(email: str, request, after_login_url: str | None = None, mobile: bool 
         email (str): The email address to send the login link to.
         after_login_url (str, optional): The URL to redirect to after the user logs in. Defaults to None.
     """
-    existing = False
+    user, created = User.objects.get_or_create(email=email)
+
+    if created and name:
+        user.name = name  # type: ignore
+        user.save()
 
     if not after_login_url or after_login_url.startswith("http"):
-        after_login_url = reverse("pages:home")
-
-    try:
-        user = User.objects.get(email=email)
-        existing = True
-    except User.DoesNotExist:
-        user = User.objects.create(email=email)
-        if name:
-            user.name = name  # type: ignore
-            user.save()
+        after_login_url = reverse("users:index")
 
     if mobile:
         url = "https://app.totem.org" + reverse("magic-login")
     else:
         url = request.build_absolute_uri(reverse("magic-login"))
+
     url += get_query_string(user)
     url += "&next=" + after_login_url
-    if existing:
-        email_returning_user(user, url)
-    else:
+    if created:
         email_new_user(user, url)
         _notify_slack()
+    else:
+        email_returning_user(user, url)
     user.identify()  # type: ignore
     return user
+
+
+def user_index_view(request):
+    user = request.user
+    if user.is_authenticated:
+        try:
+            if user.onboard and user.onboard.onboarded:
+                return redirect("users:detail", pk=request.user.pk)
+        except ObjectDoesNotExist:
+            pass
+        return redirect("onboard:index")
+    raise Http404

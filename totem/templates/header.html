@@ -16,7 +16,7 @@
         <a href="{% url 'admin:index' %}" class="mr-5">Admin</a>
       {% endif %}
       {% if request.user.is_authenticated %}
-        <a href="{% url 'users:detail' pk=request.user.pk %}" class="mr-5">{{ request.user.email }}</a>
+        <a href="{% url 'users:index' %}" class="mr-5">{{ request.user.email }}</a>
         <a href="{% url 'account_logout' %}" class="mr-5">Logout</a>
       {% else %}
         <a href="{% url 'users:login' %}" class="mr-5">Login</a>

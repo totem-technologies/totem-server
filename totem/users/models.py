@@ -28,7 +28,7 @@ class User(AbstractUser):
     username = None  # type: ignore
     api_key = UUIDField(_("API Key"), db_index=True, default=uuid.uuid4)
     ics_key = UUIDField(_("API Key"), db_index=True, default=uuid.uuid4)
-    profile_image = CharField(max_length=255, null=True)
+    profile_image = CharField(max_length=255, null=True, blank=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []

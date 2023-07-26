@@ -8,6 +8,7 @@ from django.http import HttpRequest, HttpResponseRedirect
 from django.test import RequestFactory
 from django.urls import reverse
 
+from totem.onboard.models import OnboardModel
 from totem.users.forms import UserAdminChangeForm
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
@@ -93,3 +94,31 @@ class TestUserDetailView:
         assert isinstance(response, HttpResponseRedirect)
         assert response.status_code == 302
         assert response.url == f"{login_url}?next=/fake-url/"
+
+
+from django.contrib.auth.models import AnonymousUser
+from django.http import Http404
+from django.test import RequestFactory
+
+from ..views import user_index_view
+
+
+def test_user_index_view():
+    factory = RequestFactory()
+    request = factory.get("/")
+    request.user = AnonymousUser()
+
+    with pytest.raises(Http404):
+        user_index_view(request)
+    user = UserFactory()
+    request.user = user
+    response = user_index_view(request)
+    assert response.status_code == 302
+    assert response.url == "/onboard/"
+
+    OnboardModel.objects.create(user=user)
+    user.onboard.onboarded = True
+    user.onboard.save()
+    response = user_index_view(request)
+    assert response.status_code == 302
+    assert response.url == f"/users/{user.pk}/"
