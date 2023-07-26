@@ -39,7 +39,10 @@ def detail(request, slug):
     circle = _get_circle(slug)
     if not circle.published and not request.user.is_staff:
         raise Http404
-    attending = circle.attendees.contains(request.user)
+    if request.user.is_authenticated:
+        attending = circle.attendees.contains(request.user)
+    else:
+        attending = False
     ics_url = ""
     if attending:
         ih = ics_hash(slug, request.user.ics_key)
@@ -50,7 +53,7 @@ def detail(request, slug):
     return render(
         request,
         "circles/detail.html",
-        {"object": circle, "attending": circle.attendees.contains(request.user), "ics_url": ics_url},
+        {"object": circle, "attending": attending, "ics_url": ics_url},
     )
 
 
