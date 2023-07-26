@@ -3,6 +3,7 @@ import json
 import caldav
 import googleapiclient.discovery
 from django.conf import settings
+from google.auth.credentials import Credentials
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 from googleapiclient.discovery_cache.base import Cache
@@ -28,12 +29,26 @@ class MemoryCache(Cache):
         MemoryCache._CACHE[url] = content
 
 
-SCOPES = ["https://www.googleapis.com/auth/calendar"]
-calid = settings.GOOGLE_CALENDAR_ID
-caldavurl = "https://apidata.googleusercontent.com/caldav/v2/" + calid + "/events"
-credentials = service_account.Credentials.from_service_account_info(settings.GOOGLE_SERVICE_JSON, scopes=SCOPES)
-service = googleapiclient.discovery.build("calendar", "v3", credentials=credentials, cache=MemoryCache())
-client = caldav.DAVClient(caldavurl, auth=OAuth(credentials))
+credentials: Credentials | None = None
+client: caldav.DAVClient | None = None
+
+
+def _init():
+    global credentials, client
+    if credentials is None:
+        SCOPES = ["https://www.googleapis.com/auth/calendar"]
+        calid = settings.GOOGLE_CALENDAR_ID
+        caldavurl = "https://apidata.googleusercontent.com/caldav/v2/" + calid + "/events"
+        credentials = service_account.Credentials.from_service_account_info(
+            settings.GOOGLE_SERVICE_JSON, scopes=SCOPES
+        )
+        client = caldav.DAVClient(caldavurl, auth=OAuth(credentials))
+    if credentials.expired or credentials.token is None:
+        credentials.refresh(Request())
+    # service = googleapiclient.discovery.build("calendar", "v3", credentials=credentials, cache=MemoryCache())
+
+    return client
+
 
 # # events_result = service.events().list(calendarId=CAL_ID, singleEvents=True).execute()
 # events_result = service.events().get(calendarId=calid, eventId="51h15rb48o1ighm3rn79dn6vhi").execute()
@@ -55,13 +70,14 @@ client = caldav.DAVClient(caldavurl, auth=OAuth(credentials))
 # #  }).execute()
 
 
-def get_calendar_event(id: str):
-    events_result = service.events().get(calendarId=calid, eventId="51h15rb48o1ighm3rn79dn6vhi").execute()
+# def get_calendar_event(id: str):
+#     events_result = service.events().get(calendarId=calid, eventId="51h15rb48o1ighm3rn79dn6vhi").execute()
 
 
 def get_event_ical(event_id: str):
-    if credentials.expired or credentials.token is None:
-        credentials.refresh(Request())
+    client = _init()
+    if client is None:
+        raise Exception("Client is None")
     calendar = client.principal().calendars()[0]
     event = calendar.event(event_id)
     return event.data
