@@ -72,7 +72,7 @@
         <div>Duration: {{ object.duration }}</div>
         <div>Going: {{ object.number_of_attendees }}</div>
         <div>
-            <add-to-calendar-button name="Add to Calendar Button" hideCheckmark buttonStyle="round" startDate="{% now "Y-m-d" %}" subscribe icsFile="{% absurl 'circles:ics' slug='sfsd' %}" options="'Apple','Google','iCal','Outlook.com','Microsoft 365','Microsoft Teams','Yahoo'"></add-to-calendar-button>
+            <add-to-calendar-button name="Add to Calendar Button" hideCheckmark buttonStyle="round" startDate="{% now "Y-m-d" %}" subscribe icsFile="{{ ics_url }}" options="'Apple','Google','iCal','Outlook.com','Microsoft 365','Microsoft Teams','Yahoo'"></add-to-calendar-button>
         </div>
     </div>
     <div class="section-prose m-auto px-5">

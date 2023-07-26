@@ -15,11 +15,11 @@ class Circle(SluggedModel):
     subtitle = models.CharField(max_length=2000)
     tags = TaggableManager()
     description = models.TextField()
-    image_url = models.URLField(blank=True)
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, limit_choices_to={"is_staff": True})
     date_created = models.DateTimeField(auto_now_add=True)
     date_modified = models.DateTimeField(auto_now=True)
-    published = models.BooleanField(default=False)
+    published = models.BooleanField(default=False, help_text="Is this Circle visible?")
+    open = models.BooleanField(default=True, help_text="Is this Circle for more attendees?")
     price = models.CharField(max_length=255)
     type = "Circle"
     start = models.DateTimeField()
@@ -56,3 +56,6 @@ class Circle(SluggedModel):
 
     def number_of_attendees(self):
         return self.attendees.count()
+
+    def attendee_list(self):
+        return ", ".join([str(attendee) for attendee in self.attendees.all()])

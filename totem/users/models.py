@@ -26,6 +26,8 @@ class User(AbstractUser):
     email = EmailField(_("email address"), unique=True, validators=[validate_email_blocked])
     username = None  # type: ignore
     api_key = UUIDField(_("API Key"), db_index=True, default=uuid.uuid4)
+    ics_key = UUIDField(_("API Key"), db_index=True, default=uuid.uuid4)
+    profile_image = CharField(max_length=255, null=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
@@ -34,6 +36,8 @@ class User(AbstractUser):
 
     @property
     def image(self):
+        if self.profile_image:
+            return self.profile_image
         return "https://picsum.photos/seed/picsum/300/300"
 
     def get_absolute_url(self) -> str:
