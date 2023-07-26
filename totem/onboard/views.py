@@ -1,8 +1,11 @@
 from dataclasses import dataclass
 
+import requests
+from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.forms import BooleanField, CharField, Form, HiddenInput, Textarea, TextInput
 from django.shortcuts import redirect
+from django.urls import reverse
 from django.views.generic import TemplateView
 
 from .models import OnboardModel
@@ -112,6 +115,27 @@ class OnboardView(LoginRequiredMixin, TemplateView):
                 setattr(onboard, key, value)
             onboard.onboarded = True
             onboard.save()
+            _notify_slack(self.request.user.name, request.build_absolute_uri(request.user.get_admin_url()))
             return redirect(self.get_success_url())
         else:
             return self.get(request, *args, **kwargs)
+
+
+def _notify_slack(user_name: str, url: str):
+    if settings.SLACK_WEBHOOK_URL is None:
+        return
+
+    headers = {
+        "Content-type": "application/json",
+    }
+
+    json_data = {
+        "text": f"{user_name} just onboarded! Say 'hi' at: {url}",
+    }
+
+    response = requests.post(
+        settings.SLACK_WEBHOOK_URL,
+        headers=headers,
+        json=json_data,
+        timeout=10,
+    )

@@ -49,6 +49,9 @@ class User(AbstractUser):
         """
         return reverse("users:detail", kwargs={"pk": self.pk})
 
+    def get_admin_url(self):
+        return reverse(f"admin:{self._meta.app_label}_{self._meta.model_name}_change", args=(self.pk,))
+
     def identify(self):
         analytics.identify_user(self)
 

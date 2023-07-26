@@ -335,3 +335,8 @@ GOOGLE_CALENDAR_ID = env(
     "GOOGLE_CALENDAR_ID",
     default="c_ddf4458b375a1d28389aee93ed234ac1b51ee98ed37d09a8a22509a950bac115@group.calendar.google.com",
 )
+
+
+# Slack
+# ------------------------------------------------------------------------------
+SLACK_WEBHOOK_URL = env("SLACK_WEBHOOK_URL", default=None)
