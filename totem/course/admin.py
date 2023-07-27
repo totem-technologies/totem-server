@@ -6,7 +6,6 @@ from .models import CoursePage
 @admin.register(CoursePage)
 class CoursePageAdmin(admin.ModelAdmin):
     list_display = (
-        "id",
         "title",
         "slug",
         "created_by",
