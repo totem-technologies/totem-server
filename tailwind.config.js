@@ -5,7 +5,7 @@
  * https://unpkg.com/browse/tailwindcss@latest/stubs/defaultConfig.stub.js
  */
 
-const basedir = "totem";
+const basedir = "totem"
 
 // Creme
 // CMYK: 3, 3, 7, 0 RGB: 243, 241, 233 HEX: F3F1E9
@@ -36,7 +36,7 @@ const totemColors = {
   blueTint: "#55778F",
   pink: "#D999AA",
   pinkTint: "#8B5363",
-};
+}
 
 module.exports = {
   content: [
@@ -110,4 +110,4 @@ module.exports = {
     require("@tailwindcss/line-clamp"),
     require("@tailwindcss/aspect-ratio"),
   ],
-};
+}

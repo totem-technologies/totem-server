@@ -409,7 +409,10 @@
     "prompt": "Imagine you are in conflict with a person who is important in your life. What values do you want to guide your conduct as you try to work out that conflict?",
     "tags": ["exploringvalues", "courage", "conflict"]
   },
-  { "prompt": "What is your passion?", "tags": ["exploringvalues", "passion"] },
+  {
+    "prompt": "What is your passion?",
+    "tags": ["exploringvalues", "passion"]
+  },
   {
     "prompt": "What do you keep returning to in your life?",
     "tags": ["exploringvalues", "life"]
