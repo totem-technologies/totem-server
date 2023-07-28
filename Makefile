@@ -24,8 +24,11 @@ deploy:
 deploy-prod:
 	git push dokku-prod
 
-assets:
+assets-watch:
 	npm run dev
+
+assets:
+	npm run build
 
 .venv:
 	python3 -m venv .venv
