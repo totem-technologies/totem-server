@@ -1,5 +1,6 @@
 from typing import Any, List
 
+from anymail.message import AnymailMessage
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail as django_send_mail
@@ -22,6 +23,28 @@ def send_mail(
     return django_send_mail(
         subject, text_message, from_email, recipient_list, fail_silently=fail_silently, html_message=html_message
     )
+
+
+def send_template_mail(
+    *,
+    template_id: str,
+    recipient: str,
+    subject: str,
+    context: dict[str, str],
+    from_email: str = settings.DEFAULT_FROM_EMAIL,
+    fail_silently: bool = False,
+) -> int:
+    if settings.DEBUG:
+        print(f"Sending email to {recipient} with template {template_id}")
+        print(f"Context: {context}")
+    message = AnymailMessage(
+        subject=subject,  # use the subject in our stored template
+        from_email=from_email,
+        to=[recipient],
+    )
+    message.template_id = template_id  # use this ESP stored template
+    message.merge_global_data = context  # per-recipient data to merge into the template
+    return message.send(fail_silently=fail_silently)
 
 
 def validate_email_blocked(value):

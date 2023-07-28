@@ -21,7 +21,7 @@ class LogInViewTestCase(TestCase):
         # Check that an email was sent
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, ["testuser@totem.org"])
-        self.assertEqual(mail.outbox[0].subject, "Welcome to ✨Totem✨")
+        self.assertEqual(mail.outbox[0].subject, "Welcome to ✨Totem✨!")
 
         # Check that a new user was created
         self.assertEqual(User.objects.count(), count + 1)
@@ -41,7 +41,7 @@ class LogInViewTestCase(TestCase):
         # Check that an email was sent
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, [user.email])
-        self.assertEqual(mail.outbox[0].subject, "Login to ✨Totem✨")
+        self.assertEqual(mail.outbox[0].subject, "Sign in to Totem!")
 
         # Check that no new user was created, and the name is not changed
         self.assertEqual(User.objects.count(), count)
@@ -83,7 +83,7 @@ class LogInViewTestCase(TestCase):
         # Check that an email was sent
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, [user.email])
-        self.assertEqual(mail.outbox[0].subject, "Login to ✨Totem✨")
-        assert "next=/foo" in mail.outbox[0].body
+        self.assertEqual(mail.outbox[0].subject, "Sign in to Totem!")
+        assert "next=/foo" in mail.outbox[0].merge_global_data["link"]
         # Check that no new user was created
         self.assertEqual(User.objects.count(), count)

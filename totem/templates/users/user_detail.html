@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load settings_value %}
 {% load static %}
 {% block title %}User: {{ object.name }}{% endblock %}
 {% block content %}
@@ -13,33 +14,35 @@
         </p>
         <p>Welcome to the Totem Community!</p>
         <p>
-          If you have any questions, please reach out to <a href="mailto:help@totem.org">help@totem.org</a>
-        </p>
-        {% comment %} <p>In the meantime, you can check out these great resources we've put together:</p>
+          If you have any questions, please reach out to <a href="mailto:{% settings_value 'EMAIL_SUPPORT_ADDRESS' %}">
+          {% settings_value 'EMAIL_SUPPORT_ADDRESS' %}
+        </a>
+      </p>
+      {% comment %} <p>In the meantime, you can check out these great resources we've put together:</p>
       <ul>
         <li>Community Guidelines</li>
         <li>How Totem Works</li>
         <li>Meet the Team</li>
         <li>Find us on Instagram</li>
-        </ul> {% endcomment %}
+      </ul> {% endcomment %}
+    </div>
+    <div class="py-5">
+      <div class="mb-5">
+        You can also change your preferences at any time:
+        <br>
+        <a class="md:w-1/3 btn btn-primary block mt-5"
+           href="{% url 'onboard:index' %}"
+           role="button">Change Preferences</a>
       </div>
-      <div class="py-5">
-        <div class="mb-5">
-          You can also change your preferences at any time:
-          <br>
-          <a class="md:w-1/3 btn btn-primary block mt-5"
-             href="{% url 'onboard:index' %}"
-             role="button">Change Preferences</a>
-        </div>
-        {% comment %} <div>
+      {% comment %} <div>
           <a class="btn btn-primary" href="{% url 'account_email' %}" role="button">E-Mail</a>
-        </div> {% endcomment %}
-        <!-- Your Stuff: Custom user template urls -->
-        {% comment %} <a class="btn" href="{% url 'users:delete' %}" role="button">Delete Account</a> {% endcomment %}
-      </div>
-    {% else %}
-      <h1 class="h1">404</h1>
-      <p>User not found</p>
-    {% endif %}
-  </section>
+      </div> {% endcomment %}
+      <!-- Your Stuff: Custom user template urls -->
+      {% comment %} <a class="btn" href="{% url 'users:delete' %}" role="button">Delete Account</a> {% endcomment %}
+    </div>
+  {% else %}
+    <h1 class="h1">404</h1>
+    <p>User not found</p>
+  {% endif %}
+</section>
 {% endblock content %}

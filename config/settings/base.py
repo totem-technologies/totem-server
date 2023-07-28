@@ -229,6 +229,20 @@ EMAIL_BACKEND = env(
 EMAIL_TIMEOUT = 5
 EMAIL_BASE_URL = env("EMAIL_BASE_URL", default="http://localhost:8000")
 
+# https://docs.djangoproject.com/en/dev/ref/settings/#default-from-email
+DEFAULT_FROM_EMAIL = env(
+    "DJANGO_DEFAULT_FROM_EMAIL",
+    default="Totem <computer@totem.org>",
+)
+# https://docs.djangoproject.com/en/dev/ref/settings/#server-email
+SERVER_EMAIL = env("DJANGO_SERVER_EMAIL", default=DEFAULT_FROM_EMAIL)
+# https://docs.djangoproject.com/en/dev/ref/settings/#email-subject-prefix
+EMAIL_SUBJECT_PREFIX = env(
+    "DJANGO_EMAIL_SUBJECT_PREFIX",
+    default="[Totem]",
+)
+EMAIL_SUPPORT_ADDRESS = "help@totem.org"
+
 # ADMIN
 # ------------------------------------------------------------------------------
 # Django Admin URL.

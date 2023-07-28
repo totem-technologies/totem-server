@@ -11,7 +11,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views.generic import DetailView, FormView, RedirectView, UpdateView
 from sesame.utils import get_query_string
 
-from totem.email.utils import send_mail
+from totem.email import emails
 from totem.utils.slack import notify_slack
 
 from .forms import LoginForm
@@ -59,44 +59,46 @@ class LogInView(FormView):
     form_class = LoginForm
     success_url = reverse_lazy("users:login")
 
-    def _message(self):
-        messages.success(self.request, "Check your email for a login link.")
+    def _message(self, email: str):
+        messages.success(self.request, "Sign in link sent to " + mark_safe(email))
 
     def form_valid(self, form):
         success_url = form.cleaned_data.get("success_url")
+        email = form.cleaned_data["email"].lower()
+        after_login_url = form.cleaned_data.get("after_login_url") or self.request.GET.get("next")
+        login(email, self.request, after_login_url=after_login_url, name=form.cleaned_data.get("name"))
         if success_url:
             self.success_url = success_url
         else:
             # Always set message no matter what
-            self._message()
-
-        email = form.cleaned_data["email"].lower()
-        after_login_url = form.cleaned_data.get("after_login_url") or self.request.GET.get("next")
-        login(email, self.request, after_login_url=after_login_url, name=form.cleaned_data.get("name"))
-
+            self._message(email)
         return super().form_valid(form)
 
 
 def email_returning_user(user, url):
-    send_mail(
-        "Login to ✨Totem✨",
-        "old_login",
-        {"url": mark_safe(url)},
-        recipient_list=[user.email],  # type: ignore
-    )
+    emails.send_returning_login_email(user.email, url)
 
 
 def email_new_user(user, url):
-    send_mail(
-        "Welcome to ✨Totem✨",
-        "new_login",
-        {"url": mark_safe(url)},
-        recipient_list=[user.email],  # type: ignore
-    )
+    emails.send_new_login_email(user.email, url)
 
 
 def _notify_slack():
     notify_slack("Signup: A new person has signed up for ✨Totem✨!")
+
+
+def _login_url(user, request, after_login_url: str | None, mobile: bool) -> str:
+    if not after_login_url or after_login_url.startswith("http"):
+        after_login_url = reverse("users:index")
+
+    if mobile:
+        url = "https://app.totem.org" + reverse("magic-login")
+    else:
+        url = request.build_absolute_uri(reverse("magic-login"))
+
+    url += get_query_string(user)
+    url += "&next=" + after_login_url
+    return url
 
 
 def login(email: str, request, after_login_url: str | None = None, mobile: bool = False, name: str | None = None):
@@ -112,21 +114,14 @@ def login(email: str, request, after_login_url: str | None = None, mobile: bool 
         user.name = name  # type: ignore
         user.save()
 
-    if not after_login_url or after_login_url.startswith("http"):
-        after_login_url = reverse("users:index")
+    url = _login_url(user, request, after_login_url, mobile)
 
-    if mobile:
-        url = "https://app.totem.org" + reverse("magic-login")
-    else:
-        url = request.build_absolute_uri(reverse("magic-login"))
-
-    url += get_query_string(user)
-    url += "&next=" + after_login_url
     if created:
         email_new_user(user, url)
         _notify_slack()
     else:
         email_returning_user(user, url)
+
     user.identify()  # type: ignore
     return user
 
