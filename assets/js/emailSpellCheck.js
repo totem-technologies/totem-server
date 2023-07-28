@@ -12,7 +12,6 @@ function debounce(func, timeout = 300) {
 
 function init() {
     document.querySelectorAll('input[type=email]').forEach((input) => {
-        console.log(input)
         function clearAlert(e) {
             const alert = e.target.parentElement.querySelector(
                 '.email-alert-dismissible'
@@ -22,7 +21,6 @@ function init() {
             }
         }
         const myScript = (e) => {
-            console.log('blurp')
             const email = e.target.value.trim()
             const suggestedEmail = emailSpellChecker.run({
                 email,
