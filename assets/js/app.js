@@ -4,10 +4,7 @@ dismiss_alert = function (e) {
     e.closest('.alert-dismissible').remove()
 }
 
-// initialize tooltips on DOM ready
-document.addEventListener('DOMContentLoaded', function () {})
-
-// Timezone settings
+// Timezone settings. See TimezoneMiddleware in utils/middleware.py
 const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone // e.g. "America/New_York"
 document.cookie = `totem_timezone=${timezone}; SameSite=Strict`
 

@@ -15,8 +15,8 @@
         {% translate "Please sign in with one of your existing third party accounts:" %}
         {% if ACCOUNT_ALLOW_REGISTRATION %}
           {% blocktranslate trimmed %}
-        Or, <a href="{{ signup_url }}">sign up</a>
-        for a {{ site_name }} account and sign in below:
+            Or, <a href="{{ signup_url }}">sign up</a>
+            for a {{ site_name }} account and sign in below:
           {% endblocktranslate %}
         {% endif %}
       </p>
@@ -31,8 +31,8 @@
       {% if ACCOUNT_ALLOW_REGISTRATION %}
         <p>
           {% blocktranslate trimmed %}
-        If you have not created an account yet, then please
-        <a class="a" href="{{ signup_url }}">sign up</a> first.
+            If you have not created an account yet, then please
+            <a class="a" href="{{ signup_url }}">sign up</a> first.
           {% endblocktranslate %}
         </p>
       {% endif %}
