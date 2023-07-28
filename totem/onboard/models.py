@@ -23,3 +23,7 @@ class OnboardModel(models.Model):
 
     def __str__(self):
         return f"Onboard: {self.user}"
+
+    @property
+    def user_name(self):
+        return self.user.name
