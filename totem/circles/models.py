@@ -5,16 +5,17 @@ from django.db import models
 from django.urls import reverse
 from taggit.managers import TaggableManager
 
+from totem.utils.md import MarkdownField, MarkdownMixin
 from totem.utils.models import SluggedModel
 
 # Create your models here.
 
 
-class Circle(SluggedModel):
+class Circle(MarkdownMixin, SluggedModel):
     title = models.CharField(max_length=255)
     subtitle = models.CharField(max_length=2000)
     tags = TaggableManager()
-    description = models.TextField()
+    content = MarkdownField(default="")
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, limit_choices_to={"is_staff": True})
     date_created = models.DateTimeField(auto_now_add=True)
     date_modified = models.DateTimeField(auto_now=True)
@@ -54,8 +55,8 @@ class Circle(SluggedModel):
     def get_absolute_url(self) -> str:
         return reverse("circles:detail", kwargs={"slug": self.slug})
 
-    def number_of_attendees(self):
-        return self.attendees.count()
+    def seats_left(self):
+        return 8 - self.attendees.count()
 
     def attendee_list(self):
         return ", ".join([str(attendee) for attendee in self.attendees.all()])

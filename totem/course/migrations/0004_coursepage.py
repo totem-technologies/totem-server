@@ -2,7 +2,7 @@
 
 from django.db import migrations, models
 import totem.course.models
-import totem.utils.fields
+import totem.utils.md
 
 
 class Migration(migrations.Migration):
@@ -18,10 +18,10 @@ class Migration(migrations.Migration):
                 ("title", models.CharField(max_length=255)),
                 ("slug", models.SlugField(unique=True)),
                 ("enable_toc", models.BooleanField(default=False)),
-                ("content", totem.utils.fields.MarkdownField()),
+                ("content", totem.utils.md.MarkdownField()),
                 ("date_created", models.DateTimeField(auto_now_add=True)),
                 ("date_modified", models.DateTimeField(auto_now=True)),
             ],
-            bases=(totem.course.models.MardownMixin, models.Model),
+            bases=(totem.utils.md.MarkdownMixin, models.Model),
         ),
     ]

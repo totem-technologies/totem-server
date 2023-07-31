@@ -1,6 +1,10 @@
 window.addEventListener("DOMContentLoaded", (event) => {
-  const easyMDE = new EasyMDE({
-    element: document.querySelector(".markdown-widget"),
-    maxHeight: "1000px",
+  const fields = document.querySelectorAll(".markdown-widget")
+  fields.forEach((field) => {
+    const height = field.getAttribute("height") || "1000px"
+    const easyMDE = new EasyMDE({
+      element: field,
+      maxHeight: height,
+    })
   })
 })
