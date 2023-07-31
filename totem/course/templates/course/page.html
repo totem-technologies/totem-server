@@ -4,8 +4,8 @@
     {% if page %}
         <div class="{% if page.enable_toc %}section{% else %}section-prose{% endif %} flex m-auto px-5">
             {% if page.enable_toc %}
-                <div class="w-72 max-sm:hidden">
-                    <div class="pt-40 w-72 pr-5 page-toc">{{ page.toc | safe }}</div>
+                <div class="w-72 max-sm:hidden pt-20">
+                    <div class="pr-5 sticky top-20 page-toc">{{ page.toc | safe }}</div>
                 </div>
             {% endif %}
             <div class="tprose flex-1 page-content">
@@ -34,7 +34,6 @@
                 tocSelector: '.page-toc',
                 contentSelector: '.page-content',
                 headingSelector: 'h1, h2, h3, h4, h5, h6',
-                positionFixedSelector: '.page-toc',
                 includeHtml: true,
                 includeTitleTags: false,
                 hasInnerContainers: false,

@@ -15,7 +15,7 @@
         {% if not object.published %}
             <div class="text-red-500 text-center pb-5">This circle is not published yet.</div>
         {% endif %}
-        <div class="rounded-2xl relative bg-gradient-to-r from-purple-500 to-pink-500">
+        <div class="rounded-2xl relative bg-gradient-to-r from-purple-500 to-pink-500 mb-5">
             <div class="absolute top-5 left-5">
                 <a href="{{ object.type }}">{{ object.type }}</a>
             </div>
@@ -42,27 +42,35 @@
                     <strong><a href="{{ object.author.get_absolute_url }}">{{ object.author.name }}</a></strong>
                 </div>
             </div>
-            <div class="text-center pb-5">
-                {% if attending %}
-                    <form action="{% url 'circles:rsvp' slug=object.slug %}" method="post">
-                        {% csrf_token %}
-                        <button class="btn-danger p-2 px-6" type="submit" value="Submit">Cancel</button>
-                    </form>
-                {% else %}
-                    <form action="{% url 'circles:rsvp' slug=object.slug %}" method="post">
-                        {% csrf_token %}
-                        <button class="btn-danger p-2 px-6 shimmer" type="submit" value="Submit">Reserve</button>
-                    </form>
-                {% endif %}
-            </div>
-        </div>
-        <div class="pt-5">
-            <div class="h-1/2">Starts: {{ object.start }}</div>
-            <div>Duration: {{ object.duration }}</div>
-            <div>Seats left: {{ object.seats_left }}</div>
         </div>
     </div>
-    <div class="section-prose m-auto px-5">
-        <p>{{ object.content_html }}</p>
+    <div class="flex max-w-5xl m-auto px-5">
+        <div class="tprose pr-4">
+            <p>{{ object.content_html }}</p>
+        </div>
+        <div class="max-md:fixed max-md:bottom-0 max-md:left-0 w-full">
+            <div class=" bg-white p-5 rounded-2xl border w-80 sticky top-20 border-gray-200 max-md:w-full">
+                <div>
+                    <strong>{{ object.start }}</strong>
+                </div>
+                <div>Duration: {{ object.duration }}</div>
+                <div>Seats left: {{ object.seats_left }}</div>
+                <div class="text-center pt-3">
+                    {% if attending %}
+                        <form action="{% url 'circles:rsvp' slug=object.slug %}" method="post">
+                            {% csrf_token %}
+                            <button class=" w-full btn-danger p-2 px-6" type="submit" value="Submit">Cancel</button>
+                        </form>
+                    {% else %}
+                        <form action="{% url 'circles:rsvp' slug=object.slug %}" method="post">
+                            {% csrf_token %}
+                            <button class=" w-full btn-danger p-2 px-6 shimmer"
+                                    type="submit"
+                                    value="Submit">Reserve Seat</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
 {% endblock content %}
