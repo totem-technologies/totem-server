@@ -31,10 +31,12 @@ charset-normalizer==3.2.0
 click==8.1.6
     # via uvicorn
 cryptography==41.0.2
-    # via pyjwt
+    # via
+    #   django-anymail
+    #   pyjwt
 defusedxml==0.7.1
     # via python3-openid
-django==4.2.3
+django==4.2.4
     # via
     #   -r requirements/base.in
     #   django-allauth
