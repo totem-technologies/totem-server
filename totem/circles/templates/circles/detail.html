@@ -46,12 +46,15 @@
     </div>
     <div class="flex max-w-5xl m-auto px-5">
         <div class="tprose pr-4">
+            <div>
+                <strong>{{ object.start|date:'l, F j' }} @ {{ object.start|date:'P T' }}</strong>
+            </div>
             <p>{{ object.content_html }}</p>
         </div>
         <div class="max-md:fixed max-md:bottom-0 max-md:left-0 w-full">
             <div class=" bg-white p-5 rounded-2xl border w-80 sticky top-20 border-gray-200 max-md:w-full">
                 <div>
-                    <strong>{{ object.start }}</strong>
+                    <strong>{{ object.start|date:'l, F j' }} <span , class="inline-block">@ {{ object.start|date:'P T' }}</span></strong>
                 </div>
                 <div>Duration: {{ object.duration }}</div>
                 <div>Seats left: {{ object.seats_left }}</div>
@@ -59,7 +62,7 @@
                     {% if attending %}
                         <form action="{% url 'circles:rsvp' slug=object.slug %}" method="post">
                             {% csrf_token %}
-                            <button class=" w-full btn-danger p-2 px-6" type="submit" value="Submit">Cancel</button>
+                            <button class="w-full btn-danger p-2 px-6" type="submit" value="Submit">Leave</button>
                         </form>
                     {% else %}
                         <form action="{% url 'circles:rsvp' slug=object.slug %}" method="post">
