@@ -1,17 +1,12 @@
-from typing import Dict
-
 from django import forms
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth import login as django_login
-from django.contrib.auth.backends import ModelBackend
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ObjectDoesNotExist
-from django.http import Http404
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
-from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 from django.views.generic import DetailView, FormView
 from sesame.utils import get_query_string
@@ -51,7 +46,7 @@ def user_update_view(request, *args, **kwargs):
             message = "Profile successfully updated."
             new_email = form.cleaned_data["email"]
             if old_email != new_email:
-                login_url = _login_url(user, request, after_login_url=None, mobile=False)
+                login_url = get_login_url(user, request, after_login_url=None, mobile=False)
                 user.verified = False
                 emails.send_change_email(old_email, new_email, login_url)
                 message = f"Email successfully updated to {new_email}. Please check your inbox to confirm."
@@ -64,21 +59,22 @@ def user_update_view(request, *args, **kwargs):
 @login_required
 def user_redirect_view(request, *args, **kwargs):
     user = request.user
-    if user.is_authenticated:
-        try:
-            if user.onboard and user.onboard.onboarded:
-                return redirect("users:detail", pk=request.user.pk)
-        except ObjectDoesNotExist:
-            pass
-        return redirect("onboard:index")
-    raise Http404
+    assert user.is_authenticated
+    try:
+        if user.onboard and user.onboard.onboarded:
+            return redirect("users:detail", pk=request.user.pk)
+    except ObjectDoesNotExist:
+        pass
+    return redirect("onboard:index")
 
 
 class MagicLoginView(SesameLoginView):
     def login_success(self):
         user = self.request.user
-        user.verified = True
-        user.save()
+        if not user.verified:
+            user.verified = True
+            user.save()
+            messages.success(self.request, "Email successfully verified!")
         return super().login_success()
 
 
@@ -116,7 +112,7 @@ def _notify_slack():
     notify_slack("Signup: A new person has signed up for ✨Totem✨!")
 
 
-def _login_url(user, request, after_login_url: str | None, mobile: bool) -> str:
+def get_login_url(user, request, after_login_url: str | None, mobile: bool) -> str:
     if not after_login_url or after_login_url.startswith("http"):
         after_login_url = reverse("users:redirect")
 
@@ -140,7 +136,7 @@ def login(email: str, request, after_login_url: str | None = None, mobile: bool 
     """
     user, created = User.objects.get_or_create(email=email)
 
-    url = _login_url(user, request, after_login_url, mobile)
+    url = get_login_url(user, request, after_login_url, mobile)
 
     if created:
         django_login(request, user, backend="django.contrib.auth.backends.ModelBackend")

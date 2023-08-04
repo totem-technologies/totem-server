@@ -5,12 +5,12 @@ from django.contrib.sitemaps.views import sitemap
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.urls import include, path
 from django.views import defaults as default_views
-from sesame.views import LoginView
 
 from totem.api.api import api
 from totem.pages.urls import PagesSitemap
 from totem.plans.urls import PlansSitemap
 from totem.repos.urls import ReposSitemap
+from totem.users.views import MagicLoginView
 
 
 def trigger_error(request):
@@ -47,7 +47,7 @@ urlpatterns = [
         name="django.contrib.sitemaps.views.sitemap",
     ),
     path("onboard/", include("totem.onboard.urls")),
-    path("auth/link/", LoginView.as_view(), name="magic-login"),
+    path("auth/link/", MagicLoginView.as_view(), name="magic-login"),
     # Your stuff: custom urls includes go here
     # path("_testcrash/", trigger_error, name="crash"),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

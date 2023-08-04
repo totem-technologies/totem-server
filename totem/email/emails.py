@@ -8,7 +8,7 @@ def send_returning_login_email(email: str, url: str):
     _send_button_email(
         recipient=email,
         subject="Sign in to Totem!",
-        message="It's great to see you again, welcome back. Use the magic link button below to access your account.",
+        message="It's great to see you again, welcome back. Use the magic link button below to access your account. If this wasn't you, please ignore this email.",
         button_text="Sign in",
         link=url,
     )
@@ -18,8 +18,8 @@ def send_new_login_email(email: str, url: str):
     _send_button_email(
         recipient=email,
         subject="Welcome to ✨Totem✨!",
-        message="We're excited to have you join us. To continue signing in to your account, press the 'Sign in' button below. We have a few questions for you before we get started.",
-        button_text="Sign in",
+        message="We're excited to have you join us. However, we won't be able to reach you until you confirm your email address. Please confirm by clicking the button below. If this wasn't you, please ignore this email.",
+        button_text="Confirm",
         link=url,
     )
 

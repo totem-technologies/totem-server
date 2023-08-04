@@ -3,16 +3,18 @@ from unittest import mock
 import pytest
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser, User
+from django.contrib.messages import get_messages
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.contrib.sessions.middleware import SessionMiddleware
-from django.http import Http404, HttpResponseRedirect
+from django.http import HttpResponseRedirect
 from django.test import RequestFactory
 from django.urls import reverse
+from sesame.utils import get_query_string
 
 from totem.onboard.models import OnboardModel
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
-from totem.users.views import user_detail_view, user_redirect_view, user_update_view
+from totem.users.views import MagicLoginView, user_detail_view, user_redirect_view, user_update_view
 
 from ..views import user_index_view
 
@@ -100,3 +102,40 @@ def test_user_index_view():
     response = user_index_view(request)
     assert response.status_code == 302
     assert response.url == f"/users/{user.pk}/"
+
+
+def test_magic_login_view():
+    factory = RequestFactory()
+    user = UserFactory()
+    user.verified = False
+    user.save()
+    qs = get_query_string(user)
+    request = factory.get(reverse("magic-login") + qs)
+    request.user = user
+    middleware = SessionMiddleware(mock.MagicMock())
+    middleware.process_request(request)
+    request.session.save()
+    messages = FallbackStorage(request)
+    request._messages = messages
+    response = MagicLoginView.as_view()(request)
+    assert response.status_code == 302
+    # assert response.url == reverse("login")
+    assert len(messages) is 1
+    user.refresh_from_db()
+    assert user.verified == True
+
+    user.verified = True
+    user.save()
+    qs = get_query_string(user)
+    request = factory.get(reverse("magic-login") + qs)
+    request.user = user
+    middleware = SessionMiddleware(mock.MagicMock())
+    middleware.process_request(request)
+    request.session.save()
+    messages = FallbackStorage(request)
+    request._messages = messages
+    response = MagicLoginView.as_view()(request)
+    assert response.status_code == 302
+    assert len(get_messages(request)) == 0
+    user.refresh_from_db()
+    assert user.verified == True

@@ -124,9 +124,7 @@ class HomeView(TemplateView):
                 answer="It depends on the Circle, some are free, some aren't. Our mission is to make Totem Circles accessible to as many people as possible. In the future we’ll add the ability to donate directly to your Keeper if you’d like to support them. ",
             ),
         ]
-        context["signup_form"] = LoginForm(
-            initial={"after_login_url": reverse("onboard:index"), "success_url": reverse("onboard:sent")}
-        )
+        context["signup_form"] = LoginForm()
         return context
 
 
