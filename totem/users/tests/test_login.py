@@ -11,12 +11,13 @@ class LogInViewTestCase(TestCase):
     fixtures = ["users.yaml"]
 
     def test_login_success(self):
-        # Submit the login form with a valid email
+        # Submit the login form with a new valid email
         count = User.objects.count()
-        response = self.client.post(reverse("users:login"), {"email": "testuser@totem.org", "name": "Test User"})
+        response = self.client.post(reverse("users:login"), {"email": "testuser@totem.org"})
 
         # Check that the response is a redirect to the success URL
-        self.assertRedirects(response, reverse("users:login"))
+        print(response)
+        self.assertRedirects(response, reverse("users:redirect"), status_code=302, target_status_code=302)
 
         # Check that an email was sent
         self.assertEqual(len(mail.outbox), 1)
@@ -25,7 +26,7 @@ class LogInViewTestCase(TestCase):
 
         # Check that a new user was created
         self.assertEqual(User.objects.count(), count + 1)
-        assert User.objects.get(email="testuser@totem.org", name="Test User")
+        assert User.objects.get(email="testuser@totem.org")
 
     def test_login_existing_user(self):
         # Create an existing user

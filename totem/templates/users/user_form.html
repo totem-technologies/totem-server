@@ -1,16 +1,18 @@
 {% extends "base.html" %}
-
 {% block title %}{{ user.name }}{% endblock %}
-
 {% block content %}
-  <h1>{{ user.name }}</h1>
-  <form class="form-horizontal" method="post" action="{% url 'users:update' %}">
-    {% csrf_token %}
-    {{ form}}
-    <div class="control-group">
-      <div class="controls">
-        <button type="submit" class="btn btn-primary">Update</button>
+  <div class="max-w-xl m-auto">
+    <h1 class="h1 pb-10">{{ user.name }}'s Profile</h1>
+    <form class="form-horizontal"
+          method="post"
+          action="{% url 'users:update' %}">
+      {% csrf_token %}
+      {{ form }}
+      <div class="control-group">
+        <div class="controls pt-10">
+          <button type="submit" class="btn btn-primary">Update</button>
+        </div>
       </div>
-    </div>
-  </form>
+    </form>
+  </div>
 {% endblock %}

@@ -1,8 +1,9 @@
-from allauth.account.forms import SignupForm
+from allauth.account.forms import SignupForm as AllauthSignupForm
 from allauth.socialaccount.forms import SignupForm as SocialSignupForm
 from django.contrib.auth import forms as admin_forms
 from django.contrib.auth import get_user_model
 from django.forms import CharField, EmailField, Form, HiddenInput
+from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 
 from totem.email.utils import validate_email_blocked
@@ -31,7 +32,7 @@ class UserAdminCreationForm(admin_forms.UserCreationForm):
         }
 
 
-class UserSignupForm(SignupForm):
+class UserSignupForm(AllauthSignupForm):
     """
     Form that will be rendered on a user sign up section/screen.
     Default fields will be added automatically.
@@ -48,7 +49,7 @@ class UserSocialSignupForm(SocialSignupForm):
 
 
 class LoginForm(Form):
-    name = CharField(max_length=255)
+    form_url = reverse_lazy("users:login")
     email = EmailField(validators=[validate_email_blocked])
     after_login_url = CharField(required=False, widget=HiddenInput())
     success_url = CharField(required=False, widget=HiddenInput())

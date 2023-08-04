@@ -29,3 +29,4 @@ class UserFactory(DjangoModelFactory):
     class Meta:
         model = get_user_model()
         django_get_or_create = ["email"]
+        skip_postgeneration_save = True

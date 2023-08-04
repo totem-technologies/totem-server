@@ -1,15 +1,21 @@
+from typing import Dict
+
+from django import forms
 from django.contrib import messages
 from django.contrib.auth import get_user_model
+from django.contrib.auth import login as django_login
+from django.contrib.auth.backends import ModelBackend
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.messages.views import SuccessMessageMixin
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404
-from django.shortcuts import redirect
+from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
-from django.views.generic import DetailView, FormView, RedirectView, UpdateView
+from django.views.generic import DetailView, FormView
 from sesame.utils import get_query_string
+from sesame.views import LoginView as SesameLoginView
 
 from totem.email import emails
 from totem.utils.slack import notify_slack
@@ -28,30 +34,52 @@ class UserDetailView(LoginRequiredMixin, DetailView):
 user_detail_view = UserDetailView.as_view()
 
 
-class UserUpdateView(LoginRequiredMixin, SuccessMessageMixin, UpdateView):
-    model = User
-    fields = ["name"]
-    success_message = _("Information successfully updated")
-
-    def get_success_url(self):
-        assert self.request.user.is_authenticated  # for mypy to know that the user is authenticated
-        return self.request.user.get_absolute_url()  # type: ignore
-
-    def get_object(self):
-        return self.request.user
+class UserUpdateForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ("name", "email")
 
 
-user_update_view = UserUpdateView.as_view()
+@login_required
+def user_update_view(request, *args, **kwargs):
+    user = request.user
+    form = UserUpdateForm(instance=user)
+    if request.method == "POST":
+        old_email = user.email
+        form = UserUpdateForm(request.POST, instance=user)
+        if form.is_valid():
+            message = "Profile successfully updated."
+            new_email = form.cleaned_data["email"]
+            if old_email != new_email:
+                login_url = _login_url(user, request, after_login_url=None, mobile=False)
+                user.verified = False
+                emails.send_change_email(old_email, new_email, login_url)
+                message = f"Email successfully updated to {new_email}. Please check your inbox to confirm."
+            form.save()
+            messages.success(request, message)
+            return redirect(user.get_absolute_url())
+    return render(request, "users/user_form.html", {"form": form})
 
 
-class UserRedirectView(LoginRequiredMixin, RedirectView):
-    permanent = False
+@login_required
+def user_redirect_view(request, *args, **kwargs):
+    user = request.user
+    if user.is_authenticated:
+        try:
+            if user.onboard and user.onboard.onboarded:
+                return redirect("users:detail", pk=request.user.pk)
+        except ObjectDoesNotExist:
+            pass
+        return redirect("onboard:index")
+    raise Http404
 
-    def get_redirect_url(self):
-        return reverse("users:detail", kwargs={"pk": self.request.user.pk})
 
-
-user_redirect_view = UserRedirectView.as_view()
+class MagicLoginView(SesameLoginView):
+    def login_success(self):
+        user = self.request.user
+        user.verified = True
+        user.save()
+        return super().login_success()
 
 
 class LogInView(FormView):
@@ -60,17 +88,18 @@ class LogInView(FormView):
     success_url = reverse_lazy("users:login")
 
     def _message(self, email: str):
-        messages.success(self.request, "Sign in link sent to " + mark_safe(email))
+        messages.success(self.request, f"Please check your inbox at: {email}.")
 
     def form_valid(self, form):
         success_url = form.cleaned_data.get("success_url")
         email = form.cleaned_data["email"].lower()
         after_login_url = form.cleaned_data.get("after_login_url") or self.request.GET.get("next")
-        login(email, self.request, after_login_url=after_login_url, name=form.cleaned_data.get("name"))
+        created = login(email, self.request, after_login_url=after_login_url)
         if success_url:
             self.success_url = success_url
-        else:
-            # Always set message no matter what
+        elif created:
+            self.success_url = reverse("users:redirect")
+        if not created:
             self._message(email)
         return super().form_valid(form)
 
@@ -89,7 +118,7 @@ def _notify_slack():
 
 def _login_url(user, request, after_login_url: str | None, mobile: bool) -> str:
     if not after_login_url or after_login_url.startswith("http"):
-        after_login_url = reverse("users:index")
+        after_login_url = reverse("users:redirect")
 
     if mobile:
         url = "https://app.totem.org" + reverse("magic-login")
@@ -101,8 +130,9 @@ def _login_url(user, request, after_login_url: str | None, mobile: bool) -> str:
     return url
 
 
-def login(email: str, request, after_login_url: str | None = None, mobile: bool = False, name: str | None = None):
-    """Login a user by sending them a login link via email.
+def login(email: str, request, after_login_url: str | None = None, mobile: bool = False) -> bool:
+    """Login a user by sending them a login link via email. If it's a new user, log them in automatically and send them
+    a welcome email.
 
     Args:
         email (str): The email address to send the login link to.
@@ -110,29 +140,18 @@ def login(email: str, request, after_login_url: str | None = None, mobile: bool 
     """
     user, created = User.objects.get_or_create(email=email)
 
-    if created and name:
-        user.name = name  # type: ignore
-        user.save()
-
     url = _login_url(user, request, after_login_url, mobile)
 
     if created:
+        django_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
         email_new_user(user, url)
         _notify_slack()
     else:
         email_returning_user(user, url)
 
     user.identify()  # type: ignore
-    return user
+    return created
 
 
 def user_index_view(request):
-    user = request.user
-    if user.is_authenticated:
-        try:
-            if user.onboard and user.onboard.onboarded:
-                return redirect("users:detail", pk=request.user.pk)
-        except ObjectDoesNotExist:
-            pass
-        return redirect("onboard:index")
-    raise Http404
+    return user_redirect_view(request)

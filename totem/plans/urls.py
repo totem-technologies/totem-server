@@ -12,7 +12,7 @@ class PlansSitemap(Sitemap):
     changefreq = "monthly"
 
     def items(self):
-        return CirclePlan.objects.filter(published=True)
+        return sorted(CirclePlan.objects.filter(published=True), key=lambda x: x.date_modified)
 
     def lastmod(self, obj):
         return obj.date_modified

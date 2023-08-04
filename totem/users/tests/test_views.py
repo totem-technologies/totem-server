@@ -1,80 +1,64 @@
+from unittest import mock
+
 import pytest
 from django.conf import settings
-from django.contrib import messages
-from django.contrib.auth.models import AnonymousUser
-from django.contrib.messages.middleware import MessageMiddleware
+from django.contrib.auth.models import AnonymousUser, User
+from django.contrib.messages.storage.fallback import FallbackStorage
 from django.contrib.sessions.middleware import SessionMiddleware
-from django.http import HttpRequest, HttpResponseRedirect
+from django.http import Http404, HttpResponseRedirect
 from django.test import RequestFactory
 from django.urls import reverse
 
 from totem.onboard.models import OnboardModel
-from totem.users.forms import UserAdminChangeForm
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
-from totem.users.views import UserRedirectView, UserUpdateView, user_detail_view
+from totem.users.views import user_detail_view, user_redirect_view, user_update_view
+
+from ..views import user_index_view
 
 pytestmark = pytest.mark.django_db
 
 
-class TestUserUpdateView:
-    """
-    TODO:
-        extracting view initialization code as class-scoped fixture
-        would be great if only pytest-django supported non-function-scoped
-        fixture db access -- this is a work-in-progress for now:
-        https://github.com/pytest-dev/pytest-django/pull/258
-    """
+def test_user_update_view():
+    factory = RequestFactory()
+    user = UserFactory(verified=True)
+    request = factory.get(reverse("users:update"))
+    request.user = user
+    middleware = SessionMiddleware(mock.MagicMock())
+    middleware.process_request(request)
+    request.session.save()
+    response = user_update_view(request)
+    assert response.status_code == 200
 
-    def dummy_get_response(self, request: HttpRequest):
-        return None
-
-    def test_get_success_url(self, user: User, rf: RequestFactory):
-        view = UserUpdateView()
-        request = rf.get("/fake-url/")
-        request.user = user
-
-        view.request = request
-        assert view.get_success_url() == f"/users/{user.pk}/"
-
-    def test_get_object(self, user: User, rf: RequestFactory):
-        view = UserUpdateView()
-        request = rf.get("/fake-url/")
-        request.user = user
-
-        view.request = request
-
-        assert view.get_object() == user
-
-    def test_form_valid(self, user: User, rf: RequestFactory):
-        view = UserUpdateView()
-        request = rf.get("/fake-url/")
-
-        # Add the session/message middleware to the request
-        SessionMiddleware(self.dummy_get_response).process_request(request)
-        MessageMiddleware(self.dummy_get_response).process_request(request)
-        request.user = user
-
-        view.request = request
-
-        # Initialize the form
-        form = UserAdminChangeForm()
-        form.cleaned_data = {}
-        form.instance = user
-        view.form_valid(form)
-
-        messages_sent = [m.message for m in messages.get_messages(request)]
-        assert messages_sent == ["Information successfully updated"]
+    request = factory.post(reverse("users:update"), {"email": "new@example.com"})
+    assert user.email != "new@example.com"
+    request.user = user
+    middleware = SessionMiddleware(mock.MagicMock())
+    middleware.process_request(request)
+    request.session.save()
+    messages = FallbackStorage(request)
+    request._messages = messages
+    response = user_update_view(request)
+    assert response.status_code == 302
+    assert response.url == f"/users/{user.pk}/"
+    assert len(messages) is 1
+    user.refresh_from_db()
+    assert user.email == "new@example.com"
+    assert user.verified == False
 
 
 class TestUserRedirectView:
     def test_get_redirect_url(self, user: User, rf: RequestFactory):
-        view = UserRedirectView()
         request = rf.get("/fake-url")
         request.user = user
-
-        view.request = request
-        assert view.get_redirect_url() == f"/users/{user.pk}/"
+        response = user_redirect_view(request)
+        assert response.status_code == 302
+        assert response.url == reverse("onboard:index")
+        OnboardModel.objects.create(user=user)
+        user.onboard.onboarded = True
+        response = user_redirect_view(request)
+        assert response.status_code == 302
+        assert response.url == reverse("users:detail", kwargs={"pk": user.pk})
 
 
 class TestUserDetailView:
@@ -96,20 +80,14 @@ class TestUserDetailView:
         assert response.url == f"{login_url}?next=/fake-url/"
 
 
-from django.contrib.auth.models import AnonymousUser
-from django.http import Http404
-from django.test import RequestFactory
-
-from ..views import user_index_view
-
-
 def test_user_index_view():
     factory = RequestFactory()
-    request = factory.get("/")
+    request = factory.get("/someroute")
     request.user = AnonymousUser()
+    response = user_index_view(request)
+    assert isinstance(response, HttpResponseRedirect)
+    assert response.url == reverse("users:login") + "?next=/someroute"
 
-    with pytest.raises(Http404):
-        user_index_view(request)
     user = UserFactory()
     request.user = user
     response = user_index_view(request)

@@ -21,9 +21,9 @@
         <br>
       </div>
       <div class="p-10 md:w-1/3 bg-white rounded-xl max-md:mt-10 max-md:mx-2">
-        <form method="post" action="{% url 'users:login' %}">
+        <form method="post" action="{{ signup_form.form_url }}">
           {% csrf_token %}
-          {{ login_form }}
+          {{ signup_form }}
           <button class="btn-primary mt-2 w-full shimmer" type="submit">Join</button>
         </form>
         <p class="text-center mt-5 text-xs text-gray-400">

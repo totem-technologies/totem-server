@@ -2,7 +2,7 @@ import uuid
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
-from django.db.models import CharField, EmailField, UUIDField
+from django.db.models import BooleanField, CharField, EmailField, UUIDField
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
@@ -21,7 +21,7 @@ class User(AbstractUser):
 
     # First and last name do not cover name patterns around the globe
     objects: UserManager = UserManager()
-    name = CharField(_("Name of User"), blank=True, max_length=255)
+    name = CharField(_("Name"), blank=True, max_length=255)
     first_name = None  # type: ignore
     last_name = None  # type: ignore
     email = EmailField(_("email address"), unique=True, validators=[validate_email_blocked])
@@ -29,6 +29,7 @@ class User(AbstractUser):
     api_key = UUIDField(_("API Key"), db_index=True, default=uuid.uuid4)
     ics_key = UUIDField(_("API Key"), db_index=True, default=uuid.uuid4)
     profile_image = CharField(max_length=255, null=True, blank=True)
+    verified = BooleanField(_("Verified"), default=False)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
