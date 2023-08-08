@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 from django import forms
 from django.contrib import messages
 from django.contrib.auth import get_user_model
@@ -5,6 +7,7 @@ from django.contrib.auth import login as django_login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ObjectDoesNotExist
+from django.http import Http404
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.translation import gettext_lazy as _

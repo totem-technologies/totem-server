@@ -1,4 +1,5 @@
 import emailSpellChecker from "./emailSpellCheck"
+import logger from "./logger"
 
 dismiss_alert = function (e) {
   e.closest(".alert-dismissible").remove()
@@ -11,3 +12,5 @@ document.cookie = `totem_timezone=${timezone}; SameSite=Strict`
 window.addEventListener("DOMContentLoaded", () => {
   emailSpellChecker()
 })
+
+logger(window.TOTEM_DATA.debug)

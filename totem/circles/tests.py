@@ -1,5 +1,3 @@
-import hashlib
-
 from .views import ics_hash
 
 

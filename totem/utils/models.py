@@ -4,8 +4,16 @@ import string
 from django.db import models
 
 
+def make_slug():
+    return "".join(
+        random.sample(string.ascii_lowercase, 3)
+        + random.sample(string.digits, 3)
+        + random.sample(string.ascii_lowercase, 3)
+    )
+
+
 class SluggedModel(models.Model):
-    slug = models.SlugField(db_index=True, unique=True, editable=False, blank=True)
+    slug = models.SlugField(db_index=True, unique=True, editable=False, blank=True, default=make_slug)
 
     def save(self, *args, **kwargs):
         while not self.slug:

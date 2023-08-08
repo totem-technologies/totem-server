@@ -6,6 +6,8 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 
+from totem.utils.hash import basic_hash
+
 User = get_user_model()
 
 from .calendar import calendar
@@ -82,7 +84,7 @@ def ics(request, slug):
 def ics_hash(slug, user_ics_key):
     # Hash the slug with the secret key
     # to make the ics key
-    return hashlib.blake2b((slug + str(user_ics_key)).encode("utf-8"), digest_size=10).hexdigest()
+    return basic_hash(slug + str(user_ics_key))
 
 
 @login_required

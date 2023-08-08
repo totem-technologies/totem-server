@@ -3,23 +3,21 @@
 {% block title %}
     Circles - {{ object.title }}
 {% endblock title %}
+{% block javascript %}
+    <script src="{% static 'js/atcb.min.js' %}" defer></script>
+{% endblock javascript %}
 {% block content %}
     <div class="m-auto px-5 pb-2 flex max-w-5xl">
         <a class="no-underline items-center space-x-2 flex"
            href="{% url 'circles:list' %}">
             <h2 class="h3">All Circles</h2>
         </a>
-        <div></div>
     </div>
     <div class="m-auto px-5 pb-5 max-w-5xl">
         {% if not object.published %}
             <div class="text-red-500 text-center pb-5">This circle is not published yet.</div>
         {% endif %}
         <div class="rounded-2xl relative bg-gradient-to-r from-purple-500 to-pink-500 mb-5">
-            <div class="absolute top-5 left-5">
-                <a href="{{ object.type }}">{{ object.type }}</a>
-            </div>
-            <div class="absolute top-5 right-5">{{ object.price }}</div>
             <div class="pt-10">
                 <img class="rounded-full m-auto"
                      width="200px"
@@ -44,15 +42,9 @@
             </div>
         </div>
     </div>
-    <div class="flex max-w-5xl m-auto px-5">
-        <div class="tprose pr-4">
-            <div>
-                <strong>{{ object.start|date:'l, F j' }} @ {{ object.start|date:'P T' }}</strong>
-            </div>
-            <p>{{ object.content_html }}</p>
-        </div>
-        <div class="max-md:fixed max-md:bottom-0 max-md:left-0 w-full">
-            <div class=" bg-white p-5 rounded-2xl border w-80 sticky top-20 border-gray-200 max-md:w-full">
+    <div class="md:flex flex-row-reverse max-w-5xl m-auto px-5">
+        <div class="">
+            <div class="max-md:fixed max-md:bottom-0 max-md:left-0 bg-white p-5 rounded-2xl border w-80 sticky md:top-20 border-gray-200 max-md:w-full">
                 <div>
                     <strong>{{ object.start|date:'l, F j' }} <span , class="inline-block">@ {{ object.start|date:'P T' }}</span></strong>
                 </div>
@@ -60,9 +52,12 @@
                 <div>Seats left: {{ object.seats_left }}</div>
                 <div class="text-center pt-3">
                     {% if attending %}
+                        <add-to-calendar-button hideCheckmark styleLight="--btn-shadow:none; --btn-shadow-hover:none" inline hideBranding
+                        {% if debug %}debug{% endif %}
+                        buttonStyle="round" name="Title" options="'Apple','Google'" location="Online" startDate="{{ object.start|date:"Y-m-d" }}" endDate="{{ object.start|date:"Y-m-d" }}" startTime="{{ object.start|date:"H:i" }}" endTime="{{ object.start|date:"H:i" }}"></add-to-calendar-button>
                         <form action="{% url 'circles:rsvp' slug=object.slug %}" method="post">
                             {% csrf_token %}
-                            <button class="w-full btn-danger p-2 px-6" type="submit" value="Submit">Leave</button>
+                            <button class="a text-gray-400 pt-2" type="submit" value="Submit">Give up spot</button>
                         </form>
                     {% else %}
                         <form action="{% url 'circles:rsvp' slug=object.slug %}" method="post">
@@ -74,6 +69,34 @@
                     {% endif %}
                 </div>
             </div>
+            {% if attending %}
+                <div class="bg-white p-5 rounded-2xl border w-80 mb-8 md:mt-5 border-gray-200 max-md:w-full">
+                    <div class="pb-3">
+                        <strong>Attending</strong>
+                    </div>
+                    <div class="flex justify-center flex-wrap">
+                        {% for attendee in object.attendees.all %}
+                            <div class="w-1/4 py-3">
+                                <img class="rounded-full m-auto"
+                                     width="50px"
+                                     height="50px"
+                                     src="{{ attendee.image }}"
+                                     alt="{{ attendee.name }}"
+                                     title="{{ attendee.name }}" />
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        <div class="pr-4 flex-grow">
+            <div class="pb-4">
+                <div>
+                    <strong>{{ object.price }}</strong>
+                </div>
+                <strong>{{ object.start|date:'l, F j' }} @ {{ object.start|date:'P T' }}</strong>
+            </div>
+            <div class="tprose">{{ object.content_html }}</div>
         </div>
     </div>
 {% endblock content %}
