@@ -52,7 +52,7 @@ class User(SluggedModel, AbstractUser):
             str: URL for user detail.
 
         """
-        return reverse("users:detail", kwargs={"pk": self.pk})
+        return reverse("users:detail", kwargs={"slug": self.slug})
 
     def get_admin_url(self):
         return reverse(f"admin:{self._meta.app_label}_{self._meta.model_name}_change", args=(self.pk,))
@@ -62,6 +62,9 @@ class User(SluggedModel, AbstractUser):
 
     def analytics_id(self):
         return settings.ENVIRONMENT_NAME.lower() + "_" + str(self.pk)
+
+    def __str__(self):
+        return f"<User: {self.email}, slug: {self.slug}>"
 
 
 def _boring_profile(key: str) -> str:

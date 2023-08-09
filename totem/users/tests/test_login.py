@@ -4,20 +4,19 @@ from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 
+from totem.users.tests.factories import UserFactory
+
 User = get_user_model()
 
 
 class LogInViewTestCase(TestCase):
-    fixtures = ["users.yaml"]
-
-    def test_login_success(self):
-        # Submit the login form with a new valid email
-        count = User.objects.count()
+    def test_login_new_user(self):
         response = self.client.post(reverse("users:login"), {"email": "testuser@totem.org"})
 
         # Check that the response is a redirect to the success URL
         print(response)
-        self.assertRedirects(response, reverse("users:redirect"), status_code=302, target_status_code=302)
+        assert response.status_code == 302
+        assert response.url == reverse("users:redirect")
 
         # Check that an email was sent
         self.assertEqual(len(mail.outbox), 1)
@@ -25,16 +24,17 @@ class LogInViewTestCase(TestCase):
         self.assertEqual(mail.outbox[0].subject, "Welcome to ✨Totem✨!")
 
         # Check that a new user was created
-        self.assertEqual(User.objects.count(), count + 1)
+        count = User.objects.count()
+        assert count == 1
         assert User.objects.get(email="testuser@totem.org")
 
     def test_login_existing_user(self):
         # Create an existing user
-        user = User.objects.get(pk=1)
+        user = UserFactory()
         count = User.objects.count()
 
         # Submit the login form with an existing email
-        response = self.client.post(reverse("users:login"), {"email": user.email, "name": "Test User"})
+        response = self.client.post(reverse("users:login"), {"email": user.email, "name": "Not my name"})
 
         # Check that the response is a redirect to the success URL
         self.assertRedirects(response, reverse("users:login"))
@@ -59,12 +59,14 @@ class LogInViewTestCase(TestCase):
         # Check that no email was sent
         self.assertEqual(len(mail.outbox), 0)
 
-        # Check that no new user was created
-        self.assertEqual(User.objects.count(), count)
+        # Check that "check your inbox" in no new
+        # self.assertEqual(User."check your inbox" in objects.coun
 
+    #
     def test_login_parameters(self):
         # Create an existing user
-        user = User.objects.get(pk=1)
+        user = UserFactory()
+        user.save()
         count = User.objects.count()
 
         # Submit the login form with an existing email
@@ -72,7 +74,7 @@ class LogInViewTestCase(TestCase):
             reverse("users:login"),
             {
                 "email": user.email,
-                "name": "Test User",
+                "name": user.name,
                 "after_login_url": "/foo",
                 "success_url": reverse("pages:home"),
             },

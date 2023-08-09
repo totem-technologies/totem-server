@@ -25,8 +25,8 @@ User = get_user_model()
 
 class UserDetailView(LoginRequiredMixin, DetailView):
     model = User
-    slug_field = "id"
-    slug_url_kwarg = "id"
+    slug_field = "slug"
+    slug_url_kwarg = "slug"
 
 
 user_detail_view = UserDetailView.as_view()
@@ -65,7 +65,7 @@ def user_redirect_view(request, *args, **kwargs):
     assert user.is_authenticated
     try:
         if user.onboard and user.onboard.onboarded:
-            return redirect("users:detail", pk=request.user.pk)
+            return redirect(user)
     except ObjectDoesNotExist:
         pass
     return redirect("onboard:index")

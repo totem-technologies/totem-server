@@ -4,8 +4,8 @@ from totem.users.models import User
 
 
 def test_detail(user: User):
-    assert reverse("users:detail", kwargs={"pk": user.pk}) == f"/users/{user.pk}/"
-    assert resolve(f"/users/{user.pk}/").view_name == "users:detail"
+    assert reverse("users:detail", kwargs={"slug": user.slug}) == f"/users/{user.slug}/"
+    assert resolve(f"/users/{user.slug}/").view_name == "users:detail"
 
 
 def test_update():

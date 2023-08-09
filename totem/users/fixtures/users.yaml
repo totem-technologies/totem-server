@@ -7,6 +7,7 @@
         "last_login": "2023-04-27T22:10:06.015Z",
         "is_superuser": true,
         "is_staff": true,
+        "slug": "admin",
         "is_active": true,
         "date_joined": "2023-04-26T22:23:17.526Z",
         "name": "",

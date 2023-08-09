@@ -7,7 +7,7 @@ app_name = "users"
 urlpatterns = [
     path("~redirect/", view=user_redirect_view, name="redirect"),
     path("~update/", view=user_update_view, name="update"),
-    path("<int:pk>/", view=user_detail_view, name="detail"),
     path("login/", LogInView.as_view(), name="login"),
     path("", user_index_view, name="index"),
+    path("<str:slug>/", view=user_detail_view, name="detail"),
 ]
