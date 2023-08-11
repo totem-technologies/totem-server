@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load settings_value %}
 {% load static %}
-{% block title %}User: {{ object.name }}{% endblock %}
+{% block title %}{{ object.name }}{% endblock %}
 {% block content %}
   {% if object == request.user %}
     <section class="section max-w-4xl m-auto">
@@ -9,10 +9,10 @@
         <h1 class="h1">Hello {{ object.name|default:"friend" }}!</h1>
       </div>
       <div class="tprose">
-        <p class="lead">
-          Thank you for taking the first step in your Totem journey! Next you can expect a welcome email from one of our Keeper’s based on the interests you expressed during registration. They will give meeting days of time of their Circles and any specific information about their Circles that may be helpful.
+        <p class="lead">Welcome to the Totem Community!</p>
+        <p>
+          You've just taken the first step. Next you can expect a welcome email from one of our Keepers.
         </p>
-        <p>Welcome to the Totem Community!</p>
         <p>
           If you have any questions, please reach out to <a href="mailto:{% settings_value 'EMAIL_SUPPORT_ADDRESS' %}">
           {% settings_value 'EMAIL_SUPPORT_ADDRESS' %}
