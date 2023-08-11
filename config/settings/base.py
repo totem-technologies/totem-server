@@ -150,6 +150,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "totem.utils.middleware.robotnoindex",
     "totem.utils.middleware.TimezoneMiddleware",
+    "totem.utils.middleware.CDNGuard",
 ]
 
 # STATIC
@@ -165,6 +166,10 @@ STATICFILES_FINDERS = [
     "django.contrib.staticfiles.finders.FileSystemFinder",
     "django.contrib.staticfiles.finders.AppDirectoriesFinder",
 ]
+STATIC_HOST = env.str("DJANGO_STATIC_HOST", default=None)
+STATIC_URL = "/static/"
+if STATIC_HOST:
+    STATIC_URL = f"https://{STATIC_HOST}/static/"
 
 # MEDIA
 # ------------------------------------------------------------------------------

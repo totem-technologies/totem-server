@@ -1,7 +1,7 @@
 import zoneinfo
 
 from django.conf import settings
-from django.http import HttpRequest
+from django.http import Http404, HttpRequest
 from django.utils import timezone
 
 
@@ -30,4 +30,17 @@ class TimezoneMiddleware:
             timezone.activate(zoneinfo.ZoneInfo(tzname))
         else:
             timezone.deactivate()
+        return self.get_response(request)
+
+
+class CDNGuard:
+    """Raise a 404 if a request is made from DJANGO_STATIC_HOST for any URL except for the /static/ directory."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.get_host() == settings.STATIC_HOST:
+            if not request.build_absolute_uri().startswith(settings.STATIC_URL):
+                raise Http404
         return self.get_response(request)
