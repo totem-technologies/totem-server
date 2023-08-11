@@ -93,3 +93,8 @@
 form .errorlist {
   @apply text-red-700 text-sm;
 }
+
+
+html {
+  scroll-behavior: smooth;
+}

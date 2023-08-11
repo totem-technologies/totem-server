@@ -6,5 +6,6 @@
     "favicons",
     "stylesheet",
     "waitlist"
-  ]
+  ],
+  "editor.defaultFormatter": null
 }
