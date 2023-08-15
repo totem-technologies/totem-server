@@ -1,5 +1,4 @@
 from django.urls import path
-from django.views.generic import RedirectView, TemplateView
 
 from . import views
 
@@ -14,5 +13,10 @@ urlpatterns = [
         "unsubscribe/<uuid:id>/",
         views.UnsubscribeView.as_view(),
         name="unsubscribe",
+    ),
+    path(
+        "signature/",
+        views.signature_view,
+        name="signature",
     ),
 ]
