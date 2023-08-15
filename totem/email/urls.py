@@ -14,9 +14,4 @@ urlpatterns = [
         views.UnsubscribeView.as_view(),
         name="unsubscribe",
     ),
-    path(
-        "signature/",
-        views.signature_view,
-        name="signature",
-    ),
 ]
