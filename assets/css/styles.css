@@ -18,7 +18,7 @@
     @apply md:py-10 mx-4;
   }
   .tprose {
-    @apply prose lg:prose-xl prose-h1:font-serif max-w-prose;
+    @apply prose lg:prose-xl prose-h1:font-serif prose-h2:font-serif max-w-prose;
   }
   .section-prose {
     @apply tprose section;
@@ -27,7 +27,7 @@
     @apply md:text-6xl text-4xl font-serif;
   }
   .h2 {
-    @apply text-2xl font-sans font-medium text-gray-900;
+    @apply text-4xl font-serif font-medium text-gray-900;
   }
   .a {
     @apply text-blue-500 underline;
