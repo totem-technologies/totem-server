@@ -2,7 +2,8 @@ from unittest import mock
 
 import pytest
 from django.conf import settings
-from django.contrib.auth.models import AnonymousUser, User
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 from django.contrib.messages import get_messages
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.contrib.sessions.middleware import SessionMiddleware
@@ -12,11 +13,12 @@ from django.urls import reverse
 from sesame.utils import get_query_string
 
 from totem.onboard.models import OnboardModel
-from totem.users.models import User
 from totem.users.tests.factories import UserFactory
 from totem.users.views import MagicLoginView, user_detail_view, user_redirect_view, user_update_view
 
 from ..views import user_index_view
+
+User = get_user_model()
 
 pytestmark = pytest.mark.django_db
 
@@ -43,10 +45,10 @@ def test_user_update_view():
     response = user_update_view(request)
     assert response.status_code == 302
     assert response.url == user.get_absolute_url()
-    assert len(messages) is 1
+    assert len(messages) == 1
     user.refresh_from_db()
     assert user.email == "new@example.com"
-    assert user.verified == False
+    assert user.verified is False
 
 
 class TestUserRedirectView:
@@ -120,9 +122,9 @@ def test_magic_login_view():
     response = MagicLoginView.as_view()(request)
     assert response.status_code == 302
     # assert response.url == reverse("login")
-    assert len(messages) is 1
+    assert len(messages) == 1
     user.refresh_from_db()
-    assert user.verified == True
+    assert user.verified is True
 
     user.verified = True
     user.save()
@@ -138,4 +140,4 @@ def test_magic_login_view():
     assert response.status_code == 302
     assert len(get_messages(request)) == 0
     user.refresh_from_db()
-    assert user.verified == True
+    assert user.verified is True

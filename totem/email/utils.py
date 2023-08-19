@@ -1,4 +1,4 @@
-from typing import Any, List
+from typing import Any
 
 from anymail.message import AnymailMessage
 from django.conf import settings

@@ -3,6 +3,8 @@ import socket
 from .base import *  # noqa
 from .base import env
 
+STATIC_HOST = STATIC_HOST or None  # noqa: F405
+
 # GENERAL
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#secret-key

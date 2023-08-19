@@ -28,13 +28,13 @@ cffi==1.15.1
     #   cryptography
 charset-normalizer==3.2.0
     # via requests
-click==8.1.6
+click==8.1.7
     # via uvicorn
-cryptography==41.0.2
+cryptography==41.0.3
     # via pyjwt
 defusedxml==0.7.1
     # via python3-openid
-django==4.2.3
+django==4.2.4
     # via
     #   -r requirements/base.in
     #   django-allauth
@@ -63,7 +63,7 @@ django-taggit==4.0.0
     # via -r requirements/base.in
 google-api-core==2.11.1
     # via google-api-python-client
-google-api-python-client==2.95.0
+google-api-python-client==2.97.0
     # via -r requirements/base.in
 google-auth==2.22.0
     # via
@@ -75,7 +75,7 @@ google-auth-httplib2==0.1.0
     # via google-api-python-client
 google-auth-oauthlib==1.0.0
     # via -r requirements/base.in
-googleapis-common-protos==1.59.1
+googleapis-common-protos==1.60.0
     # via google-api-core
 gunicorn==21.2.0
     # via -r requirements/base.in
@@ -110,9 +110,9 @@ packaging==23.1
     # via gunicorn
 pillow==10.0.0
     # via -r requirements/base.in
-posthog==3.0.1
+posthog==3.0.2
     # via -r requirements/base.in
-protobuf==4.23.4
+protobuf==4.24.1
     # via
     #   google-api-core
     #   googleapis-common-protos
@@ -130,7 +130,7 @@ pydantic==1.10.12
     # via django-ninja
 pyjwt[crypto]==2.8.0
     # via django-allauth
-pyparsing==3.1.0
+pyparsing==3.1.1
     # via httplib2
 python-dateutil==2.8.2
     # via
@@ -173,7 +173,7 @@ requests-oauthlib==1.3.1
     #   google-auth-oauthlib
 rsa==4.9
     # via google-auth
-sentry-sdk[django]==1.28.1
+sentry-sdk[django]==1.29.2
     # via -r requirements/base.in
 six==1.16.0
     # via
@@ -199,7 +199,7 @@ urllib3==1.26.16
     #   google-auth
     #   requests
     #   sentry-sdk
-uvicorn[standard]==0.23.1
+uvicorn[standard]==0.23.2
     # via -r requirements/base.in
 uvloop==0.17.0
     # via uvicorn

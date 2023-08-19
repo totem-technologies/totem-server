@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 
-import requests
-from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.forms import BooleanField, CharField, Form, HiddenInput, Textarea, TextInput
 from django.shortcuts import redirect

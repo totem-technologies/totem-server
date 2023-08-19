@@ -1,6 +1,6 @@
-from typing import Any, Dict
+from typing import Any
 
-from django.views.generic import ListView, TemplateView
+from django.views.generic import ListView
 
 from .models import Prompt
 

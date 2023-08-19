@@ -13,13 +13,14 @@ pytest-sugar==0.9.7  # https://github.com/Frozenball/pytest-sugar
 
 # Code quality
 # ------------------------------------------------------------------------------
-flake8==6.0.0  # https://github.com/PyCQA/flake8
-flake8-isort==6.0.0  # https://github.com/gforcada/flake8-isort
-coverage<8.0.0  # https://github.com/nedbat/coveragepy
 black==23.7.0  # https://github.com/psf/black
-pylint-django==2.5.3  # https://github.com/PyCQA/pylint-django
-pre-commit<4  # https://github.com/pre-commit/pre-commit
+coverage<8.0.0  # https://github.com/nedbat/coveragepy
+flake8-isort==6.0.0  # https://github.com/gforcada/flake8-isort
+flake8==6.0.0  # https://github.com/PyCQA/flake8
 pip-tools<8
+pre-commit<4  # https://github.com/pre-commit/pre-commit
+pylint-django==2.5.3  # https://github.com/PyCQA/pylint-django
+ruff==0.0.285  # https://github.com/astral-sh/ruff
 
 # Django
 # ------------------------------------------------------------------------------

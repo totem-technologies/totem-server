@@ -38,11 +38,11 @@ cffi==1.15.1
     # via
     #   argon2-cffi-bindings
     #   cryptography
-cfgv==3.3.1
+cfgv==3.4.0
     # via pre-commit
 charset-normalizer==3.2.0
     # via requests
-click==8.1.6
+click==8.1.7
     # via
     #   black
     #   djlint
@@ -50,11 +50,11 @@ click==8.1.6
     #   uvicorn
 colorama==0.4.6
     # via djlint
-coverage==7.2.7
+coverage==7.3.0
     # via
     #   -r requirements/local.in
     #   django-coverage-plugin
-cryptography==41.0.2
+cryptography==41.0.3
     # via pyjwt
 cssbeautifier==1.14.9
     # via djlint
@@ -68,7 +68,7 @@ dill==0.3.7
     # via pylint
 distlib==0.3.7
     # via virtualenv
-django==4.2.3
+django==4.2.4
     # via
     #   -r requirements/base.in
     #   django-allauth
@@ -122,7 +122,7 @@ executing==1.2.0
     # via stack-data
 factory-boy==3.3.0
     # via -r requirements/local.in
-faker==19.2.0
+faker==19.3.0
     # via factory-boy
 filelock==3.12.2
     # via virtualenv
@@ -134,7 +134,7 @@ flake8-isort==6.0.0
     # via -r requirements/local.in
 google-api-core==2.11.1
     # via google-api-python-client
-google-api-python-client==2.95.0
+google-api-python-client==2.97.0
     # via -r requirements/base.in
 google-auth==2.22.0
     # via
@@ -146,7 +146,7 @@ google-auth-httplib2==0.1.0
     # via google-api-python-client
 google-auth-oauthlib==1.0.0
     # via -r requirements/base.in
-googleapis-common-protos==1.59.1
+googleapis-common-protos==1.60.0
     # via google-api-core
 gunicorn==21.2.0
     # via -r requirements/base.in
@@ -185,7 +185,7 @@ isort==5.12.0
     # via
     #   flake8-isort
     #   pylint
-jedi==0.18.2
+jedi==0.19.0
     # via ipython
 jsbeautifier==1.14.9
     # via
@@ -230,7 +230,7 @@ packaging==23.1
     #   pytest-sugar
 parso==0.8.3
     # via jedi
-pathspec==0.11.1
+pathspec==0.11.2
     # via
     #   black
     #   djlint
@@ -240,22 +240,22 @@ pickleshare==0.7.5
     # via ipython
 pillow==10.0.0
     # via -r requirements/base.in
-pip-tools==7.1.0
+pip-tools==7.3.0
     # via -r requirements/local.in
-platformdirs==3.9.1
+platformdirs==3.10.0
     # via
     #   black
     #   pylint
     #   virtualenv
 pluggy==1.2.0
     # via pytest
-posthog==3.0.1
+posthog==3.0.2
     # via -r requirements/base.in
 pre-commit==3.3.3
     # via -r requirements/local.in
 prompt-toolkit==3.0.39
     # via ipython
-protobuf==4.23.4
+protobuf==4.24.1
     # via
     #   google-api-core
     #   googleapis-common-protos
@@ -279,11 +279,11 @@ pydantic==1.10.12
     # via django-ninja
 pyflakes==3.0.1
     # via flake8
-pygments==2.15.1
+pygments==2.16.1
     # via ipython
 pyjwt[crypto]==2.8.0
     # via django-allauth
-pylint==2.17.4
+pylint==2.17.5
     # via
     #   pylint-django
     #   pylint-plugin-utils
@@ -291,7 +291,7 @@ pylint-django==2.5.3
     # via -r requirements/local.in
 pylint-plugin-utils==0.8.2
     # via pylint-django
-pyparsing==3.1.0
+pyparsing==3.1.1
     # via httplib2
 pyproject-hooks==1.0.0
     # via build
@@ -335,7 +335,7 @@ redis==4.6.0
     # via
     #   -r requirements/base.in
     #   django-redis
-regex==2023.6.3
+regex==2023.8.8
     # via djlint
 requests==2.31.0
     # via
@@ -351,7 +351,9 @@ requests-oauthlib==1.3.1
     #   google-auth-oauthlib
 rsa==4.9
     # via google-auth
-sentry-sdk[django]==1.28.1
+ruff==0.0.285
+    # via -r requirements/local.in
+sentry-sdk[django]==1.29.2
     # via -r requirements/base.in
 six==1.16.0
     # via
@@ -374,15 +376,15 @@ termcolor==2.3.0
     # via pytest-sugar
 text-unidecode==1.3
     # via python-slugify
-tomlkit==0.11.8
+tomlkit==0.12.1
     # via pylint
-tqdm==4.65.0
+tqdm==4.66.1
     # via djlint
 traitlets==5.9.0
     # via
     #   ipython
     #   matplotlib-inline
-types-pytz==2023.3.0.0
+types-pytz==2023.3.0.1
     # via django-stubs
 types-pyyaml==6.0.12.11
     # via django-stubs
@@ -402,11 +404,11 @@ urllib3==1.26.16
     #   google-auth
     #   requests
     #   sentry-sdk
-uvicorn[standard]==0.23.1
+uvicorn[standard]==0.23.2
     # via -r requirements/base.in
 uvloop==0.17.0
     # via uvicorn
-virtualenv==20.24.2
+virtualenv==20.24.3
     # via pre-commit
 vobject==0.9.6.1
     # via caldav
@@ -422,7 +424,7 @@ websockets==11.0.3
     # via uvicorn
 werkzeug[watchdog]==2.3.6
     # via -r requirements/local.in
-wheel==0.41.0
+wheel==0.41.1
     # via pip-tools
 whitenoise==6.5.0
     # via -r requirements/base.in

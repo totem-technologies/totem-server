@@ -1,5 +1,3 @@
-import hashlib
-
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponse
@@ -8,10 +6,11 @@ from django.urls import reverse
 
 from totem.utils.hash import basic_hash
 
-User = get_user_model()
-
 from .calendar import calendar
 from .models import Circle
+
+User = get_user_model()
+
 
 ICS_QUERY_PARAM = "key"
 

@@ -1,7 +1,4 @@
-import json
-
 import caldav
-import googleapiclient.discovery
 from django.conf import settings
 from google.auth.credentials import Credentials
 from google.auth.transport.requests import Request

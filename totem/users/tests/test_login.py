@@ -1,5 +1,4 @@
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import User
 from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
@@ -49,7 +48,6 @@ class LogInViewTestCase(TestCase):
         assert user.name != "Test User"
 
     def test_login_failure(self):
-        count = User.objects.count()
         # Submit the login form with an invalid email
         response = self.client.post(reverse("users:login"), {"email": "invalid"})
 

@@ -1,7 +1,7 @@
 {% load static %}
 {% load settings_value %}
 <div class="pb-5 px-4">
-  <footer class="text-gray-600 body-font max-w-5xl m-auto bg-tblue container rounded-3xl  bg-opacity-25">
+  <footer class="text-gray-600 body-font max-w-5xl m-auto bg-white container rounded-3xl">
     <div class="px-5 p-10 md:flex md:items-center lg:items-start md:flex-row md:flex-nowrap flex-wrap flex-col">
       <div class="w-64 flex-shrink-0 md:mx-0 text-center md:text-left m-auto">
         <a class="" href="{% url "pages:home" %}">
@@ -10,8 +10,8 @@
                class="max-md:m-auto"
                alt="" />
         </a>
-        <p class="mt-2 text-sm text-gray-500">Totem is a 501(c)(3) organization.</p>
-        <p class="mt-2 text-sm text-gray-500">
+        <p class="mt-2 text-sm">Totem is a 501(c)(3) organization.</p>
+        <p class="mt-2 text-sm">
           This site is not intended to diagnose, treat, cure, or prevent any
           disease.
         </p>
@@ -23,24 +23,19 @@
         <div class="lg:w-1/4 md:w-1/2 w-full px-4">
           <nav class="list-none md:mb-10">
             <li>
-              <a class="text-gray-600 hover:text-gray-800"
-                 href="{% url 'pages:about' %}">About</a>
+              <a class=" hover:text-gray-800" href="{% url 'pages:about' %}">About</a>
             </li>
             <li>
-              <a class="text-gray-600 hover:text-gray-800"
-                 href="{% url 'pages:team' %}">Team</a>
+              <a class=" hover:text-gray-800" href="{% url 'pages:team' %}">Team</a>
             </li>
             <li>
-              <a class="text-gray-600 hover:text-gray-800"
-                 href="{% url 'pages:how-it-works' %}">How It Works</a>
+              <a class=" hover:text-gray-800" href="{% url 'pages:how-it-works' %}">How It Works</a>
             </li>
             <li>
-              <a class="text-gray-600 hover:text-gray-800"
-                 href="{% url 'pages:tos' %}">Terms of Service</a>
+              <a class=" hover:text-gray-800" href="{% url 'pages:tos' %}">Terms of Service</a>
             </li>
             <li>
-              <a class="text-gray-600 hover:text-gray-800"
-                 href="{% url 'pages:privacy' %}">Privacy Policy</a>
+              <a class=" hover:text-gray-800" href="{% url 'pages:privacy' %}">Privacy Policy</a>
             </li>
           </nav>
         </div>

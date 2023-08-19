@@ -1,5 +1,4 @@
 import uuid
-from urllib.parse import quote
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser

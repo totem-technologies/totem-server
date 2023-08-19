@@ -1,4 +1,4 @@
-from django.contrib.auth import REDIRECT_FIELD_NAME, authenticate, get_user_model
+from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth import login as auth_login
 from ninja import NinjaAPI, Schema
 from ninja.security import APIKeyHeader

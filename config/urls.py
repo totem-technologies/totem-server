@@ -12,11 +12,6 @@ from totem.plans.urls import PlansSitemap
 from totem.repos.urls import ReposSitemap
 from totem.users.views import MagicLoginView
 
-
-def trigger_error(request):
-    division_by_zero = 1 / 0
-
-
 sitemap_dict = {
     "sitemaps": {
         "pages": PagesSitemap(),
@@ -49,7 +44,6 @@ urlpatterns = [
     path("onboard/", include("totem.onboard.urls")),
     path("auth/link/", MagicLoginView.as_view(), name="magic-login"),
     # Your stuff: custom urls includes go here
-    # path("_testcrash/", trigger_error, name="crash"),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 if settings.DEBUG:
     # Static file serving when using Gunicorn + Uvicorn for local web socket development

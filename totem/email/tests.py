@@ -2,8 +2,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.exceptions import ValidationError
-from django.test import RequestFactory, TestCase
-from django.urls import reverse
+from django.test import TestCase
 
 from totem.email.models import SubscribedModel
 
