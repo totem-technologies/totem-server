@@ -6,8 +6,6 @@
 #
 anyio==3.7.1
     # via watchfiles
-appnope==0.1.3
-    # via ipython
 argon2-cffi==21.3.0
     # via -r requirements/base.in
 argon2-cffi-bindings==21.2.0
@@ -55,7 +53,9 @@ coverage==7.3.0
     #   -r requirements/local.in
     #   django-coverage-plugin
 cryptography==41.0.3
-    # via pyjwt
+    # via
+    #   django-anymail
+    #   pyjwt
 cssbeautifier==1.14.9
     # via djlint
 decorator==5.1.1
@@ -126,7 +126,7 @@ faker==19.3.0
     # via factory-boy
 filelock==3.12.2
     # via virtualenv
-flake8==6.0.0
+flake8==6.1.0
     # via
     #   -r requirements/local.in
     #   flake8-isort
@@ -271,13 +271,13 @@ pyasn1==0.5.0
     #   rsa
 pyasn1-modules==0.3.0
     # via google-auth
-pycodestyle==2.10.0
+pycodestyle==2.11.0
     # via flake8
 pycparser==2.21
     # via cffi
 pydantic==1.10.12
     # via django-ninja
-pyflakes==3.0.1
+pyflakes==3.1.0
     # via flake8
 pygments==2.16.1
     # via ipython
