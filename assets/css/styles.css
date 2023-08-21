@@ -48,6 +48,9 @@
   .badge {
     @apply bg-purple-100 text-purple-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full dark:bg-purple-900 dark:text-purple-300;
   }
+  .tshadow{
+    @apply shadow-2xl ring-1 ring-gray-900/10;
+  }
 }
 
 .shimmer {
