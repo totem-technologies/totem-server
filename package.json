@@ -7,10 +7,11 @@
     "build": "npm run build:tailwind && npm run build:js",
     "build:js": "esbuild --bundle --sourcemap --define:process.env.NODE_ENV=\"\\\"production\\\"\" ./assets/js/app.js --outfile=./totem/static/js/app.min.js --minify",
     "build:tailwind": "cross-env NODE_ENV=production tailwindcss --postcss -i ./assets/css/styles.css -o ./totem/static/css/styles.css --minify",
-    "dev": "concurrently --kill-others \"npm run watch:js\" \"npm run watch:tailwind\"",
+    "dev": "concurrently --kill-others \"npm run watch:js\" \"npm run watch:tailwind\" \"npm run livereload\"",
     "watch:js": "esbuild --bundle --watch --sourcemap --define:process.env.NODE_ENV=\"\\\"development\\\"\" ./assets/js/app.js --outfile=./totem/static/js/app.min.js",
     "watch:tailwind": "cross-env NODE_ENV=development tailwindcss --postcss -i ./assets/css/styles.css -o ./totem/static/css/styles.css -w --minify",
-    "tailwindcss": "node ./node_modules/tailwindcss/lib/cli.js"
+    "tailwindcss": "node ./node_modules/tailwindcss/lib/cli.js",
+    "livereload": "livereload ./totem/ -e 'html,css,js,py'"
   },
   "keywords": [],
   "author": "",
@@ -34,6 +35,7 @@
   },
   "dependencies": {
     "@zootools/email-spell-checker": "^1.12.0",
-    "add-to-calendar-button": "^2.3.1"
+    "add-to-calendar-button": "^2.3.1",
+    "livereload": "^0.9.3"
   }
 }
