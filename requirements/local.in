@@ -22,7 +22,6 @@ ruff==0.0.285  # https://github.com/astral-sh/ruff
 
 # Django
 # ------------------------------------------------------------------------------
-django-browser-reload<2  # https://github.com/adamchainz/django-browser-reload
 django-coverage-plugin<4  # https://github.com/nedbat/django_coverage_plugin
 django-debug-toolbar==4.1.0  # https://github.com/jazzband/django-debug-toolbar
 django-extensions==3.2.3  # https://github.com/django-extensions/django-extensions

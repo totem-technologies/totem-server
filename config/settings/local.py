@@ -62,11 +62,6 @@ if env.bool("USE_DOCKER", True):
 # https://django-extensions.readthedocs.io/en/latest/installation_instructions.html#configuration
 INSTALLED_APPS += ["django_extensions"]  # noqa: F405
 
-# django-browser-reload
-# ------------------------------------------------------------------------------
-# INSTALLED_APPS += ["django_browser_reload"]
-# MIDDLEWARE += ["django_browser_reload.middleware.BrowserReloadMiddleware"]
-
 
 # # Email Tester (Uncomment)
 # # # Anymail

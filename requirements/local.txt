@@ -73,7 +73,6 @@ django==4.2.4
     #   -r requirements/base.in
     #   django-allauth
     #   django-anymail
-    #   django-browser-reload
     #   django-debug-toolbar
     #   django-extensions
     #   django-model-utils
@@ -88,8 +87,6 @@ django-allauth==0.54.0
     # via -r requirements/base.in
 django-anymail==10.0
     # via -r requirements/base.in
-django-browser-reload==1.11.0
-    # via -r requirements/local.in
 django-coverage-plugin==3.1.0
     # via -r requirements/local.in
 django-debug-toolbar==4.1.0
@@ -163,7 +160,7 @@ icalendar==5.0.7
     #   caldav
     #   recurring-ical-events
     #   x-wr-timezone
-identify==2.5.26
+identify==2.5.27
     # via pre-commit
 idna==3.4
     # via
