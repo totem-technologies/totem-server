@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponse
@@ -13,20 +15,6 @@ User = get_user_model()
 
 
 ICS_QUERY_PARAM = "key"
-
-# test_circle = Circle(
-#     title=fake.sentence(),
-#     subtitle=fake.sentence(),
-#     tags=["tag1", "tag2", "tag3"],
-#     description=fake.paragraph(100),
-#     author=User.objects.get(id=1),
-#     published=True,
-#     slug="circle-slug",
-#     pk=1,
-#     price="Free",
-#     duration="1 hour",
-#     google_url="https://calendar.google.com/calendar/u/0/r/eventedit/NTFoMTVyYjQ4bzFpZ2htM3JuNzlkbjZ2aGlfMjAyMzA3MjlUMjMwMDAwWiBjX2RkZjQ0NThiMzc1YTFkMjgzODlhZWU5M2VkMjM0YWMxYjUxZWU5OGVkMzdkMDlhOGEyMjUwOWE5NTBiYWMxMTVAZw",
-# )
 
 
 def _get_circle(slug: str) -> Circle:
@@ -99,3 +87,24 @@ def rsvp(request, slug):
             circle.attendees.add(request.user)
         circle.save()
     return redirect("circles:detail", slug=slug)
+
+
+class CircleListItem:
+    def __init__(self, circle, is_attending):
+        self.circle = circle
+        self.is_attending = is_attending
+
+
+def list(request):
+    circles = Circle.objects.filter(start__gte=datetime.now())
+    if request.user.is_staff:
+        circles = circles.all()
+    else:
+        circles = circles.filter(published=True)
+    circles.order_by("start")
+    if request.user.is_authenticated:
+        attending = request.user.attending.all()
+        circles = [CircleListItem(circle, circle in attending) for circle in circles]
+    else:
+        circles = [CircleListItem(circle, False) for circle in circles]
+    return render(request, "circles/list.html", {"circles": circles})
