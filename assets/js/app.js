@@ -1,4 +1,6 @@
 import emailSpellChecker from "./emailSpellCheck"
+import rruleWidget from "./rruleWidget"
+
 import logger from "./logger"
 
 dismiss_alert = function (e) {
@@ -11,6 +13,7 @@ document.cookie = `totem_timezone=${timezone}; SameSite=Strict`
 
 window.addEventListener("DOMContentLoaded", () => {
   emailSpellChecker()
+  rruleWidget()
 })
 
 logger(window.TOTEM_DATA.debug)

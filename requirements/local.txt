@@ -289,6 +289,7 @@ pytest-sugar==0.9.7
     # via -r requirements/local.in
 python-dateutil==2.8.2
     # via
+    #   -r requirements/base.in
     #   faker
     #   icalendar
     #   posthog
@@ -407,7 +408,7 @@ websockets==11.0.3
     # via uvicorn
 werkzeug[watchdog]==2.3.6
     # via -r requirements/local.in
-wheel==0.41.1
+wheel==0.41.2
     # via pip-tools
 whitenoise==6.5.0
     # via -r requirements/base.in

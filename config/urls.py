@@ -43,6 +43,7 @@ urlpatterns = [
     ),
     path("onboard/", include("totem.onboard.urls")),
     path("auth/link/", MagicLoginView.as_view(), name="magic-login"),
+    path("dev/", include("totem.dev.urls", namespace="dev"))
     # Your stuff: custom urls includes go here
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 if settings.DEBUG:
