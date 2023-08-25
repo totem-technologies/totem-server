@@ -54,7 +54,7 @@ class Circle(MarkdownMixin, SluggedModel):
 class CircleEvent(MarkdownMixin, SluggedModel):
     open = models.BooleanField(default=True, help_text="Is this Circle for more attendees?")
     cancelled = models.BooleanField(default=False, help_text="Is this Circle cancelled?")
-    start = models.DateTimeField()
+    start = models.DateTimeField(default=timezone.now)
     duration_minutes = models.IntegerField(_("Minutes"), default=60)
     attendees = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="attending")
     seats = models.IntegerField(default=8)

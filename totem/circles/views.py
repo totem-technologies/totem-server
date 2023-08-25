@@ -1,10 +1,9 @@
-from datetime import datetime
-
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
+from django.utils import timezone
 
 from totem.utils.hash import basic_hash
 
@@ -95,7 +94,7 @@ class CircleListItem:
 
 
 def list(request):
-    events = CircleEvent.objects.filter(start__gte=datetime.now())
+    events = CircleEvent.objects.filter(start__gte=timezone.now())
     if request.user.is_staff:
         events = events.all()
     else:

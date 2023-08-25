@@ -1,4 +1,5 @@
-import pytz
+import datetime
+
 from factory import Faker, SubFactory
 from factory.django import DjangoModelFactory
 
@@ -20,7 +21,7 @@ class CircleFactory(DjangoModelFactory):
 
 class CircleEventFactory(DjangoModelFactory):
     circle = SubFactory(CircleFactory)
-    start = Faker("future_datetime", tzinfo=pytz.UTC)
+    start = Faker("future_datetime", tzinfo=datetime.UTC)
     duration_minutes = 60
 
     class Meta:

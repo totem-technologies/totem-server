@@ -4,5 +4,15 @@
     "dokku": {
       "postdeploy": "./manage.py migrate"
     }
+  },
+  "healthchecks": {
+    "web": [
+      {
+        "type": "startup",
+        "name": "web check",
+        "path": "/",
+        "contents": "Totem"
+      }
+    ]
   }
 }
