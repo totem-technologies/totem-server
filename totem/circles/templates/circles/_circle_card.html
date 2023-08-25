@@ -3,7 +3,7 @@
         <div class="flex w-full items-start justify-between space-x-6 p-6">
             <div class="flex-1">
                 <h2 class="h2 text-gray-900">{{ circle.title }}</h2>
-                <p class="text-red-500">{{ circle.start|date:"D, M j, g:i a T" }}</p>
+                <p class="text-red-500">{{ circle.next_event.start|date:"D, M j, g:i a T" }}</p>
                 <p>{{ circle.recurring }}</p>
                 {% for tag in circle.tags.all %}
                     <span class="inline-flex flex-shrink-0 items-center badge badge-primary">{{ tag }}</span>

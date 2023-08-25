@@ -9,7 +9,7 @@ from django.urls import reverse
 from totem.utils.hash import basic_hash
 
 from .calendar import calendar
-from .models import Circle
+from .models import Circle, CircleEvent
 
 User = get_user_model()
 
@@ -28,10 +28,10 @@ def detail(request, slug):
     circle = _get_circle(slug)
     if not circle.published and not request.user.is_staff:
         raise Http404
-    if request.user.is_authenticated:
-        attending = circle.attendees.contains(request.user)
-    else:
-        attending = False
+        # if request.user.is_authenticated:
+        #     attending = circle.attendees.contains(request.user)
+        # else:
+    attending = False
     ics_url = ""
     if attending:
         ih = ics_hash(slug, request.user.ics_key)
@@ -90,21 +90,21 @@ def rsvp(request, slug):
 
 
 class CircleListItem:
-    def __init__(self, circle, is_attending):
-        self.circle = circle
-        self.is_attending = is_attending
+    def __init__(self, circle):
+        self.circle: Circle = circle
 
 
 def list(request):
-    circles = Circle.objects.filter(start__gte=datetime.now())
+    events = CircleEvent.objects.filter(start__gte=datetime.now())
     if request.user.is_staff:
-        circles = circles.all()
+        events = events.all()
     else:
-        circles = circles.filter(published=True)
-    circles.order_by("start")
-    if request.user.is_authenticated:
-        attending = request.user.attending.all()
-        circles = [CircleListItem(circle, circle in attending) for circle in circles]
-    else:
-        circles = [CircleListItem(circle, False) for circle in circles]
-    return render(request, "circles/list.html", {"circles": circles})
+        events = events.filter(circle__published=True)
+    events.order_by("start")
+    circles = []
+    for event in events:
+        if event.circle in circles:
+            continue
+        circles.append(event.circle)
+    circle_list_items = [CircleListItem(circle) for circle in circles]
+    return render(request, "circles/list.html", {"circles": circle_list_items})

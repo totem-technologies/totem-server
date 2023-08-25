@@ -13,8 +13,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description"
           content="{% block description %}Totem Circles are a confidential space for us to share and grow. A discussion facilitator, known as the Keeper, will be your guide.{% endblock description %}" />
-    <meta name="author" content="Bo" />
-    <link rel="icon" href="{% static 'images/favicons/favicon.ico' %}" />
+    <meta name="author" content="bo@totem.org" />
+    {% comment %} Open Graph / Facebook {% endcomment %}
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.totem.org/" />
+    <meta property="og:image" content="{% static 'images/ogimage.jpg' %}" />
+    {% comment %} Twitter {% endcomment %}
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:site" content="@totemcircles" />
+    <link rel="icon"
+          href="{% block ogimage %}{% static 'images/favicons/favicon.ico' %}{% endblock ogimage %}" />
     <link rel="apple-touch-icon"
           sizes="180x180"
           href="{% static 'images/favicons/apple-touch-icon.png' %}" />
