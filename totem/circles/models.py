@@ -70,3 +70,31 @@ class CircleEvent(MarkdownMixin, SluggedModel):
 
     def attendee_list(self):
         return ", ".join([str(attendee) for attendee in self.attendees.all()])
+
+    def add_attendee(self, user):
+        if self.seats_left() <= 0:
+            raise CircleEventException("No seats left")
+        if user in self.attendees.all():
+            return
+        if not self.open and not user.is_staff:
+            raise CircleEventException("Circle is not open")
+        if self.cancelled:
+            raise CircleEventException("Circle is cancelled")
+        if self.start < timezone.now():
+            raise CircleEventException("Circle has already started")
+        self.attendees.add(user)
+        self.save()
+
+    def remove_attendee(self, user):
+        if user not in self.attendees.all():
+            return
+        if self.cancelled:
+            raise CircleEventException("Circle is cancelled")
+        if self.start < timezone.now():
+            raise CircleEventException("Circle has already started")
+        self.attendees.remove(user)
+        self.save()
+
+
+class CircleEventException(Exception):
+    pass

@@ -1,3 +1,4 @@
+from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponse
@@ -8,7 +9,7 @@ from django.utils import timezone
 from totem.utils.hash import basic_hash
 
 from .calendar import calendar
-from .models import Circle, CircleEvent
+from .models import Circle, CircleEvent, CircleEventException
 
 User = get_user_model()
 
@@ -23,14 +24,21 @@ def _get_circle(slug: str) -> Circle:
         raise Http404
 
 
+def _get_circle_event(slug: str) -> CircleEvent:
+    try:
+        return CircleEvent.objects.get(slug=slug)
+    except CircleEvent.DoesNotExist:
+        raise Http404
+
+
 def detail(request, slug):
     circle = _get_circle(slug)
     if not circle.published and not request.user.is_staff:
         raise Http404
-        # if request.user.is_authenticated:
-        #     attending = circle.attendees.contains(request.user)
-        # else:
-    attending = False
+    if request.user.is_authenticated:
+        attending = circle.next_event().attendees.contains(request.user)
+    else:
+        attending = False
     ics_url = ""
     if attending:
         ih = ics_hash(slug, request.user.ics_key)
@@ -74,18 +82,17 @@ def ics_hash(slug, user_ics_key):
 
 
 @login_required
-def rsvp(request, slug):
-    # user = request.user
+def rsvp(request, event_slug):
+    event = _get_circle_event(event_slug)
     if request.POST:
-        circle = _get_circle(slug)
-        if not circle.published and not request.user.is_staff:
-            raise Http404
-        if request.user in circle.attendees.all():
-            circle.attendees.remove(request.user)
-        else:
-            circle.attendees.add(request.user)
-        circle.save()
-    return redirect("circles:detail", slug=slug)
+        try:
+            if request.POST.get("action") == "remove":
+                event.remove_attendee(request.user)
+            else:
+                event.add_attendee(request.user)
+        except CircleEventException as e:
+            messages.error(request, str(e))
+    return redirect("circles:detail", slug=event.circle.slug)
 
 
 class CircleListItem:

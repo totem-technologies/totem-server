@@ -106,6 +106,7 @@ class OnboardView(LoginRequiredMixin, TemplateView):
         extra_form = OnboardExtraForm(request.POST)
         if name_form.is_valid() and circle_form.is_valid() and extra_form.is_valid():
             self.request.user.name = name_form.cleaned_data.pop("name")
+            self.request.user.clean()
             self.request.user.save()
             onboard = self.get_onboard_model()
             interests = []
