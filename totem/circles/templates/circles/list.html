@@ -7,7 +7,25 @@
 {% endblock javascript %}
 {% block content %}
     <section class="max-w-5xl m-auto pb-20">
-        <h1 class="h1 pb-10">Circles</h1>
+        <h1 class="h1 text-center pb-10">Circles</h1>
+        {% if attending_events %}
+            <h2 class="h2 pb-5">Registered Circles</h2>
+            <ul role="list" class="grid grid-cols-1 gap-6 pb-5 sm:grid-cols-3">
+                {% for event in attending_events %}
+                    <li class="col-span-1 divide-y hover:tshadow divide-gray-200 transition-all duration-500 rounded-3xl bg-white">
+                        <a href="{% url 'circles:event_detail' slug=event.circle.slug event_slug=event.slug %}">
+                            <div class="flex w-full items-start justify-between space-x-6 p-6">
+                                <div class="flex-1">
+                                    <h2 class="h2 text-gray-900 text-lg">{{ event.circle.title }}</h2>
+                                    <p class="text-red-500">{{ event.start|date:"D, M j, g:i a T" }}</p>
+                                </div>
+                            </div>
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        <h2 class="h2 pb-5">Upcoming Circles</h2>
         <ul role="list" class="grid grid-cols-1 gap-6 sm:grid-cols-2">
             {% for circle in circles %}
                 {% include "circles/_circle_card.html" with circle=circle.circle is_attending=circle.is_attending %}

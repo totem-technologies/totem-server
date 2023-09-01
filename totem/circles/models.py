@@ -65,11 +65,13 @@ class CircleEvent(MarkdownMixin, SluggedModel):
     cancelled = models.BooleanField(default=False, help_text="Is this Circle cancelled?")
     start = models.DateTimeField(default=timezone.now)
     duration_minutes = models.IntegerField(_("Minutes"), default=60)
-    attendees = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="attending")
+    attendees = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="events_attending")
+    joined = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="events_joined")
     seats = models.IntegerField(default=8)
     date_created = models.DateTimeField(auto_now_add=True)
     date_modified = models.DateTimeField(auto_now=True)
     circle = models.ForeignKey(Circle, on_delete=models.CASCADE, related_name="events")
+    meeting_url = models.CharField(max_length=255, blank=True)
 
     def get_absolute_url(self) -> str:
         return reverse("circles:event_detail", kwargs={"event_slug": self.slug, "slug": self.circle.slug})
@@ -97,6 +99,18 @@ class CircleEvent(MarkdownMixin, SluggedModel):
     def started(self):
         return self.start < timezone.now()
 
+    def joinable(self, user):
+        now = timezone.now()
+        grace_before = datetime.timedelta(minutes=30)
+        grace_after = datetime.timedelta(minutes=10)
+        grace_duration = datetime.timedelta(minutes=self.duration_minutes)
+        if user not in self.attendees.all():
+            return False
+        if user in self.joined.all():
+            # Come back any time if already joined.
+            return self.start - grace_before < now < self.start + grace_duration
+        return self.start - grace_before < now < self.start + grace_after
+
     def ended(self):
         return self.start + datetime.timedelta(minutes=self.duration_minutes) < timezone.now()
 
@@ -111,7 +125,7 @@ class CircleEvent(MarkdownMixin, SluggedModel):
         self.save()
 
     def __str__(self):
-        return f"<CircleEvent start: {self.start}>"
+        return f"CircleEvent: {self.start}"
 
 
 class CircleEventException(Exception):

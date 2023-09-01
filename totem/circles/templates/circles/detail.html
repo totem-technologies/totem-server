@@ -56,6 +56,11 @@
                 <div class="text-center pt-3">
                     {% if event.cancelled %}
                         <p>This Circle session has been cancelled.</p>
+                    {% elif joinable %}
+                        <p class="pb-4">The Circle is starting!</p>
+                        <a class="w-full inline-block btn-primary p-2 px-6 shimmer"
+                           target="_blank"
+                           href="{% url 'circles:join' event_slug=event.slug %}">Join now</a>
                     {% elif event.ended %}
                         <p>This Circle session has already ended.</p>
                     {% elif event.started %}
@@ -73,7 +78,7 @@
                         {% else %}
                             <form action="{% url 'circles:rsvp' event_slug=event.slug %}" method="post">
                                 {% csrf_token %}
-                                <button class=" w-full btn-danger p-2 px-6 shimmer"
+                                <button class="w-full btn-primary p-2 px-6 shimmer"
                                         type="submit"
                                         value="Submit">Reserve a spot</button>
                             </form>
