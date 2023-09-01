@@ -12,7 +12,15 @@ def make_slug():
     )
 
 
-class SluggedModel(models.Model):
+class BaseModel(models.Model):
+    date_created = models.DateTimeField(auto_now_add=True)
+    date_modified = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        abstract = True
+
+
+class SluggedModel(BaseModel):
     slug = models.SlugField(db_index=True, unique=True, editable=False, blank=True, default=make_slug)
 
     def save(self, *args, **kwargs):

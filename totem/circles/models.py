@@ -15,11 +15,10 @@ from totem.utils.models import SluggedModel
 class Circle(MarkdownMixin, SluggedModel):
     title = models.CharField(max_length=255)
     subtitle = models.CharField(max_length=2000)
+    image = models.ImageField(upload_to="circles", blank=True, null=True)
     tags = TaggableManager()
     content = MarkdownField(default="")
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, limit_choices_to={"is_staff": True})
-    date_created = models.DateTimeField(auto_now_add=True)
-    date_modified = models.DateTimeField(auto_now=True)
     published = models.BooleanField(default=False, help_text="Is this Circle visible?")
     open = models.BooleanField(default=True, help_text="Is this Circle for more attendees?")
     price = models.IntegerField(
@@ -31,7 +30,6 @@ class Circle(MarkdownMixin, SluggedModel):
             MaxValueValidator(1000, message="Price must be less than or equal to 1000"),
         ],
     )
-    duration = models.CharField(max_length=255)
     recurring = models.CharField(max_length=255)
     subscribed = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="subscribed_circles")
 
@@ -42,13 +40,22 @@ class Circle(MarkdownMixin, SluggedModel):
         return reverse("circles:detail", kwargs={"slug": self.slug})
 
     def subscribed_list(self):
-        return ", ".join([str(attendee) for attendee in self.subscribed.all()])
+        return ", ".join([str(attendee.email) for attendee in self.subscribed.all()])
 
     def next_event(self):
         return self.events.filter(start__gte=timezone.now()).order_by("start").first()
 
+    def other_events(self):
+        return self.events.filter(start__gte=timezone.now()).order_by("start")[:10]
+
     def is_free(self):
         return self.price == 0
+
+    def subscribe(self, user):
+        return self.subscribed.add(user)
+
+    def unsubscribe(self, user):
+        return self.subscribed.remove(user)
 
 
 class CircleEvent(MarkdownMixin, SluggedModel):
@@ -63,7 +70,7 @@ class CircleEvent(MarkdownMixin, SluggedModel):
     circle = models.ForeignKey(Circle, on_delete=models.CASCADE, related_name="events")
 
     def get_absolute_url(self) -> str:
-        return reverse("circles:event_detail", kwargs={"slug": self.slug})
+        return reverse("circles:event_detail", kwargs={"event_slug": self.slug, "slug": self.circle.slug})
 
     def seats_left(self):
         return self.seats - self.attendees.count()
@@ -94,6 +101,9 @@ class CircleEvent(MarkdownMixin, SluggedModel):
             raise CircleEventException("Circle has already started")
         self.attendees.remove(user)
         self.save()
+
+    def __str__(self):
+        return f"<CircleEvent start: {self.start}>"
 
 
 class CircleEventException(Exception):

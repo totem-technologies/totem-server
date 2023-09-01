@@ -92,6 +92,7 @@ LOCAL_APPS = [
     "totem.email",
     "totem.onboard",
     "totem.circles",
+    "totem.uploads",
     "totem.dev",
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps

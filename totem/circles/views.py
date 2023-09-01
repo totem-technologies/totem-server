@@ -31,12 +31,19 @@ def _get_circle_event(slug: str) -> CircleEvent:
         raise Http404
 
 
-def detail(request, slug):
+def detail(request, slug, event_slug=None):
     circle = _get_circle(slug)
+    if event_slug is not None:
+        try:
+            event = circle.events.get(slug=event_slug)
+        except CircleEvent.DoesNotExist:
+            raise Http404
+    else:
+        event = circle.next_event()
     if not circle.published and not request.user.is_staff:
         raise Http404
     if request.user.is_authenticated:
-        attending = circle.next_event().attendees.contains(request.user)
+        attending = event.attendees.contains(request.user)
     else:
         attending = False
     ics_url = ""
@@ -46,10 +53,17 @@ def detail(request, slug):
             request.build_absolute_uri(reverse("circles:ics", kwargs={"slug": slug})) + f"?{ICS_QUERY_PARAM}={ih}"
         )
         ics_url = ics_url.replace("http://", "https://")
+
     return render(
         request,
         "circles/detail.html",
-        {"object": circle, "attending": attending, "ics_url": ics_url},
+        {
+            "object": circle,
+            "attending": attending,
+            "ics_url": ics_url,
+            "event": event,
+            "other_events": circle.other_events(),
+        },
     )
 
 
@@ -90,6 +104,7 @@ def rsvp(request, event_slug):
                 event.remove_attendee(request.user)
             else:
                 event.add_attendee(request.user)
+                event.circle.subscribe(request.user)
         except CircleEventException as e:
             messages.error(request, str(e))
     return redirect("circles:detail", slug=event.circle.slug)

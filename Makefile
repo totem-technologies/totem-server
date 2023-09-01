@@ -1,6 +1,9 @@
 run:
 	npm run build
-	docker compose -f local.yml up --build
+	docker compose -f local.yml up
+
+build:
+	docker-compose -f local.yml build
 
 test:
 	docker-compose -f local.yml run --rm django coverage run -m pytest
@@ -14,9 +17,6 @@ dbshell:
 
 sqlshell:
 	docker-compose -f local.yml exec postgres psql -U debug -d totem
-
-migrate:
-	./manage.py makemigrations && ./manage.py migrate
 
 deploy:
 	git push dokku
@@ -44,5 +44,11 @@ pipcompile:
 
 pipsync:
 	pip-sync requirements/local.txt
+
+migrations: ## Create DB migrations in the container
+	@docker-compose -f local.yml run django python manage.py makemigrations
+
+migrate: ## Run DB migrations in the container
+	@docker-compose -f local.yml run django python manage.py migrate
 
 .PHONY: run test shell migrate deploy assets

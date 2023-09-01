@@ -58,7 +58,7 @@ class User(SluggedModel, AbstractUser):
         return settings.ENVIRONMENT_NAME.lower() + "_" + str(self.pk)
 
     def __str__(self):
-        return f"<User: {self.email}, slug: {self.slug}>"
+        return f"<User: {self.name}, slug: {self.slug}>"
 
     def clean(self):
         super().clean()
