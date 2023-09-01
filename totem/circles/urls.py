@@ -18,8 +18,8 @@ app_name = "circles"
 
 urlpatterns = [
     path("", views.list, name="list"),
+    path("rsvp/<str:event_slug>", views.rsvp, name="rsvp"),
     path("<str:slug>/event.ics", views.ics, name="ics"),
-    path("<str:event_slug>/rsvp", views.rsvp, name="rsvp"),
     path("<str:slug>/", views.detail, name="detail"),
     path("<str:slug>/event/<str:event_slug>/", views.detail, name="event_detail"),
     # path("sitemap.xml", CirclesSitemap),

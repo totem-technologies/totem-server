@@ -13,7 +13,7 @@ class CircleFactory(DjangoModelFactory):
     subtitle = Faker("text")
     author = SubFactory(UserFactory)
     price = 0
-    duration = "4 weeks"
+    recurring = "4 weeks"
 
     class Meta:
         model = Circle

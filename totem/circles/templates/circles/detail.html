@@ -2,7 +2,7 @@
 {% load static %}
 {% load avatar %}
 {# djlint:off #}
-{% block title %}Circles - {{ object.title }}{% endblock title %}
+{% block title %}Circles - {{ object.title }} @ {{event.start|date:'l, F j'}}{% endblock title %}
 {# djlint:on #}
 {% block javascript %}
     <script src="{% static 'js/atcb.min.js' %}" defer></script>
@@ -54,22 +54,30 @@
                 <div>Duration: {{ event.duration_minutes }} min</div>
                 <div>Seats left: {{ event.seats_left }}</div>
                 <div class="text-center pt-3">
-                    {% if attending %}
-                        <add-to-calendar-button hideCheckmark styleLight="--btn-shadow:none; --btn-shadow-hover:none" inline hideBranding
-                        {% if debug %}debug{% endif %}
-                        buttonStyle="round" name="Title" options="'Apple','Google'" location="Online" startDate="{{ event.start|date:"Y-m-d" }}" endDate="{{ event.start|date:"Y-m-d" }}" startTime="{{ event.start|date:"H:i" }}" endTime="{{ event.start|date:"H:i" }}"></add-to-calendar-button>
-                        <form action="{% url 'circles:rsvp' event_slug=event.slug %}" method="post">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="remove">
-                            <button class="a text-gray-400 pt-2" type="submit" value="Submit">Give up spot</button>
-                        </form>
+                    {% if event.cancelled %}
+                        <p>This Circle session has been cancelled.</p>
+                    {% elif event.ended %}
+                        <p>This Circle session has already ended.</p>
+                    {% elif event.started %}
+                        <p>This Circle session has already started.</p>
                     {% else %}
-                        <form action="{% url 'circles:rsvp' event_slug=event.slug %}" method="post">
-                            {% csrf_token %}
-                            <button class=" w-full btn-danger p-2 px-6 shimmer"
-                                    type="submit"
-                                    value="Submit">Reserve a spot</button>
-                        </form>
+                        {% if attending %}
+                            <add-to-calendar-button hideCheckmark styleLight="--btn-shadow:none; --btn-shadow-hover:none" inline hideBranding
+                            {% if debug %}debug{% endif %}
+                            buttonStyle="round" name="Title" options="'Apple','Google'" location="Online" startDate="{{ event.start|date:"Y-m-d" }}" endDate="{{ event.start|date:"Y-m-d" }}" startTime="{{ event.start|date:"H:i" }}" endTime="{{ event.start|date:"H:i" }}"></add-to-calendar-button>
+                            <form action="{% url 'circles:rsvp' event_slug=event.slug %}" method="post">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="remove">
+                                <button class="a text-gray-400 pt-2" type="submit" value="Submit">Give up spot</button>
+                            </form>
+                        {% else %}
+                            <form action="{% url 'circles:rsvp' event_slug=event.slug %}" method="post">
+                                {% csrf_token %}
+                                <button class=" w-full btn-danger p-2 px-6 shimmer"
+                                        type="submit"
+                                        value="Submit">Reserve a spot</button>
+                            </form>
+                        {% endif %}
                     {% endif %}
                 </div>
             </div>

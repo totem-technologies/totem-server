@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from totem.email.models import SubscribedModel
+from totem.users.tests.factories import UserFactory
 
 from .utils import validate_email_blocked
 
@@ -12,10 +13,8 @@ User = get_user_model()
 
 
 class SubscribeTestCase(TestCase):
-    fixtures = ["users.yaml"]
-
     def test_subscribe(self):
-        user = User.objects.get(pk=1)
+        user = UserFactory()
         subscribed = SubscribedModel.objects.create(user=user)
         assert subscribed.subscribed is False
         subscribed.subscribe()
@@ -24,7 +23,7 @@ class SubscribeTestCase(TestCase):
         assert subscribed.subscribed is False
 
     def test_subscribe_email(self):
-        user = User.objects.get(pk=1)
+        user = UserFactory()
         subscribed = SubscribedModel.objects.create(user=user)
         subscribed.send_subscribe_email()
         assert len(mail.outbox) == 1

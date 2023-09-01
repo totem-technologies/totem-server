@@ -1,3 +1,5 @@
+import datetime
+
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -87,17 +89,23 @@ class CircleEvent(MarkdownMixin, SluggedModel):
             raise CircleEventException("Circle is not open")
         if self.cancelled:
             raise CircleEventException("Circle is cancelled")
-        if self.start < timezone.now():
+        if self.started():
             raise CircleEventException("Circle has already started")
         self.attendees.add(user)
         self.save()
+
+    def started(self):
+        return self.start < timezone.now()
+
+    def ended(self):
+        return self.start + datetime.timedelta(minutes=self.duration_minutes) < timezone.now()
 
     def remove_attendee(self, user):
         if user not in self.attendees.all():
             return
         if self.cancelled:
             raise CircleEventException("Circle is cancelled")
-        if self.start < timezone.now():
+        if self.started():
             raise CircleEventException("Circle has already started")
         self.attendees.remove(user)
         self.save()

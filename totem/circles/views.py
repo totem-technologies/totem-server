@@ -107,7 +107,7 @@ def rsvp(request, event_slug):
                 event.circle.subscribe(request.user)
         except CircleEventException as e:
             messages.error(request, str(e))
-    return redirect("circles:detail", slug=event.circle.slug)
+    return redirect("circles:event_detail", slug=event.circle.slug, event_slug=event.slug)
 
 
 class CircleListItem:
