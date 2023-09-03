@@ -74,7 +74,7 @@ class CircleEvent(MarkdownMixin, SluggedModel):
     meeting_url = models.CharField(max_length=255, blank=True)
 
     def get_absolute_url(self) -> str:
-        return reverse("circles:event_detail", kwargs={"event_slug": self.slug, "slug": self.circle.slug})
+        return reverse("circles:event_detail", kwargs={"event_slug": self.slug})
 
     def seats_left(self):
         return self.seats - self.attendees.count()
@@ -82,24 +82,31 @@ class CircleEvent(MarkdownMixin, SluggedModel):
     def attendee_list(self):
         return ", ".join([str(attendee) for attendee in self.attendees.all()])
 
-    def add_attendee(self, user):
-        if self.seats_left() <= 0:
-            raise CircleEventException("No seats left")
-        if user in self.attendees.all():
-            return
-        if not self.open and not user.is_staff:
+    def can_attend(self, user):
+        if not user.is_authenticated:
+            raise CircleEventException("Must be logged in")
+        if user.is_staff:
+            return True
+        if not self.open:
             raise CircleEventException("Circle is not open")
         if self.cancelled:
             raise CircleEventException("Circle is cancelled")
         if self.started():
             raise CircleEventException("Circle has already started")
+        if self.seats_left() <= 0:
+            raise CircleEventException("No seats left")
+        return True
+
+    def add_attendee(self, user):
+        if not self.can_attend(user):
+            return
         self.attendees.add(user)
         self.save()
 
     def started(self):
         return self.start < timezone.now()
 
-    def joinable(self, user):
+    def can_join(self, user):
         now = timezone.now()
         grace_before = datetime.timedelta(minutes=30)
         grace_after = datetime.timedelta(minutes=10)

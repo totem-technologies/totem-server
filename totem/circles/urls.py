@@ -20,8 +20,8 @@ urlpatterns = [
     path("", views.list, name="list"),
     path("rsvp/<str:event_slug>", views.rsvp, name="rsvp"),
     path("join/<str:event_slug>", views.join, name="join"),
-    # path("<str:slug>/event.ics", views.ics, name="ics"),
+    path("event/<str:event_slug>/", views.event_detail, name="event_detail"),
     path("<str:slug>/", views.detail, name="detail"),
-    path("<str:slug>/event/<str:event_slug>/", views.detail, name="event_detail"),
+    # path("<str:slug>/event.ics", views.ics, name="ics"),
     # path("sitemap.xml", CirclesSitemap),
 ]

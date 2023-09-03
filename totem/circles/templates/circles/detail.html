@@ -62,9 +62,11 @@
                            target="_blank"
                            href="{% url 'circles:join' event_slug=event.slug %}">Join now</a>
                     {% elif event.ended %}
-                        <p>This Circle session has already ended.</p>
+                        <p>This Circle session has ended.</p>
                     {% elif event.started %}
                         <p>This Circle session has already started.</p>
+                    {% elif not event.open and not attending %}
+                        <p>This Circle is not open to new participants.</p>
                     {% else %}
                         {% if attending %}
                             <add-to-calendar-button hideCheckmark styleLight="--btn-shadow:none; --btn-shadow-hover:none" inline hideBranding
@@ -100,7 +102,7 @@
             {% endif %}
             <div class="bg-white p-5 rounded-2xl border w-80 mb-8 mt-5 border-gray-200 max-md:w-full">
                 <div class="pb-3">
-                    <strong>Upcoming Sessions</strong>
+                    <strong>Other Sessions</strong>
                 </div>
                 {% for other_event in other_events %}
                     {% if other_event != event %}

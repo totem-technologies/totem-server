@@ -31,21 +31,27 @@ def _get_circle_event(slug: str) -> CircleEvent:
         raise Http404
 
 
-def detail(request, slug, event_slug=None):
+def event_detail(request, event_slug):
+    event = _get_circle_event(event_slug)
+    circle = event.circle
+    return _detail(request, circle, event)
+
+
+def detail(request, slug):
     circle = _get_circle(slug)
+    event = circle.next_event()
+    return _detail(request, circle, event)
+
+
+def _detail(request, circle, event):
     if not circle.published and not request.user.is_staff:
         raise Http404
-
-    if event_slug is not None:
-        event = _get_circle_event(event_slug)
-    else:
-        event = circle.next_event()
 
     attending = False
     joinable = False
     if request.user.is_authenticated:
         attending = event.attendees.contains(request.user)
-        joinable = event.joinable(request.user)
+        joinable = event.can_join(request.user)
 
     # if attending:
     #     ih = ics_hash(slug, request.user.ics_key)
@@ -107,12 +113,18 @@ def rsvp(request, event_slug):
                 event.circle.subscribe(request.user)
         except CircleEventException as e:
             messages.error(request, str(e))
-    return redirect("circles:event_detail", slug=event.circle.slug, event_slug=event.slug)
+    return redirect("circles:event_detail", event_slug=event.slug)
 
 
 class CircleListItem:
     def __init__(self, circle):
         self.circle: Circle = circle
+
+
+class CircleEventListItem:
+    def __init__(self, event, joinable):
+        self.event: CircleEvent = event
+        self.joinable: bool = joinable
 
 
 def list(request):
@@ -128,9 +140,11 @@ def list(request):
     circle_list_items = [CircleListItem(circle) for circle in circles]
     attending_events = []
     if request.user.is_authenticated:
-        attending_events = request.user.events_attending.filter(
+        events = request.user.events_attending.filter(
             start__gte=timezone.now() - datetime.timedelta(minutes=60)
         ).order_by("start")
+        for event in events:
+            attending_events.append(CircleEventListItem(event, event.joinable(request.user)))
     return render(request, "circles/list.html", {"circles": circle_list_items, "attending_events": attending_events})
 
 
