@@ -1,25 +1,30 @@
 import random
 
 from django import template
-from django.utils.html import escape
-from django.utils.safestring import mark_safe
 
 from totem.utils.hash import basic_hash
 
 register = template.Library()
 
 
-@register.simple_tag
+@register.inclusion_tag("utils/avatar.html")
 def avatar(user, size=120, classes=""):
-    html = ""
-    name = escape(user.name)
     size = int(size)
-    classes = escape(classes)
     if user.profile_image:
-        html = f'<img width="{size}" height="{size}" src="{user.profile_image}" alt="{name}" title="{name}" class="rounded-full {classes}">'
+        is_static = True
+        if user.profile_image.startswith("https://"):
+            is_static = False
+        ctx = {
+            "is_image": True,
+            "size": size,
+            "classes": classes,
+            "name": user.name,
+            "image": user.profile_image.strip("/"),
+            "is_static": is_static,
+        }
     else:
-        html = avatar_marble(name=name + user.slug, size=size, classes=classes, title=True)
-    return mark_safe(html)
+        ctx = avatar_marble(name=user.name + user.slug, size=size, classes=classes, title=True) | {"is_image": False}
+    return ctx
 
 
 ELEMENTS = 3
@@ -158,21 +163,17 @@ def avatar_marble(
     properties = _generate_colors(hashed_key, colors)
     mask_id = "mask_" + str(hashed_key)
 
-    svg = f'<svg class="{classes}" viewBox="0 0 {SIZE} {SIZE}" fill="none" role="img" xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}">'
-    if title:
-        svg += f"<title>{name}</title>"
-    svg += f'<mask id="{mask_id}" maskUnits="userSpaceOnUse" x="0" y="0" width="{SIZE}" height="{SIZE}">'
-    svg += f'<rect width="{SIZE}" height="{SIZE}" rx="{SIZE * 2 if not square else ""}" fill="#FFFFFF"/>'
-    svg += "</mask>"
-    svg += f'<g mask="url(#{mask_id})">'
-    svg += f'<rect width="{SIZE}" height="{SIZE}" fill="{properties[0]["color"]}"/>'
-    svg += f'<path filter="url(#prefix__filter0_f)" d="M32.414 59.35L50.376 70.5H72.5v-71H33.728L26.5 13.381l19.057 27.08L32.414 59.35z" fill="{properties[1]["color"]}" transform="translate({properties[1]["translateX"]} {properties[1]["translateY"]}) rotate({properties[1]["rotate"]} {SIZE / 2} {SIZE / 2}) scale({properties[2]["scale"]})" />'
-    svg += f'<path filter="url(#prefix__filter0_f)" style="mix-blend-mode:overlay" d="M22.216 24L0 46.75l14.108 38.129L78 86l-3.081-59.276-22.378 4.005 12.972 20.186-23.35 27.395L22.215 24z" fill="{properties[2]["color"]}" transform="translate({properties[2]["translateX"]} {properties[2]["translateY"]}) rotate({properties[2]["rotate"]} {SIZE / 2} {SIZE / 2}) scale({properties[2]["scale"]})" />'
-    svg += "</g>"
-    svg += '<defs><filter id="prefix__filter0_f" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"></feFlood><feBlend in="SourceGraphic" in2="BackgroundImageFix" result="shape"></feBlend><feGaussianBlur stdDeviation="7" result="effect1_foregroundBlur"></feGaussianBlur></filter></defs>'
-    svg += "</svg>"
-
-    return svg
+    return {
+        "classes": classes,
+        "size": size,
+        "SIZE": SIZE,
+        "SIZED2": SIZE / 2,
+        "RX": SIZE * 2,
+        "name": name,
+        "properties": properties,
+        "mask_id": mask_id,
+        "title": title,
+    }
 
 
 if __name__ == "__main__":
