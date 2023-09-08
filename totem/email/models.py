@@ -52,3 +52,17 @@ class SubscribedModel(models.Model):
     @property
     def unsubscribe_url(self):
         return reverse("email:unsubscribe", kwargs={"id": str(self.id)})
+
+
+class EmailLog(models.Model):
+    subscribed = models.ForeignKey(SubscribedModel, on_delete=models.CASCADE)
+    subject = models.CharField(max_length=255)
+    body = models.TextField()
+    created = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.subscribed.user.email} - {self.subject} ({self.created})"
+
+    class Meta:
+        verbose_name_plural = "Email Logs"
+        ordering = ("-created",)

@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from django.conf import settings
 
 from .utils import send_template_mail
@@ -34,6 +36,19 @@ def send_change_email(old_email: str, new_email: str, login_url: str):
             below. If this wasn't you, please ignore this email.",
         button_text="Confirm",
         link=login_url,
+    )
+
+
+def send_notify_circle_starting(circle_title: str, start_time: datetime, circle_url: str, attendee_email: str):
+    # 06:56 PM EDT on Friday, August 25
+    formatted_time = start_time.strftime("%I:%M %p %Z on %A, %B %d")
+    _send_button_email(
+        recipient=attendee_email,
+        subject="Your Circle is starting soon!",
+        message=f"Your Circle, {circle_title}, is starting at {formatted_time}. \
+            Click the button below to join the Circle. If you are more than 5 minutes late, you may not be allowed to participate.",
+        button_text="Join Circle",
+        link=circle_url,
     )
 
 

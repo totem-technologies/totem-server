@@ -1,5 +1,4 @@
 import zoneinfo
-
 from django.conf import settings
 from django.http import Http404, HttpRequest
 from django.utils import timezone
@@ -22,10 +21,15 @@ class TimezoneMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        tzname = None
         detected_tzname = request.COOKIES.get("totem_timezone")
-        tzname = request.session.get("totem_timezone")
+        user = request.user
+        if user.is_authenticated and user.timezone:
+            tzname = user.timezone
         if tzname is None and detected_tzname is not None:
             tzname = detected_tzname
+            if user.is_authenticated:
+                user.timezone = tzname
         if tzname:
             timezone.activate(zoneinfo.ZoneInfo(tzname))
         else:

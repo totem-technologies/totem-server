@@ -1,5 +1,6 @@
 import datetime
 
+from dateutil import tz
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -8,6 +9,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from taggit.managers import TaggableManager
 
+from totem.email.emails import send_notify_circle_starting
 from totem.utils.md import MarkdownField, MarkdownMixin
 from totem.utils.models import SluggedModel
 
@@ -68,10 +70,10 @@ class CircleEvent(MarkdownMixin, SluggedModel):
     attendees = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="events_attending")
     joined = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="events_joined")
     seats = models.IntegerField(default=8)
-    date_created = models.DateTimeField(auto_now_add=True)
-    date_modified = models.DateTimeField(auto_now=True)
     circle = models.ForeignKey(Circle, on_delete=models.CASCADE, related_name="events")
     meeting_url = models.CharField(max_length=255, blank=True)
+    notified = models.BooleanField(default=False)
+    advertised = models.BooleanField(default=False)
 
     def get_absolute_url(self) -> str:
         return reverse("circles:event_detail", kwargs={"event_slug": self.slug})
@@ -130,6 +132,16 @@ class CircleEvent(MarkdownMixin, SluggedModel):
             raise CircleEventException("Circle has already started")
         self.attendees.remove(user)
         self.save()
+
+    def notify(self, force=False):
+        # Notify users who are attending that the circle is about to start
+        if force is False and self.notified:
+            return
+        self.notified = True
+        self.save()
+        for user in self.attendees.all():
+            start = self.start.astimezone(tz.gettz(user.timezone))
+            send_notify_circle_starting(self.circle.title, start, self.meeting_url, user.email)
 
     def __str__(self):
         return f"CircleEvent: {self.start}"

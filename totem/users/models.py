@@ -33,6 +33,7 @@ class User(SluggedModel, AbstractUser):
     ics_key = UUIDField(_("API Key"), db_index=True, default=uuid.uuid4)
     profile_image = CharField(max_length=255, null=True, blank=True)
     verified = BooleanField(_("Verified"), default=False)
+    timezone = CharField(max_length=255, null=True, blank=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []

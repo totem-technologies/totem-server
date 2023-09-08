@@ -76,6 +76,7 @@ DJANGO_APPS = [
     "django.forms",
 ]
 THIRD_PARTY_APPS = [
+    "ninja",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
@@ -316,6 +317,10 @@ SOCIALACCOUNT_FORMS = {"signup": "totem.users.forms.UserSocialSignupForm"}
 
 # Your stuff...
 # ------------------------------------------------------------------------------
+
+# Custom
+# ------------------------------------------------------------------------------
+TOTEM_RUN_TASKS_TOKEN = env("TOTEM_RUN_TASKS_TOKEN")
 
 # django-sesame
 # ------------------------------------------------------------------------------

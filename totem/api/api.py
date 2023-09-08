@@ -1,8 +1,11 @@
+from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth import login as auth_login
 from ninja import NinjaAPI, Schema
+from ninja.errors import ValidationError
 from ninja.security import APIKeyHeader
 
+from totem.circles.tasks import tasks as circle_tasks
 from totem.users.views import login as user_login
 
 User = get_user_model()
@@ -60,3 +63,15 @@ def token(request, token: str):
         raise InvalidToken
     auth_login(request, user)  # updates the last login date
     return {"key": str(user.api_key)}  # type: ignore
+
+
+@api.post("/tasks")
+def run_tasks(request, token: str):
+    if token != settings.TOTEM_RUN_TASKS_TOKEN:
+        raise ValidationError(errors=[{"token": "Invalid token"}])
+    for task in circle_tasks:
+        try:
+            task()
+        except Exception as e:
+            print(e)
+            pass
