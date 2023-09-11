@@ -2,7 +2,7 @@ from django.urls import reverse
 
 from totem.users.tests.factories import UserFactory
 
-from .factories import CircleEventFactory
+from .factories import CircleEventFactory, CircleFactory
 
 
 class TestCircleListView:
@@ -42,5 +42,14 @@ class TestCircleDetailView:
     def test_detail_circle(self, client, db):
         circle = CircleEventFactory()
         url = reverse("circles:detail", kwargs={"slug": circle.circle.slug})
+        response = client.get(url)
+        assert response.status_code == 200
+
+    def test_detail_circle_no_event(self, client, db):
+        user = UserFactory()
+        user.save()
+        client.force_login(user)
+        circle = CircleFactory()
+        url = reverse("circles:detail", kwargs={"slug": circle.slug})
         response = client.get(url)
         assert response.status_code == 200

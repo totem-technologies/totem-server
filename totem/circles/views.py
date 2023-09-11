@@ -49,7 +49,7 @@ def _detail(request, circle, event):
 
     attending = False
     joinable = False
-    if request.user.is_authenticated:
+    if request.user.is_authenticated and event:
         attending = event.attendees.contains(request.user)
         joinable = event.can_join(request.user)
 
@@ -152,7 +152,7 @@ def list(request):
 def join(request, event_slug):
     event = _get_circle_event(event_slug)
     user = request.user
-    if event.joinable(user):
+    if event.joinable(user):  # type: ignore
         event.joined.add(user)
         return redirect(event.meeting_url, permanent=False)
     return redirect(event, permanent=False)
