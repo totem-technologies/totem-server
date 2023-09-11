@@ -9,4 +9,5 @@ urlpatterns = [
         views.rrule,
         name="rrule",
     ),
+    path("healthcheck/", views.healthcheck, name="healthcheck"),
 ]

@@ -30,3 +30,7 @@ def rrule(request):
     if request.method == "POST":
         rrule_data["rrule"] = request.POST.get("rrule")
     return render(request, "dev/rrule.html", context={"rrule_data": rrule_data})
+
+
+def healthcheck(request):
+    return render(request, "dev/healthcheck.html")
