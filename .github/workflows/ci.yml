@@ -4,7 +4,6 @@ name: CI
 env:
   DOCKER_BUILDKIT: 1
   COMPOSE_DOCKER_CLI_BUILD: 1
-  TOTEM_RUN_TASKS_TOKEN: gh_actions
 
 on:
   pull_request:
@@ -49,8 +48,11 @@ jobs:
       - name: Checkout Code Repository
         uses: actions/checkout@v3
 
+      - name: Set up env
+        run: cp .envs/.ci/.django .env
+
       - name: Build the Stack
-        run: touch .env && docker-compose -f local.yml build
+        run: docker-compose -f local.yml build
 
       - name: Run DB Migrations
         run: docker-compose -f local.yml run --rm django python manage.py migrate
