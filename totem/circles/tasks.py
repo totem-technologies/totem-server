@@ -12,17 +12,23 @@ def notify_circle_ready():
         notified=False,
     )
     for event in upcoming_circles:
-        event.notify()
+        try:
+            event.notify()
+        except Exception as e:
+            print(e)
 
 
 def advertise_circle():
     upcoming_circles = CircleEvent.objects.filter(
-        start__gte=timezone.now() + timedelta(days=5),
+        start__gte=timezone.now() + timedelta(days=2),
         start__lte=timezone.now() + timedelta(days=7),
         advertised=False,
     )
     for event in upcoming_circles:
-        event.advertise()
+        try:
+            event.advertise()
+        except Exception as e:
+            print(e)
 
 
-tasks = [notify_circle_ready]
+tasks = [notify_circle_ready, advertise_circle]

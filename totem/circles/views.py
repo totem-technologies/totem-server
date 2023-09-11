@@ -144,7 +144,7 @@ def list(request):
             start__gte=timezone.now() - datetime.timedelta(minutes=60)
         ).order_by("start")
         for event in events:
-            attending_events.append(CircleEventListItem(event, event.joinable(request.user)))
+            attending_events.append(CircleEventListItem(event, event.can_join(request.user)))
     return render(request, "circles/list.html", {"circles": circle_list_items, "attending_events": attending_events})
 
 

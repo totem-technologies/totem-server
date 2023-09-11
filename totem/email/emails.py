@@ -1,3 +1,4 @@
+import urllib.parse
 from datetime import datetime
 
 from django.conf import settings
@@ -52,7 +53,21 @@ def send_notify_circle_starting(circle_title: str, start_time: datetime, circle_
     )
 
 
+def send_notify_circle_advertisement(circle_title: str, start_time: datetime, event_url: str, attendee_email: str):
+    # 06:56 PM EDT on Friday, August 25
+    formatted_time = start_time.strftime("%I:%M %p %Z on %A, %B %d")
+    _send_button_email(
+        recipient=attendee_email,
+        subject="Join an upcoming Circle!",
+        message=f"A session for a Circle you are subscribed to, {circle_title}, is coming up at {formatted_time}. \
+            Click the button below to reserve a spot before this one fills up.",
+        button_text="Reserve a spot",
+        link=event_url,
+    )
+
+
 def _send_button_email(*, recipient: str, subject: str, message: str, button_text: str, link: str):
+    link = make_email_url(link)
     send_template_mail(
         template_id="vywj2lpv631l7oqz",
         recipient=recipient,
@@ -65,3 +80,7 @@ def _send_button_email(*, recipient: str, subject: str, message: str, button_tex
             "support_email": settings.EMAIL_SUPPORT_ADDRESS,
         },
     )
+
+
+def make_email_url(link):
+    return urllib.parse.urljoin(settings.EMAIL_BASE_URL, link)

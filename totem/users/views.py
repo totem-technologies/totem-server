@@ -45,13 +45,13 @@ def user_update_view(request, *args, **kwargs):
             message = "Profile successfully updated."
             new_email = form.cleaned_data["email"]
             if old_email != new_email:
-                login_url = get_login_url(user, request, after_login_url=None, mobile=False)
+                login_url = get_login_url(user, after_login_url=None, mobile=False)
                 user.verified = False
                 emails.send_change_email(old_email, new_email, login_url)
                 message = f"Email successfully updated to {new_email}. Please check your inbox to confirm."
             form.save()
             messages.success(request, message)
-            return redirect(user.get_absolute_url())
+            return redirect("users:dashboard")
     return render(request, "users/user_form.html", {"form": form})
 
 
@@ -61,7 +61,7 @@ def user_redirect_view(request, *args, **kwargs):
     assert user.is_authenticated
     try:
         if user.onboard and user.onboard.onboarded:
-            return redirect(user)
+            return redirect("users:dashboard")
     except ObjectDoesNotExist:
         pass
     return redirect("onboard:index")
@@ -111,14 +111,11 @@ def _notify_slack():
     notify_slack("Signup: A new person has signed up for ✨Totem✨!")
 
 
-def get_login_url(user, request, after_login_url: str | None, mobile: bool) -> str:
+def get_login_url(user, after_login_url: str | None, mobile: bool) -> str:
     if not after_login_url or after_login_url.startswith("http"):
         after_login_url = reverse("users:redirect")
 
-    if mobile:
-        url = "https://app.totem.org" + reverse("magic-login")
-    else:
-        url = request.build_absolute_uri(reverse("magic-login"))
+    url = reverse("magic-login")
 
     url += get_query_string(user)
     url += "&next=" + after_login_url
@@ -135,7 +132,7 @@ def login(email: str, request, after_login_url: str | None = None, mobile: bool 
     """
     user, created = User.objects.get_or_create(email=email)
 
-    url = get_login_url(user, request, after_login_url, mobile)
+    url = get_login_url(user, after_login_url, mobile)
 
     if created:
         django_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
@@ -150,3 +147,8 @@ def login(email: str, request, after_login_url: str | None = None, mobile: bool 
 
 def user_index_view(request):
     return user_redirect_view(request)
+
+
+@login_required
+def user_dashboard_view(request):
+    return render(request, "users/dashboard.html", context={"object": request.user})

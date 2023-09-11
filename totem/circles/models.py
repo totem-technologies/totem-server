@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from taggit.managers import TaggableManager
 
-from totem.email.emails import send_notify_circle_starting
+from totem.email.emails import send_notify_circle_advertisement, send_notify_circle_starting
 from totem.utils.md import MarkdownField, MarkdownMixin
 from totem.utils.models import SluggedModel
 
@@ -84,11 +84,7 @@ class CircleEvent(MarkdownMixin, SluggedModel):
     def attendee_list(self):
         return ", ".join([str(attendee) for attendee in self.attendees.all()])
 
-    def can_attend(self, user):
-        if not user.is_authenticated:
-            raise CircleEventException("Must be logged in")
-        if user.is_staff:
-            return True
+    def can_attend(self):
         if not self.open:
             raise CircleEventException("Circle is not open")
         if self.cancelled:
@@ -100,10 +96,9 @@ class CircleEvent(MarkdownMixin, SluggedModel):
         return True
 
     def add_attendee(self, user):
-        if not self.can_attend(user):
-            return
-        self.attendees.add(user)
-        self.save()
+        if user.is_staff or self.can_attend():
+            self.attendees.add(user)
+            self.save()
 
     def started(self):
         return self.start < timezone.now()
@@ -142,6 +137,17 @@ class CircleEvent(MarkdownMixin, SluggedModel):
         for user in self.attendees.all():
             start = self.start.astimezone(tz.gettz(user.timezone))
             send_notify_circle_starting(self.circle.title, start, self.meeting_url, user.email)
+
+    def advertise(self, force=False):
+        # Notify users who are attending that the circle is about to start
+        if force is False and self.advertised:
+            return
+        self.advertised = True
+        self.save()
+        for user in self.circle.subscribed.all():
+            if self.can_attend() and user not in self.attendees.all():
+                start = self.start.astimezone(tz.gettz(user.timezone))
+                send_notify_circle_advertisement(self.circle.title, start, self.get_absolute_url(), user.email)
 
     def __str__(self):
         return f"CircleEvent: {self.start}"

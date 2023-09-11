@@ -18,14 +18,16 @@
         {% if not object.published %}
             <div class="text-red-500 text-center pb-5">This circle is not published yet.</div>
         {% endif %}
-        <style>
+        {% if object.image %}
+            <style>
             .circle-bg-image{
                 background-image: url({{ object.image.url }});
                 background-size: cover;
                 background-position: center;
                 background-repeat: no-repeat;
             }
-        </style>
+            </style>
+        {% endif %}
         <div class="circle-bg-image rounded-2xl relative bg-gradient-to-r from-purple-500 to-pink-500 mb-5">
             <div class="pt-10">{% avatar object.author size=200 classes="m-auto" %}</div>
             <div class="p-5 text-center">
@@ -40,7 +42,7 @@
                 <div class="h2">{{ object.subtitle }}</div>
                 <div>
                     By
-                    <strong><a href="{{ object.author.get_absolute_url }}">{{ object.author.name }}</a></strong>
+                    <strong><a href="{{ object.author.get_keeper_url }}">{{ object.author.name }}</a></strong>
                 </div>
             </div>
         </div>

@@ -69,6 +69,10 @@ def token(request, token: str):
 def run_tasks(request, token: str):
     if token != settings.TOTEM_RUN_TASKS_TOKEN:
         raise ValidationError(errors=[{"token": "Invalid token"}])
+    run_tasks_impl()
+
+
+def run_tasks_impl():
     for task in circle_tasks:
         try:
             task()

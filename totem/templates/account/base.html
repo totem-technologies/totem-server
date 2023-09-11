@@ -1,8 +1,11 @@
 {% extends "base.html" %}
-{% block title %}{% block head_title %}{% endblock head_title %}{% endblock title %}
-
+{% block title %}
+    {% block head_title %}
+    {% endblock head_title %}
+{% endblock title %}
 {% block content %}
-<div class="bg-white rounded-2xl flex flex-col justify-center px-6 py-12 lg:px-8 sm:mx-auto sm:w-full sm:max-w-sm">
-    {% block inner %}{% endblock %}
-</div>
+    <div class="bg-white rounded-2xl flex flex-col justify-center px-6 py-12 lg:px-8 sm:mx-auto sm:w-full sm:max-w-sm mb-10">
+        {% block inner %}
+        {% endblock inner %}
+    </div>
 {% endblock %}

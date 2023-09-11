@@ -14,6 +14,7 @@ class CircleFactory(DjangoModelFactory):
     author = SubFactory(UserFactory)
     price = 0
     recurring = "4 weeks"
+    published = True
 
     class Meta:
         model = Circle

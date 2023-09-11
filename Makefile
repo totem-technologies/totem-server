@@ -12,6 +12,9 @@ test:
 shell:
 	docker-compose -f local.yml run --rm django bash
 
+tasks:
+	docker-compose -f local.yml run --rm django python manage.py totem_tasks
+
 dbshell:
 	docker-compose -f local.yml exec postgres bash
 

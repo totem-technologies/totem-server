@@ -97,9 +97,6 @@ class OnboardView(LoginRequiredMixin, TemplateView):
     def get_onboard_model(self):
         return OnboardModel.objects.get_or_create(user=self.request.user)[0]
 
-    def get_success_url(self) -> str:
-        return self.request.user.get_absolute_url()  # type: ignore
-
     def post(self, request, *args, **kwargs):
         name_form = OnboardNameForm(request.POST)
         circle_form = OnboardCircleForm(request.POST)
@@ -120,7 +117,7 @@ class OnboardView(LoginRequiredMixin, TemplateView):
             onboard.save()
             admin_url = request.build_absolute_uri(request.user.get_admin_url())
             _notify_slack(self.request.user.name, admin_url, interests)
-            return redirect(self.get_success_url())
+            return redirect("users:dashboard")
         else:
             return self.get(request, *args, **kwargs)
 

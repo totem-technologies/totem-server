@@ -44,7 +44,7 @@ def test_user_update_view():
     request._messages = messages
     response = user_update_view(request)
     assert response.status_code == 302
-    assert response.url == user.get_absolute_url()
+    assert response.url == reverse("users:dashboard")
     assert len(messages) == 1
     user.refresh_from_db()
     assert user.email == "new@example.com"
@@ -62,7 +62,7 @@ class TestUserRedirectView:
         user.onboard.onboarded = True
         response = user_redirect_view(request)
         assert response.status_code == 302
-        assert response.url == reverse("users:detail", kwargs={"slug": user.slug})
+        assert response.url == reverse("users:dashboard")
 
 
 class TestUserDetailView:
@@ -103,7 +103,7 @@ def test_user_index_view():
     user.onboard.save()
     response = user_index_view(request)
     assert response.status_code == 302
-    assert response.url == f"/users/{user.slug}/"
+    assert response.url == "/users/dashboard/"
 
 
 def test_magic_login_view():
