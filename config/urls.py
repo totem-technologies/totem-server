@@ -43,13 +43,15 @@ urlpatterns = [
     ),
     path("onboard/", include("totem.onboard.urls")),
     path("auth/link/", MagicLoginView.as_view(), name="magic-login"),
-    path("dev/", include("totem.dev.urls", namespace="dev"))
-    # Your stuff: custom urls includes go here
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    path("dev/", include("totem.dev.urls", namespace="dev")),
+]
+
+if not settings.USE_S3_STORAGE:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
 if settings.DEBUG:
     # Static file serving when using Gunicorn + Uvicorn for local web socket development
     urlpatterns += staticfiles_urlpatterns()
-
 
 if settings.DEBUG:
     # This allows the error pages to be debugged during development, just visit

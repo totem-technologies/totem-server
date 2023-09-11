@@ -15,10 +15,10 @@ env = environ.Env()
 
 def b64_json_env(key: str):
     empty_json = "e30K"
-    return json.loads(base64.b64decode(env(key, default=empty_json)))
+    return json.loads(base64.b64decode(env(key, default=empty_json)))  # type: ignore
 
 
-READ_DOT_ENV_FILE = env.bool("DJANGO_READ_DOT_ENV_FILE", default=False)
+READ_DOT_ENV_FILE = env.bool("DJANGO_READ_DOT_ENV_FILE", default=False)  # type: ignore
 if READ_DOT_ENV_FILE:
     # OS environment variables take precedence over variables from .env
     env.read_env(str(BASE_DIR / ".env"))
@@ -26,7 +26,7 @@ if READ_DOT_ENV_FILE:
 # GENERAL
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#debug
-DEBUG = env.bool("DJANGO_DEBUG", False)
+DEBUG = env.bool("DJANGO_DEBUG", False)  # type: ignore
 
 # Local time zone. Choices are
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -170,7 +170,7 @@ STATICFILES_FINDERS = [
     "django.contrib.staticfiles.finders.FileSystemFinder",
     "django.contrib.staticfiles.finders.AppDirectoriesFinder",
 ]
-STATIC_HOST = env.str("DJANGO_STATIC_HOST", default=None)
+STATIC_HOST = env.str("DJANGO_STATIC_HOST", default=None)  # type: ignore
 STATIC_URL = "/static/"
 if STATIC_HOST:
     STATIC_URL = f"https://{STATIC_HOST}/static/"
@@ -181,6 +181,33 @@ if STATIC_HOST:
 MEDIA_ROOT = str(APPS_DIR / "media")
 # https://docs.djangoproject.com/en/dev/ref/settings/#media-url
 MEDIA_URL = "/media/"
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+USE_S3_STORAGE = env.bool("USE_S3_STORAGE", default=False)  # type: ignore
+if USE_S3_STORAGE:
+    _region = env("DO_STORAGE_BUCKET_REGION", default="nyc3")  # type: ignore
+    STORAGES["default"] = {  # type: ignore
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "access_key": env("DO_STORAGE_BUCKET_KEY"),
+            "secret_key": env("DO_STORAGE_BUCKET_SECRET"),
+            "bucket_name": env("DO_STORAGE_BUCKET_NAME"),
+            "region_name": _region,
+            "endpoint_url": f"https://{_region}.digitaloceanspaces.com",
+            "default_acl": "public-read",
+            "querystring_auth": False,
+            "custom_domain": f"{env('DO_STORAGE_BUCKET_NAME')}.{_region}.cdn.digitaloceanspaces.com",
+        },
+    }
+
 
 # TEMPLATES
 # ------------------------------------------------------------------------------
@@ -240,23 +267,23 @@ X_FRAME_OPTIONS = "DENY"
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
 EMAIL_BACKEND = env(
     "DJANGO_EMAIL_BACKEND",
-    default="django.core.mail.backends.console.EmailBackend",
+    default="django.core.mail.backends.console.EmailBackend",  # type: ignore
 )
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-timeout
 EMAIL_TIMEOUT = 5
-EMAIL_BASE_URL = env("EMAIL_BASE_URL", default="http://localhost:8000")
+EMAIL_BASE_URL = env("EMAIL_BASE_URL", default="http://localhost:8000")  # type: ignore
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#default-from-email
 DEFAULT_FROM_EMAIL = env(
     "DJANGO_DEFAULT_FROM_EMAIL",
-    default="Totem <computer@totem.org>",
+    default="Totem <computer@totem.org>",  # type: ignore
 )
 # https://docs.djangoproject.com/en/dev/ref/settings/#server-email
 SERVER_EMAIL = env("DJANGO_SERVER_EMAIL", default=DEFAULT_FROM_EMAIL)
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-subject-prefix
 EMAIL_SUBJECT_PREFIX = env(
     "DJANGO_EMAIL_SUBJECT_PREFIX",
-    default="[Totem]",
+    default="[Totem]",  # type: ignore
 )
 EMAIL_SUPPORT_ADDRESS = "help@totem.org"
 
@@ -295,7 +322,7 @@ LOGGING = {
 
 # django-allauth
 # ------------------------------------------------------------------------------
-ACCOUNT_ALLOW_REGISTRATION = env.bool("DJANGO_ACCOUNT_ALLOW_REGISTRATION", True)
+ACCOUNT_ALLOW_REGISTRATION = env.bool("DJANGO_ACCOUNT_ALLOW_REGISTRATION", True)  # type: ignore
 # https://django-allauth.readthedocs.io/en/latest/configuration.html
 ACCOUNT_AUTHENTICATION_METHOD = "email"
 # https://django-allauth.readthedocs.io/en/latest/configuration.html
@@ -330,12 +357,12 @@ SESAME_MAX_AGE = 60 * 30  # 30 minutes
 SESAME_TOKENS = ["sesame.tokens_v2"]
 
 
-ROBOTS_NO_INDEX = env.bool("ROBOT_NO_INDEX", False)
+ROBOTS_NO_INDEX = env.bool("ROBOT_NO_INDEX", False)  # type: ignore
 
 # admin banner
 # ------------------------------------------------------------------------------
-ENVIRONMENT_NAME = env("ENVIRONMENT_NAME", default="Development")
-ENVIRONMENT_COLOR = env("ENVIRONMENT_COLOR", default="gray")
+ENVIRONMENT_NAME = env("ENVIRONMENT_NAME", default="Development")  # type: ignore
+ENVIRONMENT_COLOR = env("ENVIRONMENT_COLOR", default="gray")  # type: ignore
 
 # django-taggit
 # ------------------------------------------------------------------------------
@@ -353,14 +380,14 @@ if not DEBUG:
         integrations=[
             DjangoIntegration(),
         ],
-        environment=env("SENTRY_ENVIRONMENT", default="development"),
+        environment=env("SENTRY_ENVIRONMENT", default="development"),  # type: ignore
         traces_sample_rate=0.1,
         send_default_pii=True,
     )
 
 # posthog
 # ------------------------------------------------------------------------------
-POSTHOG_API_KEY = env("POSTHOG_API_KEY", default="phc_OJCztWvtlN5scoDe58jLipnOTCBugeidvZlni3FIy9z")
+POSTHOG_API_KEY = env("POSTHOG_API_KEY", default="phc_OJCztWvtlN5scoDe58jLipnOTCBugeidvZlni3FIy9z")  # type: ignore
 
 
 # google API
@@ -368,10 +395,10 @@ POSTHOG_API_KEY = env("POSTHOG_API_KEY", default="phc_OJCztWvtlN5scoDe58jLipnOTC
 GOOGLE_SERVICE_JSON = b64_json_env("GOOGLE_SERVICE_JSON_B64")
 GOOGLE_CALENDAR_ID = env(
     "GOOGLE_CALENDAR_ID",
-    default="c_ddf4458b375a1d28389aee93ed234ac1b51ee98ed37d09a8a22509a950bac115@group.calendar.google.com",
+    default="c_ddf4458b375a1d28389aee93ed234ac1b51ee98ed37d09a8a22509a950bac115@group.calendar.google.com",  # type: ignore
 )
 
 
 # Slack
 # ------------------------------------------------------------------------------
-SLACK_WEBHOOK_URL = env("SLACK_WEBHOOK_URL", default=None)
+SLACK_WEBHOOK_URL = env("SLACK_WEBHOOK_URL", default=None)  # type: ignore
