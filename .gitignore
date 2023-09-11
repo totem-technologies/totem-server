@@ -279,3 +279,4 @@ totem/media/
 .env
 .envs/*
 !.envs/.local/
+!.envs/.ci/
