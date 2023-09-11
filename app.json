@@ -14,5 +14,11 @@
         "contents": "Totem"
       }
     ]
-  }
+  },
+  "cron": [
+    {
+      "command": "./manage.py totem_tasks",
+      "schedule": "*/10 * * * *"
+    }
+  ]
 }

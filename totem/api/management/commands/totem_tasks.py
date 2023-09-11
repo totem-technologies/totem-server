@@ -9,3 +9,4 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         print("Running tasks...")
         run_tasks_impl()
+        print("Done.")
