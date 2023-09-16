@@ -23,6 +23,7 @@ class CircleFactory(DjangoModelFactory):
 class CircleEventFactory(DjangoModelFactory):
     circle = SubFactory(CircleFactory)
     start = Faker("future_datetime", tzinfo=datetime.UTC)
+    meeting_url = "https://example.com"
     duration_minutes = 60
 
     class Meta:

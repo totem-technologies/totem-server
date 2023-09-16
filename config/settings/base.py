@@ -383,6 +383,7 @@ if not DEBUG:
         ],
         environment=SENTRY_ENVIRONMENT,  # type: ignore
         traces_sample_rate=0.1,
+        profiles_sample_rate=0.1,
         send_default_pii=True,
     )
 

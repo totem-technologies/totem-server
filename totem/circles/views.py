@@ -152,7 +152,8 @@ def list(request):
 def join(request, event_slug):
     event = _get_circle_event(event_slug)
     user = request.user
-    if event.joinable(user):  # type: ignore
+    if event.can_join(user):
         event.joined.add(user)
         return redirect(event.meeting_url, permanent=False)
-    return redirect(event, permanent=False)
+    messages.info(request, "Cannot join at this time.")
+    return redirect("circles:event_detail", event_slug=event.slug)
