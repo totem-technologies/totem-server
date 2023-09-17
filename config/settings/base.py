@@ -371,7 +371,7 @@ TAGGIT_CASE_INSENSITIVE = True
 
 # sentry
 # ------------------------------------------------------------------------------
-SENTRY_ENVIRONMENT = env("SENTRY_ENVIRONMENT", default="development")
+SENTRY_ENVIRONMENT = env("SENTRY_ENVIRONMENT", default="development")  # type: ignore
 if not DEBUG:
     import sentry_sdk
     from sentry_sdk.integrations.django import DjangoIntegration

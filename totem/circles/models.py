@@ -4,6 +4,7 @@ from dateutil import tz
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models.query import QuerySet
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -36,6 +37,7 @@ class Circle(MarkdownMixin, SluggedModel):
     )
     recurring = models.CharField(max_length=255)
     subscribed = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="subscribed_circles")
+    events: QuerySet["CircleEvent"]
 
     def __str__(self):
         return self.title
@@ -136,7 +138,9 @@ class CircleEvent(MarkdownMixin, SluggedModel):
         self.save()
         for user in self.attendees.all():
             start = self.start.astimezone(tz.gettz(user.timezone))
-            send_notify_circle_starting(self.circle.title, start, self.meeting_url, user.email)
+            send_notify_circle_starting(
+                self.circle.title, start, reverse("circles:join", kwargs={"event_slug": self.slug}), user.email
+            )
 
     def advertise(self, force=False):
         # Notify users who are attending that the circle is about to start
