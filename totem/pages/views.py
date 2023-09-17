@@ -1,11 +1,14 @@
 from dataclasses import dataclass
 
 from django.contrib.auth import get_user_model
+from django.shortcuts import get_object_or_404
+from django.shortcuts import redirect as django_redirect
 from django.shortcuts import render
 from django.urls import reverse_lazy
 from django.views.generic import TemplateView
 
 from ..users.forms import LoginForm
+from .models import Redirect
 
 User = get_user_model()
 
@@ -148,3 +151,9 @@ class HomeView(TemplateView):
 
 def keepers(request, name):
     return render(request, f"pages/keepers/{name}.html")
+
+
+def redirect(request, slug):
+    redirect = get_object_or_404(Redirect, slug=slug)
+    redirect.increment_count()
+    return django_redirect(to=redirect.url, permanent=redirect.permanent)

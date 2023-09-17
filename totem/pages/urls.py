@@ -37,4 +37,5 @@ urlpatterns = [
     path("keepers/<str:name>/", views.keepers, name="keepers"),
     path("team/pam/", TemplateView.as_view(template_name="pages/pam.html"), name="team-pam"),
     path("metrics/", TemplateView.as_view(template_name="pages/metrics.html"), name="metrics"),
+    path("r/<slug:slug>/", views.redirect, name="redirect"),
 ]
