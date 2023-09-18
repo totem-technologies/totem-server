@@ -1,7 +1,8 @@
+import base64
 from dataclasses import dataclass
 
 from django.contrib.auth import get_user_model
-from django.shortcuts import get_object_or_404
+from django.http import Http404
 from django.shortcuts import redirect as django_redirect
 from django.shortcuts import render
 from django.urls import reverse_lazy
@@ -9,6 +10,7 @@ from django.views.generic import TemplateView
 
 from ..users.forms import LoginForm
 from .models import Redirect
+from .qrmaker import make_qr
 
 User = get_user_model()
 
@@ -154,6 +156,18 @@ def keepers(request, name):
 
 
 def redirect(request, slug):
-    redirect = get_object_or_404(Redirect, slug=slug)
+    try:
+        redirect = Redirect.get_by_slug(slug)
+    except Redirect.DoesNotExist:
+        raise Http404
     redirect.increment_count()
     return django_redirect(to=redirect.url, permanent=redirect.permanent)
+
+
+def redirect_qr(request, slug):
+    try:
+        redirect = Redirect.get_by_slug(slug)
+    except Redirect.DoesNotExist:
+        raise Http404
+    img_str = base64.b64encode(make_qr(redirect.full_url()))
+    return render(request, "pages/qr.html", {"img": img_str.decode("utf-8"), "obj": redirect})

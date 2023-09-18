@@ -53,3 +53,8 @@ class RedirectViewTest(TestCase):
     def test_redirect_not_found(self):
         response = self.client.get(reverse("pages:redirect", args=["not-found"]))
         self.assertEqual(response.status_code, 404)
+
+    def test_redirect_qr(self):
+        redirect = Redirect.objects.get(slug="test")
+        response = self.client.get(reverse("pages:redirect_qr", args=[redirect.slug]))
+        self.assertEqual(response.status_code, 200)

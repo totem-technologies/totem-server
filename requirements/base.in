@@ -11,6 +11,7 @@ psycopg2==2.9.6  # https://github.com/psycopg/psycopg2
 python-dateutil < 3  # https://pypi.org/project/python-dateutil/
 python-slugify==8.0.1  # https://github.com/un33k/python-slugify
 pytz==2023.3  # https://github.com/stub42/pytz
+qrcode==7.4.2  # https://pypi.org/project/qrcode/
 redis==4.6.0  # https://github.com/redis/redis-py
 sentry-sdk[django]<2  # https://pypi.org/project/sentry-sdk/
 uvicorn[standard]<0.24.0  # https://github.com/encode/uvicorn

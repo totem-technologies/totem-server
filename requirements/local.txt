@@ -24,9 +24,9 @@ backoff==2.2.1
     # via posthog
 black==23.7.0
     # via -r requirements/local.in
-boto3==1.28.45
+boto3==1.28.49
     # via django-storages
-botocore==1.31.45
+botocore==1.31.49
     # via
     #   boto3
     #   s3transfer
@@ -130,11 +130,11 @@ factory-boy==3.3.0
     # via -r requirements/local.in
 faker==19.6.1
     # via factory-boy
-filelock==3.12.3
+filelock==3.12.4
     # via virtualenv
 google-api-core==2.11.1
     # via google-api-python-client
-google-api-python-client==2.98.0
+google-api-python-client==2.99.0
     # via -r requirements/base.in
 google-auth==2.23.0
     # via
@@ -169,7 +169,7 @@ icalendar==5.0.7
     #   caldav
     #   recurring-ical-events
     #   x-wr-timezone
-identify==2.5.27
+identify==2.5.29
     # via pre-commit
 idna==3.4
     # via
@@ -238,7 +238,7 @@ pexpect==4.8.0
     # via ipython
 pickleshare==0.7.5
     # via ipython
-pillow==10.0.0
+pillow==10.0.1
     # via -r requirements/base.in
 pip-tools==7.3.0
     # via -r requirements/local.in
@@ -289,6 +289,8 @@ pylint-plugin-utils==0.8.2
     # via pylint-django
 pyparsing==3.1.1
     # via httplib2
+pypng==0.20220715.0
+    # via qrcode
 pyproject-hooks==1.0.0
     # via build
 pytest==7.4.0
@@ -327,6 +329,8 @@ pyyaml==6.0.1
     #   djlint
     #   pre-commit
     #   uvicorn
+qrcode==7.4.2
+    # via -r requirements/base.in
 recurring-ical-events==2.0.2
     # via caldav
 redis==4.6.0
@@ -353,7 +357,7 @@ ruff==0.0.285
     # via -r requirements/local.in
 s3transfer==0.6.2
     # via boto3
-sentry-sdk[django]==1.30.0
+sentry-sdk[django]==1.31.0
     # via -r requirements/base.in
 six==1.16.0
     # via
@@ -378,11 +382,11 @@ tomlkit==0.12.1
     # via pylint
 tqdm==4.66.1
     # via djlint
-traitlets==5.9.0
+traitlets==5.10.0
     # via
     #   ipython
     #   matplotlib-inline
-types-pytz==2023.3.0.1
+types-pytz==2023.3.1.0
     # via django-stubs
 types-pyyaml==6.0.12.11
     # via django-stubs
@@ -392,6 +396,7 @@ typing-extensions==4.7.1
     #   django-stubs-ext
     #   mypy
     #   pydantic
+    #   qrcode
 tzlocal==5.0.1
     # via caldav
 uritemplate==4.1.1

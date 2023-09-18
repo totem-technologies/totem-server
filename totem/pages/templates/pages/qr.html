@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+</html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="robots" content="noindex">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code</title>
+    <style>
+        body{
+            background-color:lightgrey;
+        }
+    </style>
+</head>
+<body>
+    <a href="data:image/png;base64,{{ img }}">
+        <img src="data:image/png;base64,{{ img }}" width=300 height=300 alt="">
+    </a>
+    <p>
+        For <a href="{{ obj.full_url }}">{{ obj.full_url }}</a>
+    </p>
+    <p>Redirect to {{ obj.url }}</p>
+</body>
+</html>
