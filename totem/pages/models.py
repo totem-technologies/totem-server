@@ -26,11 +26,6 @@ class Redirect(SluggedModel):
         verbose_name_plural = "Redirects"
         ordering = ["url"]
         indexes = [models.Index(fields=["url"])]
-        constraints = [
-            models.UniqueConstraint(fields=["url"], name="unique_redirect_url"),
-            models.UniqueConstraint(fields=["slug"], name="unique_redirect_slug"),
-            models.UniqueConstraint(fields=["alternate_slug"], name="unique_redirect_alternate_slug"),
-        ]
 
     def increment_count(self):
         self.count += 1

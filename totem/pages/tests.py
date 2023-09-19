@@ -1,6 +1,8 @@
 from django.test import Client, TestCase
 from django.urls import reverse
 
+from totem.users.tests.factories import UserFactory
+
 from .models import Redirect
 
 
@@ -55,6 +57,11 @@ class RedirectViewTest(TestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_redirect_qr(self):
+        redirect = Redirect.objects.get(slug="test")
+        response = self.client.get(reverse("pages:redirect_qr", args=[redirect.slug]))
+        self.assertEqual(response.status_code, 302)
+        user = UserFactory(is_staff=True)
+        self.client.force_login(user)
         redirect = Redirect.objects.get(slug="test")
         response = self.client.get(reverse("pages:redirect_qr", args=[redirect.slug]))
         self.assertEqual(response.status_code, 200)

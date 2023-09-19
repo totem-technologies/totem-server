@@ -2,6 +2,7 @@ import base64
 from dataclasses import dataclass
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.decorators import login_required
 from django.http import Http404
 from django.shortcuts import redirect as django_redirect
 from django.shortcuts import render
@@ -164,7 +165,10 @@ def redirect(request, slug):
     return django_redirect(to=redirect.url, permanent=redirect.permanent)
 
 
+@login_required
 def redirect_qr(request, slug):
+    if not request.user.is_staff:
+        raise Http404
     try:
         redirect = Redirect.get_by_slug(slug)
     except Redirect.DoesNotExist:
