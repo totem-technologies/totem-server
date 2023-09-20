@@ -51,8 +51,8 @@ class Circle(MarkdownMixin, SluggedModel):
     def next_event(self):
         return self.events.filter(start__gte=timezone.now()).order_by("start").first()
 
-    def other_events(self):
-        return self.events.filter(start__gte=timezone.now()).order_by("start")[:10]
+    def other_events(self, event: "CircleEvent"):
+        return self.events.filter(start__gte=timezone.now()).exclude(slug=event.slug).order_by("start")[:10]
 
     def is_free(self):
         return self.price == 0

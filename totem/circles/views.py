@@ -43,7 +43,7 @@ def detail(request, slug):
     return _detail(request, circle, event)
 
 
-def _detail(request, circle, event):
+def _detail(request, circle: Circle, event):
     if not circle.published and not request.user.is_staff:
         raise Http404
 
@@ -59,6 +59,9 @@ def _detail(request, circle, event):
     #         request.build_absolute_uri(reverse("circles:ics", kwargs={"slug": slug})) + f"?{ICS_QUERY_PARAM}={ih}"
     #     )
     #     ics_url = ics_url.replace("http://", "https://")
+    other_events = []
+    if event:
+        other_events = circle.other_events(event=event)
 
     return render(
         request,
@@ -68,7 +71,7 @@ def _detail(request, circle, event):
             "attending": attending,
             "joinable": joinable,
             "event": event,
-            "other_events": circle.other_events(),
+            "other_events": other_events,
         },
     )
 

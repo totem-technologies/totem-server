@@ -114,11 +114,9 @@
                         <strong>Other Sessions</strong>
                     </div>
                     {% for other_event in other_events %}
-                        {% if other_event != event %}
-                            <div>
-                                <a class="a" href="{{ other_event.get_absolute_url }}">{{ other_event.start }}</a>
-                            </div>
-                        {% endif %}
+                        <div>
+                            <a class="a" href="{{ other_event.get_absolute_url }}">{{ other_event.start }}</a>
+                        </div>
                     {% endfor %}
                 </div>
             {% endif %}

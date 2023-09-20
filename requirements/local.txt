@@ -24,9 +24,9 @@ backoff==2.2.1
     # via posthog
 black==23.7.0
     # via -r requirements/local.in
-boto3==1.28.49
+boto3==1.28.51
     # via django-storages
-botocore==1.31.49
+botocore==1.31.51
     # via
     #   boto3
     #   s3transfer
@@ -60,7 +60,7 @@ coverage==7.3.1
     # via
     #   -r requirements/local.in
     #   django-coverage-plugin
-cryptography==41.0.3
+cryptography==41.0.4
     # via pyjwt
 cssbeautifier==1.14.9
     # via djlint
@@ -118,7 +118,7 @@ django-stubs-ext==4.2.2
     # via django-stubs
 django-taggit==4.0.0
     # via -r requirements/base.in
-djlint==1.32.1
+djlint==1.33.0
     # via -r requirements/local.in
 editorconfig==0.12.3
     # via
@@ -134,7 +134,7 @@ filelock==3.12.4
     # via virtualenv
 google-api-core==2.11.1
     # via google-api-python-client
-google-api-python-client==2.99.0
+google-api-python-client==2.100.0
     # via -r requirements/base.in
 google-auth==2.23.0
     # via
@@ -164,7 +164,7 @@ httplib2==0.22.0
     #   google-auth-httplib2
 httptools==0.6.0
     # via uvicorn
-icalendar==5.0.7
+icalendar==5.0.8
     # via
     #   caldav
     #   recurring-ical-events
@@ -390,7 +390,7 @@ types-pytz==2023.3.1.0
     # via django-stubs
 types-pyyaml==6.0.12.11
     # via django-stubs
-typing-extensions==4.7.1
+typing-extensions==4.8.0
     # via
     #   django-stubs
     #   django-stubs-ext

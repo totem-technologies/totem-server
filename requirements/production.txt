@@ -14,9 +14,9 @@ asgiref==3.7.2
     # via django
 backoff==2.2.1
     # via posthog
-boto3==1.28.49
+boto3==1.28.51
     # via django-storages
-botocore==1.31.49
+botocore==1.31.51
     # via
     #   boto3
     #   s3transfer
@@ -36,7 +36,7 @@ charset-normalizer==3.2.0
     # via requests
 click==8.1.7
     # via uvicorn
-cryptography==41.0.3
+cryptography==41.0.4
     # via pyjwt
 defusedxml==0.7.1
     # via python3-openid
@@ -72,7 +72,7 @@ django-taggit==4.0.0
     # via -r requirements/base.in
 google-api-core==2.11.1
     # via google-api-python-client
-google-api-python-client==2.99.0
+google-api-python-client==2.100.0
     # via -r requirements/base.in
 google-auth==2.23.0
     # via
@@ -98,7 +98,7 @@ httplib2==0.22.0
     #   google-auth-httplib2
 httptools==0.6.0
     # via uvicorn
-icalendar==5.0.7
+icalendar==5.0.8
     # via
     #   caldav
     #   recurring-ical-events
@@ -206,7 +206,7 @@ sqlparse==0.4.4
     # via django
 text-unidecode==1.3
     # via python-slugify
-typing-extensions==4.7.1
+typing-extensions==4.8.0
     # via
     #   pydantic
     #   qrcode

@@ -36,7 +36,12 @@ class UserFactory(DjangoModelFactory, metaclass=BaseMetaFactory[User]):
         )
         self.set_password(password)
 
+    @post_generation
+    def post_save(self, create: bool, extracted: Sequence[Any], **kwargs):
+        if create:
+            self.save()
+
     class Meta:
         model = get_user_model()
         django_get_or_create = ["email"]
-        skip_postgeneration_save = False
+        skip_postgeneration_save = True

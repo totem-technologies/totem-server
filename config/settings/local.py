@@ -8,7 +8,7 @@ DEBUG = True
 # https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
 SECRET_KEY = env(
     "DJANGO_SECRET_KEY",
-    default="ug27gQVlBLKLnF2a09adWFdgWWZPG6s8PZWnCdjzDjJoNrUnr0oSosLwjwZudNSt",
+    default="ug27gQVlBLKLnF2a09adWFdgWWZPG6s8PZWnCdjzDjJoNrUnr0oSosLwjwZudNSt",  # type: ignore
 )
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
 # 10.0.2.2 for android emulator
@@ -26,7 +26,7 @@ CACHES = {
 # EMAIL
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
-EMAIL_BACKEND = env("DJANGO_EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
+EMAIL_BACKEND = env("DJANGO_EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")  # type: ignore
 
 # INSTALLED_APPS += ["anymail"]  # noqa: F405
 # EMAIL_BACKEND = "anymail.backends.mailersend.EmailBackend"
@@ -49,13 +49,9 @@ DEBUG_TOOLBAR_CONFIG = {
     "DISABLE_PANELS": ["debug_toolbar.panels.redirects.RedirectsPanel"],
     "SHOW_TEMPLATE_CONTEXT": True,
 }
-# https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#internal-ips
-INTERNAL_IPS = ["127.0.0.1", "10.0.2.2"]
-if env.bool("USE_DOCKER", True):
-    import socket
 
-    hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
-    INTERNAL_IPS += [".".join(ip.split(".")[:-1] + ["1"]) for ip in ips]
+# https://django-debug-toolbar.readthedocs.io/en/latest/installation.html#internal-ips
+INTERNAL_IPS = type("c", (), {"__contains__": lambda *a: True})()
 
 # django-extensions
 # ------------------------------------------------------------------------------

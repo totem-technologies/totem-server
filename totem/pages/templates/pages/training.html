@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+  <div class="m-auto">
+    <style>
+    .header-circle{
+      background-color: #987AA5;
+      height: 100%;
+      width: 100%;
+      border-radius: 50%;
+      overflow: hidden;
+      transform: translate(0, -70%);
+      opacity: 0.5;
+    }
+    .header-circle-container {
+      overflow: hidden;
+      position: absolute;
+      transform: translate(-50%, 0 );
+      left: 50%;
+      height: 100vw;
+      width: 100vw;
+      max-width: 1000px;
+      max-height: 1000px;
+      z-index: -1;
+    }
+    .header-stars{
+      position: absolute;
+      top: 15%;
+    }
+    </style>
+    <div class="header-circle-container">
+      <div class="header-circle"></div>
+      <img class="header-stars" src="{% static "images/training/headerstars.png" %}" alt="">
+    </div>
+  </div>
+  <section class="m-auto max-w-5xl relative">
+    <div class="section relative m-auto px-5 md:pt-20 pt-10 overflow-x-clip text-center max-w-4xl">
+      <h1 class="h1 ">Keeper Training</h1>
+    </div>
+    <div class="mx-auto max-md:mb-20 m-10 text-center md:mt-3">
+      <a href="{% url 'pages:home' %}"
+         class="btn-primary shimmer mt-2 w-1/3 p-4 rounded-full">Enroll Now</a>
+    </div>
+  </section>
+  <div class="md:h-[100px]"></div>
+  <section class="section m-auto max-w-3xl px-10 flex">
+    <div class="mr-10 mt-5 w-[400px]">
+      <img src="{% static "images/training/sittinggirl.png" %}" alt="">
+    </div>
+    <div class="align-middle tprose">
+      <p>
+        Totem offers a Keeper training program to those interested in better understanding themselves and those around them.
+      </p>
+      <p>The Keeper training program is an essential part of Totem. Keepers make Circles go round!</p>
+    </div>
+  </section>
+  <section class="section relative m-auto max-w-5xl pt-10 border-tblue border-[50px] border-solid rounded-2xl outline outline-tblueTint">
+    <div class="outline outline-tpink rounded-xl h-max">
+      <div>
+        <h2>Keeper training curriculum</h2>
+      </div>
+      <div>
+        <div>
+          <h3>Week 1</h3>
+          <p>
+            An introductory session lead by a Totem Keeper to familiarize you with all the details of Circle, such as the importance of Circles, our mission and values at Totem, the how to's of Circle, how to guide others through Circles.
+          </p>
+        </div>
+        <div>
+          <h3>Week 2</h3>
+          <p>
+            Participate in a Circle with your trainer as the Keeper. During this session you're encouraged to ask clarifying questions, take notes on Circle structure, be present, open and vulnerable.
+          </p>
+        </div>
+        <div>
+          <h3>Week 3-5</h3>
+          <p>Attend two Circles lead by your fellow Keepers in training and lead one Circle of your own.</p>
+        </div>
+      </div>
+      <div>
+        <div>
+          <p>
+            Keeper Training offer you a guide to mastering the art of personal story telling. Through this practice, you’ll learn how to be more present, open-minded, and learn how to release patterns of thoughts which no longer serve you.
+          </p>
+          <p>
+            You’ll learn how to write and design your own prompts for your Circles. Writing prompts in your own voice allows you to model vulnerability, fostering a sense of trust within your Circles.
+          </p>
+          <p>
+            Our training program will teach you how to create spaces in which Circle participants feel safe to share, be seen, and be heard.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="section m-auto max-w-5xl overflow-x-auto">
+    <div>
+      <p>
+        The Totem Keeper Training program gives you a comprehensive curriculum and real life Circle experiences with other trained keepers.
+      </p>
+    </div>
+  </section>
+  <section class="section m-auto max-w-5xl">
+    <div>
+      <p>
+        The Keeper Training program costs $200. Once you complete the Keeper Training Program you'll have the confidence and knowledge to run your own Circles. You will also receive:
+      </p>
+      <ul>
+        <li>A certificate of completion</li>
+        <li>The Keeper handbook</li>
+        <li>Access to expert Keeper prompts</li>
+        <li>Access to Keeper's Only Circles</li>
+        <li>Access to Circles</li>
+        <li>Mentorship from your Keeper Trainer</li>
+      </ul>
+    </div>
+  </section>
+  <section class="section m-auto max-w-5xl">
+    <div>
+      <h2>Meet your Keeper Trainer</h2>
+      <p>
+        Hi, I'm Gabe. I am a User Researcher, Keeper, and musician based in Los Angeles. Growing up as a queer person, acceptance and community was something I knew I needed but struggled to navigate. I'm excited to share my knowledge and experience of Circles with you!
+      </p>
+    </div>
+  </section>
+  <section class="section m-auto max-w-5xl">
+    <div>
+      <h2>Ready to be a Keeper?</h2>
+      <a href="">Enroll now</a>
+    </div>
+    <div>
+      <h2>Have more questions?</h2>
+      <a href="">Contact us</a>
+    </div>
+  </section>
+  <section class="section m-auto max-w-5xl">
+    <div>
+      <h2>Meet your Keeper Trainer</h2>
+      <p>
+        Hi, I'm Gabe. I am a User Researcher, Keeper, and musician based in Los Angeles. Growing up as a queer person, acceptance and community was something I knew I needed but struggled to navigate. I'm excited to share my knowledge and experience of Circles with you!
+      </p>
+    </div>
+  </section>
+{% endblock content %}
