@@ -23,7 +23,7 @@ ruff==0.0.285  # https://github.com/astral-sh/ruff
 # Django
 # ------------------------------------------------------------------------------
 django-coverage-plugin<4  # https://github.com/nedbat/django_coverage_plugin
-django-debug-toolbar==4.1.0  # https://github.com/jazzband/django-debug-toolbar
+django-debug-toolbar==4.2.0  # https://github.com/jazzband/django-debug-toolbar
 django-extensions==3.2.3  # https://github.com/django-extensions/django-extensions
 djlint<2  # https://pypi.org/project/djlint/
 factory-boy<4  # https://github.com/FactoryBoy/factory_boy
