@@ -1,5 +1,8 @@
 {% extends "base.html" %}
 {% load static %}
+{# djlint:off #}
+{% block title %}Keeper Training{% endblock title %}
+{# djlint:on #}
 {% block content %}
   <div class="m-auto">
     <style>
@@ -38,12 +41,12 @@
       <h1 class="h1 ">Keeper Training</h1>
     </div>
     <div class="mx-auto max-md:mb-20 m-10 text-center md:mt-3">
-      <a href="{% url 'pages:home' %}"
+      <a href="{{ enroll_url }}"
          class="btn-primary shimmer mt-2 w-1/3 p-4 rounded-full">Enroll Now</a>
     </div>
   </section>
   <div class="md:h-[100px]"></div>
-  <section class="section m-auto max-w-3xl px-10 flex">
+  <section class="section m-auto max-w-3xl px-10 flex pb-10">
     <div class="mr-10 mt-5 w-[400px]">
       <img src="{% static "images/training/sittinggirl.png" %}" alt="">
     </div>
@@ -54,90 +57,125 @@
       <p>The Keeper training program is an essential part of Totem. Keepers make Circles go round!</p>
     </div>
   </section>
-  <section class="section relative m-auto max-w-5xl pt-10 border-tblue border-[50px] border-solid rounded-2xl outline outline-tblueTint">
-    <div class="outline outline-tpink rounded-xl h-max">
-      <div>
-        <h2>Keeper training curriculum</h2>
+  <section class="relative m-auto max-w-5xl border-tblue border-[2rem] border-solid rounded-2xl outline outline-tblueTint">
+    <div class="outline outline-tblue outline-[1rem] rounded-xl h-max border-tpink border-[3px]">
+      <div class="relative">
+        <h2 class="h2 top-1/2 left-[10vw] absolute">Keeper training curriculum</h2>
+        <img class="m-auto" src="{% static "images/training/traingcircheader.png" %}" alt="">
       </div>
-      <div>
-        <div>
-          <h3>Week 1</h3>
-          <p>
-            An introductory session lead by a Totem Keeper to familiarize you with all the details of Circle, such as the importance of Circles, our mission and values at Totem, the how to's of Circle, how to guide others through Circles.
-          </p>
+      <div class="md:columns-3 columns-1  grid-flow-col gap-10 w-[104.5%] -translate-x-[2%]">
+        <div class="break-inside-avoid pt-10">
+          <img class="m-auto pb-5 w-[50px]" src="{% static "images/training/check.png" %}" alt="">
+          <div class="outline outline-tpink rounded-xl bg-white p-5">
+            <h3 class="text-xl text-center pb-2">Week 1</h3>
+            <p>
+              An introductory session lead by a Totem Keeper to familiarize you with all the details of Circle, such as the importance of Circles, our mission and values at Totem, the how to's of Circle, how to guide others through Circles.
+            </p>
+          </div>
         </div>
-        <div>
-          <h3>Week 2</h3>
-          <p>
-            Participate in a Circle with your trainer as the Keeper. During this session you're encouraged to ask clarifying questions, take notes on Circle structure, be present, open and vulnerable.
-          </p>
+        <div class="break-inside-avoid pt-10">
+          <img class="m-auto pb-5 w-[50px]" src="{% static "images/training/check.png" %}" alt="">
+          <div class="outline outline-tpink rounded-xl bg-white p-5">
+            <h3 class="text-xl text-center pb-2">Week 2</h3>
+            <p>
+              Participate in a Circle with your trainer as the Keeper. During this session you're encouraged to ask clarifying questions, take notes on Circle structure, be present, open and vulnerable.
+            </p>
+          </div>
         </div>
-        <div>
-          <h3>Week 3-5</h3>
-          <p>Attend two Circles lead by your fellow Keepers in training and lead one Circle of your own.</p>
+        <div class="break-inside-avoid pt-10">
+          <img class="m-auto pb-5 w-[50px]" src="{% static "images/training/check.png" %}" alt="">
+          <div class="outline outline-tpink rounded-xl bg-white p-5">
+            <h3 class="text-xl text-center pb-2">Week 3+</h3>
+            <p>
+              Attend Circles lead by your fellow Keepers in training and lead one Circle of your own. We'll share constructive feedback after each Circle.
+            </p>
+          </div>
         </div>
       </div>
-      <div>
-        <div>
-          <p>
+      <div class="md:flex p-10">
+        <div class="md:w-2/5 max-w-full">
+          <img class="pb-10 m-auto" src="{% static "images/training/bench.png" %}" alt="">
+          <img class="md:block hidden" src="{% static "images/training/circledance.png" %}" alt="">
+        </div>
+        <div class="pl-10">
+          <p class="pb-5">
             Keeper Training offer you a guide to mastering the art of personal story telling. Through this practice, you’ll learn how to be more present, open-minded, and learn how to release patterns of thoughts which no longer serve you.
           </p>
-          <p>
+          <p class="pb-5">
             You’ll learn how to write and design your own prompts for your Circles. Writing prompts in your own voice allows you to model vulnerability, fostering a sense of trust within your Circles.
           </p>
-          <p>
+          <p class="pb-5">
             Our training program will teach you how to create spaces in which Circle participants feel safe to share, be seen, and be heard.
           </p>
         </div>
       </div>
     </div>
   </section>
-  <section class="section m-auto max-w-5xl overflow-x-auto">
-    <div>
-      <p>
-        The Totem Keeper Training program gives you a comprehensive curriculum and real life Circle experiences with other trained keepers.
-      </p>
+  <div class="h-20"></div>
+  <section class="section m-auto max-w-5xl">
+    <div class="md:flex flex-row-reverse items-center max-w-3xl m-auto">
+      <div class="relative m-auto md:pb-0 pb-20 md:w-1/2 w-3/4">
+        <p class="h2 text-2xl">
+          The Totem Keeper Training program gives you a comprehensive curriculum and real life Circle experiences with other trained keepers.
+        </p>
+        <img class="absolute md:-top-20 -top-10 -z-10" src="{% static "images/training/starsandpaint.png" %}" alt="">
+      </div>
+      <div class="md:w-1/2 w-3/4 m-auto">
+        <img src="{% static "images/training/fantasticwork.png" %}" alt="">
+      </div>
     </div>
   </section>
-  <section class="section m-auto max-w-5xl">
-    <div>
-      <p>
-        The Keeper Training program costs $200. Once you complete the Keeper Training Program you'll have the confidence and knowledge to run your own Circles. You will also receive:
-      </p>
-      <ul>
-        <li>A certificate of completion</li>
-        <li>The Keeper handbook</li>
-        <li>Access to expert Keeper prompts</li>
-        <li>Access to Keeper's Only Circles</li>
-        <li>Access to Circles</li>
-        <li>Mentorship from your Keeper Trainer</li>
-      </ul>
+  <div class="h-20"></div>
+  <section class="relative m-auto max-w-5xl border-tmauve border-[2rem] border-solid rounded-2xl outline outline-tblueTint">
+    <div class="outline outline-tmauve outline-[1rem] rounded-xl h-max border-tpink border-[3px]">
+      <div class="p-10 md:flex items-center justify-center">
+        <div class="md:w-1/2 md:pr-10 md:pb-0 pb-10">
+          <img class="m-auto" src="{% static "images/training/ideaguy.png" %}" alt="">
+        </div>
+        <div>
+          <h2 class="h2 pb-5">What you'll get</h2>
+          <p>
+            Once you complete the Keeper Training Program you'll have the confidence and knowledge to run your own Circles. You will also receive:
+          </p>
+          <ul class="list-disc pl-10 pt-5">
+            <li>The Keeper handbook</li>
+            <li>Access to expert Keeper prompts</li>
+            <li>Access to Keeper's Only Circles</li>
+            <li>Access to preview Circles</li>
+            <li>Mentorship from your Keeper Trainer</li>
+            <li>A certificate of completion</li>
+          </ul>
+        </div>
+      </div>
     </div>
   </section>
-  <section class="section m-auto max-w-5xl">
-    <div>
-      <h2>Meet your Keeper Trainer</h2>
+  <div class="h-10"></div>
+  <section class="section m-auto max-w-3xl md:flex items-center px-10">
+    <div class="md:pr-10">
+      <h2 class="h2 pb-5">Meet your Keeper Trainer</h2>
       <p>
-        Hi, I'm Gabe. I am a User Researcher, Keeper, and musician based in Los Angeles. Growing up as a queer person, acceptance and community was something I knew I needed but struggled to navigate. I'm excited to share my knowledge and experience of Circles with you!
+        Hi, I'm <a class="a" href="{% url 'pages:keepers' name='gabe' %}">Gabe</a>. I am a User Researcher, Keeper, and musician based in Los Angeles. Growing up as a queer person, acceptance and community was something I knew I needed but struggled to navigate. I'm excited to share my knowledge and experience of Circles with you!
       </p>
     </div>
-  </section>
-  <section class="section m-auto max-w-5xl">
-    <div>
-      <h2>Ready to be a Keeper?</h2>
-      <a href="">Enroll now</a>
-    </div>
-    <div>
-      <h2>Have more questions?</h2>
-      <a href="">Contact us</a>
+    <div class="h-10 md:hidden"></div>
+    <div class="rounded-full border border-tpink p-10 max-w-sm m-auto">
+      <a href="{% url 'pages:keepers' name='gabe' %}">
+        <img class="rounded-full" src="{% static "images/team/gabe.jpg" %}" alt="">
+      </a>
     </div>
   </section>
-  <section class="section m-auto max-w-5xl">
-    <div>
-      <h2>Meet your Keeper Trainer</h2>
-      <p>
-        Hi, I'm Gabe. I am a User Researcher, Keeper, and musician based in Los Angeles. Growing up as a queer person, acceptance and community was something I knew I needed but struggled to navigate. I'm excited to share my knowledge and experience of Circles with you!
-      </p>
+  <div class="h-10"></div>
+  <section class="section m-auto max-w-3xl md:flex justify-between items-center px-10">
+    <div class="border border-tpink align-middle text-center py-10">
+      <h2 class="h2 pb-10">Ready to be a Keeper?</h2>
+      <a class="btn-primary" href="{{ enroll_url }}">Enroll now</a>
+    </div>
+    <div class="p-10">
+      <img class="m-auto" src="{% static "images/training/superman.png" %}" alt="">
+    </div>
+    <div class="border border-tpink align-middle text-center py-10">
+      <h2 class="h2 pb-10">Have more questions?</h2>
+      <a class="btn-primary" href="mailto:gabe@totem.org">Contact us</a>
     </div>
   </section>
 {% endblock content %}

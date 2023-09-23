@@ -33,7 +33,7 @@ urlpatterns = [
     path("how-it-works/", views.HowItWorksView.as_view(), name="how-it-works"),
     path("tos/", TemplateView.as_view(template_name="pages/tos.html"), name="tos"),
     path("privacy/", TemplateView.as_view(template_name="pages/privacy.html"), name="privacy"),
-    # path("training/", TemplateView.as_view(template_name="pages/training.html"), name="training"),
+    path("training/", views.training, name="training"),
     path("privacy-policy/", RedirectView.as_view(pattern_name="pages:privacy"), name="privacy-policy"),
     path("keepers/<str:name>/", views.keepers, name="keepers"),
     path("team/pam/", TemplateView.as_view(template_name="pages/pam.html"), name="team-pam"),

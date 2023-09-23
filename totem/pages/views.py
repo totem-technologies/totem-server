@@ -112,7 +112,7 @@ class HomeView(TemplateView):
         context["faqs"] = [
             FAQ(
                 question="Can I be anonymous?",
-                answer="Yes! We don’t mind if you don’t use your real name. We will require \
+                answer="Yes! We don't mind if you don't use your real name. We will require \
                     enough information for moderation, like your email, but to other people \
                         in your Circles (including Keepers) you can be whoever you want to \
                             be. However, we do require you share authentic stories.",
@@ -143,8 +143,8 @@ class HomeView(TemplateView):
             FAQ(
                 question="How much does Totem cost?",
                 answer="It depends on the Circle, some are free, some aren't. Our mission is to \
-                    make Totem Circles accessible to as many people as possible. In the future we’ll \
-                        add the ability to donate directly to your Keeper if you’d like to \
+                    make Totem Circles accessible to as many people as possible. In the future we'll \
+                        add the ability to donate directly to your Keeper if you'd like to \
                             support them. ",
             ),
         ]
@@ -175,3 +175,9 @@ def redirect_qr(request, slug):
         raise Http404
     img_str = base64.b64encode(make_qr(redirect.full_url()))
     return render(request, "pages/qr.html", {"img": img_str.decode("utf-8"), "obj": redirect})
+
+
+@login_required
+def training(request):
+    enroll_url = "https://secure.totem.org/b/7sI03l8LD1zl5eU9AJ"
+    return render(request, "pages/training.html", {"enroll_url": enroll_url})
