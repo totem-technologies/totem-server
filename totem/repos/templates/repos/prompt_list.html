@@ -10,7 +10,7 @@
             These prompts are created for Totem by expert Keepers. They are designed to encourage authentic communication. Please try them out in your Circles!
         </p>
         <p class="pt-4">You can use the search bar below, or filter by tag by selecting the tag pill.</p>
-        <div x-data="search">
+        <div x-data="search" x-init="init()">
             <div class="relative py-5">
                 <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                     <svg aria-hidden="true"
@@ -55,5 +55,4 @@
 {% block inline_javascript %}
     {{ search_data|json_script:"search_data" }}
     <script src="{% static 'js/ufuzzy.min.js' %}"></script>
-    <script src="{% static 'js/prompt_search.js' %}"></script>
 {% endblock inline_javascript %}

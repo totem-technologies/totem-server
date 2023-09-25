@@ -1,25 +1,98 @@
 {% load static %}
+{% load avatar %}
 <header class="text-gray-600 body-font">
-  <div class="container mx-auto flex flex-wrap p-5 justify-between flex-col md:flex-row items-center max-w-5xl">
-    <a class="title-font font-medium items-center text-gray-900 mb-4 md:mb-0"
+  <div class="h-5"></div>
+  <div class="container mx-auto flex flex-wrap px-5 py-3 justify-between items-center max-w-5xl bg-white rounded-3xl">
+    <a class="title-font font-medium items-center text-gray-900"
        href="{% url 'pages:home' %}">
       <img src="{% static 'images/totem-logo.png' %}" width="100" alt="" />
     </a>
     {% comment %} <nav class="md:mr-auto md:ml-4 md:py-1 md:pl-4 md:border-l md:border-gray-400 flex flex-wrap items-center text-base justify-center">
     </nav> {% endcomment %}
-    <nav class="md:mr-auto md:ml-4 md:py-1 md:pl-4 md:justify-end flex-grow flex flex-wrap items-center text-base justify-center">
-      <a class="mr-5 hover:text-tblue" href="{% url 'pages:about' %}">About</a>
-      <a class="mr-5 hover:text-tblue" href="{% url 'pages:team' %}">Team</a>
-      <a class="mr-5 hover:text-tblue" href="{% url 'pages:how-it-works' %}">How It Works</a>
-      {% if request.user.is_staff %}
-        <a href="{% url 'admin:index' %}" class="mr-5 hover:text-tblue">Admin</a>
-      {% endif %}
+    <nav class="md:mr-auto md:ml-4 md:py-1 md:pl-4 justify-end flex-grow flex flex-wrap items-center text-base">
+      <div class="flex justify-center">
+        <div x-data="dropdown"
+             x-on:keydown.escape.prevent.stop="close($refs.button)"
+             x-on:focusin.window="! $refs.panel.contains($event.target) && close()"
+             x-id="['dropdown-button']"
+             class="relative">
+          <!-- Button -->
+          <button x-ref="button"
+                  x-on:click="toggle()"
+                  :aria-expanded="open"
+                  :aria-controls="$id('dropdown-button')"
+                  type="button"
+                  class="flex items-center gap-1">
+            About
+            <svg xmlns="http://www.w3.org/2000/svg"
+                 class="h-5 w-5 text-gray-400"
+                 viewBox="0 0 20 20"
+                 fill="currentColor">
+              <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+          </button>
+          <div x-ref="panel"
+               x-show="open"
+               x-transition.origin.top.left
+               x-on:click.outside="close($refs.button)"
+               :id="$id('dropdown-button')"
+               x-cloak
+               class="absolute right-0 mt-2 w-40 rounded-md bg-white shadow-md z-10">
+            <a href="{% url 'pages:how-it-works' %}"
+               class="flex items-center gap-2 w-full first-of-type:rounded-t-md last-of-type:rounded-b-md px-4 py-2.5 text-left text-sm hover:bg-gray-50 disabled:text-gray-500">
+              How it works
+            </a>
+            <a href="{% url 'pages:about' %}"
+               class="flex items-center gap-2 w-full first-of-type:rounded-t-md last-of-type:rounded-b-md px-4 py-2.5 text-left text-sm hover:bg-gray-50 disabled:text-gray-500">
+              Why we made this
+            </a>
+            <a href="{% url 'pages:team' %}"
+               class="flex items-center gap-2 w-full first-of-type:rounded-t-md last-of-type:rounded-b-md px-4 py-2.5 text-left text-sm hover:bg-gray-50 disabled:text-gray-500">
+              Team
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="w-0.5 bg-gray-200 h-5 mx-2 rounded"></div>
       {% if request.user.is_authenticated %}
-        <a href="{% url 'users:redirect' %}" class="mr-5 hover:text-tblue">{{ request.user.email }}</a>
-        <a href="{% url 'account_logout' %}" class="mr-5 hover:text-tblue">Logout</a>
+        <div x-data="dropdown"
+             x-on:keydown.escape.prevent.stop="close($refs.button)"
+             x-on:focusin.window="! $refs.panel.contains($event.target) && close()"
+             x-id="['dropdown-button']"
+             class="relative">
+          <!-- Button -->
+          <button x-ref="button"
+                  x-on:click="toggle()"
+                  :aria-expanded="open"
+                  :aria-controls="$id('dropdown-button')"
+                  type="button"
+                  class="flex items-center gap-1">{% avatar request.user size=50 %}</button>
+          <!-- Panel -->
+          <div x-ref="panel"
+               x-show="open"
+               x-transition.origin.top.left
+               x-on:click.outside="close($refs.button)"
+               :id="$id('dropdown-button')"
+               class="absolute right-0 mt-2 w-40 rounded-md bg-white shadow-md z-10">
+            <a href="{% url 'users:redirect' %}"
+               class="flex items-center gap-2 w-full first-of-type:rounded-t-md last-of-type:rounded-b-md px-4 py-2.5 text-left text-sm hover:bg-gray-50 disabled:text-gray-500">
+              Profile
+            </a>
+            {% if request.user.is_staff %}
+              <a href="{% url 'admin:index' %}"
+                 class="flex items-center gap-2 w-full first-of-type:rounded-t-md last-of-type:rounded-b-md px-4 py-2.5 text-left text-sm hover:bg-gray-50 disabled:text-gray-500">
+                Admin
+              </a>
+            {% endif %}
+            <a href="{% url 'pages:team' %}"
+               class="flex items-center gap-2 w-full first-of-type:rounded-t-md last-of-type:rounded-b-md px-4 py-2.5 text-left text-sm hover:bg-gray-50 disabled:text-gray-500">
+              <span class="text-red-500">Logout</span>
+            </a>
+          </div>
+        </div>
       {% else %}
-        <a href="{% url 'pages:home' %}#signup" class="mr-5 hover:text-tblue">Join</a>
-        <a href="{% url 'users:login' %}" class="mr-5 hover:text-tblue">Log In</a>
+        <a href="{% url 'users:login' %}" class="mx-5 hover:text-tblue">Log In</a>
+        <a href="{% url 'pages:home' %}#signup" class=" btn-primary shimmer">Join</a>
       {% endif %}
     </nav>
   </div>
