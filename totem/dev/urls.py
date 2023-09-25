@@ -5,7 +5,7 @@ from . import views
 app_name = "email"
 urlpatterns = [
     path(
-        "rrule/",
+        "test/",
         views.rrule,
         name="rrule",
     ),

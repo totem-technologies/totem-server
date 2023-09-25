@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+    <section class="max-w-5xl m-auto">
+        <h1 class="h1">Test</h1>
+        <span hidden t-component="Button" t-props='{"color": "blue"}'>I'm a button</span>
+        <span hidden t-component="Button">Me too!</span>
+    </section>
+{% endblock content %}

@@ -11,18 +11,8 @@
     </nav> {% endcomment %}
     <nav class="md:mr-auto md:ml-4 md:py-1 md:pl-4 justify-end flex-grow flex flex-wrap items-center text-base">
       <div class="flex justify-center">
-        <div x-data="dropdown"
-             x-on:keydown.escape.prevent.stop="close($refs.button)"
-             x-on:focusin.window="! $refs.panel.contains($event.target) && close()"
-             x-id="['dropdown-button']"
-             class="relative">
-          <!-- Button -->
-          <button x-ref="button"
-                  x-on:click="toggle()"
-                  :aria-expanded="open"
-                  :aria-controls="$id('dropdown-button')"
-                  type="button"
-                  class="flex items-center gap-1">
+        <span hidden t-component="Dropdown">
+          <button class="flex items-center gap-1">
             About
             <svg xmlns="http://www.w3.org/2000/svg"
                  class="h-5 w-5 text-gray-400"
@@ -31,13 +21,7 @@
               <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
             </svg>
           </button>
-          <div x-ref="panel"
-               x-show="open"
-               x-transition.origin.top.left
-               x-on:click.outside="close($refs.button)"
-               :id="$id('dropdown-button')"
-               x-cloak
-               class="absolute right-0 mt-2 w-40 rounded-md bg-white shadow-md z-10">
+          <div class="absolute right-0 mt-2 w-40 rounded-md bg-white shadow-md z-10">
             <a href="{% url 'pages:how-it-works' %}"
                class="flex items-center gap-2 w-full first-of-type:rounded-t-md last-of-type:rounded-b-md px-4 py-2.5 text-left text-sm hover:bg-gray-50 disabled:text-gray-500">
               How it works
@@ -51,29 +35,13 @@
               Team
             </a>
           </div>
-        </div>
+        </span>
       </div>
       <div class="w-0.5 bg-gray-200 h-5 mx-2 rounded"></div>
       {% if request.user.is_authenticated %}
-        <div x-data="dropdown"
-             x-on:keydown.escape.prevent.stop="close($refs.button)"
-             x-on:focusin.window="! $refs.panel.contains($event.target) && close()"
-             x-id="['dropdown-button']"
-             class="relative">
-          <!-- Button -->
-          <button x-ref="button"
-                  x-on:click="toggle()"
-                  :aria-expanded="open"
-                  :aria-controls="$id('dropdown-button')"
-                  type="button"
-                  class="flex items-center gap-1">{% avatar request.user size=50 %}</button>
-          <!-- Panel -->
-          <div x-ref="panel"
-               x-show="open"
-               x-transition.origin.top.left
-               x-on:click.outside="close($refs.button)"
-               :id="$id('dropdown-button')"
-               class="absolute right-0 mt-2 w-40 rounded-md bg-white shadow-md z-10">
+        <span hidden t-component="Dropdown">
+          <button class="flex items-center gap-1">{% avatar request.user size=50 %}</button>
+          <div class="absolute right-0 mt-2 w-40 rounded-md bg-white shadow-md z-10">
             <a href="{% url 'users:redirect' %}"
                class="flex items-center gap-2 w-full first-of-type:rounded-t-md last-of-type:rounded-b-md px-4 py-2.5 text-left text-sm hover:bg-gray-50 disabled:text-gray-500">
               Profile
@@ -89,7 +57,7 @@
               <span class="text-red-500">Logout</span>
             </a>
           </div>
-        </div>
+        </span>
       {% else %}
         <a href="{% url 'users:login' %}" class="mx-5 hover:text-tblue">Log In</a>
         <a href="{% url 'pages:home' %}#signup" class=" btn-primary shimmer">Join</a>

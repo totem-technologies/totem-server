@@ -27,9 +27,7 @@ rrule_data = {
 
 # Create your views here.
 def rrule(request):
-    if request.method == "POST":
-        rrule_data["rrule"] = request.POST.get("rrule")
-    return render(request, "dev/rrule.html", context={"rrule_data": rrule_data})
+    return render(request, "dev/test.html")
 
 
 def healthcheck(request):
