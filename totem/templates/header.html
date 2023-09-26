@@ -9,39 +9,24 @@
     </a>
     <nav class="md:mr-auto md:ml-4 md:py-1 md:pl-4 justify-end flex-grow flex flex-wrap items-center text-base">
       <div class="flex justify-center">
-        <t-dropdown>
-        <span slot="button">
-          <button class="flex items-center gap-1">
-            About
-            <svg xmlns="http://www.w3.org/2000/svg"
-                 class="h-5 w-5 text-gray-400"
-                 viewBox="0 0 20 20"
-                 fill="currentColor">
-              <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-            </svg>
-          </button>
-        </span>
-        <span slot="menu">
-          <div class="mt-2 w-40 rounded-md bg-white shadow-md">
-            <a href="{% url 'pages:how-it-works' %}"
-               class="flex items-center gap-2 w-full first-of-type:rounded-t-md last-of-type:rounded-b-md px-4 py-2.5 text-left text-sm hover:bg-gray-50 disabled:text-gray-500">
-              How it works
-            </a>
-            <a href="{% url 'pages:about' %}"
-               class="flex items-center gap-2 w-full first-of-type:rounded-t-md last-of-type:rounded-b-md px-4 py-2.5 text-left text-sm hover:bg-gray-50 disabled:text-gray-500">
-              Why we made this
-            </a>
-            <a href="{% url 'pages:team' %}"
-               class="flex items-center gap-2 w-full first-of-type:rounded-t-md last-of-type:rounded-b-md px-4 py-2.5 text-left text-sm hover:bg-gray-50 disabled:text-gray-500">
-              Team
-            </a>
-          </div>
-        </span>
-        </t-dropdown>
+        <script id="navmenu-data" type="application/json">
+          [
+            {
+              "title": "How it works", "href": "{% url "pages:how-it-works" %}"
+            },
+            {
+              "title": "Why we made this", "href": "{% url "pages:about" %}"
+            },
+            {
+              "title": "Team", "href": "{% url "pages:team" %}"
+            }
+          ]
+        </script>
+        <t-navmenu dataid="navmenu-data" />
       </div>
       <div class="w-0.5 bg-gray-200 h-5 mx-2 rounded"></div>
       {% if request.user.is_authenticated %}
-        <t-dropdown>
+        <t-dropdown class="pl-5">
         <span slot="button">
           <button class="flex items-center gap-1">{% avatar request.user size=50 %}</button>
         </span>
@@ -59,7 +44,7 @@
             {% endif %}
             <a href="{% url 'pages:team' %}"
                class="flex items-center gap-2 w-full first-of-type:rounded-t-md last-of-type:rounded-b-md px-4 py-2.5 text-left text-sm hover:bg-gray-50 disabled:text-gray-500">
-              <span class="text-red-500">Logout</span>
+              <span class="text-tpinkTint">Logout</span>
             </a>
           </div>
         </span>

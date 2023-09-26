@@ -3,9 +3,10 @@ import register from "./register"
 
 import Button from "./button"
 import Dropdown from "./dropdown"
+import NavMenu from "./navmenu"
 import PromptSearch from "./promptSearch"
 
-var components = [Button, Dropdown, PromptSearch]
+var components = [Button, Dropdown, PromptSearch, NavMenu]
 
 export default function () {
   window.h = h
