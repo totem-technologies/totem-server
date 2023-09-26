@@ -1,23 +1,5 @@
-import { useEffect, useRef, useState } from "preact/hooks"
-
-function useOutsideAlerter(ref, cb) {
-  useEffect(() => {
-    /**
-     * Alert if clicked on outside of element
-     */
-    function handleClickOutside(event) {
-      if (ref.current && !ref.current.contains(event.target)) {
-        cb()
-      }
-    }
-    // Bind the event listener
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => {
-      // Unbind the event listener on clean up
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [ref])
-}
+import { useRef, useState } from "preact/hooks"
+import { Popover } from "react-tiny-popover"
 
 function Dropdown() {
   const wrapperRef = useRef(null)
@@ -28,14 +10,18 @@ function Dropdown() {
   function close() {
     setOpen(false)
   }
-  useOutsideAlerter(wrapperRef, close)
 
   return (
     <div class="relative" onClick={toggle}>
-      <span ref={wrapperRef}>{this.props.button}</span>
-      <div hidden={!open} class={`absolute right-0 z-10`}>
-        {this.props.menu}
-      </div>
+      <Popover
+        isOpen={open}
+        positions={["bottom", "left", "right", "top"]}
+        content={this.props.menu}
+        padding={2}
+        onClickOutside={close}
+      >
+        <span>{this.props.button}</span>
+      </Popover>
     </div>
   )
 }
