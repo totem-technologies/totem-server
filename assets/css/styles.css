@@ -104,3 +104,4 @@ html {
 
 /* Alpinejs */
 [x-cloak] { display: none !important; }
+[slot] { display: none !important; }

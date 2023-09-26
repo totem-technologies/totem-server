@@ -16,9 +16,9 @@ document.cookie = `totem_timezone=${timezone}; SameSite=Strict`
 
 Alpine.data("search", search)
 Alpine.start()
+components()
 window.addEventListener("DOMContentLoaded", () => {
   emailSpellChecker()
-  components()
 })
 
 logger(window.TOTEM_DATA.debug)
