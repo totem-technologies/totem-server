@@ -6,7 +6,7 @@
         I'm a button
         </t-button>
         <t-button>Me too!</t-button>
-        <x-dropdown name="bo">
+        <t-dropdown name="bo">
         <span slot="button">
             <button>Dropit</button>
         </span>
@@ -18,10 +18,12 @@
                 </ul>
             </div>
         </span>
-        </x-dropdown>
-        <text-section>
-        <span slot="heading">Nice heading</span>
-        <span slot="content">Great content</span>
-        </text-section>
+        </t-dropdown>
+        <t-popover>
+        <span slot="trigger">
+            <button class="btn-primary">yolo</button>
+        </span>
+        <span slot="content">I'm content!</span>
+        </t-popover>
     </section>
 {% endblock content %}

@@ -1,9 +1,11 @@
 import { Fragment, h } from "preact"
-import Button from "./button"
-import Dropdown from "./dropdown"
 import register from "./register"
 
-var components = [Button, Dropdown]
+import Button from "./button"
+import Dropdown from "./dropdown"
+import PromptSearch from "./promptSearch"
+
+var components = [Button, Dropdown, PromptSearch]
 
 export default function () {
   window.h = h

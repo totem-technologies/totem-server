@@ -31,14 +31,7 @@ function Dropdown() {
   useOutsideAlerter(wrapperRef, close)
 
   return (
-    <div
-      class="relative"
-      onBlur={close}
-      onFocus={() => {
-        setOpen(true)
-      }}
-      onClick={toggle}
-    >
+    <div class="relative" onClick={toggle}>
       <span ref={wrapperRef}>{this.props.button}</span>
       <div hidden={!open} class={`absolute right-0 z-10`}>
         {this.props.menu}

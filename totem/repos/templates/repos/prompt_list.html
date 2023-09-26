@@ -10,49 +10,10 @@
             These prompts are created for Totem by expert Keepers. They are designed to encourage authentic communication. Please try them out in your Circles!
         </p>
         <p class="pt-4">You can use the search bar below, or filter by tag by selecting the tag pill.</p>
-        <div x-data="search" x-init="init()">
-            <div class="relative py-5">
-                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <svg aria-hidden="true"
-                         class="w-5 h-5 text-gray-500"
-                         fill="none"
-                         stroke="currentColor"
-                         viewBox="0 0 24 24"
-                         xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z">
-                        </path>
-                    </svg>
-                </div>
-                <input type="search"
-                       x-model="search"
-                       id="search"
-                       class="block w-full p-4 pl-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 "
-                       placeholder="Search prompts..."
-                       required>
-            </div>
-            <template x-for="tag in tags" :key="tag">
-                <button type="button"
-                        class="inline-flex mt-1 items-center px-3 py-1 mr-2 text-xs font-medium leading-4 text-gray-700 bg-tyellow rounded-full"
-                        x-text="tag"
-                        @click="search = tag"></button>
-            </template>
-            <ul class="pt-10">
-                <template x-for="item in filteredItems" :key="item.prompt">
-                    <li class="px-4 py-2 mb-2 bg-white rounded-lg border-2">
-                        <div x-text="item.prompt" class="pb-3"></div>
-                        <template x-for="tag in item.tags" :key="tag">
-                            <button type="button"
-                                    class="inline-flex mt-1 items-center px-3 py-1 mr-2 text-xs font-medium leading-4 text-gray-700 bg-gray-200 rounded-full"
-                                    x-text="tag"
-                                    @click="search = tag"></button>
-                        </template>
-                    </li>
-                </template>
-            </ul>
-        </div>
+        {{ search_data|json_script:"search_data" }}
+        <t-promptsearch dataid="search_data"></t-promptsearch>
     </div>
 {% endblock content %}
 {% block inline_javascript %}
-    {{ search_data|json_script:"search_data" }}
     <script src="{% static 'js/ufuzzy.min.js' %}"></script>
 {% endblock inline_javascript %}
