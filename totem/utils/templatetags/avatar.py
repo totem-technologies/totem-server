@@ -1,6 +1,9 @@
 import random
+import urllib.parse
 
 from django import template
+from django.template import Context
+from django.template.engine import Engine
 
 from totem.utils.hash import basic_hash
 
@@ -9,6 +12,7 @@ register = template.Library()
 
 @register.inclusion_tag("utils/avatar.html")
 def avatar(user, size=120, classes=""):
+    current_engine = Engine.get_default()
     size = int(size)
     if user.profile_image:
         is_static = True
@@ -23,7 +27,10 @@ def avatar(user, size=120, classes=""):
             "is_static": is_static,
         }
     else:
-        ctx = avatar_marble(name=user.name, size=size, classes=classes, title=True) | {"is_image": False}
+        # Render the avatar as a data URI SVG in an img tag. Using raw SVG causes React to not render the SVG properly.
+        avatar_ctx = avatar_marble(name=user.name, salt=user.slug, size=size)
+        svg = current_engine.select_template(["utils/avatar.svg"]).render(Context(avatar_ctx))
+        ctx = {"is_image": False, "size": size, "classes": classes, "name": user.name, "svg": urllib.parse.quote(svg)}
     return ctx
 
 
@@ -151,28 +158,27 @@ def get_unit(seed, max_value, decimal_places=0):
 
 def avatar_marble(
     name: str,
+    salt: str = "",
     colors: list | None = None,
     size: int = 120,
-    square: bool = False,
-    title: bool = False,
-    classes: str = "",
 ):
-    hashed_key = int(basic_hash(name, as_int=True))
+    # Generate avatar from name + salt, where the salt is unique to the user.
+    # This creates a unique avatar for each person, since every person is unique.
+    # However, if a user changes their name, the avatar will change.
+    hashed_key = int(basic_hash(name + salt, as_int=True))
     if not colors:
         colors = _themes[hashed_key % len(_themes)]
     properties = _generate_colors(hashed_key, colors)
     mask_id = "mask_" + str(hashed_key)
 
     return {
-        "classes": classes,
         "size": size,
         "SIZE": SIZE,
         "SIZED2": SIZE / 2,
         "RX": SIZE * 2,
-        "name": name,
+        "salt": salt,
         "properties": properties,
         "mask_id": mask_id,
-        "title": title,
     }
 
 
@@ -181,6 +187,5 @@ if __name__ == "__main__":
         avatar_marble(
             name="868ce1c742d4451efea8",
             size=80,
-            square=False,
         )
     )
