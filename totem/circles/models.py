@@ -20,7 +20,9 @@ from totem.utils.models import SluggedModel
 class Circle(MarkdownMixin, SluggedModel):
     title = models.CharField(max_length=255)
     subtitle = models.CharField(max_length=2000)
-    image = models.ImageField(upload_to="circles", blank=True, null=True)
+    image = models.ImageField(
+        upload_to="circles", blank=True, null=True, help_text="Image for the Circle, must be under 5mb"
+    )
     tags = TaggableManager()
     content = MarkdownField(default="")
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, limit_choices_to={"is_staff": True})

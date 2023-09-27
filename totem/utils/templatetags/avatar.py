@@ -23,7 +23,7 @@ def avatar(user, size=120, classes=""):
             "is_static": is_static,
         }
     else:
-        ctx = avatar_marble(name=user.name + user.slug, size=size, classes=classes, title=True) | {"is_image": False}
+        ctx = avatar_marble(name=user.name, size=size, classes=classes, title=True) | {"is_image": False}
     return ctx
 
 
