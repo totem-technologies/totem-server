@@ -368,6 +368,7 @@ ENVIRONMENT_COLOR = env("ENVIRONMENT_COLOR", default="gray")  # type: ignore
 # django-taggit
 # ------------------------------------------------------------------------------
 TAGGIT_CASE_INSENSITIVE = True
+TAGGIT_TAGS_FROM_STRING = "totem.utils.tag_utils.parse_tags"
 
 
 # sentry
