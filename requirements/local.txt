@@ -14,7 +14,7 @@ argon2-cffi-bindings==21.2.0
     # via argon2-cffi
 asgiref==3.7.2
     # via django
-astroid==2.15.6
+astroid==2.15.8
     # via pylint
 asttokens==2.4.0
     # via stack-data
@@ -24,9 +24,9 @@ backoff==2.2.1
     # via posthog
 black==23.7.0
     # via -r requirements/local.in
-boto3==1.28.51
+boto3==1.28.55
     # via django-storages
-botocore==1.31.51
+botocore==1.31.55
     # via
     #   boto3
     #   s3transfer
@@ -89,6 +89,7 @@ django==4.2.5
     #   django-stubs
     #   django-stubs-ext
     #   django-taggit
+    #   django-timezone-field
     #   sentry-sdk
 django-allauth==0.54.0
     # via -r requirements/base.in
@@ -118,7 +119,9 @@ django-stubs-ext==4.2.2
     # via django-stubs
 django-taggit==4.0.0
     # via -r requirements/base.in
-djlint==1.33.0
+django-timezone-field==6.0.1
+    # via -r requirements/base.in
+djlint==1.34.0
     # via -r requirements/local.in
 editorconfig==0.12.3
     # via
@@ -128,13 +131,13 @@ executing==1.2.0
     # via stack-data
 factory-boy==3.3.0
     # via -r requirements/local.in
-faker==19.6.1
+faker==19.6.2
     # via factory-boy
 filelock==3.12.4
     # via virtualenv
-google-api-core==2.11.1
+google-api-core==2.12.0
     # via google-api-python-client
-google-api-python-client==2.100.0
+google-api-python-client==2.101.0
     # via -r requirements/base.in
 google-auth==2.23.0
     # via
@@ -164,7 +167,7 @@ httplib2==0.22.0
     #   google-auth-httplib2
 httptools==0.6.0
     # via uvicorn
-icalendar==5.0.8
+icalendar==5.0.10
     # via
     #   caldav
     #   recurring-ical-events
@@ -273,13 +276,13 @@ pyasn1-modules==0.3.0
     # via google-auth
 pycparser==2.21
     # via cffi
-pydantic==1.10.12
+pydantic==1.10.13
     # via django-ninja
 pygments==2.16.1
     # via ipython
 pyjwt[crypto]==2.8.0
     # via django-allauth
-pylint==2.17.5
+pylint==2.17.6
     # via
     #   pylint-django
     #   pylint-plugin-utils
@@ -331,7 +334,7 @@ pyyaml==6.0.1
     #   uvicorn
 qrcode==7.4.2
     # via -r requirements/base.in
-recurring-ical-events==2.0.2
+recurring-ical-events==2.1.0
     # via caldav
 redis==4.6.0
     # via
@@ -355,7 +358,7 @@ rsa==4.9
     # via google-auth
 ruff==0.0.285
     # via -r requirements/local.in
-s3transfer==0.6.2
+s3transfer==0.7.0
     # via boto3
 sentry-sdk[django]==1.31.0
     # via -r requirements/base.in
@@ -382,13 +385,13 @@ tomlkit==0.12.1
     # via pylint
 tqdm==4.66.1
     # via djlint
-traitlets==5.10.0
+traitlets==5.10.1
     # via
     #   ipython
     #   matplotlib-inline
-types-pytz==2023.3.1.0
+types-pytz==2023.3.1.1
     # via django-stubs
-types-pyyaml==6.0.12.11
+types-pyyaml==6.0.12.12
     # via django-stubs
 typing-extensions==4.8.0
     # via

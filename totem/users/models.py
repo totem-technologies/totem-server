@@ -7,6 +7,7 @@ from django.urls import reverse
 from django.utils.html import escape as html_escape
 from django.utils.html import strip_tags
 from django.utils.translation import gettext_lazy as _
+from timezone_field import TimeZoneField
 
 from totem.email.utils import validate_email_blocked
 from totem.users.managers import UserManager
@@ -33,7 +34,7 @@ class User(SluggedModel, AbstractUser):
     ics_key = UUIDField(_("API Key"), db_index=True, default=uuid.uuid4)
     profile_image = CharField(max_length=255, null=True, blank=True)
     verified = BooleanField(_("Verified"), default=False)
-    timezone = CharField(max_length=255, null=True, blank=True)
+    timezone = TimeZoneField(choices_display="WITH_GMT_OFFSET")
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []

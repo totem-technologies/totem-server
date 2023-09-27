@@ -14,9 +14,9 @@ asgiref==3.7.2
     # via django
 backoff==2.2.1
     # via posthog
-boto3==1.28.51
+boto3==1.28.55
     # via django-storages
-botocore==1.31.51
+botocore==1.31.55
     # via
     #   boto3
     #   s3transfer
@@ -51,6 +51,7 @@ django==4.2.5
     #   django-sesame
     #   django-storages
     #   django-taggit
+    #   django-timezone-field
     #   sentry-sdk
 django-allauth==0.54.0
     # via -r requirements/base.in
@@ -70,9 +71,11 @@ django-storages[s3]==1.14
     # via -r requirements/base.in
 django-taggit==4.0.0
     # via -r requirements/base.in
-google-api-core==2.11.1
+django-timezone-field==6.0.1
+    # via -r requirements/base.in
+google-api-core==2.12.0
     # via google-api-python-client
-google-api-python-client==2.100.0
+google-api-python-client==2.101.0
     # via -r requirements/base.in
 google-auth==2.23.0
     # via
@@ -98,7 +101,7 @@ httplib2==0.22.0
     #   google-auth-httplib2
 httptools==0.6.0
     # via uvicorn
-icalendar==5.0.8
+icalendar==5.0.10
     # via
     #   caldav
     #   recurring-ical-events
@@ -139,7 +142,7 @@ pyasn1-modules==0.3.0
     # via google-auth
 pycparser==2.21
     # via cffi
-pydantic==1.10.12
+pydantic==1.10.13
     # via django-ninja
 pyjwt[crypto]==2.8.0
     # via django-allauth
@@ -172,7 +175,7 @@ pyyaml==6.0.1
     # via uvicorn
 qrcode==7.4.2
     # via -r requirements/base.in
-recurring-ical-events==2.0.2
+recurring-ical-events==2.1.0
     # via caldav
 redis==4.6.0
     # via
@@ -192,7 +195,7 @@ requests-oauthlib==1.3.1
     #   google-auth-oauthlib
 rsa==4.9
     # via google-auth
-s3transfer==0.6.2
+s3transfer==0.7.0
     # via boto3
 sentry-sdk[django]==1.31.0
     # via -r requirements/base.in
