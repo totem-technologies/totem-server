@@ -16,8 +16,15 @@
         <img src="data:image/png;base64,{{ img }}" width=300 height=300 alt="">
     </a>
     <p>
-        For <a href="{{ obj.full_url }}">{{ obj.full_url }}</a>
+        Link: <a href="{{ obj.full_url }}">{{ obj.full_url }}</a>
     </p>
-    <p>Redirect to {{ obj.url }}</p>
+    {% if obj.alternate_slug %}
+        <p>
+            Alternate link: <a href="{{ obj.full_alternate_url }}">{{ obj.full_alternate_url }}</a>
+        </p>
+    {% endif %}
+    <p>
+        Redirect to: <a href="{{ obj.full_redirect_url }}">{{ obj.full_redirect_url }}</a>
+    </p>
 </body>
 </html>

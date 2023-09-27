@@ -21,6 +21,9 @@ class Redirect(SluggedModel):
     def get_absolute_url(self):
         return reverse("pages:redirect", kwargs={"slug": self.slug})
 
+    def get_alternate_url(self):
+        return reverse("pages:redirect", kwargs={"slug": self.alternate_slug})
+
     class Meta:
         verbose_name = "Redirect"
         verbose_name_plural = "Redirects"
@@ -33,6 +36,12 @@ class Redirect(SluggedModel):
 
     def full_url(self):
         return urljoin(settings.EMAIL_BASE_URL, self.get_absolute_url())
+
+    def full_alternate_url(self):
+        return urljoin(settings.EMAIL_BASE_URL, self.get_alternate_url())
+
+    def full_redirect_url(self):
+        return urljoin(settings.EMAIL_BASE_URL, self.url)
 
     @classmethod
     def get_by_slug(cls, slug):

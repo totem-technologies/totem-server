@@ -9,7 +9,7 @@ from qrcode.main import QRCode
 def make_qr(data):
     qr = QRCode(
         version=None,
-        box_size=20,
+        box_size=14,
         border=1,
     )
     qr.add_data(data)
