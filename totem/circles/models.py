@@ -8,20 +8,32 @@ from django.db.models.query import QuerySet
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from imagekit import ImageSpec
+from imagekit.models import ProcessedImageField
+from imagekit.processors import ResizeToFit
 from taggit.managers import TaggableManager
 
 from totem.email.emails import send_notify_circle_advertisement, send_notify_circle_starting
 from totem.utils.md import MarkdownField, MarkdownMixin
 from totem.utils.models import SluggedModel
 
+
 # Create your models here.
+class CircleImageSpec(ImageSpec):
+    processors = [ResizeToFit(1500, 1500)]
+    format = "JPEG"
+    options = {"quality": 80, "optimize": True}
 
 
 class Circle(MarkdownMixin, SluggedModel):
     title = models.CharField(max_length=255)
     subtitle = models.CharField(max_length=2000)
-    image = models.ImageField(
-        upload_to="circles", blank=True, null=True, help_text="Image for the Circle, must be under 5mb"
+    image = ProcessedImageField(
+        blank=True,
+        null=True,
+        upload_to="circles",
+        spec=CircleImageSpec,  # type: ignore
+        help_text="Image for the Circle, must be under 5mb",
     )
     tags = TaggableManager()
     content = MarkdownField(default="")

@@ -1,32 +1,33 @@
-argon2-cffi==21.3.0  # https://github.com/hynek/argon2_cffi
+argon2-cffi==21.3.0
 caldav<2
 google-api-python-client<3
 google-auth-oauthlib<2
-gunicorn<22  # https://github.com/benoitc/gunicorn
-hiredis==2.2.3  # https://github.com/redis/hiredis-py
-markdown<3.5.0  # https://pypi.org/project/Markdown/
-Pillow<11  # https://github.com/python-pillow/Pillow
-posthog<4.0.0  # https://pypi.org/project/posthog/
-psycopg2==2.9.6  # https://github.com/psycopg/psycopg2
-python-dateutil < 3  # https://pypi.org/project/python-dateutil/
-python-slugify==8.0.1  # https://github.com/un33k/python-slugify
-pytz==2023.3  # https://github.com/stub42/pytz
-qrcode==7.4.2  # https://pypi.org/project/qrcode/
-redis==4.6.0  # https://github.com/redis/redis-py
-sentry-sdk[django]<2  # https://pypi.org/project/sentry-sdk/
-uvicorn[standard]<0.24.0  # https://github.com/encode/uvicorn
-whitenoise==6.5.0  # https://github.com/evansd/whitenoise
+gunicorn<22
+hiredis==2.2.3
+markdown<3.5.0
+Pillow<11
+posthog<4.0.0
+psycopg2==2.9.6
+python-dateutil < 3
+python-slugify==8.0.1
+pytz==2023.3
+qrcode==7.4.2
+redis==4.6.0
+sentry-sdk[django]<2
+uvicorn[standard]<0.24.0
+whitenoise==6.5.0
 
 # Django
 # ------------------------------------------------------------------------------
-django-allauth==0.54.0  # https://github.com/pennersr/django-allauth
-django-anymail==10.0  # https://github.com/anymail/django-anymail
-django-environ==0.10.0  # https://github.com/joke2k/django-environ
-django-model-utils==4.3.1  # https://github.com/jazzband/django-model-utils
-django-ninja<0.23.0  # https://github.com/vitalik/django-ninja
-django-redis==5.3.0  # https://github.com/jazzband/django-redis
-django-sesame==3.1  # https://pypi.org/project/django-sesame/
-django-storages[s3]==1.14  # https://pypi.org/project/django-storages/
-django-taggit==4.0.0  # https://github.com/jazzband/django-taggit
-django-timezone-field<7 # https://pypi.org/project/django-timezone-field/
-django<4.3.0  # pyup: < 4.2  # https://www.djangoproject.com/
+django-allauth==0.54.0
+django-anymail==10.0
+django-environ==0.10.0
+django-imagekit<6.0.0
+django-model-utils==4.3.1
+django-ninja<0.23.0
+django-redis==5.3.0
+django-sesame==3.1
+django-storages[s3]==1.14
+django-taggit==4.0.0
+django-timezone-field<7
+django<4.3.0

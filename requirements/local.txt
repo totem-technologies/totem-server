@@ -24,9 +24,9 @@ backoff==2.2.1
     # via posthog
 black==23.7.0
     # via -r requirements/local.in
-boto3==1.28.55
+boto3==1.28.57
     # via django-storages
-botocore==1.31.55
+botocore==1.31.57
     # via
     #   boto3
     #   s3transfer
@@ -40,7 +40,7 @@ certifi==2023.7.22
     # via
     #   requests
     #   sentry-sdk
-cffi==1.15.1
+cffi==1.16.0
     # via
     #   argon2-cffi-bindings
     #   cryptography
@@ -79,6 +79,7 @@ django==4.2.5
     #   -r requirements/base.in
     #   django-allauth
     #   django-anymail
+    #   django-appconf
     #   django-debug-toolbar
     #   django-extensions
     #   django-model-utils
@@ -95,6 +96,8 @@ django-allauth==0.54.0
     # via -r requirements/base.in
 django-anymail==10.0
     # via -r requirements/base.in
+django-appconf==1.0.5
+    # via django-imagekit
 django-coverage-plugin==3.1.0
     # via -r requirements/local.in
 django-debug-toolbar==4.1.0
@@ -103,6 +106,8 @@ django-environ==0.10.0
     # via -r requirements/base.in
 django-extensions==3.2.3
     # via -r requirements/local.in
+django-imagekit==5.0.0
+    # via -r requirements/base.in
 django-model-utils==4.3.1
     # via -r requirements/base.in
 django-ninja==0.22.2
@@ -139,7 +144,7 @@ google-api-core==2.12.0
     # via google-api-python-client
 google-api-python-client==2.101.0
     # via -r requirements/base.in
-google-auth==2.23.0
+google-auth==2.23.2
     # via
     #   google-api-core
     #   google-api-python-client
@@ -241,8 +246,12 @@ pexpect==4.8.0
     # via ipython
 pickleshare==0.7.5
     # via ipython
+pilkit==3.0
+    # via django-imagekit
 pillow==10.0.1
-    # via -r requirements/base.in
+    # via
+    #   -r requirements/base.in
+    #   pilkit
 pip-tools==7.3.0
     # via -r requirements/local.in
 platformdirs==3.10.0
@@ -408,7 +417,6 @@ urllib3==1.26.16
     # via
     #   botocore
     #   django-anymail
-    #   google-auth
     #   requests
     #   sentry-sdk
 uvicorn[standard]==0.23.2

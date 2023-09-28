@@ -14,9 +14,9 @@ asgiref==3.7.2
     # via django
 backoff==2.2.1
     # via posthog
-boto3==1.28.55
+boto3==1.28.57
     # via django-storages
-botocore==1.31.55
+botocore==1.31.57
     # via
     #   boto3
     #   s3transfer
@@ -28,7 +28,7 @@ certifi==2023.7.22
     # via
     #   requests
     #   sentry-sdk
-cffi==1.15.1
+cffi==1.16.0
     # via
     #   argon2-cffi-bindings
     #   cryptography
@@ -45,6 +45,7 @@ django==4.2.5
     #   -r requirements/base.in
     #   django-allauth
     #   django-anymail
+    #   django-appconf
     #   django-model-utils
     #   django-ninja
     #   django-redis
@@ -57,7 +58,11 @@ django-allauth==0.54.0
     # via -r requirements/base.in
 django-anymail==10.0
     # via -r requirements/base.in
+django-appconf==1.0.5
+    # via django-imagekit
 django-environ==0.10.0
+    # via -r requirements/base.in
+django-imagekit==5.0.0
     # via -r requirements/base.in
 django-model-utils==4.3.1
     # via -r requirements/base.in
@@ -77,7 +82,7 @@ google-api-core==2.12.0
     # via google-api-python-client
 google-api-python-client==2.101.0
     # via -r requirements/base.in
-google-auth==2.23.0
+google-auth==2.23.2
     # via
     #   google-api-core
     #   google-api-python-client
@@ -124,8 +129,12 @@ oauthlib==3.2.2
     # via requests-oauthlib
 packaging==23.1
     # via gunicorn
+pilkit==3.0
+    # via django-imagekit
 pillow==10.0.1
-    # via -r requirements/base.in
+    # via
+    #   -r requirements/base.in
+    #   pilkit
 posthog==3.0.2
     # via -r requirements/base.in
 protobuf==4.24.3
@@ -221,7 +230,6 @@ urllib3==1.26.16
     # via
     #   botocore
     #   django-anymail
-    #   google-auth
     #   requests
     #   sentry-sdk
 uvicorn[standard]==0.23.2
