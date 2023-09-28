@@ -37,7 +37,9 @@ charset-normalizer==3.2.0
 click==8.1.7
     # via uvicorn
 cryptography==41.0.4
-    # via pyjwt
+    # via
+    #   django-anymail
+    #   pyjwt
 defusedxml==0.7.1
     # via python3-openid
 django==4.2.5
@@ -186,7 +188,7 @@ qrcode==7.4.2
     # via -r requirements/base.in
 recurring-ical-events==2.1.0
     # via caldav
-redis==4.6.0
+redis==5.0.1
     # via
     #   -r requirements/base.in
     #   django-redis

@@ -12,7 +12,7 @@ python-dateutil < 3
 python-slugify==8.0.1
 pytz==2023.3
 qrcode==7.4.2
-redis==4.6.0
+redis==5.0.1
 sentry-sdk[django]<2
 uvicorn[standard]<0.24.0
 whitenoise==6.5.0
