@@ -8,6 +8,7 @@
     <script src="{% static 'js/atcb.min.js' %}" defer></script>
 {% endblock javascript %}
 {% block content %}
+    <div class="h-10"></div>
     <div class="m-auto px-5 pb-2 flex max-w-5xl">
         <a class="no-underline items-center space-x-2 flex"
            href="{% url 'circles:list' %}">
@@ -21,7 +22,7 @@
         {% if object.image %}
             <style>
             .circle-bg-image{
-                background-image: url({{ object.image.url }});
+                background-image: linear-gradient(185deg, rgba(196, 204, 255, 0.52), rgba(117, 19, 93, 0.73)), url({{ object.image.url }});
                 background-size: cover;
                 background-position: center;
                 background-repeat: no-repeat;
@@ -35,12 +36,12 @@
                 </a>
             </div>
             <div class="p-5 text-center">
-                <h1 class="h1 pb-3">{{ object.title }}</h1>
+                <h1 class="h1 pb-3 text-white">{{ object.title }}</h1>
                 <div class="pb-3">
                     {% for tag in object.tags.all %}<span class="badge badge-primary">{{ tag }}</span>{% endfor %}
                 </div>
-                <div class="h2">{{ object.subtitle }}</div>
-                <div>
+                <div class="h2 text-white">{{ object.subtitle }}</div>
+                <div class="text-white">
                     By
                     <strong><a href="{{ object.author.get_keeper_url }}">{{ object.author.name }}</a></strong>
                 </div>

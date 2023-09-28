@@ -39,19 +39,23 @@
         </span>
         <span slot='menu'>
           <div class="absolute right-0 mt-2 w-40 rounded-md bg-white shadow-md z-10">
+            <div class="flex items-center gap-2 w-full first-of-type:rounded-t-md last-of-type:rounded-b-md px-4 py-2.5 text-left text-sm hover:bg-gray-50 disabled:text-gray-500">
+              {{ request.user.email }}
+            </div>
             <a href="{% url 'users:redirect' %}"
                class="flex items-center gap-2 w-full first-of-type:rounded-t-md last-of-type:rounded-b-md px-4 py-2.5 text-left text-sm hover:bg-gray-50 disabled:text-gray-500">
               Profile
             </a>
             {% if request.user.is_staff %}
               <a href="{% url 'admin:index' %}"
+                 target="_blank"
                  class="flex items-center gap-2 w-full first-of-type:rounded-t-md last-of-type:rounded-b-md px-4 py-2.5 text-left text-sm hover:bg-gray-50 disabled:text-gray-500">
                 Admin
               </a>
             {% endif %}
             <a href="{% url 'pages:team' %}"
                class="flex items-center gap-2 w-full first-of-type:rounded-t-md last-of-type:rounded-b-md px-4 py-2.5 text-left text-sm hover:bg-gray-50 disabled:text-gray-500">
-              <span class="text-tpinkTint">Logout</span>
+              <span class="text-tpink">Logout</span>
             </a>
           </div>
         </span>

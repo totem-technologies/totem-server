@@ -12,7 +12,7 @@
     "watch:tailwind": "NODE_ENV=development npm run tw -- --watch",
     "esb": "esbuild --bundle --sourcemap ./assets/js/app.js --outfile=./totem/static/js/app.min.js --loader:.js=jsx --jsx-factory=h --jsx-fragment=Fragment",
     "tw": "tailwindcss --postcss -i ./assets/css/styles.css -o ./totem/static/css/styles.css --minify",
-    "livereload": "livereload ./totem/ -e 'html,css,js,py'"
+    "livereload": "livereload ./totem/ -e 'html,css,js,py' --wait 200"
   },
   "keywords": [],
   "author": "",
