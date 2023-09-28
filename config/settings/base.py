@@ -75,13 +75,7 @@ DJANGO_APPS = [
     "django.contrib.admin",
     "django.forms",
 ]
-THIRD_PARTY_APPS = [
-    "ninja",
-    "allauth",
-    "allauth.account",
-    "allauth.socialaccount",
-    "taggit",
-]
+THIRD_PARTY_APPS = ["ninja", "allauth", "allauth.account", "allauth.socialaccount", "taggit", "imagekit"]
 
 LOCAL_APPS = [
     "totem.users",
