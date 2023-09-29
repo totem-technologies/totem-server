@@ -1,3 +1,4 @@
+import time
 import uuid
 
 from django.conf import settings
@@ -7,13 +8,31 @@ from django.urls import reverse
 from django.utils.html import escape as html_escape
 from django.utils.html import strip_tags
 from django.utils.translation import gettext_lazy as _
+from imagekit import ImageSpec
+from imagekit.models import ProcessedImageField
+from imagekit.processors import ResizeToFill
 from timezone_field import TimeZoneField
 
 from totem.email.utils import validate_email_blocked
 from totem.users.managers import UserManager
+from totem.utils.hash import basic_hash
 from totem.utils.models import SluggedModel
 
 from . import analytics
+
+
+class ProfileImageSpec(ImageSpec):
+    processors = [ResizeToFill(400, 400)]
+    format = "JPEG"
+    options = {"quality": 80, "optimize": True}
+
+
+def upload_to_id_image(instance, filename: str):
+    extension = filename.split(".")[-1]
+    epoch_time = int(time.time())
+    new_filename = basic_hash(f"{filename}-{epoch_time}")
+    user_slug = instance.slug
+    return f"profiles/{user_slug}/{new_filename}.{extension}"
 
 
 class User(SluggedModel, AbstractUser):
@@ -32,7 +51,13 @@ class User(SluggedModel, AbstractUser):
     username = None  # type: ignore
     api_key = UUIDField(_("API Key"), db_index=True, default=uuid.uuid4)
     ics_key = UUIDField(_("API Key"), db_index=True, default=uuid.uuid4)
-    profile_image = CharField(max_length=255, null=True, blank=True)
+    profile_image = ProcessedImageField(
+        blank=True,
+        null=True,
+        upload_to=upload_to_id_image,
+        spec=ProfileImageSpec,  # type: ignore
+        help_text="Profile image, must be under 5mb. Will be cropped to a square.",
+    )
     verified = BooleanField(_("Verified"), default=False)
     timezone = TimeZoneField(choices_display="WITH_GMT_OFFSET")
 
@@ -77,5 +102,3 @@ class User(SluggedModel, AbstractUser):
         super().clean()
         self.email = strip_tags(self.__class__.objects.normalize_email(self.email))
         self.name = html_escape(strip_tags(self.name.strip()))
-        if self.profile_image:
-            self.profile_image = strip_tags(self.profile_image.strip())

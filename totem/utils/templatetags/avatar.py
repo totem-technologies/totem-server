@@ -15,17 +15,7 @@ def avatar(user, size=120, classes=""):
     current_engine = Engine.get_default()
     size = int(size)
     if user.profile_image:
-        is_static = True
-        if user.profile_image.startswith("https://"):
-            is_static = False
-        ctx = {
-            "is_image": True,
-            "size": size,
-            "classes": classes,
-            "name": user.name,
-            "image": user.profile_image.strip("/"),
-            "is_static": is_static,
-        }
+        ctx = {"is_image": True, "size": size, "classes": classes, "name": user.name, "image": user.profile_image}
     else:
         # Render the avatar as a data URI SVG in an img tag. Using raw SVG causes React to not render the SVG properly.
         avatar_ctx = avatar_marble(name=user.name, salt=user.slug, size=size)

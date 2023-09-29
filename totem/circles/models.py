@@ -1,4 +1,5 @@
 import datetime
+import time
 
 from dateutil import tz
 from django.conf import settings
@@ -14,6 +15,7 @@ from imagekit.processors import ResizeToFit
 from taggit.managers import TaggableManager
 
 from totem.email.emails import send_notify_circle_advertisement, send_notify_circle_starting
+from totem.utils.hash import basic_hash
 from totem.utils.md import MarkdownField, MarkdownMixin
 from totem.utils.models import SluggedModel
 
@@ -25,13 +27,21 @@ class CircleImageSpec(ImageSpec):
     options = {"quality": 80, "optimize": True}
 
 
+def upload_to_id_image(instance, filename: str):
+    extension = filename.split(".")[-1]
+    epoch_time = int(time.time())
+    new_filename = basic_hash(f"{filename}-{epoch_time}")
+    user_slug = instance.author.slug
+    return f"circles/{user_slug}/{new_filename}.{extension}"
+
+
 class Circle(MarkdownMixin, SluggedModel):
     title = models.CharField(max_length=255)
     subtitle = models.CharField(max_length=2000)
     image = ProcessedImageField(
         blank=True,
         null=True,
-        upload_to="circles",
+        upload_to=upload_to_id_image,
         spec=CircleImageSpec,  # type: ignore
         help_text="Image for the Circle, must be under 5mb",
     )

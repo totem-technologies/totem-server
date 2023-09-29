@@ -2,7 +2,7 @@
 {% if is_image %}
     <img width="{{ size }}"
          height="{{ size }}"
-         {% if is_static %} src="{% static image %}" {% else %} src="{{ image }}" {% endif %}
+         src="{{ image.url }}"
          alt="{{ name }}"
          title="{{ name }}"
          class="rounded-full {{ classes }}">
