@@ -34,3 +34,4 @@ class CircleAdmin(admin.ModelAdmin):
 class CircleEventAdmin(admin.ModelAdmin):
     list_display = ("start", "circle", "slug")
     list_filter = ["circle"]
+    filter_horizontal = ["attendees", "joined"]

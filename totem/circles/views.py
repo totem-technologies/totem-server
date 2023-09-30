@@ -160,3 +160,18 @@ def join(request, event_slug):
         return redirect(event.meeting_url, permanent=False)
     messages.info(request, "Cannot join at this time.")
     return redirect("circles:event_detail", event_slug=event.slug)
+
+
+@login_required
+def subscribe(request, slug):
+    if request.method != "POST":
+        raise Http404
+    circle = _get_circle(slug)
+    return_url = request.POST.get("return_url")
+    if request.POST.get("action") == "unsubscribe":
+        circle.unsubscribe(request.user)
+    else:
+        circle.subscribe(request.user)
+    if return_url:
+        return redirect(return_url)
+    return redirect("circles:detail", slug=slug)

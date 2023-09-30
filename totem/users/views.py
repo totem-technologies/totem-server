@@ -70,8 +70,8 @@ def user_redirect_view(request, *args, **kwargs):
 class MagicLoginView(SesameLoginView):
     def login_success(self):
         user = self.request.user
-        if not user.verified:
-            user.verified = True
+        if not user.verified:  # type: ignore
+            user.verified = True  # type: ignore
             user.save()
             messages.success(self.request, "Email successfully verified!")
         return super().login_success()
@@ -152,3 +152,50 @@ def user_index_view(request):
 @login_required
 def user_dashboard_view(request):
     return render(request, "users/dashboard.html", context={"object": request.user})
+
+
+@login_required
+def user_profile_view(request):
+    subscribed_circles = request.user.subscribed_circles.all()
+    circle_history = request.user.events_joined.all()
+    return render(
+        request,
+        "users/profile.html",
+        context={"object": request.user, "subscribed_circles": subscribed_circles, "circle_history": circle_history},
+    )
+
+
+@login_required
+def user_profile_info_view(request):
+    user = request.user
+    form = UserUpdateForm(instance=user)
+    if request.method == "POST":
+        old_email = user.email
+        form = UserUpdateForm(request.POST, instance=user)
+        if form.is_valid():
+            message = "Profile successfully updated."
+            new_email = form.cleaned_data["email"]
+            if old_email != new_email:
+                login_url = get_login_url(user, after_login_url=None, mobile=False)
+                user.verified = False
+                emails.send_change_email(old_email, new_email, login_url)
+                message = f"Email successfully updated to {new_email}. Please check your inbox to confirm."
+            form.save()
+            messages.success(request, message)
+            return redirect("users:profile")
+    return render(request, "users/profile_info.html", {"form": form})
+
+
+@login_required
+def user_profile_notifications_view(request):
+    return render(request, "users/profile_notifications.html", context={"object": request.user})
+
+
+@login_required
+def user_profile_delete_view(request):
+    if request.method == "POST":
+        user = request.user
+        user.delete()
+        messages.success(request, "Profile successfully deleted.")
+        return redirect("pages:home")
+    return render(request, "users/profile_delete.html", context={"object": request.user})

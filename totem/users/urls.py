@@ -5,6 +5,10 @@ from totem.users.views import (
     user_dashboard_view,
     user_detail_view,
     user_index_view,
+    user_profile_delete_view,
+    user_profile_info_view,
+    user_profile_notifications_view,
+    user_profile_view,
     user_redirect_view,
     user_update_view,
 )
@@ -15,6 +19,10 @@ urlpatterns = [
     path("~update/", view=user_update_view, name="update"),
     path("login/", LogInView.as_view(), name="login"),
     path("dashboard/", user_dashboard_view, name="dashboard"),
+    path("profile/", user_profile_view, name="profile"),
+    path("profile/info", user_profile_info_view, name="profile-info"),
+    path("profile/notifications", user_profile_notifications_view, name="profile-notifications"),
+    path("profile/delete", user_profile_delete_view, name="profile-delete"),
     path("", user_index_view, name="index"),
-    path("<str:slug>/", view=user_detail_view, name="detail"),
+    path("u/<str:slug>/", view=user_detail_view, name="detail"),
 ]

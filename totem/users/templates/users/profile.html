@@ -1,0 +1,74 @@
+{% extends "users/profile_base.html" %}
+{% load static %}
+{% block profile_content %}
+    <h2 class="h2 pb-10">Your Profile</h2>
+    <div class="pb-10">
+        <h3 class="h3 pb-5">Subscribed Circles</h3>
+        <p class="pb-5">
+            These are the circles you will get notifications for when new events are coming up.
+        </p>
+        {% if subscribed_circles %}
+            <div class="relative overflow-x-auto rounded-3xl">
+                <table class="w-full text-sm text-left text-gray-500">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3">Circle</th>
+                            <th scope="col" class="px-6 py-3">Unsubscribe</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for circle in subscribed_circles %}
+                            <tr class="bg-white last:border-none border-b dark:border-gray-700">
+                                <th scope="row" class="px-6 py-4 font-medium text-gray-900 text-ellipsis">
+                                    <a class="hover:text-tblue" href="{{ circle.get_absolute_url }}">{{ circle.title }}</a>
+                                </th>
+                                <td class="px-6 py-4">
+                                    <form method="post" action="{% url 'circles:subscribe' slug=circle.slug %}">
+                                        <input type="hidden" name="action" value="unsubscribe">
+                                        <input type="hidden" name="return_url" value="{% url 'users:profile' %}">
+                                        {% csrf_token %}
+                                        <button type="submit">Remove</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p>
+                You are not subscribed to any Circles. <a class="a" href="{% url 'circles:list' %}">Go sign up for some!</a>
+            </p>
+        {% endif %}
+    </div>
+    <div>
+        <h3 class="h3 pb-5">Circle History</h3>
+        <p class="pb-5">Here are the recent circles you have be a part of.</p>
+        {% if circle_history %}
+            <div class="relative overflow-x-auto rounded-3xl mb-10">
+                <table class="w-full text-sm text-left text-gray-500">
+                    <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3">Circle</th>
+                            <th scope="col" class="px-6 py-3">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for event in circle_history %}
+                            <tr class="bg-white last:border-none border-b dark:border-gray-700">
+                                <th scope="row" class="px-6 py-4 font-medium text-gray-900 text-ellipsis">
+                                    <a class="hover:text-tblue" href="{{ event.get_absolute_url }}">{{ event.circle.title }}</a>
+                                </th>
+                                <td class="px-6 py-4">{{ event.start }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p>
+                You have not joined any Circles yet. <a class="a" href="{% url 'circles:list' %}">Go sign up for some!</a>
+            </p>
+        {% endif %}
+    </div>
+{% endblock profile_content %}

@@ -1,6 +1,6 @@
 {% load static %}
 {% load avatar %}
-<header class="text-gray-600 body-font">
+<header class="text-gray-600 body-font px-5">
   <div class="h-5"></div>
   <div class="container mx-auto flex flex-wrap px-5 py-3 justify-between items-center max-w-5xl bg-white rounded-3xl">
     <a class="title-font font-medium items-center text-gray-900"
@@ -39,12 +39,13 @@
         </span>
         <span slot='menu'>
           <div class="absolute right-0 mt-2 w-40 rounded-md bg-white shadow-md z-10">
-            <div class="flex items-center gap-2 w-full first-of-type:rounded-t-md last-of-type:rounded-b-md px-4 py-2.5 text-left text-sm hover:bg-gray-50 disabled:text-gray-500">
+            <a href="{% url 'users:profile' %}"
+               class="flex items-center gap-2 w-full first-of-type:rounded-t-md last-of-type:rounded-b-md px-4 py-2.5 text-left text-sm hover:bg-gray-50 disabled:text-gray-500">
               {{ request.user.email }}
-            </div>
+            </a>
             <a href="{% url 'users:redirect' %}"
                class="flex items-center gap-2 w-full first-of-type:rounded-t-md last-of-type:rounded-b-md px-4 py-2.5 text-left text-sm hover:bg-gray-50 disabled:text-gray-500">
-              Profile
+              Dashboard
             </a>
             {% if request.user.is_staff %}
               <a href="{% url 'admin:index' %}"

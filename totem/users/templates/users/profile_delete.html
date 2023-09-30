@@ -1,0 +1,12 @@
+{% extends "users/profile_base.html" %}
+{% load static %}
+{% block profile_content %}
+    <h2 class="h2">Delete Account</h2>
+    <p class="text-danger pt-10">
+        This will delete your Totem account <strong>completely</strong>. We will remove all data associated from this account. This action cannot be undone.
+    </p>
+    <form class="pt-10" action="{% url 'users:profile-delete' %}" method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Delete Account</button>
+    </form>
+{% endblock profile_content %}
