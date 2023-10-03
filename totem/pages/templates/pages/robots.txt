@@ -1,4 +1,4 @@
 User-agent: *
-Disallow: /profile/
-Disallow: /profile
+Disallow: /users/
+Disallow: /users
 Disallow: /r/
