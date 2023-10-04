@@ -1,19 +1,12 @@
 from collections.abc import Sequence
-from typing import Any, Generic, TypeVar
+from typing import Any
 
-import factory
 from django.contrib.auth import get_user_model
 from factory import Faker, post_generation
 from factory.django import DjangoModelFactory
 
 from totem.users.models import User
-
-T = TypeVar("T")
-
-
-class BaseMetaFactory(Generic[T], factory.base.FactoryMetaClass):
-    def __call__(cls, *args, **kwargs) -> T:
-        return super().__call__(*args, **kwargs)
+from totem.utils.factories import BaseMetaFactory
 
 
 class UserFactory(DjangoModelFactory, metaclass=BaseMetaFactory[User]):
@@ -34,12 +27,12 @@ class UserFactory(DjangoModelFactory, metaclass=BaseMetaFactory[User]):
                 lower_case=True,
             ).evaluate(None, None, extra={"locale": None})
         )
-        self.set_password(password)
+        self.set_password(password)  # type: ignore
 
     @post_generation
     def post_save(self, create: bool, extracted: Sequence[Any], **kwargs):
         if create:
-            self.save()
+            self.save()  # type: ignore
 
     class Meta:
         model = get_user_model()

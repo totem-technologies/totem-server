@@ -1,7 +1,6 @@
 import datetime
 import time
 
-from dateutil import tz
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -161,7 +160,7 @@ class CircleEvent(MarkdownMixin, SluggedModel):
         self.notified = True
         self.save()
         for user in self.attendees.all():
-            start = self.start.astimezone(tz.gettz(user.timezone))
+            start = self.start.astimezone(user.timezone)
             send_notify_circle_starting(
                 self.circle.title, start, reverse("circles:join", kwargs={"event_slug": self.slug}), user.email
             )
@@ -174,7 +173,7 @@ class CircleEvent(MarkdownMixin, SluggedModel):
         self.save()
         for user in self.circle.subscribed.all():
             if self.can_attend() and user not in self.attendees.all():
-                start = self.start.astimezone(tz.gettz(user.timezone))
+                start = self.start.astimezone(user.timezone)
                 send_notify_circle_advertisement(self.circle.title, start, self.get_absolute_url(), user.email)
 
     def __str__(self):

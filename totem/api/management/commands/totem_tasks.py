@@ -1,8 +1,8 @@
 from django.conf import settings
 from django.core.management.base import BaseCommand
-from sentry_sdk.crons import monitor
+from sentry_sdk.crons.decorator import monitor
 
-from totem.api.api import run_tasks_impl
+from totem.circles.tasks import tasks as circle_tasks
 
 
 class Command(BaseCommand):
@@ -19,3 +19,10 @@ class Command(BaseCommand):
         print("Running tasks...")
         run_tasks_impl()
         print("Done.")
+
+
+def run_tasks_impl():
+    tasks = []
+    tasks.extend(circle_tasks)
+    for task in tasks:
+        task()

@@ -12,10 +12,7 @@ def notify_circle_ready():
         notified=False,
     )
     for event in upcoming_circles:
-        try:
-            event.notify()
-        except Exception as e:
-            print(e)
+        event.notify()
 
 
 def advertise_circle():
@@ -25,10 +22,7 @@ def advertise_circle():
         advertised=False,
     )
     for event in upcoming_circles:
-        try:
-            event.advertise()
-        except Exception as e:
-            print(e)
+        event.advertise()
 
 
 tasks = [notify_circle_ready, advertise_circle]

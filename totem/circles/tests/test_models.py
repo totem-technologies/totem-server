@@ -1,10 +1,11 @@
+from django.core import mail
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from totem.users.tests.factories import UserFactory
 
 from ..views import ics_hash
-from .factories import CircleFactory
+from .factories import CircleEventFactory, CircleFactory
 
 
 def test_ics_hash():
@@ -53,25 +54,27 @@ class CircleModelTest(TestCase):
         self.assertEqual(circle.subscribed.count(), 0)
 
 
-# class CircleEventModelTest(TestCase):
-#     @classmethod
-#     def setUpTestData(cls):
-#         # Set up non-modified objects used by all test methods
-#         user = User.objects.create_user(username="testuser", password="12345")
-#         circle = Circle.objects.create(
-#             title="Test Circle", subtitle="Test subtitle", author=user, price=10, duration="1 hour", recurring="Never"
-#         )
-#         CircleEvent.objects.create(start="2022-01-01 00:00:00", duration_minutes=60, seats=10, circle=circle)
+class TestCircleEventModel:
+    def test_notify(self, db):
+        user = UserFactory()
+        event = CircleEventFactory()
+        event.attendees.add(user)
+        assert mail.outbox == []
+        event.save()
+        assert not event.notified
+        event.notify()
+        assert len(mail.outbox) == 1
+        event.refresh_from_db()
+        assert event.notified
 
-#     def test_seats_left(self):
-#         event = CircleEvent.objects.get(id=1)
-#         self.assertEqual(event.seats_left(), 10)
-
-#     def test_attendee_list(self):
-#         event = CircleEvent.objects.get(id=1)
-#         self.assertEqual(event.attendee_list(), "")
-
-#     def test_get_absolute_url(self):
-#         event = CircleEvent.objects.get(id=1)
-#         # This will also fail if the urlconf is not defined.
-#         self.assertEqual(event.get_absolute_url(), "/circles/test-circle/events/test-circle-1/")
+    def test_advertise(self, db):
+        user = UserFactory()
+        event = CircleEventFactory()
+        event.circle.subscribed.add(user)
+        assert mail.outbox == []
+        event.save()
+        assert not event.advertised
+        event.advertise()
+        assert len(mail.outbox) == 1
+        event.refresh_from_db()
+        assert event.advertised
