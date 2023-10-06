@@ -1,5 +1,6 @@
 import datetime
 
+from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
@@ -90,3 +91,38 @@ class TestJoinView:
         assert response.status_code == 302
         assert "example" in response.url
         assert user in event.joined.all()
+
+
+class AnonSubscribeViewTest(TestCase):
+    def setUp(self):
+        self.user = UserFactory()
+        self.circle = CircleFactory()
+        self.token = self.circle.subscribe_token(self.user)
+
+    def test_anon_subscribe(self):
+        url = reverse("circles:subscribe", args=[self.circle.slug])
+        response = self.client.get(f"{url}?user={self.user.slug}&token={self.token}")
+        assert response.status_code == 200
+        self.assertTemplateUsed(response, "circles/subscribed.html")
+        self.assertTrue(self.user in self.circle.subscribed.all())
+
+    def test_anon_subscribe_wrong_token(self):
+        url = reverse("circles:subscribe", args=[self.circle.slug])
+        response = self.client.get(f"{url}?user={self.user.slug}&token=wrong-token")
+        assert response.status_code == 404
+        self.assertFalse(self.user in self.circle.subscribed.all())
+
+    def test_anon_subscribe_no_token(self):
+        url = reverse("circles:subscribe", args=[self.circle.slug])
+        response = self.client.get(f"{url}?user={self.user.slug}")
+        assert response.status_code == 200
+        self.assertTemplateUsed(response, "circles/subscribed.html")
+        self.assertFalse(self.user in self.circle.subscribed.all())
+
+    def test_anon_subscribe_unsubscribe(self):
+        url = reverse("circles:subscribe", args=[self.circle.slug])
+        response = self.client.get(f"{url}?user={self.user.slug}&token={self.token}&action=unsubscribe")
+        assert response.status_code == 200
+        self.assertTemplateUsed(response, "circles/subscribed.html")
+        self.assertTrue(response.context["unsubscribed"])
+        self.assertFalse(self.user in self.circle.subscribed.all())

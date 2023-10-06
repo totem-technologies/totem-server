@@ -3,7 +3,7 @@ import datetime
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.http import Http404
+from django.http import Http404, HttpRequest
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
@@ -162,16 +162,42 @@ def join(request, event_slug):
     return redirect("circles:event_detail", event_slug=event.slug)
 
 
-@login_required
-def subscribe(request, slug):
-    if request.method != "POST":
-        raise Http404
+def subscribe(request: HttpRequest, slug: str):
     circle = _get_circle(slug)
+    user = request.user
+
+    if request.GET.get("token"):
+        return _token_subscribe(request, circle)
+
+    if request.method != "POST":
+        return render(request, "circles/subscribed.html", {"circle": circle})
+
     return_url = request.POST.get("return_url")
     if request.POST.get("action") == "unsubscribe":
-        circle.unsubscribe(request.user)
+        circle.unsubscribe(user)
     else:
-        circle.subscribe(request.user)
+        circle.subscribe(user)
     if return_url:
         return redirect(return_url)
     return redirect("circles:detail", slug=slug)
+
+
+def _token_subscribe(request: HttpRequest, circle: Circle):
+    user_slug = request.GET.get("user")
+    sent_token = request.GET.get("token")
+
+    if not user_slug or not sent_token:
+        raise Http404
+
+    user = User.objects.get(slug=user_slug)
+    token = circle.subscribe_token(user)
+
+    if sent_token != token:
+        raise Http404
+
+    if request.GET.get("action") == "unsubscribe":
+        circle.unsubscribe(user)
+        return render(request, "circles/subscribed.html", {"circle": circle, "unsubscribed": True})
+    else:
+        circle.subscribe(user)
+        return render(request, "circles/subscribed.html", {"circle": circle})

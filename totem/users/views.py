@@ -1,6 +1,5 @@
 from django import forms
 from django.contrib import messages
-from django.contrib.auth import get_user_model
 from django.contrib.auth import login as django_login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -8,15 +7,13 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views.generic import DetailView, FormView
-from sesame.utils import get_query_string
 from sesame.views import LoginView as SesameLoginView
 
 from totem.email import emails
 from totem.utils.slack import notify_slack
 
 from .forms import LoginForm
-
-User = get_user_model()
+from .models import User
 
 
 class UserDetailView(LoginRequiredMixin, DetailView):
@@ -45,7 +42,7 @@ def user_update_view(request, *args, **kwargs):
             message = "Profile successfully updated."
             new_email = form.cleaned_data["email"]
             if old_email != new_email:
-                login_url = get_login_url(user, after_login_url=None, mobile=False)
+                login_url = user.get_login_url(after_login_url=None, mobile=False)
                 user.verified = False
                 emails.send_change_email(old_email, new_email, login_url)
                 message = f"Email successfully updated to {new_email}. Please check your inbox to confirm."
@@ -99,27 +96,8 @@ class LogInView(FormView):
         return super().form_valid(form)
 
 
-def email_returning_user(user, url):
-    emails.send_returning_login_email(user.email, url)
-
-
-def email_new_user(user, url):
-    emails.send_new_login_email(user.email, url)
-
-
 def _notify_slack():
     notify_slack("Signup: A new person has signed up for ✨Totem✨!")
-
-
-def get_login_url(user, after_login_url: str | None, mobile: bool) -> str:
-    if not after_login_url or after_login_url.startswith("http"):
-        after_login_url = reverse("users:redirect")
-
-    url = reverse("magic-login")
-
-    url += get_query_string(user)
-    url += "&next=" + after_login_url
-    return url
 
 
 def login(email: str, request, after_login_url: str | None = None, mobile: bool = False) -> bool:
@@ -132,14 +110,14 @@ def login(email: str, request, after_login_url: str | None = None, mobile: bool 
     """
     user, created = User.objects.get_or_create(email=email)
 
-    url = get_login_url(user, after_login_url, mobile)
+    url = user.get_login_url(after_login_url, mobile)  # type: ignore
 
     if created:
         django_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
-        email_new_user(user, url)
+        emails.send_new_login_email(user.email, url)
         _notify_slack()
     else:
-        email_returning_user(user, url)
+        emails.send_returning_login_email(user.email, url)
 
     user.identify()  # type: ignore
     return created
@@ -176,7 +154,7 @@ def user_profile_info_view(request):
             message = "Profile successfully updated."
             new_email = form.cleaned_data["email"]
             if old_email != new_email:
-                login_url = get_login_url(user, after_login_url=None, mobile=False)
+                login_url = user.get_login_url(after_login_url=None, mobile=False)
                 user.verified = False
                 emails.send_change_email(old_email, new_email, login_url)
                 message = f"Email successfully updated to {new_email}. Please check your inbox to confirm."

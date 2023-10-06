@@ -86,6 +86,9 @@ class Circle(MarkdownMixin, SluggedModel):
     def unsubscribe(self, user):
         return self.subscribed.remove(user)
 
+    def subscribe_token(self, user):
+        return basic_hash(f"{self.slug}-{user.email}-{user.api_key}")
+
 
 class CircleEvent(MarkdownMixin, SluggedModel):
     open = models.BooleanField(default=True, help_text="Is this Circle for more attendees?")
@@ -109,16 +112,21 @@ class CircleEvent(MarkdownMixin, SluggedModel):
     def attendee_list(self):
         return ", ".join([str(attendee) for attendee in self.attendees.all()])
 
-    def can_attend(self):
-        if not self.open:
-            raise CircleEventException("Circle is not open")
-        if self.cancelled:
-            raise CircleEventException("Circle is cancelled")
-        if self.started():
-            raise CircleEventException("Circle has already started")
-        if self.seats_left() <= 0:
-            raise CircleEventException("No seats left")
-        return True
+    def can_attend(self, silent=False):
+        try:
+            if not self.open:
+                raise CircleEventException("Circle is not open")
+            if self.cancelled:
+                raise CircleEventException("Circle is cancelled")
+            if self.started():
+                raise CircleEventException("Circle has already started")
+            if self.seats_left() <= 0:
+                raise CircleEventException("No seats left")
+            return True
+        except CircleEventException as e:
+            if silent:
+                return False
+            raise e
 
     def add_attendee(self, user):
         if user.is_staff or self.can_attend():
@@ -160,21 +168,17 @@ class CircleEvent(MarkdownMixin, SluggedModel):
         self.notified = True
         self.save()
         for user in self.attendees.all():
-            start = self.start.astimezone(user.timezone)
-            send_notify_circle_starting(
-                self.circle.title, start, reverse("circles:join", kwargs={"event_slug": self.slug}), user.email
-            )
+            send_notify_circle_starting(self, user)
 
     def advertise(self, force=False):
-        # Notify users who are attending that the circle is about to start
+        # Notify users who are subscribed that a new event is available.
         if force is False and self.advertised:
             return
         self.advertised = True
         self.save()
         for user in self.circle.subscribed.all():
-            if self.can_attend() and user not in self.attendees.all():
-                start = self.start.astimezone(user.timezone)
-                send_notify_circle_advertisement(self.circle.title, start, self.get_absolute_url(), user.email)
+            if self.can_attend(silent=True) and user not in self.attendees.all():
+                send_notify_circle_advertisement(self, user)
 
     def __str__(self):
         return f"CircleEvent: {self.start}"

@@ -1,7 +1,14 @@
+from __future__ import annotations
+
 import urllib.parse
-from datetime import datetime
+from typing import TYPE_CHECKING
 
 from django.conf import settings
+from django.urls import reverse
+
+if TYPE_CHECKING:
+    from totem.circles.models import CircleEvent
+    from totem.users.models import User
 
 from .utils import send_template_mail
 
@@ -40,29 +47,32 @@ def send_change_email(old_email: str, new_email: str, login_url: str):
     )
 
 
-def send_notify_circle_starting(circle_title: str, start_time: datetime, circle_url: str, attendee_email: str):
+def send_notify_circle_starting(event: CircleEvent, user: User):
     # 06:56 PM EDT on Friday, August 25
-    formatted_time = start_time.strftime("%I:%M %p %Z on %A, %B %d")
+    start = event.start.astimezone(user.timezone).strftime("%I:%M %p %Z on %A, %B %d")
     _send_button_email(
-        recipient=attendee_email,
+        recipient=user.email,
         subject="Your Circle is starting soon!",
-        message=f"Your Circle, {circle_title}, is starting at {formatted_time}. \
+        message=f"Your Circle, {event.circle.title}, is starting at {start}. \
             Click the button below to join the Circle. If you are more than 5 minutes late, you may not be allowed to participate.",
         button_text="Join Circle",
-        link=circle_url,
+        link=user.get_login_url(after_login_url=event.get_absolute_url()),
     )
 
 
-def send_notify_circle_advertisement(circle_title: str, start_time: datetime, event_url: str, attendee_email: str):
+def send_notify_circle_advertisement(event: CircleEvent, user: User):
     # 06:56 PM EDT on Friday, August 25
-    formatted_time = start_time.strftime("%I:%M %p %Z on %A, %B %d")
+    start = event.start.astimezone(user.timezone).strftime("%I:%M %p %Z on %A, %B %d")
+    unsubscribe_url = make_email_url(reverse("circles:subscribe", kwargs={"slug": event.circle.slug}))
+    unsubscribe_url += f"?user={user.slug}&token={event.circle.subscribe_token(user)}&action=unsubscribe"
     _send_button_email(
-        recipient=attendee_email,
+        recipient=user.email,
         subject="Join an upcoming Circle!",
-        message=f"A session for a Circle you are subscribed to, {circle_title}, is coming up at {formatted_time}. \
-            Click the button below to reserve a spot before this one fills up.",
+        message=f"A session for a Circle you are subscribed to, {event.circle.title}, is coming up at {start}. \
+            Click the button below to reserve a spot before this one fills up. If you no longer wish to get notifications about this Circle, \
+                you can unsubscribe here: {unsubscribe_url}",
         button_text="Reserve a spot",
-        link=event_url,
+        link=event.get_absolute_url(),
     )
 
 
