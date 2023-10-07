@@ -8,11 +8,17 @@
 }
 
 @layer components {
+  .btn {
+    @apply px-4 py-2 border border-transparent text-center rounded-2xl text-base font-medium text-tslate focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-tyellow no-underline;
+  }
   .btn-primary {
-    @apply py-2 px-4 bg-tyellow text-tslate font-semibold rounded-2xl shadow-md hover:bg-yellow-300 focus:outline-none focus:ring-2 focus:ring-yellow-300 focus:ring-opacity-75 text-center no-underline;
+    @apply btn bg-tyellow border-tyellow text-tslate shadow-md hover:bg-yellow-500;
   }
   .btn-danger {
-    @apply btn-primary bg-tpink;
+    @apply btn bg-tpink hover:bg-tpinkTint;
+  }
+  .btn-outline {
+    @apply btn border-2 border-tyellow text-tslate hover:bg-tyellow;
   }
   .section {
     @apply md:py-10 mx-4;

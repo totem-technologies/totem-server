@@ -1,18 +1,15 @@
 import datetime
 
 from django.contrib import messages
-from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpRequest
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
+from totem.users.models import User
 from totem.utils.hash import basic_hash
 
 from .models import Circle, CircleEvent, CircleEventException
-
-User = get_user_model()
-
 
 ICS_QUERY_PARAM = "key"
 
@@ -34,24 +31,26 @@ def _get_circle_event(slug: str) -> CircleEvent:
 def event_detail(request, event_slug):
     event = _get_circle_event(event_slug)
     circle = event.circle
-    return _detail(request, circle, event)
+    return _detail(request, request.user, circle, event)
 
 
 def detail(request, slug):
     circle = _get_circle(slug)
     event = circle.next_event()
-    return _detail(request, circle, event)
+    return _detail(request, request.user, circle, event)
 
 
-def _detail(request, circle: Circle, event):
-    if not circle.published and not request.user.is_staff:
+def _detail(request, user: User, circle: Circle, event):
+    if not circle.published and not user.is_staff:
         raise Http404
 
     attending = False
     joinable = False
-    if request.user.is_authenticated and event:
-        attending = event.attendees.contains(request.user)
-        joinable = event.can_join(request.user)
+    subscribed = False
+    if user.is_authenticated and event:
+        attending = event.attendees.contains(user)
+        joinable = event.can_join(user)
+        subscribed = circle.subscribed.contains(user)
 
     # if attending:
     #     ih = ics_hash(slug, request.user.ics_key)
@@ -70,6 +69,7 @@ def _detail(request, circle: Circle, event):
             "object": circle,
             "attending": attending,
             "joinable": joinable,
+            "subscribed": subscribed,
             "event": event,
             "other_events": other_events,
         },

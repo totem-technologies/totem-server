@@ -94,8 +94,34 @@
                     </div>
                 {% endif %}
             </div>
+            {% if request.user.is_authenticated %}
+                <div class="bg-white p-5 rounded-2xl border w-80 md:mt-5 border-gray-200 max-md:w-full">
+                    {% if subscribed %}
+                        <div>
+                            <div>
+                                You are currently <strong>subscribed</strong> to this Circle. You'll get updates when new sessions are added.
+                            </div>
+                            <div>
+                                <form class="text-center"
+                                      action="{% url 'circles:subscribe' slug=object.slug %}"
+                                      method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="unsubscribe">
+                                    <button class="a text-gray-400 pt-2" type="submit" value="Submit">Unsubscribe</button>
+                                </form>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="pb-2">Subscribe to this Circle to get updates when new sessions are added.</div>
+                        <form action="{% url 'circles:subscribe' slug=object.slug %}" method="post">
+                            {% csrf_token %}
+                            <button class="w-full btn-outline p-2 px-6" type="submit" value="Submit">Subscribe</button>
+                        </form>
+                    {% endif %}
+                </div>
+            {% endif %}
             {% if attending %}
-                <div class="bg-white p-5 mb-10 rounded-2xl border w-80 md:mt-5 border-gray-200 max-md:w-full">
+                <div class="bg-white p-5 mb-10 rounded-2xl border w-80 mt-5 border-gray-200 max-md:w-full">
                     <div class="pb-3">
                         <strong>Attending</strong>
                     </div>
