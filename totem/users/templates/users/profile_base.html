@@ -5,9 +5,9 @@
 {% block title %}Profile{% endblock title %}
 {# djlint:on #}
 {% block content %}
-    <section class="section max-w-5xl mt-5 m-auto md:flex">
+    <div class="max-w-5xl px-5 md:mt-10 mt-5 m-auto md:flex">
         <div>
-            <div class="bg-white p-5 mx-5 md:mr-10 rounded-3xl md:w-[200px]">
+            <div class="bg-white p-5 md:mr-10 rounded-3xl md:w-[200px]">
                 <h1 class="text-xl font-bold pb-3">Menu</h1>
                 <ul class="list-inside">
                     <li class="pb-3 hover:text-tblue">
@@ -25,9 +25,9 @@
                 </ul>
             </div>
         </div>
-        <div class="md:p px-5 md:pt-0 pt-10 w-full">
+        <div class="md:p px-5 md:pt-0 pt-10 w-full flex-grow">
             {% block profile_content %}
             {% endblock profile_content %}
         </div>
-    </section>
+    </div>
 {% endblock content %}

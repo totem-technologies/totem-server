@@ -41,7 +41,7 @@
   .a {
     @apply text-blue-500 underline;
   }
-  input, textarea {
+  input, textarea, select {
     @apply my-2 rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-tyellow sm:text-sm sm:leading-6 !important;
   }
   label {
@@ -57,7 +57,7 @@
   .badge {
     @apply bg-purple-100 text-purple-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded-full dark:bg-purple-900 dark:text-purple-300;
   }
-  .tshadow{
+  .tshadow {
     @apply shadow-2xl ring-1 ring-gray-900/10;
   }
 }
