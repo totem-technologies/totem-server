@@ -119,11 +119,6 @@ def rsvp(request, event_slug):
     return redirect("circles:event_detail", event_slug=event.slug)
 
 
-class CircleListItem:
-    def __init__(self, circle):
-        self.circle: Circle = circle
-
-
 class CircleEventListItem:
     def __init__(self, event, joinable):
         self.event: CircleEvent = event
@@ -140,7 +135,6 @@ def list(request):
         if event.circle in circles:
             continue
         circles.append(event.circle)
-    circle_list_items = [CircleListItem(circle) for circle in circles]
     attending_events = []
     if request.user.is_authenticated:
         events = request.user.events_attending.filter(
@@ -148,7 +142,7 @@ def list(request):
         ).order_by("start")
         for event in events:
             attending_events.append(CircleEventListItem(event, event.can_join(request.user)))
-    return render(request, "circles/list.html", {"circles": circle_list_items, "attending_events": attending_events})
+    return render(request, "circles/list.html", {"circles": circles, "attending_events": attending_events})
 
 
 @login_required

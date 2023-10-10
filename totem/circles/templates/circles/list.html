@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load avatar %}
 {# djlint:off #}
 {% block title %}Circles{% endblock title %}
 {# djlint:on #}
@@ -32,7 +33,12 @@
         <h2 class="h2 pb-5">Upcoming Circles</h2>
         <ul role="list" class="grid grid-cols-1 gap-6 sm:grid-cols-2">
             {% for circle in circles %}
-                {% include "circles/_circle_card.html" with circle=circle.circle is_attending=circle.is_attending %}
+                <t-card image="{{ circle.image.url }}" href="{% url "circles:detail" slug=circle.slug %}">
+                <span slot="title">{{ circle.title }}</span>
+                <span slot="description">By {{ circle.author.name }}</span>
+                <span slot="buttonText">Join</span>
+                <span slot="avatar">{% avatar circle.author %}</span>
+                </t-card>
             {% empty %}
                 <h2 class="h2">No Circles. 😥</h2>
             {% endfor %}
