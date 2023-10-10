@@ -17,6 +17,7 @@ from totem.email.emails import send_notify_circle_advertisement, send_notify_cir
 from totem.utils.hash import basic_hash
 from totem.utils.md import MarkdownField, MarkdownMixin
 from totem.utils.models import SluggedModel
+from totem.utils.utils import full_url
 
 
 # Create your models here.
@@ -179,6 +180,9 @@ class CircleEvent(MarkdownMixin, SluggedModel):
         for user in self.circle.subscribed.all():
             if self.can_attend(silent=True) and user not in self.attendees.all():
                 send_notify_circle_advertisement(self, user)
+
+    def cal_link(self):
+        return full_url(self.get_absolute_url())
 
     def __str__(self):
         return f"CircleEvent: {self.start}"
