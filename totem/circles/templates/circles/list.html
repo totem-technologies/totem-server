@@ -7,41 +7,45 @@
 {% block javascript %}
 {% endblock javascript %}
 {% block content %}
-    <section class="max-w-5xl m-auto pb-20">
-        <h1 class="h1 text-center pb-10">Circles</h1>
-        {% if attending_events %}
-            <h2 class="h2 pb-5">My Circles</h2>
-            <ul role="list" class="grid grid-cols-1 gap-6 pb-5 sm:grid-cols-3">
-                {% for event_item in attending_events %}
-                    <li class="col-span-1 divide-y hover:tshadow divide-gray-200 transition-all duration-500 rounded-3xl bg-white">
-                        <a href="{% url 'circles:event_detail' event_slug=event_item.event.slug %}">
-                            <div class="flex w-full items-start justify-between space-x-6 p-6">
-                                <div class="flex-1">
-                                    <h2 class="h2 text-gray-900 text-lg">{{ event_item.event.circle.title }}</h2>
-                                    {% if event_item.joinable %}
-                                        <p class="text-red-500">Join now!</p>
-                                    {% else %}
-                                        <p class="text-red-500">{{ event_item.event.start|date:"D, M j, g:i a T" }}</p>
-                                    {% endif %}
+    <div class="px-5">
+        <section class="max-w-5xl m-auto pb-20">
+            <h1 class="h1 text-center pb-10">Circles</h1>
+            {% if attending_events %}
+                <h2 class="h2 pb-5">My Circles</h2>
+                <ul role="list" class="grid grid-cols-1 gap-6 pb-5 sm:grid-cols-3">
+                    {% for event_item in attending_events %}
+                        <li class="col-span-1 divide-y hover:tshadow divide-gray-200 transition-all duration-500 rounded-3xl bg-white">
+                            <a href="{% url 'circles:event_detail' event_slug=event_item.event.slug %}">
+                                <div class="flex w-full items-start justify-between space-x-6 p-6">
+                                    <div class="flex-1">
+                                        <h2 class="h2 text-gray-900 text-lg">{{ event_item.event.circle.title }}</h2>
+                                        {% if event_item.joinable %}
+                                            <p class="text-red-500">Join now!</p>
+                                        {% else %}
+                                            <p class="text-red-500">{{ event_item.event.start|date:"D, M j, g:i a T" }}</p>
+                                        {% endif %}
+                                    </div>
                                 </div>
-                            </div>
-                        </a>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% endif %}
-        <h2 class="h2 pb-5">Upcoming Circles</h2>
-        <ul role="list" class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-            {% for circle in circles %}
-                <t-card image="{{ circle.image.url }}" href="{% url "circles:detail" slug=circle.slug %}">
-                <span slot="title">{{ circle.title }}</span>
-                <span slot="description">By {{ circle.author.name }}</span>
-                <span slot="buttonText">Join</span>
-                <span slot="avatar">{% avatar circle.author %}</span>
-                </t-card>
-            {% empty %}
-                <h2 class="h2">No Circles. 😥</h2>
-            {% endfor %}
-        </ul>
-    </section>
-{% endblock content %}
+                            </a>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+            <h2 class="h2 pb-5">Upcoming Circles</h2>
+            <ul role="list" class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                {% for event in circles %}
+                    <t-card
+                    {% if event.circle.image %}image="{{ event.circle.image.url }}"{% endif %} href="{% url "circles:event_detail" event_slug=event.slug %}">
+                        <span slot="title">{{ event.circle.title }}</span>
+                        <span slot="description">By {{ event.circle.author.name }}</span>
+                        <span slot="buttonText">Join</span>
+                        <span slot="avatar">{% avatar event.circle.author %}</span>
+                        <span slot="start">{{ event.start|date:'M jS' }} @ {{ event.start|date:'P T' }}</span>
+                        </t-card>
+                    {% empty %}
+                        <h2 class="h2">No Circles. 😥</h2>
+                    {% endfor %}
+                </ul>
+            </section>
+        </div>
+    {% endblock content %}

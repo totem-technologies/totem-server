@@ -1,35 +1,38 @@
 function Card(props) {
+  const imgeUrl = props.image ? `url(${props.image})` : ""
   backgroundImageStyle = {
-    backgroundImage: `linear-gradient(185deg, rgba(196, 204, 255, 0.52), rgba(117, 19, 93, 0.73)), url(${props.image})`,
+    backgroundImage: `linear-gradient(185deg, rgba(196, 204, 255, 0.52), rgba(117, 19, 93, 0.73)), ${imgeUrl}`,
     backgroundSize: "cover",
     backgroundPosition: "center",
     backgroundRepeat: "no-repeat",
     height: "150px",
   }
-  const avatar = props.avatar ? (
-    <div class="absolute left-1/2 top-1/2 w-[100px] -translate-x-1/2 -translate-y-1/2  rounded-full bg-tcreme p-0.5">
-      <a class="" href={props.href}>
-        {props.avatar}
-      </a>
-    </div>
-  ) : null
-  const image = props.image ? (
+
+  const image = (
     <a href={props.href}>
-      <div class="relative rounded-t-3xl" style={backgroundImageStyle}>
-        {avatar}
-      </div>
-    </a>
-  ) : null
-  return (
-    <div class="relative max-w-[300px] rounded-3xl border border-gray-200 bg-white shadow ">
-      {image}
-      <div class="p-5">
-        <a href={props.href}>
-          <h5 class="mb-2 text-2xl font-bold tracking-tight text-gray-900">
+      <div
+        class="relative flex items-center justify-between rounded-t-3xl p-5"
+        style={backgroundImageStyle}
+      >
+        <div class="w-[70%] pr-4">
+          <h5 class="mb-2 break-words text-2xl font-bold tracking-tight text-white">
             {props.title}
           </h5>
-        </a>
-        <p class="mb-3 font-normal text-gray-700 ">{props.description}</p>
+          <p class="mb-3 font-normal text-white">{props.description}</p>
+        </div>
+        <div>
+          <div class="w-[75px] rounded-full bg-tcreme p-0.5">
+            <a href={props.href}>{props.avatar}</a>
+          </div>
+        </div>
+      </div>
+    </a>
+  )
+  return (
+    <div class="relative max-w-[300px] overflow-clip rounded-3xl border border-gray-200 bg-white shadow ">
+      {image}
+      <div class="p-5">
+        <p class="mb-3 font-normal text-gray-700 ">{props.start}</p>
         <a href={props.href} class="btn-primary inline-flex items-center">
           {props.buttonText}
           <svg

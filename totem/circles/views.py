@@ -130,19 +130,14 @@ def list(request):
     if not request.user.is_staff:
         events = events.filter(circle__published=True)
     events.order_by("start")
-    circles = []
-    for event in events:
-        if event.circle in circles:
-            continue
-        circles.append(event.circle)
     attending_events = []
     if request.user.is_authenticated:
-        events = request.user.events_attending.filter(
+        myevents = request.user.events_attending.filter(
             start__gte=timezone.now() - datetime.timedelta(minutes=60)
         ).order_by("start")
-        for event in events:
+        for event in myevents:
             attending_events.append(CircleEventListItem(event, event.can_join(request.user)))
-    return render(request, "circles/list.html", {"circles": circles, "attending_events": attending_events})
+    return render(request, "circles/list.html", {"circles": events, "attending_events": attending_events})
 
 
 @login_required
