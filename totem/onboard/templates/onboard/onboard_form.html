@@ -2,15 +2,13 @@
 {% load static %}
 {% block content %}
     <div class="section m-auto max-w-4xl px-5">
-        <div class="m-auto text-center mb-10 ">
+        <div class="m-auto text-center mb-10 max-w-xl">
             <h1 class="h1 py-5">Welcome!</h1>
             <p>
                 We just need to know a little more about you. Fill out the information below and you'll be good to go.
             </p>
         </div>
         <div class="bg-white rounded-3xl border-gray-400 border p-10 max-w-xl m-auto">
-            <p class="h2 mb-10 text-center">Complete your profile</p>
-            <hr>
             <form class="mt-5" method="post">
                 {{ form.non_field_errors }}
                 {% csrf_token %}
