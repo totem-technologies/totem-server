@@ -9,17 +9,20 @@ test:
 	docker-compose -f local.yml run --rm django coverage run -m pytest
 	docker-compose -f local.yml run --rm django coverage report
 
-shell:
-	docker-compose -f local.yml run --rm django bash
-
 tasks:
 	docker-compose -f local.yml run --rm django python manage.py totem_tasks
+
+shell:
+	docker-compose -f local.yml run --rm django bash
 
 dbshell:
 	docker-compose -f local.yml exec postgres bash
 
 sqlshell:
 	docker-compose -f local.yml exec postgres psql -U debug -d totem
+
+pyshell:
+	docker-compose -f local.yml run --rm django ./manage.py shell_plus
 
 deploy:
 	git push dokku

@@ -21,7 +21,7 @@ function Card(props) {
           <p class="mb-3 font-normal text-white">{props.description}</p>
         </div>
         <div>
-          <div class="w-[75px] rounded-full bg-tcreme p-0.5">
+          <div class="w-[75px] rounded-full">
             <a href={props.href}>{props.avatar}</a>
           </div>
         </div>
