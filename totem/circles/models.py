@@ -137,6 +137,9 @@ class CircleEvent(MarkdownMixin, SluggedModel):
     def started(self):
         return self.start < timezone.now()
 
+    def end(self):
+        return self.start + datetime.timedelta(minutes=self.duration_minutes)
+
     def can_join(self, user):
         now = timezone.now()
         grace_before = datetime.timedelta(minutes=30)
