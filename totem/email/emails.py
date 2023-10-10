@@ -56,7 +56,7 @@ def send_notify_circle_starting(event: CircleEvent, user: User):
         message=f"Your Circle, {event.circle.title}, is starting at {start}. \
             Click the button below to join the Circle. If you are more than 5 minutes late, you may not be allowed to participate.",
         button_text="Join Circle",
-        link=user.get_login_url(after_login_url=event.get_absolute_url()),
+        link=event.get_absolute_url(),
     )
 
 
