@@ -5,29 +5,31 @@
 {% block title %}Profile{% endblock title %}
 {# djlint:on #}
 {% block content %}
-    <div class="max-w-5xl px-5 md:mt-10 mt-5 m-auto md:flex">
-        <div>
-            <div class="bg-white p-5 md:mr-10 rounded-3xl md:w-[200px]">
-                <h1 class="text-xl font-bold pb-3">Menu</h1>
-                <ul class="list-inside">
-                    <li class="pb-3 hover:text-tblue">
-                        <a href="{% url 'users:profile' %}">Profile</a>
-                    </li>
-                    <li class="pb-3 hover:text-tblue">
-                        <a href="{% url 'users:profile-info' %}">Change Info</a>
-                    </li>
-                    <li class="pb-3 hover:text-tblue">
-                        <a href="{% url 'users:profile-notifications' %}">Notifications</a>
-                    </li>
-                    <li class="pb-3 hover:text-tblue">
-                        <a href="{% url 'users:profile-delete' %}">Delete Account</a>
-                    </li>
-                </ul>
+    <div class="px-5">
+        <div class="max-w-5xl md:mt-10 mt-5 m-auto md:flex">
+            <div>
+                <div class="bg-white p-5 md:mr-10 rounded-3xl md:w-[200px]">
+                    <h1 class="text-xl font-bold pb-3">Menu</h1>
+                    <ul class="list-inside">
+                        <li class="pb-3 hover:text-tblue">
+                            <a href="{% url 'users:profile' %}">Profile</a>
+                        </li>
+                        <li class="pb-3 hover:text-tblue">
+                            <a href="{% url 'users:profile-info' %}">Change Info</a>
+                        </li>
+                        <li class="pb-3 hover:text-tblue">
+                            <a href="{% url 'users:profile-notifications' %}">Notifications</a>
+                        </li>
+                        <li class="pb-3 hover:text-tblue">
+                            <a href="{% url 'users:profile-delete' %}">Delete Account</a>
+                        </li>
+                    </ul>
+                </div>
             </div>
-        </div>
-        <div class="md:p px-5 md:pt-0 pt-10 w-full flex-grow">
-            {% block profile_content %}
-            {% endblock profile_content %}
+            <div class="md:p px-5 md:pt-0 pt-10 w-full flex-grow">
+                {% block profile_content %}
+                {% endblock profile_content %}
+            </div>
         </div>
     </div>
 {% endblock content %}
