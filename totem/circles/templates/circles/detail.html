@@ -34,10 +34,7 @@
             </div>
             <div class="p-5 text-center">
                 <h1 class="h1 pb-3 text-white">{{ object.title }}</h1>
-                <div class="pb-3">
-                    {% for tag in object.tags.all %}<span class="badge badge-primary">{{ tag }}</span>{% endfor %}
-                </div>
-                <div class="h2 text-white">{{ object.subtitle }}</div>
+                <div class="h3 text-white">{{ object.subtitle }}</div>
                 <div class="text-white">
                     By
                     <strong><a href="{{ object.author.get_keeper_url }}">{{ object.author.name }}</a></strong>

@@ -8,6 +8,7 @@ from timezone_field.forms import TimeZoneFormField
 
 from totem.users.models import User
 from totem.utils.slack import notify_slack
+from totem.utils.utils import full_url
 
 from .models import OnboardModel
 
@@ -38,7 +39,7 @@ class OnboardForm(Form):
                 setattr(onboard, key, value)
         onboard.onboarded = True
         onboard.save()
-        _notify_slack(user.name, user.get_admin_url())
+        _notify_slack(user.name, full_url(user.get_admin_url()))
 
 
 @login_required

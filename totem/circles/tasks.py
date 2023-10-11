@@ -17,7 +17,7 @@ def notify_circle_ready():
 
 def advertise_circle():
     upcoming_circles = CircleEvent.objects.filter(
-        start__gte=timezone.now() + timedelta(days=2),
+        start__gte=timezone.now(),
         start__lte=timezone.now() + timedelta(days=7),
         advertised=False,
     )

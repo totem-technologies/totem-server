@@ -175,7 +175,7 @@ class CircleEvent(MarkdownMixin, SluggedModel):
             send_notify_circle_starting(self, user)
 
     def advertise(self, force=False):
-        # Notify users who are subscribed that a new event is available.
+        # Notify users who are subscribed that a new event is available, if they aren't already attending.
         if force is False and self.advertised:
             return
         self.advertised = True
