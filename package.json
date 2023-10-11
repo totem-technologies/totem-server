@@ -37,6 +37,7 @@
     "@radix-ui/react-popover": "1.0.7",
     "@zootools/email-spell-checker": "^1.12.0",
     "add-to-calendar-button": "^2.3.1",
+    "htmx.org": "^1.9.6",
     "preact": "^10.17.1",
     "preact-custom-element": "^4.2.1",
     "react": "npm:@preact/compat",

@@ -1,3 +1,4 @@
+import htmx from "htmx.org"
 import components from "./components"
 import emailSpellChecker from "./emailSpellCheck"
 import timezoneDetect from "./timezone"
@@ -14,4 +15,5 @@ window.addEventListener("DOMContentLoaded", () => {
   emailSpellChecker()
 })
 
+window.htmx = htmx
 logger(window.TOTEM_DATA.debug)

@@ -43,7 +43,10 @@
         </div>
     </div>
     <div class="md:flex flex-row-reverse max-w-5xl m-auto px-5">
-        <div>
+        <div hx-select=".hx-circle-sidebar"
+             hx-swap="outerHTML"
+             hx-target="this"
+             class="hx-circle-sidebar">
             <div class="max-md:fixed max-md:bottom-0 max-md:left-0 bg-white p-5 rounded-2xl border w-80 md:top-20 border-gray-200 max-md:w-full">
                 {% if event %}
                     <div>
@@ -70,13 +73,17 @@
                                 <add-to-calendar-button hideCheckmark styleLight="--btn-shadow:none; --btn-shadow-hover:none" inline hideBranding
                                 {% if debug %}debug{% endif %}
                                 buttonStyle="round" listStyle="dropup-static" name="{{ event.circle.title }}" options="'Apple','Google'" location="{{ event.cal_link }}?r=cal_link" startDate="{{ event.start|date:"Y-m-d" }}" endDate="{{ event.start|date:"Y-m-d" }}" startTime="{{ event.start|date:"H:i" }}" endTime="{{ event.end|date:"H:i" }}" timeZone="{{ user.timezone }}"></add-to-calendar-button>
-                                <form action="{% url 'circles:rsvp' event_slug=event.slug %}" method="post">
+                                <form hx-post="{% url 'circles:rsvp' event_slug=event.slug %}"
+                                      action="{% url 'circles:rsvp' event_slug=event.slug %}"
+                                      method="post">
                                     {% csrf_token %}
                                     <input type="hidden" name="action" value="remove">
                                     <button class="a text-gray-400 pt-2" type="submit" value="Submit">Give up spot</button>
                                 </form>
                             {% else %}
-                                <form action="{% url 'circles:rsvp' event_slug=event.slug %}" method="post">
+                                <form hx-post="{% url 'circles:rsvp' event_slug=event.slug %}"
+                                      action="{% url 'circles:rsvp' event_slug=event.slug %}"
+                                      method="post">
                                     {% csrf_token %}
                                     <button class="w-full btn-primary p-2 px-6 shimmer"
                                             type="submit"
@@ -93,28 +100,23 @@
             </div>
             {% if request.user.is_authenticated %}
                 <div class="bg-white p-5 rounded-2xl border w-80 md:mt-5 border-gray-200 max-md:w-full">
-                    {% if subscribed %}
-                        <div>
+                    <form hx-post="{% url 'circles:subscribe' slug=object.slug %}"
+                          action="{% url 'circles:subscribe' slug=object.slug %}"
+                          method="post">
+                        {% csrf_token %}
+                        {% if subscribed %}
                             <div>
                                 You are currently <strong>subscribed</strong> to this Circle. You'll get updates when new sessions are added.
                             </div>
-                            <div>
-                                <form class="text-center"
-                                      action="{% url 'circles:subscribe' slug=object.slug %}"
-                                      method="post">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="action" value="unsubscribe">
-                                    <button class="a text-gray-400 pt-2" type="submit" value="Submit">Unsubscribe</button>
-                                </form>
+                            <input type="hidden" name="action" value="unsubscribe">
+                            <div class="text-center">
+                                <button class="a text-gray-400 pt-2" type="submit" value="Submit">Unsubscribe</button>
                             </div>
-                        </div>
-                    {% else %}
-                        <div class="pb-2">Subscribe to this Circle to get updates when new sessions are added.</div>
-                        <form action="{% url 'circles:subscribe' slug=object.slug %}" method="post">
-                            {% csrf_token %}
+                        {% else %}
+                            <div class="pb-2">Subscribe to this Circle to get updates when new sessions are added.</div>
                             <button class="w-full btn-outline p-2 px-6" type="submit" value="Submit">Subscribe</button>
-                        </form>
-                    {% endif %}
+                        {% endif %}
+                    </form>
                 </div>
             {% endif %}
             {% if attending %}
