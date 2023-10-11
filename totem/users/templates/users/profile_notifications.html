@@ -25,7 +25,7 @@
                                 <td class="px-6 py-4">
                                     <form method="post" action="{% url 'circles:subscribe' slug=circle.slug %}">
                                         <input type="hidden" name="action" value="unsubscribe">
-                                        <input type="hidden" name="return_url" value="{% url 'users:profile' %}">
+                                        <input type="hidden" name="return_url" value="{{ request.path }}">
                                         {% csrf_token %}
                                         <button type="submit">Remove</button>
                                     </form>

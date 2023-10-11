@@ -166,7 +166,12 @@ def user_profile_info_view(request):
 
 @login_required
 def user_profile_notifications_view(request):
-    return render(request, "users/profile_notifications.html", context={"object": request.user})
+    subscribed_circles = request.user.subscribed_circles.all()
+    return render(
+        request,
+        "users/profile_notifications.html",
+        context={"object": request.user, "subscribed_circles": subscribed_circles},
+    )
 
 
 @login_required
