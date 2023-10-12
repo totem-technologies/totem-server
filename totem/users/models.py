@@ -3,7 +3,7 @@ import uuid
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
-from django.db.models import BooleanField, CharField, EmailField, UUIDField
+from django.db.models import BooleanField, CharField, EmailField, TextChoices, UUIDField
 from django.urls import reverse
 from django.utils.html import escape as html_escape
 from django.utils.html import strip_tags
@@ -42,6 +42,10 @@ class User(SluggedModel, AbstractUser):
     check forms.SignupForm and forms.SocialSignupForms accordingly.
     """
 
+    class ProfileChoices(TextChoices):
+        TIEDYE = "TD", _("Tie Dye")
+        IMAGE = "IM", _("Image")
+
     # First and last name do not cover name patterns around the globe
     objects: UserManager = UserManager()
     name = CharField(_("Name"), blank=True, max_length=255)
@@ -57,6 +61,12 @@ class User(SluggedModel, AbstractUser):
         upload_to=upload_to_id_image,
         spec=ProfileImageSpec,  # type: ignore
         help_text="Profile image, must be under 5mb. Will be cropped to a square.",
+    )
+    profile_avatar_seed = UUIDField(default=uuid.uuid4)
+    profile_avatar_type = CharField(
+        default=ProfileChoices.TIEDYE,
+        max_length=2,
+        choices=ProfileChoices.choices,
     )
     verified = BooleanField(_("Verified"), default=False)
     timezone = TimeZoneField(choices_display="WITH_GMT_OFFSET")
@@ -106,6 +116,10 @@ class User(SluggedModel, AbstractUser):
 
     def analytics_id(self):
         return settings.ENVIRONMENT_NAME.lower() + "_" + str(self.pk)
+
+    def randomize_avatar(self):
+        self.profile_avatar_seed = uuid.uuid4()
+        self.save()
 
     def __str__(self):
         return f"<User: {self.name}, slug: {self.slug}, email: {self.email}>"

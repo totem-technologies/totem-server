@@ -73,7 +73,7 @@
   -webkit-animation: light 1s;
 } */
 
-@keyframes light {
+/* @keyframes light {
   0% {
     background-position: -600px;
   }
@@ -89,7 +89,7 @@
   100% {
     background-position: 0px;
   }
-}
+} */
 
 
 /* Django */

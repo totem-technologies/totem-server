@@ -6,6 +6,7 @@ from totem.users.views import (
     user_detail_view,
     user_index_view,
     user_profile_delete_view,
+    user_profile_image_view,
     user_profile_info_view,
     user_profile_notifications_view,
     user_profile_view,
@@ -23,6 +24,7 @@ urlpatterns = [
     path("profile/info", user_profile_info_view, name="profile-info"),
     path("profile/notifications", user_profile_notifications_view, name="profile-notifications"),
     path("profile/delete", user_profile_delete_view, name="profile-delete"),
+    path("profile/image", user_profile_image_view, name="profile-image"),
     path("", user_index_view, name="index"),
     path("u/<str:slug>/", view=user_detail_view, name="detail"),
 ]

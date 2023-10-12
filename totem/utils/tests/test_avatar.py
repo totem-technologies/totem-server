@@ -10,7 +10,7 @@ gold = {
         {"color": "#9A8570", "rotate": 221.8, "scale": 1.4, "translateX": 4.9, "translateY": 4.93},
         {"color": "#9A8570", "rotate": 30.6, "scale": 1.2, "translateX": 0.7, "translateY": 0.68},
     ],
-    "salt": "868ce1c742d4451efea8",
+    "salt": "868ce1c742d4451efea8868ce1c742d4451efea8",
     "size": 80,
 }
 
@@ -18,8 +18,7 @@ gold = {
 def test_avatar():
     assert (
         avatar_marble(
-            name="868ce1c742d4451efea8",
-            salt="868ce1c742d4451efea8",
+            salt="868ce1c742d4451efea8868ce1c742d4451efea8",
             size=80,
         )
         == gold

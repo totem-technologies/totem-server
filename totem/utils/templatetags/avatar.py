@@ -5,20 +5,29 @@ from django import template
 from django.template import Context
 from django.template.engine import Engine
 
+from totem.users.models import User
 from totem.utils.hash import basic_hash
 
 register = template.Library()
 
 
 @register.inclusion_tag("utils/avatar.html")
-def avatar(user, size=120, classes=""):
+def avatar(user: User, size=120, blank_ok=False, classes=""):
     current_engine = Engine.get_default()
     size = int(size)
-    if user.profile_image:
+    if user.profile_avatar_type == User.ProfileChoices.IMAGE and user.profile_image:
         ctx = {"is_image": True, "size": size, "classes": classes, "name": user.name, "image": user.profile_image}
+    elif user.profile_avatar_type == User.ProfileChoices.IMAGE and blank_ok:
+        ctx = ctx = {
+            "is_image": False,
+            "size": size,
+            "classes": classes,
+            "name": user.name,
+            "svg": urllib.parse.quote(_upload_svg),
+        }
     else:
         # Render the avatar as a data URI SVG in an img tag. Using raw SVG causes React to not render the SVG properly.
-        avatar_ctx = avatar_marble(name=user.name, salt=user.slug, size=size)
+        avatar_ctx = avatar_marble(salt=str(user.profile_avatar_seed), size=size)
         svg = current_engine.select_template(["utils/avatar.svg"]).render(Context(avatar_ctx))
         ctx = {"is_image": False, "size": size, "classes": classes, "name": user.name, "svg": urllib.parse.quote(svg)}
     return ctx
@@ -26,6 +35,10 @@ def avatar(user, size=120, classes=""):
 
 ELEMENTS = 3
 SIZE = 80
+
+_upload_svg = """<svg width="128" height="128" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#000000" d="M11 16V7.85l-2.6 2.6L7 9l5-5l5 5l-1.4 1.45l-2.6-2.6V16h-2Zm-5 4q-.825 0-1.413-.588T4 18v-3h2v3h12v-3h2v3q0 .825-.588 1.413T18 20H6Z"/>
+</svg>"""
 
 _themes = [
     ["A7C5C5", "DEE0D5", "E2AC48", "B96028", "983C2D"],
@@ -147,15 +160,11 @@ def get_unit(seed, max_value, decimal_places=0):
 
 
 def avatar_marble(
-    name: str,
-    salt: str = "",
+    salt: str,
     colors: list | None = None,
     size: int = 120,
 ):
-    # Generate avatar from name + salt, where the salt is unique to the user.
-    # This creates a unique avatar for each person, since every person is unique.
-    # However, if a user changes their name, the avatar will change.
-    hashed_key = int(basic_hash(name + salt, as_int=True))
+    hashed_key = int(basic_hash(salt, as_int=True))
     if not colors:
         colors = _themes[hashed_key % len(_themes)]
     properties = _generate_colors(hashed_key, colors)
@@ -175,7 +184,7 @@ def avatar_marble(
 if __name__ == "__main__":
     print(
         avatar_marble(
-            name="868ce1c742d4451efea8",
+            salt="test",
             size=80,
         )
     )

@@ -29,7 +29,7 @@ function Card(props) {
     </a>
   )
   return (
-    <div class="relative max-w-[300px] overflow-clip rounded-3xl border border-gray-200 bg-white shadow ">
+    <div class="relative max-w-[300px] overflow-clip rounded-3xl border border-gray-200 bg-white shadow transition-shadow hover:shadow-xl">
       {image}
       <div class="p-5">
         <div class="flex justify-between">

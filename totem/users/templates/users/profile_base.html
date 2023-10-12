@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load settings_value %}
+{% load avatar %}
 {% load static %}
 {# djlint:off #}
 {% block title %}Profile{% endblock title %}
@@ -8,8 +9,22 @@
     <div class="px-5 profile-section">
         <div class="max-w-5xl md:mt-10 mt-5 m-auto md:flex">
             <div>
-                <ul class="menu bg-white md:mr-10 w-56 rounded-box">
-                    <li class="menu-title">Menu</li>
+                <ul class="menu md:mr-10 w-56">
+                    <div class="mb-5 relative">
+                        <a href="{% url 'users:profile-image' %}">
+                            <div class="relative hover:shadow-md transition-opacity rounded-full p-3 inline-block">
+                                {% avatar user=request.user %}
+                                <div class="absolute bottom-5 rounded-full bg-tcreme p-1 right-5">
+                                    <svg width="20"
+                                         height="20"
+                                         viewBox="0 0 24 24"
+                                         xmlns="http://www.w3.org/2000/svg">
+                                        <path fill="#000000" d="m19.3 8.925l-4.25-4.2l1.4-1.4q.575-.575 1.413-.575t1.412.575l1.4 1.4q.575.575.6 1.388t-.55 1.387L19.3 8.925ZM17.85 10.4L7.25 21H3v-4.25l10.6-10.6l4.25 4.25Z" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
                     <li>
                         <a href="{% url 'users:profile' %}">Profile</a>
                     </li>

@@ -174,6 +174,37 @@ def user_profile_notifications_view(request):
     )
 
 
+class ProfileForm(forms.ModelForm):
+    profile_avatar_type = forms.ChoiceField(
+        required=False,
+        choices=User.ProfileChoices.choices,
+    )
+    profile_image = forms.ImageField(
+        required=False,
+    )
+    randomize = forms.BooleanField(required=False)
+
+    class Meta:
+        model = User
+        fields = ("profile_avatar_type", "profile_image")
+
+
+@login_required
+def user_profile_image_view(request):
+    user = request.user
+    form = ProfileForm(request.POST, request.FILES, instance=user)
+    if request.method == "POST":
+        if form.is_valid():
+            if form.cleaned_data["randomize"]:
+                user.randomize_avatar()
+            form.save()
+    return render(
+        request,
+        "users/profile_image_edit.html",
+        context={"choices": User.ProfileChoices.choices, "user": request.user, "form": form},
+    )
+
+
 @login_required
 def user_profile_delete_view(request):
     if request.method == "POST":
