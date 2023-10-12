@@ -2,23 +2,21 @@ from unittest import mock
 
 import pytest
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.messages import get_messages
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.http import HttpResponseRedirect
-from django.test import RequestFactory
+from django.test import RequestFactory, TestCase
 from django.urls import reverse
 from sesame.utils import get_query_string
 
 from totem.onboard.models import OnboardModel
+from totem.users.models import User
 from totem.users.tests.factories import UserFactory
 from totem.users.views import MagicLoginView, user_detail_view, user_redirect_view, user_update_view
 
 from ..views import user_index_view
-
-User = get_user_model()
 
 pytestmark = pytest.mark.django_db
 
@@ -141,3 +139,24 @@ def test_magic_login_view():
     assert len(get_messages(request)) == 0
     user.refresh_from_db()
     assert user.verified is True
+
+
+class UserProfileImageViewTest(TestCase):
+    def setUp(self):
+        self.user = UserFactory()
+        self.client.force_login(self.user)
+
+    def test_user_profile_image_view(self):
+        url = reverse("users:profile-image")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "users/profile_image_edit.html")
+
+        # Test POST request
+        data = {"randomize": True}
+        oldseed = self.user.profile_avatar_seed
+        response = self.client.post(url, data)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "users/profile_image_edit.html")
+        self.user.refresh_from_db()
+        assert oldseed != self.user.profile_avatar_seed

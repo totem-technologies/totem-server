@@ -1,8 +1,7 @@
 {% load static %}
 {% load avatar %}
-<header class="text-gray-600 body-font px-5">
-  <div class="h-5"></div>
-  <div class="container mx-auto flex flex-wrap px-5 py-3 justify-between items-center max-w-5xl bg-white rounded-3xl">
+<header class="text-gray-600 body-font px-5 border-b-[1px] border-gray-300 ">
+  <div class="container mx-auto flex flex-wrap px-5 py-3 justify-between items-center max-w-5xl ">
     <a class="title-font font-medium items-center text-gray-900"
        {% if request.user.is_authenticated %}
        href="{% url 'users:redirect' %}">

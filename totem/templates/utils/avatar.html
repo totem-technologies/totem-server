@@ -2,7 +2,7 @@
 {% if is_image %}
     <img width="{{ size }}"
          height="{{ size }}"
-         src="{{ image.url }}"
+         {% if image %} src="{{ image.url }}" {% else %} src="{% static 'images/default_profile.webp' %}" {% endif %}
          alt=""
          title="{{ name }}"
          class="rounded-full bg-tcreme p-0.5 {{ classes }}">

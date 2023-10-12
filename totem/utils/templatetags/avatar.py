@@ -15,16 +15,8 @@ register = template.Library()
 def avatar(user: User, size=120, blank_ok=False, classes=""):
     current_engine = Engine.get_default()
     size = int(size)
-    if user.profile_avatar_type == User.ProfileChoices.IMAGE and user.profile_image:
+    if user.profile_avatar_type == User.ProfileChoices.IMAGE:
         ctx = {"is_image": True, "size": size, "classes": classes, "name": user.name, "image": user.profile_image}
-    elif user.profile_avatar_type == User.ProfileChoices.IMAGE and blank_ok:
-        ctx = ctx = {
-            "is_image": False,
-            "size": size,
-            "classes": classes,
-            "name": user.name,
-            "svg": urllib.parse.quote(_upload_svg),
-        }
     else:
         # Render the avatar as a data URI SVG in an img tag. Using raw SVG causes React to not render the SVG properly.
         avatar_ctx = avatar_marble(salt=str(user.profile_avatar_seed), size=size)
@@ -35,10 +27,6 @@ def avatar(user: User, size=120, blank_ok=False, classes=""):
 
 ELEMENTS = 3
 SIZE = 80
-
-_upload_svg = """<svg width="128" height="128" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <path fill="#000000" d="M11 16V7.85l-2.6 2.6L7 9l5-5l5 5l-1.4 1.45l-2.6-2.6V16h-2Zm-5 4q-.825 0-1.413-.588T4 18v-3h2v3h12v-3h2v3q0 .825-.588 1.413T18 20H6Z"/>
-</svg>"""
 
 _themes = [
     ["A7C5C5", "DEE0D5", "E2AC48", "B96028", "983C2D"],

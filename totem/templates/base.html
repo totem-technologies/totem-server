@@ -46,9 +46,9 @@
     {% block javascript %}
     {% endblock javascript %}
   </head>
-  <body class="bg-primary flex flex-col h-screen">
+  <body class="bg-primary flex flex-col">
     {% include "header.html" %}
-    <div class="flex-grow">
+    <div class="flex-grow min-h-[80vh]">
       {% if messages %}
         {% for message in messages %}
           <div class="max-w-2xl mt-10 alert-dismissible m-auto bg-blue-100 border border-blue-500 text-blue-500 px-4 py-3 mb-5 rounded relative {% if message.tags %}alert-{{ message.tags }}{% endif %}"
