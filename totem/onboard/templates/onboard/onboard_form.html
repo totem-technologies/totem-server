@@ -16,7 +16,7 @@
                     <label for="{{ form.name.id_for_label }}">Name</label>
                     {{ form.name.errors }}
                     {{ form.name }}
-                    <p class="text-xs">Add any pronouns in parentheses if you'd like.</p>
+                    <p class="text-xs pt-1">Add any pronouns in parentheses if you'd like.</p>
                 </div>
                 <div class="pb-5">
                     <div>
@@ -24,7 +24,7 @@
                     </div>
                     {{ form.timezone.errors }}
                     {{ form.timezone }}
-                    <p class="text-xs">We tried to guess this for you.</p>
+                    <p class="text-xs pt-1">We tried to guess this for you.</p>
                 </div>
                 <div class="pb-5">
                     <div>
@@ -32,7 +32,7 @@
                     </div>
                     {{ form.age.errors }}
                     <div class="w-[100px]">{{ form.age }}</div>
-                    <p class="text-xs">You must be over 13 to join.</p>
+                    <p class="text-xs pt-1">You must be over 13 to join.</p>
                 </div>
                 <div class="pb-5">
                     <div>
@@ -42,12 +42,9 @@
                     {{ form.hopes }}
                 </div>
                 <div class="text-center mt-10">
-                    <button class="btn-primary m-auto shimmer w-full" type="submit">Submit</button>
+                    <button class="btn btn-primary m-auto shimmer w-full" type="submit">Submit</button>
                 </div>
             </form>
         </div>
-        <script>
-            document.querySelector('input[name="timezone"]').value = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        </script>
     </div>
 {% endblock content %}

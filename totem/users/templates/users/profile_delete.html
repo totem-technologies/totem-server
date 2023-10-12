@@ -5,8 +5,24 @@
     <p class="text-danger pt-10">
         This will delete your Totem account <strong>completely</strong>. We will remove all data associated from this account. This action cannot be undone.
     </p>
-    <form class="pt-10" action="{% url 'users:profile-delete' %}" method="post">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-danger">Delete Account</button>
-    </form>
+    <button class="btn btn-error mt-10"
+            onclick="delete_account_modal.showModal()">Delete Account</button>
+    <dialog id="delete_account_modal" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg">Delete Account?</h3>
+            <p class="py-4">
+                To delete your Totem Account and all associated data, use the <strong>Delete Account</strong> button.
+                This cannot be undone.
+            </p>
+            <div class="modal-action">
+                <form method="dialog">
+                    <button class="btn">Close</button>
+                </form>
+                <form action="{% url 'users:profile-delete' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-error">Delete Account</button>
+                </form>
+            </div>
+        </div>
+    </dialog>
 {% endblock profile_content %}

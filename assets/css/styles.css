@@ -8,18 +8,6 @@
 }
 
 @layer components {
-  .btn {
-    @apply px-4 py-2 border border-transparent text-center rounded-2xl text-base font-medium text-tslate focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-tyellow no-underline;
-  }
-  .btn-primary {
-    @apply btn bg-tyellow border-tyellow text-tslate shadow-md hover:bg-yellow-500;
-  }
-  .btn-danger {
-    @apply btn bg-tpink hover:bg-tpinkTint;
-  }
-  .btn-outline {
-    @apply btn border-2 border-tyellow text-tslate hover:bg-tyellow;
-  }
   .section {
     @apply md:py-10 mx-4;
   }
@@ -41,8 +29,11 @@
   .a {
     @apply text-blue-500 underline;
   }
-  input, textarea, select {
-    @apply my-2 rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-tyellow sm:text-sm sm:leading-6 !important;
+  input[type="email"],
+  input[type="password"],
+  input[type="text"], textarea, select {
+    /* @apply my-2 rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-tyellow sm:text-sm sm:leading-6 !important; */
+    @apply input input-bordered;
   }
   label {
     @apply text-sm font-medium leading-6 text-gray-900 !important;
@@ -62,7 +53,7 @@
   }
 }
 
-.shimmer {
+/* .shimmer {
   background: linear-gradient(
     135deg,
     #f4dc92 0%,
@@ -80,7 +71,7 @@
   background-color: #f4dc92;
   animation: light 1s;
   -webkit-animation: light 1s;
-}
+} */
 
 @keyframes light {
   0% {

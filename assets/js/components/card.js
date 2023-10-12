@@ -32,25 +32,27 @@ function Card(props) {
     <div class="relative max-w-[300px] overflow-clip rounded-3xl border border-gray-200 bg-white shadow ">
       {image}
       <div class="p-5">
-        <p class="mb-3 font-normal text-gray-700 ">{props.start}</p>
-        <a href={props.href} class="btn-primary inline-flex items-center">
-          {props.buttonText}
-          <svg
-            class="ml-2 h-3.5 w-3.5"
-            aria-hidden="true"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 14 10"
-          >
-            <path
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M1 5h12m0 0L9 1m4 4L9 9"
-            />
-          </svg>
-        </a>
+        <div class="flex justify-between">
+          <p class="mb-3 w-32 font-normal text-gray-700 ">{props.start}</p>
+          <a href={props.href} class="btn btn-primary inline-flex items-center">
+            {props.buttonText}
+            <svg
+              class="ml-2 h-3.5 w-3.5"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 14 10"
+            >
+              <path
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M1 5h12m0 0L9 1m4 4L9 9"
+              />
+            </svg>
+          </a>
+        </div>
       </div>
     </div>
   )

@@ -23,6 +23,7 @@
     "@tailwindcss/line-clamp": "^0.4.2",
     "@tailwindcss/typography": "^0.5.2",
     "concurrently": "^8.2.0",
+    "daisyui": "^3.9.2",
     "esbuild": "^0.19.0",
     "livereload": "^0.9.3",
     "postcss": "^8.4.14",

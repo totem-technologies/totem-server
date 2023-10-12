@@ -35,17 +35,20 @@
             <ul role="list" class="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 {% for event in circles %}
                     <t-card
-                    {% if event.circle.image %}image="{{ event.circle.image.url }}"{% endif %} href="{% url "circles:event_detail" event_slug=event.slug %}">
-                        <span slot="title">{{ event.circle.title }}</span>
-                        <span slot="description">By {{ event.circle.author.name }}</span>
-                        <span slot="buttonText">Join</span>
-                        <span slot="avatar">{% avatar event.circle.author %}</span>
-                        <span slot="start">{{ event.start|date:'M jS' }} @ {{ event.start|date:'P T' }}</span>
-                        </t-card>
-                    {% empty %}
-                        <h2 class="h2">No Circles. 😥</h2>
-                    {% endfor %}
-                </ul>
-            </section>
-        </div>
-    {% endblock content %}
+                    {% if event.circle.image %}image="{{ event.circle.image.url }}"{% endif %}
+                    href="{% url "circles:event_detail" event_slug=event.slug %}">
+                    <span slot="title">{{ event.circle.title }}</span>
+                    <span slot="description">By {{ event.circle.author.name }}</span>
+                    <span slot="buttonText">Join</span>
+                    <span slot="avatar">{% avatar event.circle.author %}</span>
+                    <span slot="start">{{ event.start|date:'M jS' }} @
+                        <div>{{ event.start|date:'P T' }}</div>
+                    </span>
+                    </t-card>
+                {% empty %}
+                    <h2 class="h2">No Circles. 😥</h2>
+                {% endfor %}
+            </ul>
+        </section>
+    </div>
+{% endblock content %}

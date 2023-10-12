@@ -179,6 +179,6 @@ def user_profile_delete_view(request):
     if request.method == "POST":
         user = request.user
         user.delete()
-        messages.success(request, "Profile successfully deleted.")
+        messages.success(request, "Account successfully deleted.")
         return redirect("pages:home")
     return render(request, "users/profile_delete.html", context={"object": request.user})

@@ -8,23 +8,21 @@
     <div class="px-5 profile-section">
         <div class="max-w-5xl md:mt-10 mt-5 m-auto md:flex">
             <div>
-                <div class="bg-white p-5 md:mr-10 rounded-3xl md:w-[200px]">
-                    <h1 class="text-xl font-bold pb-3">Menu</h1>
-                    <ul class="list-inside">
-                        <li class="pb-3 hover:text-tblue">
-                            <a href="{% url 'users:profile' %}">Profile</a>
-                        </li>
-                        <li class="pb-3 hover:text-tblue">
-                            <a href="{% url 'users:profile-info' %}">Change Info</a>
-                        </li>
-                        <li class="pb-3 hover:text-tblue">
-                            <a href="{% url 'users:profile-notifications' %}">Notifications</a>
-                        </li>
-                        <li class="pb-3 hover:text-tblue">
-                            <a href="{% url 'users:profile-delete' %}">Delete Account</a>
-                        </li>
-                    </ul>
-                </div>
+                <ul class="menu bg-white md:mr-10 w-56 rounded-box">
+                    <li class="menu-title">Menu</li>
+                    <li>
+                        <a href="{% url 'users:profile' %}">Profile</a>
+                    </li>
+                    <li>
+                        <a href="{% url 'users:profile-info' %}">Change Info</a>
+                    </li>
+                    <li>
+                        <a href="{% url 'users:profile-notifications' %}">Notifications</a>
+                    </li>
+                    <li>
+                        <a href="{% url 'users:profile-delete' %}">Delete Account</a>
+                    </li>
+                </ul>
             </div>
             <div class="md:p px-5 md:pt-0 pt-10 w-full flex-grow">
                 {% block profile_content %}
