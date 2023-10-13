@@ -102,6 +102,31 @@ html {
   scroll-behavior: smooth;
 }
 
+.header-circle{
+  background-color: #987AA5;
+  height: 100%;
+  width: 100%;
+  border-radius: 50%;
+  overflow: hidden;
+  transform: translate(0, -70%);
+  opacity: 0.5;
+}
+.header-circle-container {
+  overflow: hidden;
+  position: absolute;
+  transform: translate(-50%, 0 );
+  left: 50%;
+  height: 100vw;
+  width: 100vw;
+  max-width: 1000px;
+  max-height: 1000px;
+  z-index: -1;
+}
+.header-stars{
+  position: absolute;
+  top: 15%;
+}
+
 /* Alpinejs */
 [x-cloak] { display: none !important; }
 [slot] { display: none !important; }

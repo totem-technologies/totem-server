@@ -1,0 +1,29 @@
+<div class="pb-10">
+    <h3 class="h3">Circle History</h3>
+    <hr>
+    <p class="py-5">Here are the recent Circle Sessions you have be a part of.</p>
+    {% if circle_history %}
+        <div class="relative overflow-x-auto rounded-3xl mb-10">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Circle Session</th>
+                        <th class="text-right">Date</th>
+                    </tr>
+                </thead>
+                {% for event in circle_history %}
+                    <tr>
+                        <th class="text-ellipsis">
+                            <a class="hover:text-tblue" href="{{ event.get_absolute_url }}">{{ event.circle.title }}</a>
+                        </th>
+                        <td class="text-right">{{ event.start }}</td>
+                    </tr>
+                {% endfor %}
+            </table>
+        </div>
+    {% else %}
+        <p>
+            You have not joined any Circles yet. <a class="link" href="{% url 'circles:list' %}">Go sign up for some!</a>
+        </p>
+    {% endif %}
+</div>

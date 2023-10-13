@@ -1,0 +1,40 @@
+<div class="pb-10">
+    <h3 class="h3">Subscribed Circles</h3>
+    <hr>
+    <p class="py-5">
+        These are the Circles you will get notifications for when new sessions are coming up.
+    </p>
+    {% if subscribed_circles %}
+        <div class="relative overflow-x-auto">
+            <div class="overflow-x-auto">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Circle</th>
+                            <th class="text-right">Unsubscribe</th>
+                        </tr>
+                    </thead>
+                    {% for circle in subscribed_circles %}
+                        <tr>
+                            <td class="text-ellipsis">
+                                <a class="hover:text-tblue" href="{{ circle.get_absolute_url }}">{{ circle.title }}</a>
+                            </td>
+                            <td class="text-right">
+                                <form method="post" action="{% url 'circles:subscribe' slug=circle.slug %}">
+                                    <input type="hidden" name="action" value="unsubscribe">
+                                    <input type="hidden" name="return_url" value="{{ request.path }}">
+                                    {% csrf_token %}
+                                    <button class="text-error" type="submit">Remove</button>
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+    {% else %}
+        <p>
+            You are not subscribed to any Circles. <a class="link" href="{% url 'circles:list' %}">Go sign up for some!</a>
+        </p>
+    {% endif %}
+</div>

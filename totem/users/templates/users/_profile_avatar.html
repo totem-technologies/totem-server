@@ -1,0 +1,31 @@
+{% load avatar %}
+<div class="mb-5 w-fit m-auto flex flex-col justify-center align-middle  rounded-box p-5">
+    <button class="block text-center" onclick="edit_avatar_modal.showModal()">
+        <div class="relative hover:shadow-md transition-opacity rounded-full p-1 inline-block">
+            {% avatar user=request.user %}
+            <div class="absolute bottom-2 rounded-full bg-tcreme p-1 right-2">
+                <svg width="20"
+                     height="20"
+                     viewBox="0 0 24 24"
+                     xmlns="http://www.w3.org/2000/svg">
+                    <path fill="#000000" d="m19.3 8.925l-4.25-4.2l1.4-1.4q.575-.575 1.413-.575t1.412.575l1.4 1.4q.575.575.6 1.388t-.55 1.387L19.3 8.925ZM17.85 10.4L7.25 21H3v-4.25l10.6-10.6l4.25 4.25Z" />
+                </svg>
+            </div>
+        </div>
+    </button>
+    <div class="text-center">
+        <h1 class="h3 pb-2">{{ user.name }}</h1>
+        <hr>
+        <div class="pt-2">
+            <div class="text-lg">{{ circle_count }}</div>
+            <div class="text-sm">Circles Joined</div>
+        </div>
+    </div>
+</div>
+<dialog id="edit_avatar_modal" class="modal">
+    <div class="modal-box w-auto">
+        <div hx-get="{% url "users:profile-image" %}" hx-trigger="load">
+            <p>Loading...</p>
+        </div>
+    </div>
+</dialog>

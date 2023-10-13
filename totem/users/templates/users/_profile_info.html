@@ -1,0 +1,18 @@
+<div class="pb-10">
+    <h3 class="h3">Edit Info</h3>
+    <hr>
+    <form class="form-horizontal pt-5"
+          method="post"
+          action="{% url 'users:profile' %}">
+        {% csrf_token %}
+        <div class="flex gap-2">{{ info_form }}</div>
+        <p class="text-sm pt-2">
+            Your name will be visible to other people on Totem. Your email will be private.
+        </p>
+        <div class="control-group">
+            <div class="controls pt-5">
+                <button type="submit" class="btn btn-primary btn-sm">Update</button>
+            </div>
+        </div>
+    </form>
+</div>

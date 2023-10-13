@@ -4,6 +4,7 @@ from django.contrib.auth import login as django_login
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ObjectDoesNotExist
+from django.http import HttpResponseForbidden
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.views.generic import DetailView, FormView
@@ -134,18 +135,25 @@ def user_dashboard_view(request):
 
 @login_required
 def user_profile_view(request):
-    subscribed_circles = request.user.subscribed_circles.all()
-    circle_history = request.user.events_joined.all()
+    subscribed_circles = request.user.subscribed_circles.all()[0:10]
+    circle_history_query = request.user.events_joined.order_by("-start")
+    circle_history = circle_history_query.all()[0:10]
+    circle_count = circle_history_query.count()
+    context = {
+        "object": request.user,
+        "subscribed_circles": subscribed_circles,
+        "circle_history": circle_history,
+        "circle_count": circle_count,
+    }
+    context.update(_user_profile_info(request, request.user))
     return render(
         request,
         "users/profile.html",
-        context={"object": request.user, "subscribed_circles": subscribed_circles, "circle_history": circle_history},
+        context=context,
     )
 
 
-@login_required
-def user_profile_info_view(request):
-    user = request.user
+def _user_profile_info(request, user: User):
     form = UserUpdateForm(instance=user)
     if request.method == "POST":
         old_email = user.email
@@ -160,18 +168,7 @@ def user_profile_info_view(request):
                 message = f"Email successfully updated to {new_email}. Please check your inbox to confirm."
             form.save()
             messages.success(request, message)
-            return redirect("users:profile")
-    return render(request, "users/profile_info.html", {"form": form})
-
-
-@login_required
-def user_profile_notifications_view(request):
-    subscribed_circles = request.user.subscribed_circles.all()
-    return render(
-        request,
-        "users/profile_notifications.html",
-        context={"object": request.user, "subscribed_circles": subscribed_circles},
-    )
+    return {"info_form": form}
 
 
 class ProfileForm(forms.ModelForm):
@@ -200,7 +197,7 @@ def user_profile_image_view(request):
             form.save()
     return render(
         request,
-        "users/profile_image_edit.html",
+        "users/_profile_image_edit.html",
         context={"choices": User.ProfileChoices.choices, "user": request.user, "form": form},
     )
 
@@ -212,4 +209,4 @@ def user_profile_delete_view(request):
         user.delete()
         messages.success(request, "Account successfully deleted.")
         return redirect("pages:home")
-    return render(request, "users/profile_delete.html", context={"object": request.user})
+    return HttpResponseForbidden()

@@ -11,6 +11,7 @@ from django.test import RequestFactory, TestCase
 from django.urls import reverse
 from sesame.utils import get_query_string
 
+from totem.circles.tests.factories import CircleEventFactory, CircleFactory
 from totem.onboard.models import OnboardModel
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
@@ -150,13 +151,34 @@ class UserProfileImageViewTest(TestCase):
         url = reverse("users:profile-image")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "users/profile_image_edit.html")
+        self.assertTemplateUsed(response, "users/_profile_image_edit.html")
 
         # Test POST request
         data = {"randomize": True}
         oldseed = self.user.profile_avatar_seed
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "users/profile_image_edit.html")
+        self.assertTemplateUsed(response, "users/_profile_image_edit.html")
         self.user.refresh_from_db()
         assert oldseed != self.user.profile_avatar_seed
+
+
+class UserProfileViewTest(TestCase):
+    def setUp(self):
+        self.user = user = UserFactory()
+        circle = CircleFactory(author=user)
+        event = CircleEventFactory(circle=circle)
+        event.attendees.add(user)
+        event.joined.add(user)
+        circle.subscribed.add(user)
+        self.client.force_login(user)
+
+    def test_user_profile_view(self):
+        url = reverse("users:profile")
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "users/profile.html")
+        self.assertEqual(response.context["object"], self.user)
+        self.assertEqual(len(response.context["subscribed_circles"]), 1)
+        self.assertEqual(len(response.context["circle_history"]), 1)
+        self.assertEqual(response.context["circle_count"], 1)
