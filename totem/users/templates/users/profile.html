@@ -3,7 +3,7 @@
 {% load avatar %}
 {% load static %}
 {# djlint:off #}
-{% block title %}Profile{% endblock title %}
+{% block title %}My Profile{% endblock title %}
 {# djlint:on #}
 {% block content %}
     <div class="px-5">
@@ -11,7 +11,7 @@
         <div class="max-w-5xl m-auto md:flex">
             <div class="md:pr-10">{% include "users/_profile_avatar.html" %}</div>
             <div class="flex-1">
-                <h2 class="h2 pb-10">Your Profile</h2>
+                <h2 class="h2 pb-10">My Profile</h2>
                 {% include "users/_profile_info.html" %}
                 {% include "users/_profile_notifications.html" %}
                 {% include "users/_profile_history.html" %}

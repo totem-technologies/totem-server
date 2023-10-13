@@ -126,10 +126,9 @@ class CircleEventListItem:
 
 
 def list(request):
-    events = CircleEvent.objects.filter(start__gte=timezone.now())
+    events = CircleEvent.objects.filter(start__gte=timezone.now()).order_by("start")
     if not request.user.is_staff:
         events = events.filter(circle__published=True)
-    events.order_by("start")
     attending_events = []
     if request.user.is_authenticated:
         myevents = request.user.events_attending.filter(
