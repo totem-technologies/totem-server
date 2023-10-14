@@ -4,10 +4,10 @@ import register from "./register"
 import Button from "./button"
 import Card from "./card"
 import Dropdown from "./dropdown"
-import NavMenu from "./navmenu"
+import NavBar from "./navbar"
 import PromptSearch from "./promptSearch"
 
-var components = [Button, Dropdown, PromptSearch, NavMenu, Card]
+var components = [Button, Dropdown, PromptSearch, Card, NavBar]
 
 export default function () {
   window.h = h

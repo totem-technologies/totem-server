@@ -1,79 +1,47 @@
 {% load static %}
 {% load avatar %}
-<header class="text-gray-600 body-font px-5 border-b-[1px] border-gray-300 ">
-  <div class="container mx-auto flex flex-wrap px-5 py-3 justify-between items-center max-w-5xl ">
-    <a class="title-font font-medium items-center text-gray-900"
-       {% if request.user.is_authenticated %}
-       href="{% url 'users:redirect' %}">
-    {% else %}
-      href="{% url 'pages:home' %}">
-    {% endif %}
-    <img class="hidden sm:block"
-         src="{% static 'images/totem-logo.png' %}"
-         width="100"
-         alt="" />
-    <img class="sm:hidden"
-         src="{% static 'images/totem-symbol.png' %}"
-         width="30"
-         alt="" />
-  </a>
-  <nav class="md:mr-auto md:ml-4 md:py-1 md:pl-4 justify-end flex-grow flex flex-wrap items-center text-base">
-    <div class="flex justify-center">
-      {% if request.user.is_authenticated %}
-        <script id="navmenu-data" type="application/json">
-          [
-            {
-              "title": "My Home", "href": "{% url "users:redirect" %}"
-            }
-          ]
-        </script>
-      {% else %}
-        <script id="navmenu-data" type="application/json">
-          [
-            {
-              "title": "How it works", "href": "{% url "pages:how-it-works" %}"
-            },
-            {
-              "title": "Why we made this", "href": "{% url "pages:about" %}"
-            },
-            {
-              "title": "Team", "href": "{% url "pages:team" %}"
-            }
-          ]
-        </script>
-      {% endif %}
-      <t-navmenu dataid="navmenu-data" />
-    </div>
-    <div class="w-0.5 bg-gray-200 h-5 mx-2 rounded"></div>
-    {% if request.user.is_authenticated %}
-      <t-dropdown class="pl-5">
-      <span slot="button">
-        <button class="flex items-center gap-1">{% avatar request.user size=50 %}</button>
-      </span>
-      <span slot='menu'>
-        <div class="absolute right-0 mt-2 w-40 rounded-md bg-white shadow-md z-10">
-          <a href="{% url 'users:profile' %}"
-             class="flex items-center gap-2 w-full first-of-type:rounded-t-md last-of-type:rounded-b-md px-4 py-2.5 text-left text-sm hover:bg-gray-50 disabled:text-gray-500">
-            Profile
-          </a>
-          {% if request.user.is_staff %}
-            <a href="{% url 'admin:index' %}"
-               target="_blank"
-               class="flex items-center gap-2 w-full first-of-type:rounded-t-md last-of-type:rounded-b-md px-4 py-2.5 text-left text-sm hover:bg-gray-50 disabled:text-gray-500">
-              Admin
-            </a>
-          {% endif %}
-          <a href="{% url 'account_logout' %}"
-             class="flex items-center gap-2 w-full first-of-type:rounded-t-md last-of-type:rounded-b-md px-4 py-2.5 text-left text-sm hover:bg-gray-50 disabled:text-gray-500">
-            <span class="text-tpink">Logout</span>
-          </a>
-        </div>
-      </span>
-      </t-dropdown>
-    {% else %}
-      <a href="{% url 'users:login' %}" class="mx-5 hover:text-tblue">Log In</a>
-      <a href="{% url 'pages:home' %}#signup" class="btn btn-primary">Join</a>
-    {% endif %}
-  </nav>
-</div>
+<header class="text-gray-600 body-font md:px-5 min-h-[65px] px-2 border-b-[1px] border-gray-300 ">
+  <script id="navbar-data" type="application/json">
+    {
+      "logo": "{% static 'images/totem-logo.png' %}",
+      "symbol": "{% static 'images/totem-symbol.png' %}",
+      "user": {
+        "auth": {{ request.user.is_authenticated|yesno:"true,false" }},
+        "name": "{{ user.name }}",
+        "home": "{% url "users:redirect" %}"
+      },
+      "links": {
+        "home": "{% url "pages:home" %}",
+        "logout": "{% url "account_logout" %}",
+        "login": "{% url "users:login" %}",
+        "profile": "{% url "users:profile" %}",
+        "marketing": [
+          {
+            "title": "How it works", "href": "{% url "pages:how-it-works" %}"
+          },
+          {
+            "title": "Why we made Totem", "href": "{% url "pages:about" %}"
+          },
+          {
+            "title": "Team", "href": "{% url "pages:team" %}"
+          }
+        ],
+        "account": [
+        {% if request.user.is_staff %}
+          {
+            "title": "Admin", "target":"_blank", "href": "{% url "admin:index" %}"
+          },
+        {% endif %}
+          {
+            "title": "My Profile", "href": "{% url "users:profile" %}"
+          }
+        ]
+      }
+    }
+  </script>
+  <t-navbar dataid="navbar-data">
+  {% if request.user.is_authenticated %}
+    <span slot="avatar">{% avatar request.user size=40 %}</span>
+  {% endif %}
+  </t-navbar>
 </header>
