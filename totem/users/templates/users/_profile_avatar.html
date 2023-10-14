@@ -1,5 +1,5 @@
 {% load avatar %}
-<div class="mb-5 w-fit m-auto flex flex-col justify-center align-middle  rounded-box p-5">
+<div class="mb-5 w-fit m-auto flex md:flex-col justify-center align-middle  rounded-box p-5">
     <button class="block text-center" onclick="edit_avatar_modal.showModal()">
         <div class="relative hover:shadow-md transition-opacity rounded-full p-1 inline-block">
             {% avatar user=request.user %}
@@ -13,10 +13,10 @@
             </div>
         </div>
     </button>
-    <div class="text-center">
-        <h1 class="h3 pb-2">{{ user.name }}</h1>
-        <hr>
-        <div class="pt-2">
+    <div class="text-center pl-5 md:pl-0">
+        <h1 class="h3">{{ user.name }}</h1>
+        <div class="divider"></div>
+        <div>
             <div class="text-lg">{{ circle_count }}</div>
             <div class="text-sm">Circles Joined</div>
         </div>
