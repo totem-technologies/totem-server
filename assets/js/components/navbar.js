@@ -13,6 +13,27 @@ function FeaturedLinks(props) {
   )
 }
 
+function CloseIcon(props) {
+  return (
+    <svg
+      width="30"
+      height="30"
+      class="cursor-pointer text-gray-500"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        fill="none"
+        stroke="#000000"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="m7 7l10 10M7 17L17 7"
+      />
+    </svg>
+  )
+}
+
 function MenuIcon(props) {
   return (
     <svg
@@ -176,6 +197,15 @@ function NavBar(props) {
           class="drawer-overlay"
         ></label>
         <div class="min-h-full w-80 bg-tcreme p-4">
+          <div className="text-right">
+            <label
+              for="nav-bar-drawer"
+              aria-label="open sidebar"
+              class="btn btn-square btn-ghost text-right"
+            >
+              <CloseIcon />
+            </label>
+          </div>
           {user.auth ? (
             <LoggedInMenu user={user} links={links} />
           ) : (
