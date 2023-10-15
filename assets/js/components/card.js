@@ -32,9 +32,12 @@ function Card(props) {
     <div class="relative max-w-[300px] overflow-clip rounded-3xl border border-gray-200 bg-white shadow transition-shadow hover:shadow-xl">
       {image}
       <div class="p-5">
-        <div class="flex justify-between">
+        <div class="flex items-end justify-between">
           <p class="mb-3 w-32 font-normal text-gray-700 ">{props.start}</p>
-          <a href={props.href} class="btn btn-primary inline-flex items-center">
+          <a
+            href={props.href}
+            class="btn btn-primary btn-sm inline-flex items-center"
+          >
             {props.buttonText}
             <svg
               class="ml-2 h-3.5 w-3.5"
