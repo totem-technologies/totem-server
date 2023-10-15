@@ -1,11 +1,10 @@
-from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth import authenticate
 from django.contrib.auth import login as auth_login
 from ninja import NinjaAPI, Schema
 from ninja.security import APIKeyHeader
 
+from totem.users.models import User
 from totem.users.views import login as user_login
-
-User = get_user_model()
 
 api = NinjaAPI(title="Totem API", version="1.0.0")
 

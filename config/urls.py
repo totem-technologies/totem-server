@@ -20,6 +20,11 @@ sitemap_dict = {
     }
 }
 
+try:
+    # This raises an error when other errors happen. Reduce noise.
+    api_path = path("api/v1/", api.urls)  # type: ignore
+except Exception:
+    api_path = None
 
 urlpatterns = [
     path("", include("totem.pages.urls", namespace="pages")),
@@ -31,10 +36,11 @@ urlpatterns = [
     # Django Admin, use {% url 'admin:index' %}
     path(settings.ADMIN_URL, admin.site.urls),
     # API
-    path("api/v1/", api.urls),  # type: ignore
+    api_path,
     # User management
     path("users/", include("totem.users.urls", namespace="users")),
     path("accounts/", include("allauth.urls")),
+    path("_impersonate/", include("impersonate.urls")),
     path(
         "sitemap.xml",
         sitemap,

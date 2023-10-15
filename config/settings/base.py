@@ -75,7 +75,15 @@ DJANGO_APPS = [
     "django.contrib.admin",
     "django.forms",
 ]
-THIRD_PARTY_APPS = ["ninja", "allauth", "allauth.account", "allauth.socialaccount", "taggit", "imagekit"]
+THIRD_PARTY_APPS = [
+    "ninja",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "taggit",
+    "imagekit",
+    "impersonate",
+]
 
 LOCAL_APPS = [
     "totem.users",
@@ -145,6 +153,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "impersonate.middleware.ImpersonateMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "totem.utils.middleware.robotnoindex",
@@ -400,3 +409,10 @@ GOOGLE_CALENDAR_ID = env(
 # Slack
 # ------------------------------------------------------------------------------
 SLACK_WEBHOOK_URL = env("SLACK_WEBHOOK_URL", default=None)  # type: ignore
+
+
+# Impersonate
+# ------------------------------------------------------------------------------
+IMPERSONATE = {
+    "REQUIRE_SUPERUSER": True,
+}

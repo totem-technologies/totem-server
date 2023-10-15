@@ -23,6 +23,7 @@ django-allauth==0.54.0
 django-anymail==10.0
 django-environ==0.10.0
 django-imagekit<6.0.0
+django-impersonate<2
 django-model-utils==4.3.1
 django-ninja<0.23.0
 django-redis==5.3.0

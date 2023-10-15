@@ -81,5 +81,11 @@
 </script>
 {% endif %}
 <div id="app-shell" hidden></div>
+{% if request.user.is_impersonate %}
+<div class="fixed bottom-0 right-0 bg-error text-white p-2">
+As {{ request.user.email }}
+<a class="link" href="{% url 'impersonate-stop' %}">Stop</a>
+</div>
+{% endif %}
 </body>
 </html>
