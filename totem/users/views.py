@@ -71,7 +71,6 @@ class MagicLoginView(SesameLoginView):
         if not user.verified:  # type: ignore
             user.verified = True  # type: ignore
             user.save()
-            messages.success(self.request, "Email successfully verified!")
         return super().login_success()
 
 
@@ -115,7 +114,8 @@ def login(email: str, request, after_login_url: str | None = None, mobile: bool 
 
     if created:
         django_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
-        emails.send_new_login_email(user.email, url)
+        # TODO make new welcome email. This one expires after 30min and doesn't make sense for a new user.
+        # emails.send_new_login_email(user.email, url)
         _notify_slack()
     else:
         emails.send_returning_login_email(user.email, url)
