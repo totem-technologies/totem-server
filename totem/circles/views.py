@@ -31,16 +31,16 @@ def _get_circle_event(slug: str) -> CircleEvent:
 def event_detail(request, event_slug):
     event = _get_circle_event(event_slug)
     circle = event.circle
-    return _detail(request, request.user, circle, event)
+    return _circle_detail(request, request.user, circle, event)
 
 
 def detail(request, slug):
     circle = _get_circle(slug)
     event = circle.next_event()
-    return _detail(request, request.user, circle, event)
+    return _circle_detail(request, request.user, circle, event)
 
 
-def _detail(request, user: User, circle: Circle, event):
+def _circle_detail(request, user: User, circle: Circle, event):
     if not circle.published and not user.is_staff:
         raise Http404
 
