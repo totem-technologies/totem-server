@@ -1,11 +1,13 @@
 {% extends "base.html" %}
-{% block title %}
-    Page not found
-{% endblock title %}
+{# djlint:off #}
+{% block title %}Page not found{% endblock title %}
+{# djlint:on #}
 {% block content %}
-    <h1 class="text-9xl h1 text-center">404</h1>
-    <p class="text-center mt-4 text-xl">This is not the page you were looking for.</p>
-    <p class="text-center mt-4">
-        Don't worry though! You can always go <a class="a" href="{% url 'pages:home' %}">home</a>.
-    </p>
+    <div class="pt-10">
+        <h1 class="text-9xl h1 text-center">404</h1>
+        <p class="text-center mt-4 text-xl">We could not find the page you are looking for.</p>
+        <p class="text-center mt-4">
+            Don't worry though! You can always go <a class="link" href="{% url 'pages:home-redirect' %}">home</a>.
+        </p>
+    </div>
 {% endblock content %}

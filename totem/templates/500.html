@@ -1,12 +1,14 @@
 {% extends "base.html" %}
-{% block title %}
-    Server Error
-{% endblock title %}
+{# djlint:off #}
+{% block title %}Server Error{% endblock title %}
+{# djlint:on #}
 {% block content %}
-    <h1 class="text-9xl h1 text-center">500</h1>
-    <p class="text-center mt-4 text-xl">Sorry! It looks like we had a crash.</p>
-    <p class="text-center mt-4">
-        We track these errors automatically, but if the problem persists feel free to <a class="a" href="mailto:bo@totem.org">contact us</a>.
-    </p>
-    <p class="text-center mt-4">In the meantime, try refreshing...</p>
+    <div class="pt-10">
+        <h1 class="text-9xl h1 text-center">500</h1>
+        <p class="text-center mt-4 text-xl">Sorry! It looks like we had a crash.</p>
+        <p class="text-center mt-4">
+            We track these errors automatically, but if the problem persists feel free to <a class="link" href="mailto:help@totem.org">contact us</a>.
+        </p>
+        <p class="text-center mt-4">In the meantime, try refreshing...</p>
+    </div>
 {% endblock content %}

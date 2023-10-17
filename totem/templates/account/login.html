@@ -1,11 +1,11 @@
 {% extends "account/base.html" %}
 {% load i18n %}
 {% load account socialaccount %}
-{% block head_title %}
-  {% translate "Sign In" %}
-{% endblock %}
+{# djlint:off #}
+{% block head_title %}{% translate "Sign In" %}{% endblock head_title %}
+{# djlint:on #}
 {% block inner %}
-  <div class="">
+  <div>
     <h2 class="h2">Sign in to your account</h2>
   </div>
   <div class="mt-10 ">

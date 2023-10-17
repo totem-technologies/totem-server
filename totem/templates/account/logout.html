@@ -1,8 +1,8 @@
 {% extends "account/base.html" %}
 {% load i18n %}
-{% block head_title %}
-  {% translate "Log Out" %}
-{% endblock head_title %}
+{# djlint:off #}
+{% block head_title %}{% translate "Log Out" %}{% endblock head_title %}
+{# djlint:on #}
 {% block inner %}
   <div class="sm:mx-auto sm:w-full sm:max-w-sm">
     <h1 class="h2">{% translate "Log Out" %}</h1>

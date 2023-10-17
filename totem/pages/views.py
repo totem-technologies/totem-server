@@ -181,3 +181,9 @@ def redirect_qr(request, slug):
 def training(request):
     enroll_url = "https://secure.totem.org/b/7sI03l8LD1zl5eU9AJ"
     return render(request, "pages/training.html", {"enroll_url": enroll_url})
+
+
+def home_redirect(request):
+    if request.user.is_authenticated:
+        return django_redirect(to=reverse_lazy("users:redirect"))
+    return django_redirect(to=reverse_lazy("pages:home"))

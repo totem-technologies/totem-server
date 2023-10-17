@@ -1,13 +1,14 @@
 {% extends "base.html" %}
-{% block title %}
-    No Access
-{% endblock title %}
+{% load settings_value %}
+{# djlint:off #}
+{% block title %}No Access{% endblock title %}
+{# djlint:on #}
 {% block content %}
-    <h1 class="text-9xl h1 text-center">
-        4<span class="text-8xl">🚫</span>3
-    </h1>
-    <p class="text-center mt-4 text-xl">You do not have access to this page.</p>
-    <p class="text-center mt-4">
-        If you think this is a mistake, please <a class="a" href="mailto:bo@totem.org">contact us</a>.
-    </p>
+    <div class="pt-10">
+        <h1 class="text-9xl h1 text-center">403</h1>
+        <p class="text-center mt-4 text-xl">You may not have access to this page.</p>
+        <p class="text-center mt-4">
+            If you think this is a mistake, please <a class="a" href="mailto:{% settings_value 'EMAIL_SUPPORT_ADDRESS' %}">contact us</a>.
+        </p>
+    </div>
 {% endblock content %}

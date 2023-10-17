@@ -10,7 +10,7 @@
                 function profile_upload() {
                     const pimage = document.getElementsByName("profile_image")[0];
                     pimage.onchange = function() {
-                        pimage.form.submit();
+                        document.getElementsByName("image_submit")[0].click();
                     }
                     pimage.click();
                 }
@@ -63,6 +63,7 @@
                    class="hidden"
                    name="profile_image"
                    accept="image/png, image/jpeg">
+            <button type="submit" class="hidden" name="image_submit"></button>
             <div class="tabs tabs-boxed inline-block">
                 {% for choice in form.fields.profile_avatar_type.choices %}
                     <button type="submit"
