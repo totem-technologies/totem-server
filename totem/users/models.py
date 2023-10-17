@@ -1,5 +1,6 @@
 import time
 import uuid
+from typing import TYPE_CHECKING
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
@@ -19,6 +20,9 @@ from totem.utils.hash import basic_hash
 from totem.utils.models import SluggedModel
 
 from . import analytics
+
+if TYPE_CHECKING:
+    from totem.onboard.models import OnboardModel
 
 
 class ProfileImageSpec(ImageSpec):
@@ -41,6 +45,9 @@ class User(SluggedModel, AbstractUser):
     If adding fields that need to be filled at user signup,
     check forms.SignupForm and forms.SocialSignupForms accordingly.
     """
+
+    # Types
+    onboard: "OnboardModel"
 
     class ProfileChoices(TextChoices):
         TIEDYE = "TD", _("Tie Dye")

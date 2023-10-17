@@ -1,5 +1,7 @@
 {% extends "base.html" %}
-{% block title %}{{ user.name }}{% endblock %}
+{# djlint:off #}
+{% block title %}{{ user.name }}{% endblock title %}
+{# djlint:on #}
 {% block content %}
   <div class="max-w-xl m-auto">
     <h1 class="h1 pb-10">{{ user.name }}'s Profile</h1>
@@ -15,4 +17,4 @@
       </div>
     </form>
   </div>
-{% endblock %}
+{% endblock content %}

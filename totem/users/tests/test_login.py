@@ -17,10 +17,12 @@ class LogInViewTestCase(TestCase):
         assert response.status_code == 302
         assert response.url == reverse("users:redirect")
 
+        # Check that an email NOT was sent
+        self.assertEqual(len(mail.outbox), 0)
         # Check that an email was sent
-        self.assertEqual(len(mail.outbox), 1)
-        self.assertEqual(mail.outbox[0].to, ["testuser@totem.org"])
-        self.assertEqual(mail.outbox[0].subject, "Welcome to ✨Totem✨!")
+        # self.assertEqual(len(mail.outbox), 1)
+        # self.assertEqual(mail.outbox[0].to, ["testuser@totem.org"])
+        # self.assertEqual(mail.outbox[0].subject, "Welcome to ✨Totem✨!")
 
         # Check that a new user was created
         count = User.objects.count()
@@ -85,6 +87,6 @@ class LogInViewTestCase(TestCase):
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to, [user.email])
         self.assertEqual(mail.outbox[0].subject, "Sign in to Totem!")
-        assert "next=/foo" in mail.outbox[0].merge_global_data["link"]
+        assert "next=/foo" in mail.outbox[0].merge_global_data["link"]  # type: ignore
         # Check that no new user was created
         self.assertEqual(User.objects.count(), count)

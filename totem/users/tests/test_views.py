@@ -1,11 +1,7 @@
-from unittest import mock
-
 import pytest
 from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.messages import get_messages
-from django.contrib.messages.storage.fallback import FallbackStorage
-from django.contrib.sessions.middleware import SessionMiddleware
 from django.http import HttpResponseRedirect
 from django.test import RequestFactory, TestCase
 from django.urls import reverse
@@ -15,35 +11,23 @@ from totem.circles.tests.factories import CircleEventFactory, CircleFactory
 from totem.onboard.models import OnboardModel
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
-from totem.users.views import MagicLoginView, user_detail_view, user_redirect_view, user_update_view
+from totem.users.views import user_detail_view, user_redirect_view
 
 from ..views import user_index_view
 
 pytestmark = pytest.mark.django_db
 
 
-def test_user_update_view():
-    factory = RequestFactory()
+def test_user_update_view(client):
     user = UserFactory(verified=True)
-    request = factory.get(reverse("users:update"))
-    request.user = user
-    middleware = SessionMiddleware(mock.MagicMock())
-    middleware.process_request(request)
-    request.session.save()
-    response = user_update_view(request)
+    client.force_login(user)
+    response = client.get(reverse("users:update"))
     assert response.status_code == 200
-
-    request = factory.post(reverse("users:update"), {"email": "new@example.com"})
+    response = client.post(reverse("users:update"), {"email": "new@example.com"})
     assert user.email != "new@example.com"
-    request.user = user
-    middleware = SessionMiddleware(mock.MagicMock())
-    middleware.process_request(request)
-    request.session.save()
-    messages = FallbackStorage(request)
-    request._messages = messages
-    response = user_update_view(request)
     assert response.status_code == 302
     assert response.url == reverse("users:dashboard")
+    messages = list(get_messages(response.wsgi_request))
     assert len(messages) == 1
     user.refresh_from_db()
     assert user.email == "new@example.com"
@@ -105,39 +89,21 @@ def test_user_index_view():
     assert response.url == "/users/dashboard/"
 
 
-def test_magic_login_view():
-    factory = RequestFactory()
+def test_magic_login_view_verify_email(client):
     user = UserFactory()
     user.verified = False
-    user.save()
     qs = get_query_string(user)
-    request = factory.get(reverse("magic-login") + qs)
-    request.user = user
-    middleware = SessionMiddleware(mock.MagicMock())
-    middleware.process_request(request)
-    request.session.save()
-    messages = FallbackStorage(request)
-    request._messages = messages
-    response = MagicLoginView.as_view()(request)
+    response = client.get(reverse("magic-login") + qs)
     assert response.status_code == 302
-    # assert response.url == reverse("login")
-    assert len(messages) == 1
+    messages = list(get_messages(response.wsgi_request))
+    assert len(messages) == 0
     user.refresh_from_db()
     assert user.verified is True
 
-    user.verified = True
-    user.save()
     qs = get_query_string(user)
-    request = factory.get(reverse("magic-login") + qs)
-    request.user = user
-    middleware = SessionMiddleware(mock.MagicMock())
-    middleware.process_request(request)
-    request.session.save()
-    messages = FallbackStorage(request)
-    request._messages = messages
-    response = MagicLoginView.as_view()(request)
+    response = client.get(reverse("magic-login") + qs)
     assert response.status_code == 302
-    assert len(get_messages(request)) == 0
+    assert len(get_messages(response)) == 0
     user.refresh_from_db()
     assert user.verified is True
 
