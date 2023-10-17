@@ -37,7 +37,7 @@
         </p>
       {% endif %}
     {% endif %}
-    <form class="login pt-5" method="POST" action="{% url 'account_login' %}">
+    <form class="login pt-5" method="post" action="{% url 'account_login' %}">
       {% csrf_token %}
       {{ form }}
       {% if redirect_field_value %}
@@ -51,4 +51,4 @@
       <a class="a block mt-2" href="{% url 'account_reset_password' %}">{% translate "Forgot Password?" %}</a>
     </form>
   </div>
-{% endblock %}
+{% endblock inner %}

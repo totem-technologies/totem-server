@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -31,6 +32,29 @@ class TestPages:
         url = reverse("pages:team")
         response = client.get(url)
         assert response.status_code == 200
+
+
+class HomeViewTest(TestCase):
+    def test_home(self):
+        response = self.client.get(reverse("pages:home"))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Totem")
+
+    def test_home_redirect(self):
+        response = self.client.get(reverse("pages:home-redirect"))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("pages:home"))
+        user = UserFactory()
+        self.client.force_login(user)
+        response = self.client.get(reverse("pages:home-redirect"))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("users:redirect"))
+        response = self.client.get(reverse("pages:home"))
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, reverse("users:redirect"))
+        # Only actually give the user the marketing home page if they came from Totem.
+        response = self.client.get(reverse("pages:home"), headers={"REFERER": settings.EMAIL_BASE_URL})  # type: ignore
+        self.assertEqual(response.status_code, 200)
 
 
 class RedirectViewTest(TestCase):

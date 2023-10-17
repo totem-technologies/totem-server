@@ -1,6 +1,7 @@
 import base64
 from dataclasses import dataclass
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.http import Http404
@@ -10,6 +11,7 @@ from django.urls import reverse_lazy
 from django.views.generic import TemplateView
 
 from ..users.forms import LoginForm
+from . import data
 from .models import Redirect
 from .qrmaker import make_qr
 
@@ -49,12 +51,6 @@ class TeamView(TemplateView):
             image="vanessa.jpg",
             url=reverse_lazy("pages:keepers", kwargs={"name": "vanessa"}),
         ),
-        # Member(
-        #     name="Josie Maestre",
-        #     title="Keeper",
-        #     image="josie.jpg",
-        #     url=reverse_lazy("pages:keepers-josie"),
-        # ),
         Member(
             name="Steve Schalkhauser",
             title="Engineer, Phase 2",
@@ -89,67 +85,17 @@ class HowItWorksView(TemplateView):
         return context
 
 
-@dataclass
-class FAQ:
-    question: str
-    answer: str
-
-
-class HomeView(TemplateView):
-    template_name = "pages/home.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["quotes"] = [
-            "I appreciate having a space to express myself and not feel the need to validate or \
-                respond to others.",
-            "It was the best experience.",
-            "I'm so glad I came, this is exactly what I've been needing.",
-            "This is definitely a safe and welcoming environment.",
-            "My expectations were exceeded 10000%.",
-            "YES!!! I love the safe space that was created.",
-        ]
-        context["faqs"] = [
-            FAQ(
-                question="Can I be anonymous?",
-                answer="Yes! We don't mind if you don't use your real name. We will require \
-                    enough information for moderation, like your email, but to other people \
-                        in your Circles (including Keepers) you can be whoever you want to \
-                            be. However, we do require you share authentic stories.",
-            ),
-            FAQ(
-                question="What about privacy?",
-                answer="We have zero tolerance about discussing what happens in Totem to the \
-                    outside. Anyone doing this will be permanently removed. Additionally, we \
-                        built Totem on top of HIPAA-compliant services, the same software \
-                            that therapists and doctors use to do online sessions. Your \
-                communications are encrypted. The only people who can hear your shares are the \
-                    people in your Circle.",
-            ),
-            FAQ(
-                question="Is this a replacement for therapy?",
-                answer="No. While many people prefer Totem Circles to therapy, it is not a \
-                replacement for traditional one-on-one therapy. However, Totem does make a great \
-                supplement if you already have ongoing therapy sessions and can help create a \
-                deeper understanding with your work there.",
-            ),
-            FAQ(
-                question="Are Keepers therapists?",
-                answer="Generally, no. Keepers are different from therapists in that they are \
-                only present to keep the Circle running smoothly and safely for everyone. \
-                Otherwise, Keepers are there to be involved with the discussion like everyone else \
-                    and not to offer advice or guidance. There is no hierarchy in a Circle.",
-            ),
-            FAQ(
-                question="How much does Totem cost?",
-                answer="It depends on the Circle, some are free, some aren't. Our mission is to \
-                    make Totem Circles accessible to as many people as possible. In the future we'll \
-                        add the ability to donate directly to your Keeper if you'd like to \
-                            support them. ",
-            ),
-        ]
-        context["signup_form"] = LoginForm()
-        return context
+def home(request):
+    if request.user.is_authenticated:
+        # Redirect to the dashboard if the user is logged in and they aren't going to the home page from the site.
+        if settings.EMAIL_BASE_URL not in request.META.get("HTTP_REFERER", ""):
+            return django_redirect(to=reverse_lazy("users:redirect"))
+    context = {
+        "faqs": data.faqs,
+        "quotes": data.quotes,
+        "signup_form": LoginForm(),
+    }
+    return render(request, "pages/home.html", context=context)
 
 
 def keepers(request, name):

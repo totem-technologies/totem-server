@@ -27,7 +27,7 @@ class PagesSitemap(Sitemap):
 
 app_name = "pages"
 urlpatterns = [
-    path("", views.HomeView.as_view(), name="home"),
+    path("", views.home, name="home"),
     path("home-redirect/", views.home_redirect, name="home-redirect"),
     path("team/", views.TeamView.as_view(), name="team"),
     path("about/", TemplateView.as_view(template_name="pages/about.html"), name="about"),
