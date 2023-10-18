@@ -1,5 +1,3 @@
-import datetime
-
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpRequest
@@ -126,17 +124,31 @@ class CircleEventListItem:
 
 
 def list(request):
+    if request.user.is_authenticated:
+        context = _logged_in_list(request.user)
+    else:
+        events = CircleEvent.objects.filter(start__gte=timezone.now()).order_by("start")
+        context = {"events": events, "attending_events": []}
+    return render(request, "circles/list.html", context=context)
+
+
+def _logged_in_list(user: User):
     events = CircleEvent.objects.filter(start__gte=timezone.now()).order_by("start")
-    if not request.user.is_staff:
+    if not user.is_staff:
         events = events.filter(circle__published=True)
     attending_events = []
-    if request.user.is_authenticated:
-        myevents = request.user.events_attending.filter(
-            start__gte=timezone.now() - datetime.timedelta(minutes=60)
-        ).order_by("start")
-        for event in myevents:
-            attending_events.append(CircleEventListItem(event, event.can_join(request.user)))
-    return render(request, "circles/list.html", {"circles": events, "attending_events": attending_events})
+    can_join = []
+    for event in events:
+        if event.attendees.contains(user):
+            attending_events.append(event)
+            continue
+        if event.can_join(user):
+            can_join.append(event)
+
+    return {
+        "events": can_join,
+        "attending_events": attending_events,
+    }
 
 
 @login_required

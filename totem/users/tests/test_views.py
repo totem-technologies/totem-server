@@ -21,12 +21,13 @@ pytestmark = pytest.mark.django_db
 def test_user_update_view(client):
     user = UserFactory(verified=True)
     client.force_login(user)
-    response = client.get(reverse("users:update"))
+    response = client.get(reverse("users:profile"))
     assert response.status_code == 200
-    response = client.post(reverse("users:update"), {"email": "new@example.com"})
+    response = client.post(
+        reverse("users:profile"), {"email": "new@example.com", "name": "New Name", "timezone": "UTC"}
+    )
     assert user.email != "new@example.com"
-    assert response.status_code == 302
-    assert response.url == reverse("users:dashboard")
+    assert response.status_code == 200
     messages = list(get_messages(response.wsgi_request))
     assert len(messages) == 1
     user.refresh_from_db()

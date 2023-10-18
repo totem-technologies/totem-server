@@ -33,27 +33,6 @@ class UserUpdateForm(forms.ModelForm):
 
 
 @login_required
-def user_update_view(request, *args, **kwargs):
-    user = request.user
-    form = UserUpdateForm(instance=user)
-    if request.method == "POST":
-        old_email = user.email
-        form = UserUpdateForm(request.POST, instance=user)
-        if form.is_valid():
-            message = "Profile successfully updated."
-            new_email = form.cleaned_data["email"]
-            if old_email != new_email:
-                login_url = user.get_login_url(after_login_url=None, mobile=False)
-                user.verified = False
-                emails.send_change_email(old_email, new_email, login_url)
-                message = f"Email successfully updated to {new_email}. Please check your inbox to confirm."
-            form.save()
-            messages.success(request, message)
-            return redirect("users:dashboard")
-    return render(request, "users/user_form.html", {"form": form})
-
-
-@login_required
 def user_redirect_view(request, *args, **kwargs):
     user = request.user
     assert user.is_authenticated

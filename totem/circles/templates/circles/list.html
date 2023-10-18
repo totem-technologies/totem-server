@@ -15,15 +15,11 @@
                 <ul role="list" class="grid grid-cols-1 gap-6 pb-5 sm:grid-cols-3">
                     {% for event_item in attending_events %}
                         <li class="col-span-1 divide-y hover:tshadow divide-gray-200 transition-all duration-500 rounded-3xl bg-white">
-                            <a href="{% url 'circles:event_detail' event_slug=event_item.event.slug %}">
+                            <a href="{% url 'circles:event_detail' event_slug=event_item.slug %}">
                                 <div class="flex w-full items-start justify-between space-x-6 p-6">
                                     <div class="flex-1">
-                                        <h2 class="h2 text-gray-900 text-lg">{{ event_item.event.circle.title }}</h2>
-                                        {% if event_item.joinable %}
-                                            <p class="text-red-500">Join now!</p>
-                                        {% else %}
-                                            <p class="text-red-500">{{ event_item.event.start|date:"D, M j, g:i a T" }}</p>
-                                        {% endif %}
+                                        <h2 class="h2 text-gray-900 text-lg">{{ event_item.circle.title }}</h2>
+                                        <p class="text-red-500">{{ event_item.start|date:"D, M j, g:i a T" }}</p>
                                     </div>
                                 </div>
                             </a>
@@ -33,7 +29,7 @@
             {% endif %}
             <h2 class="h2 pb-5">Upcoming Circles</h2>
             <ul role="list" class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                {% for event in circles %}
+                {% for event in events %}
                     <t-card
                     {% if event.circle.image %}image="{{ event.circle.image.url }}"{% endif %}
                     href="{% url "circles:event_detail" event_slug=event.slug %}">
@@ -46,7 +42,7 @@
                     </span>
                     </t-card>
                 {% empty %}
-                    <h2 class="h2">No Circles. 😥</h2>
+                    <h3 class="h3">No Circles.</h3>
                 {% endfor %}
             </ul>
         </section>
