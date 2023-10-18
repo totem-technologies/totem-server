@@ -28,9 +28,10 @@
                 </ul>
             {% endif %}
             <h2 class="h2 pb-5">Upcoming Circles</h2>
-            <ul role="list" class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <ul role="list"
+                class="grid sm:grid-cols-2 grid-cols-1 gap-6 pb-5 md:grid-cols-3">
                 {% for event in events %}
-                    <t-card
+                    <t-card class="sm:m-0 m-auto"
                     {% if event.circle.image %}image="{{ event.circle.image.url }}"{% endif %}
                     href="{% url "circles:event_detail" event_slug=event.slug %}">
                     <span slot="title">{{ event.circle.title }}</span>
