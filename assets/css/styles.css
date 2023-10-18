@@ -41,7 +41,8 @@
   input[type="email"],
   input[type="password"],
   input[type="text"],
-  textarea {
+  textarea,
+  select {
     @apply w-full block;
   }
 

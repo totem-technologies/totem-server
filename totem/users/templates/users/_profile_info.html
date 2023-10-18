@@ -5,7 +5,7 @@
           method="post"
           action="{% url 'users:profile' %}">
         {% csrf_token %}
-        <div class="flex gap-2">{{ info_form }}</div>
+        <div class="flex gap-2 flex-wrap">{{ info_form }}</div>
         <p class="text-sm pt-2">
             Your name will be visible to other people on Totem. Your email will be private.
         </p>

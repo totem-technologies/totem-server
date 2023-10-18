@@ -29,7 +29,7 @@ user_detail_view = UserDetailView.as_view()
 class UserUpdateForm(forms.ModelForm):
     class Meta:
         model = User
-        fields = ("name", "email")
+        fields = ("name", "email", "timezone")
 
 
 @login_required
