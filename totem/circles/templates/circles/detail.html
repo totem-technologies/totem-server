@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load settings_value %}
 {% load avatar %}
 {# djlint:off #}
 {% block title %}Circles - {{ object.title }} @ {{event.start|date:'l, F j'}}{% endblock title %}
@@ -157,10 +158,17 @@
                 {% if event %}
                     <strong>{{ event.start|date:'l, F j' }} @ {{ event.start|date:'P T' }}</strong>
                     <div>{{ object.recurring }}</div>
-                {% endif %}
-            </div>
-            <hr class="w-48 h-0.5 mx-auto my-4 bg-gray-700 border-0 rounded md:my-10">
-            <div class="tprose">{{ object.content_html }}</div>
+                {% else %}
+                    <div>
+                        This Circle has no upcoming scheduled sessions. Let us know if you'd like one! <a class="link"
+    href="mailto:{% settings_value 'EMAIL_SUPPORT_ADDRESS' %}">
+                        {% settings_value 'EMAIL_SUPPORT_ADDRESS' %}
+                    </a>
+                </div>
+            {% endif %}
         </div>
+        <hr class="w-48 h-0.5 mx-auto my-4 bg-gray-700 border-0 rounded md:my-10">
+        <div class="tprose">{{ object.content_html }}</div>
     </div>
+</div>
 {% endblock content %}
