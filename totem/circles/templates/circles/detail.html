@@ -137,7 +137,7 @@
                     <li class="menu-title">Other Sessions</li>
                     {% for other_event in other_events %}
                         <li>
-                            <a href="{{ other_event.get_absolute_url }}">{{ event.start|date:'M jS' }} @ {{ event.start|date:'P T' }}</a>
+                            <a href="{{ other_event.get_absolute_url }}">{{ other_event.start|date:'M jS' }} @ {{ other_event.start|date:'P T' }}</a>
                         </li>
                     {% endfor %}
                 </ul>

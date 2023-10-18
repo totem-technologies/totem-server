@@ -137,16 +137,16 @@ def _logged_in_list(user: User):
     if not user.is_staff:
         events = events.filter(circle__published=True)
     attending_events = []
-    can_join = []
+    can_attend = []
     for event in events:
         if event.attendees.contains(user):
             attending_events.append(event)
             continue
-        if event.can_join(user):
-            can_join.append(event)
+        if event.can_attend(silent=True):
+            can_attend.append(event)
 
     return {
-        "events": can_join,
+        "events": can_attend,
         "attending_events": attending_events,
     }
 

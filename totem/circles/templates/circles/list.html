@@ -14,12 +14,12 @@
                 <h2 class="h2 pb-5">My Circles</h2>
                 <ul role="list" class="grid grid-cols-1 gap-6 pb-5 sm:grid-cols-3">
                     {% for event_item in attending_events %}
-                        <li class="col-span-1 divide-y hover:tshadow divide-gray-200 transition-all duration-500 rounded-3xl bg-white">
+                        <li class="col-span-1 divide-y shadow hover:shadow-xl divide-gray-200 transition-all duration-500 rounded-3xl bg-white">
                             <a href="{% url 'circles:event_detail' event_slug=event_item.slug %}">
                                 <div class="flex w-full items-start justify-between space-x-6 p-6">
                                     <div class="flex-1">
                                         <h2 class="h2 text-gray-900 text-lg">{{ event_item.circle.title }}</h2>
-                                        <p class="text-red-500">{{ event_item.start|date:"D, M j, g:i a T" }}</p>
+                                        <p>{{ event_item.start|date:"D, M j, g:i a T" }}</p>
                                     </div>
                                 </div>
                             </a>
