@@ -27,7 +27,7 @@ if READ_DOT_ENV_FILE:
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#debug
 DEBUG = env.bool("DJANGO_DEBUG", False)  # type: ignore
-
+SITE_HOST = env("SITE_HOST", default="localhost:8000")  # type: ignore
 # Local time zone. Choices are
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # though not all of them may be available with every OS.
@@ -275,7 +275,7 @@ EMAIL_BACKEND = env(
 )
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-timeout
 EMAIL_TIMEOUT = 5
-EMAIL_BASE_URL = env("EMAIL_BASE_URL", default="http://localhost:8000")  # type: ignore
+EMAIL_BASE_URL = env("EMAIL_BASE_URL", default=f"https://{SITE_HOST}")  # type: ignore
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#default-from-email
 DEFAULT_FROM_EMAIL = env(

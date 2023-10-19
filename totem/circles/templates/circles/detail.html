@@ -53,7 +53,6 @@
                     <div>
                         <strong>{{ event.start|date:'l, F j' }} <span class="inline-block">@ {{ event.start|date:'P T' }}</span></strong>
                     </div>
-                    <div>Duration: {{ event.duration_minutes }} min</div>
                     <div>Seats left: {{ event.seats_left }}</div>
                     <div class="text-center pt-3">
                         {% if event.cancelled %}
@@ -86,7 +85,7 @@
                                       action="{% url 'circles:rsvp' event_slug=event.slug %}"
                                       method="post">
                                     {% csrf_token %}
-                                    <button class="w-full btn btn-primary p-2 px-6 shimmer"
+                                    <button class="w-full btn btn-primary max-md:btn-sm p-2 px-6 shimmer"
                                             type="submit"
                                             value="Submit">Reserve a spot</button>
                                 </form>
@@ -155,8 +154,8 @@
                         Price: <strong>${{ object.price }}</strong>
                     {% endif %}
                 </div>
+                <div>Duration: {{ event.duration_minutes }} min</div>
                 {% if event %}
-                    <strong>{{ event.start|date:'l, F j' }} @ {{ event.start|date:'P T' }}</strong>
                     <div>{{ object.recurring }}</div>
                 {% else %}
                     <div>
