@@ -1,7 +1,4 @@
 {% extends "base.html" %}
-{% load settings_value %}
-{% load avatar %}
-{% load static %}
 {# djlint:off #}
 {% block title %}My Profile{% endblock title %}
 {# djlint:on #}
@@ -9,13 +6,13 @@
     <div class="px-5">
         <div class="h-10"></div>
         <div class="max-w-5xl m-auto md:flex">
-            <div class="md:pr-10">{% include "users/_profile_avatar.html" %}</div>
+            <div class="md:pr-10">{% include "users/profile/_profile_avatar.html" %}</div>
             <div class="flex-1">
                 <h2 class="h2 pb-10">My Profile</h2>
-                {% include "users/_profile_info.html" %}
-                {% include "users/_profile_notifications.html" %}
-                {% include "users/_profile_history.html" %}
-                {% include "users/_profile_delete.html" %}
+                {% include "users/profile/_profile_info.html" %}
+                {% include "users/profile/_profile_notifications.html" %}
+                {% include "users/profile/_profile_history.html" %}
+                {% include "users/profile/_profile_delete.html" %}
             </div>
         </div>
     </div>

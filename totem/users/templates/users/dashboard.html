@@ -1,25 +1,19 @@
 {% extends "base.html" %}
-{% load settings_value %}
-{% load static %}
 {# djlint:off #}
-{% block title %}{{ object.name }}{% endblock title %}
+{% block title %}My Home{% endblock title %}
 {# djlint:on #}
 {% block content %}
-    <section class="section max-w-4xl px-5 m-auto">
-        <div class="py-10">
-            <h1 class="h1">Hello {{ object.name|default:"friend" }}!</h1>
+    <div class="px-5">
+        <div class="h-10"></div>
+        <div class="max-w-5xl m-auto md:flex">
+            <div class="md:pr-10 md:pt-20">{% include "users/dashboard/_menu.html" %}</div>
+            <div class="flex-1">
+                <h2 class="h2 pb-10">My Home</h2>
+                {% include "users/dashboard/_upcoming.html" %}
+                {% include "users/dashboard/_recommended.html" %}
+                {% comment %} {% include "users/dashboard/_athome.html" %} {% endcomment %}
+                {% comment %} {% include "users/dashboard/_resources.html" %} {% endcomment %}
+            </div>
         </div>
-        <div class="tprose">
-            <p class="lead">Welcome to the Totem Community!</p>
-            <p>
-                We're excited to have you join us. Soon, one of our Keepers will invite you to one of our Welcome Circles.
-                There, they will take you through your first Circle experience, helping you learn the ropes.
-            </p>
-            <p>
-                If you have any questions, please reach out to <a href="mailto:{% settings_value 'EMAIL_SUPPORT_ADDRESS' %}">
-                {% settings_value 'EMAIL_SUPPORT_ADDRESS' %}
-            </a>
-        </p>
     </div>
-</section>
 {% endblock content %}

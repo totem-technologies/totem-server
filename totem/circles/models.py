@@ -47,7 +47,12 @@ class Circle(MarkdownMixin, SluggedModel):
     )
     tags = TaggableManager()
     content = MarkdownField(default="")
-    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, limit_choices_to={"is_staff": True})
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        limit_choices_to={"is_staff": True},
+        related_name="created_circles",
+    )
     published = models.BooleanField(default=False, help_text="Is this Circle visible?")
     open = models.BooleanField(default=True, help_text="Is this Circle for more attendees?")
     price = models.IntegerField(

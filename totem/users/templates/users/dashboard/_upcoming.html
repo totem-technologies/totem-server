@@ -1,0 +1,22 @@
+{% if attending_events %}
+    <div class="pb-5">
+        <strong>
+            <h3 class="pb-3" id="upcoming">My Sessions</h3>
+        </strong>
+        <p class="pb-5">Upcoming sessions you have signed up for.</p>
+        <ul role="list" class="grid grid-cols-1 gap-6 pb-5 sm:grid-cols-2">
+            {% for event_item in attending_events %}
+                <li class="col-span-1 divide-y shadow hover:shadow-xl divide-gray-200 transition-all duration-500 rounded-3xl bg-white">
+                    <a href="{% url 'circles:event_detail' event_slug=event_item.slug %}">
+                        <div class="flex w-full items-start justify-between space-x-6 p-4">
+                            <div class="flex-1">
+                                <h2 class="h2 text-gray-900 text-lg">{{ event_item.circle.title }}</h2>
+                                <p>{{ event_item.start|date:"g:i a T, D, M j" }}</p>
+                            </div>
+                        </div>
+                    </a>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+{% endif %}

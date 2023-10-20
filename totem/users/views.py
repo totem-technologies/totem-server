@@ -7,9 +7,11 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponseForbidden
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.views.generic import DetailView, FormView
 from sesame.views import LoginView as SesameLoginView
 
+from totem.circles.filters import upcoming_events_user_can_attend
 from totem.email import emails
 from totem.utils.slack import notify_slack
 
@@ -109,7 +111,15 @@ def user_index_view(request):
 
 @login_required
 def user_dashboard_view(request):
-    return render(request, "users/dashboard.html", context={"object": request.user})
+    user: User = request.user
+    now_plus_60 = timezone.now() + timezone.timedelta(minutes=60)
+    attending_events = user.events_attending.filter(start__gte=now_plus_60).filter(cancelled=False).order_by("start")
+    recommended_events = upcoming_events_user_can_attend(user)[:3]
+    return render(
+        request,
+        "users/dashboard.html",
+        context={"user": user, "attending_events": attending_events, "recommended_events": recommended_events},
+    )
 
 
 @login_required

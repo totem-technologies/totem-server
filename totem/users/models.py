@@ -22,6 +22,9 @@ from totem.utils.models import SluggedModel
 from . import analytics
 
 if TYPE_CHECKING:
+    from django.db.models.query import QuerySet
+
+    from totem.circles.models import Circle, CircleEvent
     from totem.onboard.models import OnboardModel
 
 
@@ -46,8 +49,11 @@ class User(SluggedModel, AbstractUser):
     check forms.SignupForm and forms.SocialSignupForms accordingly.
     """
 
-    # Types
+    # Related Types
     onboard: "OnboardModel"
+    events_attending: "QuerySet[CircleEvent]"
+    events_joined: "QuerySet[CircleEvent]"
+    created_circles: "QuerySet[Circle]"
 
     class ProfileChoices(TextChoices):
         TIEDYE = "TD", _("Tie Dye")

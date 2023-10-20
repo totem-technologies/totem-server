@@ -9,39 +9,12 @@
 {% block content %}
     <div class="px-5">
         <section class="max-w-5xl pt-10 m-auto pb-20">
-            <h1 class="h1 pb-10">Circles</h1>
-            {% if attending_events %}
-                <h2 class="h2 pb-5">My Circles</h2>
-                <ul role="list" class="grid grid-cols-1 gap-6 pb-5 sm:grid-cols-3">
-                    {% for event_item in attending_events %}
-                        <li class="col-span-1 divide-y shadow hover:shadow-xl divide-gray-200 transition-all duration-500 rounded-3xl bg-white">
-                            <a href="{% url 'circles:event_detail' event_slug=event_item.slug %}">
-                                <div class="flex w-full items-start justify-between space-x-6 p-6">
-                                    <div class="flex-1">
-                                        <h2 class="h2 text-gray-900 text-lg">{{ event_item.circle.title }}</h2>
-                                        <p>{{ event_item.start|date:"D, M j, g:i a T" }}</p>
-                                    </div>
-                                </div>
-                            </a>
-                        </li>
-                    {% endfor %}
-                </ul>
-            {% endif %}
-            <h2 class="h2 pb-5">Upcoming Circles</h2>
+            <h1 class="h2 pb-10">Circles</h1>
+            <h2 class="h3 pb-5">Upcoming Circles</h2>
             <ul role="list"
                 class="grid sm:grid-cols-2 grid-cols-1 gap-6 pb-5 md:grid-cols-3">
                 {% for event in events %}
-                    <t-card class="sm:m-0 m-auto"
-                    {% if event.circle.image %}image="{{ event.circle.image.url }}"{% endif %}
-                    href="{% url "circles:event_detail" event_slug=event.slug %}">
-                    <span slot="title">{{ event.circle.title }}</span>
-                    <span slot="description">By {{ event.circle.author.name }}</span>
-                    <span slot="buttonText">Join</span>
-                    <span slot="avatar">{% avatar event.circle.author %}</span>
-                    <span slot="start">{{ event.start|date:'M jS' }} @
-                        <div>{{ event.start|date:'P T' }}</div>
-                    </span>
-                    </t-card>
+                    {% include "circles/_event_card.html" with event=event only %}
                 {% empty %}
                     <h3 class="h3">No Circles.</h3>
                 {% endfor %}
