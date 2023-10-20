@@ -1,5 +1,4 @@
 import pytest
-from django.conf import settings
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.messages import get_messages
 from django.http import HttpResponseRedirect
@@ -10,8 +9,8 @@ from sesame.utils import get_query_string
 from totem.circles.tests.factories import CircleEventFactory, CircleFactory
 from totem.onboard.models import OnboardModel
 from totem.users.models import User
-from totem.users.tests.factories import UserFactory
-from totem.users.views import user_detail_view, user_redirect_view
+from totem.users.tests.factories import KeeperProfileFactory, UserFactory
+from totem.users.views import user_redirect_view
 
 from ..views import user_index_view
 
@@ -50,22 +49,16 @@ class TestUserRedirectView:
 
 
 class TestUserDetailView:
-    def test_authenticated(self, user: User, rf: RequestFactory):
-        request = rf.get("/fake-url/")
-        request.user = UserFactory()
-        response = user_detail_view(request, slug=user.slug)
-
+    def test_authenticated(self, user: User, client):
+        user = UserFactory()
+        client.force_login(user)
+        response = client.get(reverse("users:detail", kwargs={"slug": user.slug}))
+        assert response.status_code == 404
+        response = client.get(reverse("users:detail", kwargs={"slug": "notreal"}))
+        assert response.status_code == 404
+        keeper_profile = KeeperProfileFactory()
+        response = client.get(reverse("users:detail", kwargs={"slug": keeper_profile.user.slug}))
         assert response.status_code == 200
-
-    def test_not_authenticated(self, user: User, rf: RequestFactory):
-        request = rf.get("/fake-url/")
-        request.user = AnonymousUser()
-        response = user_detail_view(request, slug=user.slug)
-        login_url = reverse(settings.LOGIN_URL)
-
-        assert isinstance(response, HttpResponseRedirect)
-        assert response.status_code == 302
-        assert response.url == f"{login_url}?next=/fake-url/"
 
 
 def test_user_index_view():

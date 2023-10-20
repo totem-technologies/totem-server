@@ -2,13 +2,12 @@ from django import forms
 from django.contrib import messages
 from django.contrib.auth import login as django_login
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ObjectDoesNotExist
-from django.http import HttpResponseForbidden
+from django.http import Http404, HttpResponseForbidden
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
-from django.views.generic import DetailView, FormView
+from django.views.generic import FormView
 from sesame.views import LoginView as SesameLoginView
 
 from totem.circles.filters import upcoming_events_user_can_attend
@@ -19,13 +18,15 @@ from .forms import LoginForm
 from .models import User
 
 
-class UserDetailView(LoginRequiredMixin, DetailView):
-    model = User
-    slug_field = "slug"
-    slug_url_kwarg = "slug"
-
-
-user_detail_view = UserDetailView.as_view()
+def user_detail_view(request, slug):
+    try:
+        user = User.objects.get(slug=slug)
+        if user.keeper_profile:
+            events = [e.next_event() for e in user.created_circles.all()[:10] if e.next_event()]
+            return render(request, "users/user_detail.html", context={"user": user, "events": events})
+    except (User.DoesNotExist, ObjectDoesNotExist):
+        raise Http404
+    raise Http404
 
 
 class UserUpdateForm(forms.ModelForm):

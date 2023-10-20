@@ -1,5 +1,6 @@
 import markdown
 from django.conf import settings
+from django.core.validators import MaxLengthValidator
 from django.db import models
 from django.template.defaultfilters import truncatechars
 from django.urls import reverse
@@ -10,8 +11,8 @@ class CirclePlan(models.Model):
     ordering = ["-display_date"]
 
     name = models.CharField(max_length=255)
-    description = models.TextField()
-    content = models.TextField()
+    description = models.TextField(validators=[MaxLengthValidator(5000)])
+    content = models.TextField(validators=[MaxLengthValidator(10000)])
     date_created = models.DateTimeField(auto_now_add=True)
     date_modified = models.DateTimeField(auto_now=True)
     display_date = models.DateTimeField(default=timezone.now)

@@ -2,6 +2,7 @@ import markdown
 from django import forms
 from django.contrib.admin import widgets as admin_widgets
 from django.core.exceptions import ValidationError
+from django.core.validators import MaxLengthValidator
 from django.db.models import TextField
 from django.forms import widgets
 from django.template import Context, Template
@@ -64,7 +65,10 @@ class MarkdownMixin:
 
 class MarkdownField(TextField):
     def __init__(self, *args, **kwargs):
-        kwargs["validators"] = kwargs.get("validators", [MarkdownMixin.validate_markdown])
+        kwargs["max_length"] = kwargs.get("max_length", 10000)
+        kwargs["validators"] = kwargs.get(
+            "validators", [MarkdownMixin.validate_markdown, MaxLengthValidator(kwargs["max_length"])]
+        )
         self.widget = _MarkdownWidget()
         super().__init__(*args, **kwargs)
 

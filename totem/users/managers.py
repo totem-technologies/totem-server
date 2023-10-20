@@ -1,12 +1,15 @@
 import secrets
 import string
+from typing import TYPE_CHECKING
 
 from django.contrib.auth.hashers import make_password
-from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.models import UserManager as DjangoUserManager
 
+if TYPE_CHECKING:
+    from totem.users.models import User  # noqa: F401
 
-class UserManager(DjangoUserManager[AbstractUser]):
+
+class UserManager(DjangoUserManager["User"]):
     """Custom manager for the User model."""
 
     def _create_user(self, email: str, password: str | None, **extra_fields):

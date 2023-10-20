@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
+from django.db import models
 from django.db.models import BooleanField, CharField, EmailField, TextChoices, UUIDField
 from django.urls import reverse
 from django.utils.html import escape as html_escape
@@ -17,6 +18,7 @@ from timezone_field import TimeZoneField
 from totem.email.utils import validate_email_blocked
 from totem.users.managers import UserManager
 from totem.utils.hash import basic_hash
+from totem.utils.md import MarkdownField, MarkdownMixin
 from totem.utils.models import SluggedModel
 
 from . import analytics
@@ -54,6 +56,7 @@ class User(SluggedModel, AbstractUser):
     events_attending: "QuerySet[CircleEvent]"
     events_joined: "QuerySet[CircleEvent]"
     created_circles: "QuerySet[Circle]"
+    keeper_profile: "KeeperProfile"
 
     class ProfileChoices(TextChoices):
         TIEDYE = "TD", _("Tie Dye")
@@ -141,3 +144,14 @@ class User(SluggedModel, AbstractUser):
         super().clean()
         self.email = strip_tags(self.__class__.objects.normalize_email(self.email))
         self.name = html_escape(strip_tags(self.name.strip()))
+
+
+class KeeperProfile(models.Model, MarkdownMixin):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="keeper_profile")
+    bio = MarkdownField(blank=True)
+
+    def __str__(self):
+        return f"<KeeperProfile: {self.user.name}, email: {self.user.email}>"
+
+    def get_absolute_url(self):
+        return self.user.get_absolute_url()

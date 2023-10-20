@@ -2,6 +2,7 @@ import markdown as md
 from django import template
 from django.template import TemplateDoesNotExist
 from django.template.loader import render_to_string
+from django.utils.html import escape
 from django.utils.safestring import mark_safe
 
 register = template.Library()
@@ -17,4 +18,10 @@ def markdown(file_path):
 
     # Convert markdown content to HTML
     html = md.markdown(source)
+    return mark_safe(html)
+
+
+@register.filter
+def to_html(value):
+    html = md.markdown(escape(value.strip()))
     return mark_safe(html)

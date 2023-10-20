@@ -1,12 +1,11 @@
 from django.contrib import admin
 from django.contrib.auth import admin as auth_admin
-from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 from impersonate.admin import UserAdminImpersonateMixin
 
 from totem.users.forms import UserAdminChangeForm, UserAdminCreationForm
 
-User = get_user_model()
+from .models import KeeperProfile, User
 
 
 @admin.register(User)
@@ -43,3 +42,8 @@ class UserAdmin(UserAdminImpersonateMixin, auth_admin.UserAdmin):
             },
         ),
     )
+
+
+@admin.register(KeeperProfile)
+class KeeperProfileAdmin(admin.ModelAdmin):
+    autocomplete_fields = ("user",)

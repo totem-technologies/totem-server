@@ -2,10 +2,10 @@ from collections.abc import Sequence
 from typing import Any
 
 from django.contrib.auth import get_user_model
-from factory import Faker, post_generation
+from factory import Faker, SubFactory, post_generation
 from factory.django import DjangoModelFactory
 
-from totem.users.models import User
+from totem.users.models import KeeperProfile, User
 from totem.utils.factories import BaseMetaFactory
 
 
@@ -37,4 +37,18 @@ class UserFactory(DjangoModelFactory, metaclass=BaseMetaFactory[User]):
     class Meta:
         model = get_user_model()
         django_get_or_create = ["email"]
+        skip_postgeneration_save = True
+
+
+class KeeperProfileFactory(DjangoModelFactory, metaclass=BaseMetaFactory[KeeperProfile]):
+    @post_generation
+    def post_save(self, create: bool, extracted: Sequence[Any], **kwargs):
+        if create:
+            self.save()  # type: ignore
+
+    user = SubFactory(UserFactory)
+
+    class Meta:
+        model = KeeperProfile
+        django_get_or_create = ["user"]
         skip_postgeneration_save = True
