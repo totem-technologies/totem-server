@@ -118,14 +118,14 @@ class UserProfileImageViewTest(TestCase):
         url = reverse("users:profile-image")
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "users/_profile_image_edit.html")
+        self.assertTemplateUsed(response, "users/profile/_profile_image_edit.html")
 
         # Test POST request
         data = {"randomize": True}
         oldseed = self.user.profile_avatar_seed
         response = self.client.post(url, data)
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "users/_profile_image_edit.html")
+        self.assertTemplateUsed(response, "users/profile/_profile_image_edit.html")
         self.user.refresh_from_db()
         assert oldseed != self.user.profile_avatar_seed
 

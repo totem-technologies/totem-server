@@ -6,10 +6,12 @@
     <div class="px-5">
         <div class="h-10"></div>
         <div class="max-w-5xl m-auto md:flex">
-            <div class="md:pr-10 md:pt-20">{% include "users/dashboard/_menu.html" %}</div>
-            <div class="flex-1">
+            <div class="md:pt-20 border-r-2">{% include "users/dashboard/_menu.html" %}</div>
+            <div class="flex-1 md:pl-10">
                 <h2 class="h2 pb-10">My Home</h2>
-                {% include "users/dashboard/_upcoming.html" %}
+                {% if attending_events %}
+                    {% include "users/dashboard/_upcoming.html" %}
+                {% endif %}
                 {% include "users/dashboard/_recommended.html" %}
                 {% comment %} {% include "users/dashboard/_athome.html" %} {% endcomment %}
                 {% comment %} {% include "users/dashboard/_resources.html" %} {% endcomment %}

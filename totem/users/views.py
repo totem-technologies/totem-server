@@ -114,7 +114,7 @@ def user_dashboard_view(request):
     user: User = request.user
     now_plus_60 = timezone.now() + timezone.timedelta(minutes=60)
     attending_events = user.events_attending.filter(start__gte=now_plus_60).filter(cancelled=False).order_by("start")
-    recommended_events = upcoming_events_user_can_attend(user)[:3]
+    recommended_events = upcoming_events_user_can_attend(user)
     return render(
         request,
         "users/dashboard.html",
@@ -186,7 +186,7 @@ def user_profile_image_view(request):
             form.save()
     return render(
         request,
-        "users/_profile_image_edit.html",
+        "users/profile/_profile_image_edit.html",
         context={"choices": User.ProfileChoices.choices, "user": request.user, "form": form},
     )
 

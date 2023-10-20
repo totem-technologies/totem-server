@@ -28,10 +28,13 @@
                 </div>
                 <div class="pb-5">
                     <div>
-                        <label for="{{ form.hopes.id_for_label }}">What topics would you like to explore?</label>
+                        <label for="{{ form.hopes.id_for_label }}">
+                            What topics would you like to explore? (Optional)
+                        </label>
                     </div>
                     {{ form.hopes.errors }}
                     {{ form.hopes }}
+                    <p class="text-xs pt-1">Your feedback here will help inform us about new Circles to offer.</p>
                 </div>
                 <div class="text-center mt-10">
                     <button class="btn btn-primary m-auto shimmer w-full" type="submit">Submit</button>

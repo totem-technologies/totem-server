@@ -1,9 +1,14 @@
 <ul class="menu w-56 rounded-box">
-    <li>
-        <a href="#upcoming">My Upcoming Sessions</a>
-    </li>
+    {% if attending_events %}
+        <li>
+            <a href="#upcoming">My Upcoming Sessions</a>
+        </li>
+    {% endif %}
     <li>
         <a href="#recommended">Recommended Circles</a>
+    </li>
+    <li>
+        <a href="{% url "users:profile" %}">My Profile</a>
     </li>
     {% comment %} <li>
         <a href="#athome">Circles at Home</a>
