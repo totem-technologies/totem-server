@@ -7,6 +7,6 @@ href="{% url "circles:event_detail" event_slug=event.slug %}">
 <span slot="buttonText">Join</span>
 <span slot="avatar">{% avatar event.circle.author %}</span>
 <span slot="start">{{ event.start|date:'M jS' }} @
-    <div>{{ event.start|date:'P T' }}</div>
+    <span>{{ event.start|date:'P T' }}</span>
 </span>
 </t-card>

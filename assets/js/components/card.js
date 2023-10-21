@@ -11,18 +11,22 @@ function Card(props) {
   const image = (
     <a href={props.href}>
       <div
-        class="relative flex items-center justify-between rounded-t-3xl p-5"
+        class="relative flex flex-col rounded-t-3xl p-5 pb-2"
         style={backgroundImageStyle}
       >
-        <div class="w-[70%] pr-4">
-          <h5 class="mb-2 break-words text-2xl font-bold tracking-tight text-white">
+        <div class="flex flex-1 items-center">
+          <h5 class="mb-2 line-clamp-2 overflow-ellipsis break-words text-2xl font-bold tracking-tight text-white">
             {props.title}
           </h5>
-          <p class="mb-3 font-normal text-white">{props.description}</p>
         </div>
-        <div>
-          <div class="w-[75px] rounded-full">
-            <a href={props.href}>{props.avatar}</a>
+        <div class="flex items-end justify-between ">
+          <div class="pr-4">
+            <p class="mb-3 font-normal text-white">{props.description}</p>
+          </div>
+          <div>
+            <div class="w-[50px] rounded-full">
+              <a href={props.href}>{props.avatar}</a>
+            </div>
           </div>
         </div>
       </div>
@@ -32,8 +36,8 @@ function Card(props) {
     <div class="relative max-w-[300px] overflow-clip rounded-3xl border border-gray-200 bg-white shadow transition-shadow hover:shadow-xl">
       {image}
       <div class="p-5">
-        <div class="flex items-end justify-between">
-          <p class="mb-3 w-32 font-normal text-gray-700 ">{props.start}</p>
+        <div class="flex flex-col">
+          <p class="mb-3 font-normal text-gray-700 ">{props.start}</p>
           <a
             href={props.href}
             class="btn btn-primary btn-sm inline-flex items-center"
