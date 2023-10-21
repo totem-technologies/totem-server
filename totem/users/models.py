@@ -114,15 +114,7 @@ class User(SluggedModel, AbstractUser):
         return url
 
     def get_keeper_url(self):
-        # hack until we can connect keepers to user profiles
-        keepers = {
-            "bo@totem.org": reverse("pages:about"),
-            "admin@admin.com": reverse("pages:about"),
-            "heather@totem.org": reverse("pages:keepers", kwargs={"name": "heather"}),
-            "vanessa@totem.org": reverse("pages:keepers", kwargs={"name": "vanessa"}),
-            "gabe@totem.org": reverse("pages:keepers", kwargs={"name": "gabe"}),
-        }
-        return keepers.get(self.email, reverse("users:detail", kwargs={"slug": self.slug}))
+        return reverse("users:detail", kwargs={"slug": self.slug})
 
     def get_admin_url(self):
         return reverse(f"admin:{self._meta.app_label}_{self._meta.model_name}_change", args=(self.pk,))

@@ -4,6 +4,7 @@ import urllib.parse
 from django import template
 from django.template import Context
 from django.template.engine import Engine
+from django.templatetags.static import static
 
 from totem.users.models import User
 from totem.utils.hash import basic_hash
@@ -15,13 +16,17 @@ register = template.Library()
 def avatar(user: User, size=120, blank_ok=False, classes=""):
     current_engine = Engine.get_default()
     size = int(size)
+    ctx = {"size": size, "classes": classes, "name": user.name, "padding": f"{size / 1000}rem"}
     if user.profile_avatar_type == User.ProfileChoices.IMAGE:
-        ctx = {"is_image": True, "size": size, "classes": classes, "name": user.name, "image": user.profile_image}
+        if user.profile_image:
+            ctx["src"] = user.profile_image.url
+        else:
+            ctx["src"] = static("images/default_profile.webp")
     else:
         # Render the avatar as a data URI SVG in an img tag. Using raw SVG causes React to not render the SVG properly.
         avatar_ctx = avatar_marble(salt=str(user.profile_avatar_seed), size=size)
         svg = current_engine.select_template(["utils/avatar.svg"]).render(Context(avatar_ctx))
-        ctx = {"is_image": False, "size": size, "classes": classes, "name": user.name, "svg": urllib.parse.quote(svg)}
+        ctx["src"] = f"data:image/svg+xml;utf8,{urllib.parse.quote(svg)}"
     return ctx
 
 

@@ -1,16 +1,8 @@
 {% load static %}
-{% if is_image %}
-    <img width="{{ size }}"
-         height="{{ size }}"
-         {% if image %} src="{{ image.url }}" {% else %} src="{% static 'images/default_profile.webp' %}" {% endif %}
-         alt=""
-         title="{{ name }}"
-         class="rounded-full bg-tcreme p-0.5 {{ classes }}">
-{% else %}
-    <img width="{{ size }}"
-         height="{{ size }}"
-         src="data:image/svg+xml;utf8,{{ svg }}"
-         alt=""
-         title="{{ name }}"
-         class="rounded-full bg-tcreme p-0.5 {{ classes }}">
-{% endif %}
+<img width="{{ size }}"
+     height="{{ size }}"
+     src="{{ src }}"
+     alt=""
+     title="{{ name }}"
+     style="padding: {{ padding }}"
+     class="rounded-full bg-white {{ classes }}">
