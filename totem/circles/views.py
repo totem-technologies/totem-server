@@ -45,10 +45,11 @@ def _circle_detail(request, user: User, circle: Circle, event):
     attending = False
     joinable = False
     subscribed = False
-    if user.is_authenticated and event:
-        attending = event.attendees.contains(user)
-        joinable = event.can_join(user)
+    if user.is_authenticated:
         subscribed = circle.subscribed.contains(user)
+        if event:
+            attending = event.attendees.contains(user)
+            joinable = event.can_join(user)
 
     # if attending:
     #     ih = ics_hash(slug, request.user.ics_key)
