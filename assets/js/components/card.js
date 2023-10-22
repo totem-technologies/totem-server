@@ -15,11 +15,11 @@ function Card(props) {
         style={backgroundImageStyle}
       >
         <div class="flex flex-1 items-center">
-          <h5 class="mb-2 line-clamp-2 overflow-ellipsis break-words text-2xl font-bold tracking-tight text-white">
+          <h5 class="mb-2 line-clamp-2 overflow-ellipsis break-words text-2xl font-bold tracking-tight text-white drop-shadow-lg">
             {props.title}
           </h5>
         </div>
-        <div class="flex items-end justify-between ">
+        <div class="flex items-start justify-between ">
           <div class="pr-4">
             <p class="mb-3 font-normal text-white">{props.description}</p>
           </div>
