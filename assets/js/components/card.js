@@ -7,7 +7,6 @@ function Card(props) {
     backgroundRepeat: "no-repeat",
     height: "150px",
   }
-
   const image = (
     <a href={props.href}>
       <div
@@ -15,7 +14,7 @@ function Card(props) {
         style={backgroundImageStyle}
       >
         <div class="flex flex-1 items-center">
-          <h5 class="mb-2 line-clamp-2 overflow-ellipsis break-words text-2xl font-bold tracking-tight text-white drop-shadow-lg">
+          <h5 class="mb-2 break-words text-2xl font-bold tracking-tight text-white drop-shadow-lg">
             {props.title}
           </h5>
         </div>

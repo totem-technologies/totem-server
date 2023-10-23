@@ -2,7 +2,7 @@
 <t-card class="sm:m-0 m-auto"
 {% if event.circle.image %}image="{{ event.circle.image.url }}"{% endif %}
 href="{% url "circles:event_detail" event_slug=event.slug %}">
-<span slot="title">{{ event.circle.title }}</span>
+<span slot="title">{{ event.circle.title|truncatechars:23 }}</span>
 <span slot="description">By {{ event.circle.author.name.split.0 }}</span>
 <span slot="buttonText">Join</span>
 <span slot="avatar">{% avatar event.circle.author %}</span>
