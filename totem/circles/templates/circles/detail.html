@@ -5,6 +5,7 @@
 {% load markdown %}
 {# djlint:off #}
 {% block title %}Circles - {{ object.title }} @ {{event.start|date:'l, F j'}}{% endblock title %}
+{% block description %}{{ object.content_html|striptags|truncatewords:30 }}{% endblock description %}
 {# djlint:on #}
 {% block javascript %}
     <script src="{% static 'js/atcb.min.js' %}" defer></script>

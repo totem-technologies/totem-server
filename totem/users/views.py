@@ -3,7 +3,7 @@ from django.contrib import messages
 from django.contrib.auth import login as django_login
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
-from django.http import Http404, HttpResponseForbidden
+from django.http import Http404, HttpRequest, HttpResponseForbidden
 from django.shortcuts import redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -63,6 +63,12 @@ class LogInView(FormView):
 
     def _message(self, email: str):
         messages.success(self.request, f"Please check your inbox at: {email}.")
+
+    def get(self, request: HttpRequest, *args, **kwargs):
+        response = super().get(request, *args, **kwargs)
+        # Make sure htmx redirects to the login page with a full refresh
+        response.headers["HX-Redirect"] = request.get_full_path()
+        return response
 
     def form_valid(self, form):
         success_url = form.cleaned_data.get("success_url")
