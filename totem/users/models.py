@@ -19,7 +19,7 @@ from totem.email.utils import validate_email_blocked
 from totem.users.managers import UserManager
 from totem.utils.hash import basic_hash
 from totem.utils.md import MarkdownField, MarkdownMixin
-from totem.utils.models import SluggedModel
+from totem.utils.models import AdminURLMixin, SluggedModel
 
 from . import analytics
 
@@ -44,7 +44,7 @@ def upload_to_id_image(instance, filename: str):
     return f"profiles/{user_slug}/{new_filename}.{extension}"
 
 
-class User(SluggedModel, AbstractUser):
+class User(AdminURLMixin, SluggedModel, AbstractUser):
     """
     Default custom user model for Totem.
     If adding fields that need to be filled at user signup,
@@ -115,9 +115,6 @@ class User(SluggedModel, AbstractUser):
 
     def get_keeper_url(self):
         return reverse("users:detail", kwargs={"slug": self.slug})
-
-    def get_admin_url(self):
-        return reverse(f"admin:{self._meta.app_label}_{self._meta.model_name}_change", args=(self.pk,))
 
     def identify(self):
         analytics.identify_user(self)
