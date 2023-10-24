@@ -7,6 +7,7 @@ from django.utils import timezone
 from totem.users.models import User
 from totem.utils.hash import basic_hash
 
+from .filters import logged_out_sessions_list
 from .models import Circle, CircleEvent, CircleEventException
 
 ICS_QUERY_PARAM = "key"
@@ -128,7 +129,7 @@ def list(request):
     if request.user.is_authenticated:
         context = _logged_in_list(request.user)
     else:
-        events = CircleEvent.objects.filter(start__gte=timezone.now()).order_by("start")
+        events = logged_out_sessions_list()
         context = {"events": events, "attending_events": []}
     return render(request, "circles/list.html", context=context)
 

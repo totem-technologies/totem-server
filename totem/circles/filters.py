@@ -22,3 +22,10 @@ def upcoming_events_user_can_attend(user: User, limit: int = 3):
         if len(filtered_events) >= limit:
             break
     return filtered_events
+
+
+def logged_out_sessions_list():
+    events = CircleEvent.objects.filter(start__gte=timezone.now(), cancelled=False, open=True)
+    events = events.order_by("start")
+    events = events.filter(circle__published=True)
+    return events
