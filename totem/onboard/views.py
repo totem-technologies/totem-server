@@ -5,6 +5,7 @@ from django.forms import CharField, Form, IntegerField, Textarea, TextInput
 from django.http import HttpRequest
 from django.shortcuts import redirect, render
 
+from totem.users import analytics
 from totem.users.models import User
 from totem.utils.slack import notify_slack
 from totem.utils.utils import full_url
@@ -36,6 +37,7 @@ class OnboardForm(Form):
                 setattr(onboard, key, value)
         onboard.onboarded = True
         onboard.save()
+        analytics.user_onboarded(user)
         _notify_slack(user.name, full_url(user.get_admin_url()))
 
 

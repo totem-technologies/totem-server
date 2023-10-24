@@ -13,6 +13,7 @@ from sesame.views import LoginView as SesameLoginView
 from totem.circles.filters import upcoming_events_user_can_attend
 from totem.email import emails
 
+from . import analytics
 from .forms import LoginForm
 from .models import User
 
@@ -66,7 +67,7 @@ class LogInView(FormView):
     def get(self, request: HttpRequest, *args, **kwargs):
         response = super().get(request, *args, **kwargs)
         # Make sure htmx redirects to the login page with a full refresh
-        response.headers["HX-Redirect"] = request.get_full_path()
+        response.headers["HX-Redirect"] = request.get_full_path()  # type: ignore
         return response
 
     def form_valid(self, form):
@@ -99,6 +100,7 @@ def login(email: str, request, after_login_url: str | None = None, mobile: bool 
         django_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
         # TODO make new welcome email. This one expires after 30min and doesn't make sense for a new user.
         # emails.send_new_login_email(user.email, url)
+        analytics.user_signed_up(user)
     else:
         emails.send_returning_login_email(user.email, url)
 
