@@ -68,9 +68,9 @@ def send_notify_circle_advertisement(event: CircleEvent, user: User):
     _send_button_email(
         recipient=user.email,
         subject="Join an upcoming Circle!",
-        message=f"A session for a Circle you are subscribed to, {event.circle.title}, is coming up at {start}. \
+        message=f'A session for a Circle you are subscribed to, "{event.circle.title}", is coming up at {start}. \
             Click the button below to reserve a spot before this one fills up. If you no longer wish to get notifications about this Circle, \
-                you can unsubscribe here: {unsubscribe_url}",
+                you can unsubscribe here: {unsubscribe_url}',
         button_text="Reserve a spot",
         link=event.get_absolute_url(),
     )

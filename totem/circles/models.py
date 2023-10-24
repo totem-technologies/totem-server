@@ -16,7 +16,7 @@ from taggit.managers import TaggableManager
 from totem.email.emails import send_notify_circle_advertisement, send_notify_circle_starting
 from totem.utils.hash import basic_hash
 from totem.utils.md import MarkdownField, MarkdownMixin
-from totem.utils.models import SluggedModel
+from totem.utils.models import AdminURLMixin, SluggedModel
 from totem.utils.utils import full_url
 
 
@@ -35,7 +35,7 @@ def upload_to_id_image(instance, filename: str):
     return f"circles/{user_slug}/{new_filename}.{extension}"
 
 
-class Circle(MarkdownMixin, SluggedModel):
+class Circle(AdminURLMixin, MarkdownMixin, SluggedModel):
     title = models.CharField(max_length=255)
     subtitle = models.CharField(max_length=2000)
     image = ProcessedImageField(
@@ -96,7 +96,7 @@ class Circle(MarkdownMixin, SluggedModel):
         return basic_hash(f"{self.slug}-{user.email}-{user.api_key}")
 
 
-class CircleEvent(MarkdownMixin, SluggedModel):
+class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
     open = models.BooleanField(default=True, help_text="Is this Circle for more attendees?")
     cancelled = models.BooleanField(default=False, help_text="Is this Circle cancelled?")
     start = models.DateTimeField(default=timezone.now)

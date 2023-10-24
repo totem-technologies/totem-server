@@ -1,7 +1,10 @@
 import random
 import string
+from typing import Any
 
 from django.db import models
+from django.db.models.options import Options
+from django.urls import reverse
 
 
 def make_slug():
@@ -18,6 +21,14 @@ class BaseModel(models.Model):
 
     class Meta:
         abstract = True
+
+
+class AdminURLMixin:
+    _meta: Options
+    pk: Any
+
+    def get_admin_url(self):
+        return reverse(f"admin:{self._meta.app_label}_{self._meta.model_name}_change", args=(self.pk,))
 
 
 class SluggedModel(BaseModel):
