@@ -50,7 +50,7 @@
              hx-swap="outerHTML"
              hx-target="this"
              class="hx-circle-sidebar">
-            <div class="mt-5 max-md:fixed max-md:bottom-0 max-md:left-0 bg-white p-5 rounded-2xl border w-80 md:top-20 border-gray-200 z-20 max-md:w-full">
+            <div class="mt-5 bg-white p-5 rounded-2xl border md:w-80 md:top-20 border-gray-200 z-20">
                 {% if event %}
                     <div>
                         <strong>{{ event.start|date:'l, F j' }} <span class="inline-block">@ {{ event.start|date:'P T' }}</span></strong>
@@ -176,7 +176,7 @@
             {% endif %}
         </h3>
         <div class="tprose pb-5">{{ object.content_html }}</div>
-        <h3 class="h3">About the Keeper</h3>
+        <h3 class="h3 md:pb-0 pb-5">About the Keeper</h3>
         <div>
             <div>
                 <a class="link md:float-left md:pr-5 block"
