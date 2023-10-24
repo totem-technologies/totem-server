@@ -3,8 +3,7 @@
     <strong>
         <h3 class="pb-3" id="recommended">Recommended Circles</h3>
     </strong>
-    <ul role="list"
-        class="grid sm:grid-cols-2 grid-cols-1 gap-6 pb-5 md:grid-cols-3">
+    <ul role="list" class="grid sm:grid-cols-2 grid-cols-1 gap-6 pb-5">
         {% for event in recommended_events %}
             {% include "circles/_event_card.html" with event=event only %}
         {% empty %}
