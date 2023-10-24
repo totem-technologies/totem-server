@@ -12,7 +12,6 @@ from sesame.views import LoginView as SesameLoginView
 
 from totem.circles.filters import upcoming_events_user_can_attend
 from totem.email import emails
-from totem.utils.slack import notify_slack
 
 from .forms import LoginForm
 from .models import User
@@ -84,10 +83,6 @@ class LogInView(FormView):
         return super().form_valid(form)
 
 
-def _notify_slack():
-    notify_slack("Signup: A new person has signed up for ✨Totem✨!")
-
-
 def login(email: str, request, after_login_url: str | None = None, mobile: bool = False) -> bool:
     """Login a user by sending them a login link via email. If it's a new user, log them in automatically and send them
     a welcome email.
@@ -104,7 +99,6 @@ def login(email: str, request, after_login_url: str | None = None, mobile: bool 
         django_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
         # TODO make new welcome email. This one expires after 30min and doesn't make sense for a new user.
         # emails.send_new_login_email(user.email, url)
-        _notify_slack()
     else:
         emails.send_returning_login_email(user.email, url)
 
