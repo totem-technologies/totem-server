@@ -10,7 +10,7 @@ class CoursePage(MarkdownMixin, models.Model):
     slug = models.SlugField(unique=True)
     enable_toc = models.BooleanField(default=False)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    content = MarkdownField()
+    content = MarkdownField(max_length=1000000)
     date_created = models.DateTimeField(auto_now_add=True)
     date_modified = models.DateTimeField(auto_now=True)
 
