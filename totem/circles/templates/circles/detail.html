@@ -4,7 +4,7 @@
 {% load avatar %}
 {% load markdown %}
 {# djlint:off #}
-{% block title %}Circles - {{ object.title }} @ {{event.start|date:'l, F j'}}{% endblock title %}
+{% block title %}Circles - {{ object.title }}{% endblock title %}
 {% block description %}{{ object.content_html|striptags|truncatewords:30 }}{% endblock description %}
 {# djlint:on #}
 {% block javascript %}

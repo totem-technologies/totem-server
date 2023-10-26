@@ -29,6 +29,8 @@ class CircleEventState(Enum):
     OPEN = "OPEN"
     CLOSED = "CLOSED"
     JOINABLE = "JOINABLE"
+    ENDED = "ENDED"
+    STARTED = "STARTED"
     CANCELLED = "CANCELLED"
 
 
