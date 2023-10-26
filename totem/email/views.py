@@ -1,4 +1,5 @@
 from django.http import Http404
+from django.shortcuts import render
 from django.views.generic import TemplateView
 
 from .models import SubscribedModel
@@ -26,3 +27,7 @@ class UnsubscribeView(TemplateView):
         except SubscribedModel.DoesNotExist:
             raise Http404
         return super().get(request, *args, **kwargs)
+
+
+def template_view(request, name):
+    return render(request, f"email/{name}.mjml")

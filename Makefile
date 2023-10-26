@@ -57,4 +57,6 @@ migrations: ## Create DB migrations in the container
 migrate: ## Run DB migrations in the container
 	@docker-compose -f local.yml run django python manage.py migrate
 
+adddep: pipcompile pipsync build
+
 .PHONY: run test shell migrate deploy assets

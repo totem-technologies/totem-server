@@ -14,4 +14,5 @@ urlpatterns = [
         views.UnsubscribeView.as_view(),
         name="unsubscribe",
     ),
+    # path("templates/<str:name>/", views.template_view, name="template"),
 ]
