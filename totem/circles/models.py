@@ -1,5 +1,7 @@
 import datetime
 import time
+from enum import Enum
+from typing import TYPE_CHECKING
 
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -18,6 +20,16 @@ from totem.utils.hash import basic_hash
 from totem.utils.md import MarkdownField, MarkdownMixin
 from totem.utils.models import AdminURLMixin, SluggedModel
 from totem.utils.utils import full_url
+
+if TYPE_CHECKING:
+    from totem.users.models import User
+
+
+class CircleEventState(Enum):
+    OPEN = "OPEN"
+    CLOSED = "CLOSED"
+    JOINABLE = "JOINABLE"
+    CANCELLED = "CANCELLED"
 
 
 # Create your models here.
@@ -133,6 +145,17 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
             if silent:
                 return False
             raise e
+
+    def state(self, user: "User|None" = None):
+        if self.cancelled:
+            return CircleEventState.CANCELLED
+        if self.started():
+            return CircleEventState.CLOSED
+        if self.open:
+            return CircleEventState.OPEN
+        if user is not None and user in self.attendees.all():
+            return CircleEventState.JOINABLE
+        return CircleEventState.CLOSED
 
     def add_attendee(self, user):
         if user.is_staff or self.can_attend():

@@ -60,10 +60,10 @@
                         {% if event.cancelled %}
                             <p>This Circle session has been cancelled.</p>
                         {% elif joinable %}
-                            <p class="pb-4">The Circle is starting!</p>
-                            <a class="w-full inline-block btn btn-primary p-2 px-6 shimmer"
+                            <p class="pb-4">The Circle is starting now!</p>
+                            <a class="w-full btn btn-primary"
                                target="_blank"
-                               href="{% url 'circles:join' event_slug=event.slug %}">Join now</a>
+                               href="{% url 'circles:join' event_slug=event.slug %}">Join Circle</a>
                         {% elif event.ended %}
                             <p>This Circle session has ended.</p>
                         {% elif event.started %}
