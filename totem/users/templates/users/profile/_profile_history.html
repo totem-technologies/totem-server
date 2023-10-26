@@ -13,9 +13,9 @@
                 </thead>
                 {% for event in circle_history %}
                     <tr>
-                        <th class="text-ellipsis">
+                        <td class="text-ellipsis">
                             <a class="hover:text-tblue" href="{{ event.get_absolute_url }}">{{ event.circle.title }}</a>
-                        </th>
+                        </td>
                         <td class="text-right">{{ event.start }}</td>
                     </tr>
                 {% endfor %}

@@ -12,7 +12,7 @@
     @apply md:py-10 mx-4;
   }
   .tprose {
-    @apply prose lg:prose-xl prose-h1:font-serif prose-h2:font-serif max-w-prose;
+    @apply prose text-tslate lg:prose-xl prose-h1:font-serif prose-h2:font-serif max-w-prose;
   }
   .section-prose {
     @apply tprose section;
