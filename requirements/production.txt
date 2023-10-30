@@ -14,11 +14,9 @@ asgiref==3.7.2
     # via django
 backoff==2.2.1
     # via posthog
-beautifulsoup4==4.12.2
-    # via mjml
-boto3==1.28.71
+boto3==1.28.72
     # via django-storages
-botocore==1.31.71
+botocore==1.31.72
     # via
     #   boto3
     #   s3transfer
@@ -84,8 +82,6 @@ django-taggit==4.0.0
     # via -r requirements/base.in
 django-timezone-field==6.0.1
     # via -r requirements/base.in
-docopt==0.6.2
-    # via mjml
 google-api-core==2.12.0
     # via google-api-python-client
 google-api-python-client==2.105.0
@@ -123,8 +119,6 @@ idna==3.4
     # via
     #   anyio
     #   requests
-jinja2==3.1.2
-    # via mjml
 jmespath==1.0.1
     # via
     #   boto3
@@ -133,9 +127,7 @@ lxml==4.9.3
     # via caldav
 markdown==3.5
     # via -r requirements/base.in
-markupsafe==2.1.3
-    # via jinja2
-mjml==0.9.1
+mjml-python==1.2.1
     # via -r requirements/base.in
 monotonic==1.6
     # via posthog
@@ -230,8 +222,6 @@ six==1.16.0
     #   python-dateutil
 sniffio==1.3.0
     # via anyio
-soupsieve==2.5
-    # via beautifulsoup4
 sqlparse==0.4.4
     # via django
 typing-extensions==4.8.0

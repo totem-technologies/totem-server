@@ -1,4 +1,4 @@
-{% load mjml %} {% load static %} {% mjml %}
+{% load static %}
 <mjml>
   <mj-body>
     <mj-section>
@@ -31,4 +31,3 @@
     </mj-section>
   </mj-body>
 </mjml>
-{% endmjml %}

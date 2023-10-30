@@ -1,7 +1,8 @@
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import render
 from django.views.generic import TemplateView
 
+from .emails import render_email, templates
 from .models import SubscribedModel
 
 
@@ -29,5 +30,7 @@ class UnsubscribeView(TemplateView):
         return super().get(request, *args, **kwargs)
 
 
-def template_view(request, name):
-    return render(request, f"email/{name}.mjml")
+def template_view(request, name=None):
+    if name is None:
+        return render(request, "email/templates.html", {"templates": templates.keys()})
+    return HttpResponse(render_email(name, {}))

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.urls import path
 
 from . import views
@@ -14,5 +15,9 @@ urlpatterns = [
         views.UnsubscribeView.as_view(),
         name="unsubscribe",
     ),
-    # path("templates/<str:name>/", views.template_view, name="template"),
 ]
+if settings.DEBUG:
+    urlpatterns += [
+        path("templates/", views.template_view, name="template"),
+        path("templates/<str:name>/", views.template_view, name="template"),
+    ]

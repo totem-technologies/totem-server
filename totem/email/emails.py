@@ -1,16 +1,23 @@
 from __future__ import annotations
 
 import urllib.parse
-from typing import TYPE_CHECKING
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 from django.conf import settings
+from django.template.loader import render_to_string
 from django.urls import reverse
+from mjml import mjml2html
 
 if TYPE_CHECKING:
     from totem.circles.models import CircleEvent
     from totem.users.models import User
 
 from .utils import send_template_mail
+
+# list files in templates/email/emails
+files = Path(__file__).parent.joinpath("templates/email/emails").glob("*.mjml")
+templates = {file.stem: file.name for file in files}
 
 
 def send_returning_login_email(email: str, url: str):
@@ -94,3 +101,7 @@ def _send_button_email(*, recipient: str, subject: str, message: str, button_tex
 
 def make_email_url(link):
     return urllib.parse.urljoin(settings.EMAIL_BASE_URL, link)
+
+
+def render_email(template: str, context: dict[str, Any]) -> str:
+    return mjml2html(render_to_string(f"email/emails/{template}.mjml", context=context))
