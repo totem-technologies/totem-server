@@ -172,7 +172,7 @@ function NavBar(props) {
   const featuredLinks = user.auth ? [] : links.marketing
 
   return (
-    <div class="center drawer  drawer-end mx-auto flex max-w-5xl flex-wrap items-center justify-between py-2 md:px-5 ">
+    <div class="center drawer  drawer-end mx-auto flex flex-wrap items-center justify-between py-2 md:px-5 ">
       <input id="nav-bar-drawer" type="checkbox" class="drawer-toggle" />
       <a
         class="title-font items-center font-medium text-gray-900"

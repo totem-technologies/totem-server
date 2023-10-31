@@ -44,4 +44,6 @@ urlpatterns = [
     ),
     path("r/<slug:slug>/qr/", views.redirect_qr, name="redirect_qr"),
     path("r/<slug:slug>/", views.redirect, name="redirect"),
+    path("webflow/", views.webflow_page, name="webflow"),
+    path("webflow/<str:page>/", views.webflow_page, name="webflow"),
 ]

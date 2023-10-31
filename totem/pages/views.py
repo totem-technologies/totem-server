@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.http import Http404
 from django.shortcuts import redirect as django_redirect
 from django.shortcuts import render
@@ -14,6 +15,7 @@ from ..users.forms import LoginForm
 from . import data
 from .models import Redirect
 from .qrmaker import make_qr
+from .webflow import get_webflow_page
 
 User = get_user_model()
 
@@ -133,3 +135,16 @@ def home_redirect(request):
     if request.user.is_authenticated:
         return django_redirect(to=reverse_lazy("users:redirect"))
     return django_redirect(to=reverse_lazy("pages:home"))
+
+
+@login_required
+def webflow_page(request, page=None):
+    if not request.user.is_staff:
+        raise Http404
+
+    def _get():
+        return get_webflow_page(page)
+
+    ten_minutes = 60 * 10
+    content = cache.get_or_set(f"webflow:{page or 'home'}", _get, ten_minutes)
+    return render(request, "pages/webflow.html", {"page": page, "content": content})

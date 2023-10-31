@@ -14,9 +14,9 @@ asgiref==3.7.2
     # via django
 backoff==2.2.1
     # via posthog
-boto3==1.28.72
+boto3==1.28.74
     # via django-storages
-botocore==1.31.72
+botocore==1.31.74
     # via
     #   boto3
     #   s3transfer
@@ -38,6 +38,8 @@ click==8.1.7
     # via uvicorn
 cryptography==41.0.5
     # via pyjwt
+cssselect==1.2.0
+    # via -r requirements/base.in
 defusedxml==0.7.1
     # via python3-openid
 django==4.2.6
@@ -124,7 +126,9 @@ jmespath==1.0.1
     #   boto3
     #   botocore
 lxml==4.9.3
-    # via caldav
+    # via
+    #   -r requirements/base.in
+    #   caldav
 markdown==3.5
     # via -r requirements/base.in
 mjml-python==1.2.1
@@ -198,6 +202,7 @@ redis==5.0.1
     #   django-redis
 requests==2.31.0
     # via
+    #   -r requirements/base.in
     #   caldav
     #   django-allauth
     #   django-anymail
