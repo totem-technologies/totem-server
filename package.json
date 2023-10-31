@@ -43,7 +43,7 @@
     "preact-custom-element": "^4.2.1",
     "react": "npm:@preact/compat",
     "react-dom": "npm:@preact/compat",
-    "react-tiny-popover": "^7.2.4",
+    "react-tiny-popover": "^8.0.4",
     "rrule": "^2.7.2"
   }
 }
