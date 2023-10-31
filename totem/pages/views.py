@@ -146,5 +146,9 @@ def webflow_page(request, page=None):
         return get_webflow_page(page)
 
     ten_minutes = 60 * 10
-    content = cache.get_or_set(f"webflow:{page or 'home'}", _get, ten_minutes)
+    key = f"webflow:{page or 'home'}"
+    should_refresh = request.GET.get("refresh", False)
+    if should_refresh:
+        cache.delete(key)
+    content = cache.get_or_set(key, _get, ten_minutes)
     return render(request, "pages/webflow.html", {"page": page, "content": content})
