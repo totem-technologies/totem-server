@@ -3,6 +3,7 @@ import time
 from enum import Enum
 from typing import TYPE_CHECKING
 
+import markdown
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -20,6 +21,8 @@ from totem.utils.hash import basic_hash
 from totem.utils.md import MarkdownField, MarkdownMixin
 from totem.utils.models import AdminURLMixin, SluggedModel
 from totem.utils.utils import full_url
+
+from .calendar import calendar
 
 if TYPE_CHECKING:
     from totem.users.models import User
@@ -216,6 +219,17 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
 
     def cal_link(self):
         return full_url(self.get_absolute_url())
+
+    def save(self, *args, **kwargs):
+        if settings.SAVE_TO_GOOGLE_CALENDAR:
+            calendar.save_event(
+                event_id=self.slug,
+                start=self.start.isoformat(),
+                end=self.end().isoformat(),
+                summary=self.circle.title,
+                description=markdown.markdown(self.circle.content),
+            )
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"CircleEvent: {self.start}"

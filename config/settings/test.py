@@ -34,3 +34,4 @@ TEMPLATES[0]["OPTIONS"]["debug"] = True  # type: ignore # noqa: F405
 # Your stuff...
 # ------------------------------------------------------------------------------
 POSTHOG_API_KEY = None
+SAVE_TO_GOOGLE_CALENDAR = False

@@ -1,9 +1,14 @@
+import base64
+import os
+
 import caldav
 from django.conf import settings
 from google.auth.credentials import Credentials
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
+from googleapiclient.discovery import build
 from googleapiclient.discovery_cache.base import Cache
+from googleapiclient.errors import HttpError
 from requests.auth import AuthBase
 
 
@@ -28,23 +33,35 @@ class MemoryCache(Cache):
 
 credentials: Credentials | None = None
 client: caldav.DAVClient | None = None
+service = None
 
 
-def _init():
-    global credentials, client
+def _init(calendar_id=settings.GOOGLE_CALENDAR_ID, service_json=settings.GOOGLE_SERVICE_JSON):
+    global credentials, client, service
     if credentials is None:
         SCOPES = ["https://www.googleapis.com/auth/calendar"]
-        calid = settings.GOOGLE_CALENDAR_ID
-        caldavurl = "https://apidata.googleusercontent.com/caldav/v2/" + calid + "/events"
-        credentials = service_account.Credentials.from_service_account_info(
-            settings.GOOGLE_SERVICE_JSON, scopes=SCOPES
-        )
+        caldavurl = f"https://apidata.googleusercontent.com/caldav/v2/{calendar_id}/events"
+        credentials = service_account.Credentials.from_service_account_info(service_json, scopes=SCOPES)
+        credentials = credentials.with_subject("bo@totem.org")
         client = caldav.DAVClient(caldavurl, auth=OAuth(credentials))
+        service = build("calendar", "v3", credentials=credentials, cache=MemoryCache())
     if credentials.expired or credentials.token is None:
         credentials.refresh(Request())
-    # service = googleapiclient.discovery.build("calendar", "v3", credentials=credentials, cache=MemoryCache())
+    return client, service
 
+
+def get_caldev_client():
+    client, _ = _init()
+    if client is None:
+        raise Exception("Client is None")
     return client
+
+
+def get_service_client():
+    _, service = _init()
+    if service is None:
+        raise Exception("Service is None")
+    return service
 
 
 # # events_result = service.events().list(calendarId=CAL_ID, singleEvents=True).execute()
@@ -72,9 +89,38 @@ def _init():
 
 
 def get_event_ical(event_id: str):
-    client = _init()
-    if client is None:
-        raise Exception("Client is None")
+    client = get_caldev_client()
     calendar = client.principal().calendars()[0]
     event = calendar.event(event_id)
     return event.data
+
+
+def save_event(event_id: str, start: str, end: str, summary: str, description: str):
+    service = get_service_client()
+    cal_id = settings.GOOGLE_CALENDAR_ID
+    event_id = base64.b32hexencode(event_id.encode()).strip(b"=").lower().decode()
+    random_string = base64.b32hexencode(os.urandom(10)).strip(b"=").lower().decode()
+    event = {
+        "id": event_id,
+        "summary": summary,
+        "description": description,
+        "start": {
+            "dateTime": start,
+            "timeZone": "America/Los_Angeles",
+        },
+        "end": {
+            "dateTime": end,
+            "timeZone": "America/Los_Angeles",
+        },
+        "conferenceData": {
+            "createRequest": {
+                "requestId": random_string,
+                "conferenceSolutionKey": {"type": "hangoutsMeet"},
+            },
+        },
+    }
+    try:
+        event = service.events().update(eventId=event_id, calendarId=cal_id, body=event).execute()
+    except HttpError:
+        event = service.events().insert(calendarId=cal_id, body=event, conferenceDataVersion=1).execute()
+    return event
