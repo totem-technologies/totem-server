@@ -134,7 +134,9 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
     def attendee_list(self):
         return ", ".join([str(attendee) for attendee in self.attendees.all()])
 
-    def can_attend(self, silent=False):
+    def can_attend(self, user: "User | None" = None, silent=False):
+        if user and user.is_staff:
+            return True
         try:
             if not self.open:
                 raise CircleEventException("Circle is not open")
@@ -162,7 +164,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         return CircleEventState.CLOSED
 
     def add_attendee(self, user):
-        if user.is_staff or self.can_attend():
+        if self.can_attend(user=user):
             self.attendees.add(user)
             self.save()
 
