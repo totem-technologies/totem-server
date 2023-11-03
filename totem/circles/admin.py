@@ -11,7 +11,8 @@ class CircleEventInline(admin.StackedInline):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.filter(start__gte=timezone.now()).order_by("start")
+        now_minus_1_hour = timezone.now() - timezone.timedelta(hours=1)
+        return qs.filter(start__gte=now_minus_1_hour).order_by("start")
 
 
 @admin.register(Circle)
