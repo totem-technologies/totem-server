@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+    <h1 class="h1 text-center text-4xl font-bold pt-20">Feedback</h1>
+    <div class="max-w-[600px] m-auto pt-10 pb-20 px-5">
+        <p class="pb-5">
+            We love hearing about how we can improve Totem. If you have any feedback, please let us know!
+        </p>
+        <form action="{% url "users:feedback" %}" method="post">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+            {% if not request.user.is_authenticated %}
+                <div>
+                    {{ form.email.errors }}
+                    <label for="{{ form.email.id_for_label }}">Email:</label>
+                    {{ form.email }}
+                </div>
+            {% endif %}
+            <div class="pt-2">
+                {{ form.message.errors }}
+                <label for="{{ form.message.id_for_label }}">Your feedback:</label>
+                {{ form.message }}
+            </div>
+            <input class="btn btn-primary mt-5 w-full" type="submit" value="Submit">
+        </form>
+    </div>
+{% endblock content %}

@@ -17,6 +17,7 @@ from timezone_field import TimeZoneField
 
 from totem.email.utils import validate_email_blocked
 from totem.users.managers import UserManager
+from totem.utils.fields import MaxLengthTextField
 from totem.utils.hash import basic_hash
 from totem.utils.md import MarkdownField, MarkdownMixin
 from totem.utils.models import AdminURLMixin, SluggedModel
@@ -144,3 +145,13 @@ class KeeperProfile(models.Model, MarkdownMixin):
 
     def get_absolute_url(self):
         return self.user.get_absolute_url()
+
+
+class Feedback(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="feedback", null=True)
+    email = EmailField(_("Email Address"), null=True, blank=True)
+    message = MaxLengthTextField(null=False, max_length=10000, blank=False, verbose_name=_("Feedback"))
+    date_created = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"<Feedback: {self.date_created}>"

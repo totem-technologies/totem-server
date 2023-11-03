@@ -5,7 +5,7 @@ from impersonate.admin import UserAdminImpersonateMixin
 
 from totem.users.forms import UserAdminChangeForm, UserAdminCreationForm
 
-from .models import KeeperProfile, User
+from .models import Feedback, KeeperProfile, User
 
 
 @admin.register(User)
@@ -47,3 +47,8 @@ class UserAdmin(UserAdminImpersonateMixin, auth_admin.UserAdmin):
 @admin.register(KeeperProfile)
 class KeeperProfileAdmin(admin.ModelAdmin):
     autocomplete_fields = ("user",)
+
+
+@admin.register(Feedback)
+class FeedbackAdmin(admin.ModelAdmin):
+    pass

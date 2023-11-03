@@ -15,7 +15,7 @@ from totem.email import emails
 
 from . import analytics
 from .forms import LoginForm
-from .models import User
+from .models import Feedback, User
 
 
 def user_detail_view(request, slug):
@@ -202,3 +202,27 @@ def user_profile_delete_view(request):
         messages.success(request, "Account successfully deleted.")
         return redirect("pages:home")
     return HttpResponseForbidden()
+
+
+class FeedbackForm(forms.ModelForm):
+    class Meta:
+        model = Feedback
+        fields = ("email", "message")
+        widgets = {
+            "message": forms.Textarea(attrs={"rows": 5, "cols": 15}),
+        }
+
+
+def user_feedback_view(request):
+    form = FeedbackForm()
+    if request.method == "POST":
+        data = request.POST.copy()
+        form = FeedbackForm(data)
+        if form.is_valid():
+            if request.user.is_authenticated:
+                Feedback.objects.create(**form.cleaned_data, user=request.user)
+            else:
+                Feedback.objects.create(**form.cleaned_data)
+            messages.success(request, "Feedback successfully submitted. Thank you!")
+            form = FeedbackForm()
+    return render(request, "users/feedback.html", context={"form": form})

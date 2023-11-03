@@ -112,6 +112,11 @@ function LoggedInMenu({ user, links }) {
           </li>
         ))}
         <li>
+          <a class="pr-5 hover:text-tblue" href={links.feedback}>
+            Feedback
+          </a>
+        </li>
+        <li>
           <a class="pr-5 text-tpinkTint hover:text-error" href={links.logout}>
             Logout
           </a>
@@ -137,6 +142,11 @@ function LoggedOutMenu({ links }) {
             </a>
           </li>
         ))}
+        <li>
+          <a class="pr-5 hover:text-tblue" href={links.feedback}>
+            Feedback
+          </a>
+        </li>
       </ul>
     </>
   )

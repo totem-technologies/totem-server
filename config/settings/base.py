@@ -157,6 +157,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "totem.utils.middleware.robotnoindex",
+    "django_htmx.middleware.HtmxMiddleware",
     "totem.utils.middleware.TimezoneMiddleware",
     "totem.utils.middleware.CDNGuard",
 ]
