@@ -14,6 +14,10 @@
     {
       "command": "./manage.py totem_tasks",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "command": "./manage.py clearsessions",
+      "schedule": "@daily"
     }
   ]
 }

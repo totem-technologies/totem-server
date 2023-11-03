@@ -19,6 +19,7 @@ from totem.email.emails import send_notify_circle_advertisement, send_notify_cir
 from totem.utils.hash import basic_hash, hmac
 from totem.utils.md import MarkdownField, MarkdownMixin
 from totem.utils.models import AdminURLMixin, SluggedModel
+from totem.utils.slack import notify_slack
 from totem.utils.utils import full_url
 
 from .calendar import calendar
@@ -167,6 +168,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         if self.can_attend(user=user):
             self.attendees.add(user)
             self.save()
+            notify_slack(f"New Circle attendee: {user.email} for {self.circle.title} by {self.circle.author.name}")
 
     def started(self):
         return self.start < timezone.now()

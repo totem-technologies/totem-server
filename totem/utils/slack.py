@@ -3,6 +3,8 @@ import json
 import requests
 from django.conf import settings
 
+requests_session = requests.Session()
+
 
 def notify_slack(message):
     if settings.SLACK_WEBHOOK_URL is None:
@@ -16,4 +18,4 @@ def notify_slack(message):
         "text": message,
     }
 
-    requests.post(settings.SLACK_WEBHOOK_URL, headers=headers, data=json.dumps(json_data), timeout=10)
+    requests_session.post(settings.SLACK_WEBHOOK_URL, headers=headers, data=json.dumps(json_data), timeout=10)
