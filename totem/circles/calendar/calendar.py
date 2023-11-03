@@ -1,5 +1,6 @@
 import base64
 import os
+from dataclasses import dataclass
 
 import caldav
 from django.conf import settings
@@ -10,6 +11,83 @@ from googleapiclient.discovery import build
 from googleapiclient.discovery_cache.base import Cache
 from googleapiclient.errors import HttpError
 from requests.auth import AuthBase
+
+
+@dataclass
+class EntryPoint:
+    entryPointType: str
+    uri: str
+    label: str | None = None
+    pin: str | None = None
+    regionCode: str | None = None
+
+
+@dataclass
+class ConferenceSolutionKey:
+    type: str
+
+
+@dataclass
+class ConferenceSolution:
+    key: ConferenceSolutionKey
+    name: str
+    iconUri: str
+
+
+@dataclass
+class CreateRequest:
+    requestId: str
+    conferenceSolutionKey: ConferenceSolutionKey
+    status: dict
+
+
+@dataclass
+class ConferenceData:
+    createRequest: CreateRequest
+    entryPoints: list[EntryPoint]
+    conferenceSolution: ConferenceSolution
+    conferenceId: str
+
+
+@dataclass
+class Organizer:
+    email: str
+    displayName: str
+    self: bool
+
+
+@dataclass
+class Creator:
+    email: str
+
+
+@dataclass
+class DateTimeZone:
+    dateTime: str
+    timeZone: str
+
+
+@dataclass
+class CalendarEvent:
+    kind: str
+    etag: str
+    id: str
+    status: str
+    htmlLink: str
+    created: str
+    updated: str
+    summary: str
+    description: str
+    creator: Creator
+    organizer: Organizer
+    start: DateTimeZone
+    end: DateTimeZone
+    iCalUID: str
+    sequence: int
+    hangoutLink: str
+    conferenceData: ConferenceData
+    reminders: dict
+    eventType: str
 
 
 class OAuth(AuthBase):
@@ -95,7 +173,7 @@ def get_event_ical(event_id: str):
     return event.data
 
 
-def save_event(event_id: str, start: str, end: str, summary: str, description: str):
+def save_event(event_id: str, start: str, end: str, summary: str, description: str) -> "CalendarEvent":
     service = get_service_client()
     cal_id = settings.GOOGLE_CALENDAR_ID
     event_id = base64.b32hexencode(event_id.encode()).strip(b"=").lower().decode()
@@ -123,4 +201,4 @@ def save_event(event_id: str, start: str, end: str, summary: str, description: s
         event = service.events().update(eventId=event_id, calendarId=cal_id, body=event).execute()
     except HttpError:
         event = service.events().insert(calendarId=cal_id, body=event, conferenceDataVersion=1).execute()
-    return event
+    return CalendarEvent(**event)

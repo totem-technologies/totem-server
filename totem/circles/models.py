@@ -3,7 +3,6 @@ import time
 from enum import Enum
 from typing import TYPE_CHECKING
 
-import markdown
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -17,7 +16,7 @@ from imagekit.processors import ResizeToFit
 from taggit.managers import TaggableManager
 
 from totem.email.emails import send_notify_circle_advertisement, send_notify_circle_starting
-from totem.utils.hash import basic_hash
+from totem.utils.hash import basic_hash, hmac
 from totem.utils.md import MarkdownField, MarkdownMixin
 from totem.utils.models import AdminURLMixin, SluggedModel
 from totem.utils.utils import full_url
@@ -175,14 +174,14 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
 
     def can_join(self, user):
         now = timezone.now()
-        grace_before = datetime.timedelta(minutes=30)
+        grace_before = datetime.timedelta(minutes=15)
         grace_after = datetime.timedelta(minutes=10)
-        grace_duration = datetime.timedelta(minutes=self.duration_minutes)
+        if user.is_staff or user in self.joined.all():
+            # Come back any time if already joined.
+            grace_before = datetime.timedelta(minutes=60)
+            grace_after = datetime.timedelta(minutes=self.duration_minutes)
         if user not in self.attendees.all():
             return False
-        if user in self.joined.all():
-            # Come back any time if already joined.
-            return self.start - grace_before < now < self.start + grace_duration
         return self.start - grace_before < now < self.start + grace_after
 
     def ended(self):
@@ -222,14 +221,18 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
 
     def save(self, *args, **kwargs):
         if settings.SAVE_TO_GOOGLE_CALENDAR:
-            calendar.save_event(
+            cal_event = calendar.save_event(
                 event_id=self.slug,
                 start=self.start.isoformat(),
                 end=self.end().isoformat(),
                 summary=self.circle.title,
-                description=markdown.markdown(self.circle.content),
+                description=self.cal_link(),
             )
+            self.meeting_url = cal_event.hangoutLink
         super().save(*args, **kwargs)
+
+    def password(self):
+        return basic_hash(hmac(f"{self.slug}|{self.meeting_url}"))
 
     def __str__(self):
         return f"CircleEvent: {self.start}"

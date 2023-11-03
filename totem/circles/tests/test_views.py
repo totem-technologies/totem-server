@@ -77,10 +77,8 @@ class TestJoinView:
         assert user not in event.joined.all()
 
     def test_join_attending(self, client, db):
-        # event = CircleEventFactory()
-        # event.start = timezone.now() + datetime.timedelta(minutes=20)
         event = CircleEventFactory(
-            start=timezone.now() + datetime.timedelta(minutes=20),
+            start=timezone.now() + datetime.timedelta(minutes=14),
         )
         event.save()
         user = UserFactory()
@@ -89,8 +87,21 @@ class TestJoinView:
         client.force_login(user)
         response = client.get(reverse("circles:join", kwargs={"event_slug": event.slug}))
         assert response.status_code == 302
-        assert "example" in response.url
+        assert event.meeting_url in response.url
         assert user in event.joined.all()
+
+    def test_join_attending_late(self, client, db):
+        event = CircleEventFactory(start=timezone.now() + datetime.timedelta(minutes=20))
+        event.save()
+        user = UserFactory()
+        user.save()
+        event.add_attendee(user)
+        client.force_login(user)
+        event.start = timezone.now() - datetime.timedelta(minutes=30)
+        response = client.get(reverse("circles:join", kwargs={"event_slug": event.slug}))
+        assert response.status_code == 302
+        assert event.slug in response.url
+        assert user not in event.joined.all()
 
 
 class AnonSubscribeViewTest(TestCase):
