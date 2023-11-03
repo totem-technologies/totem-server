@@ -12,6 +12,7 @@ from sesame.views import LoginView as SesameLoginView
 
 from totem.circles.filters import upcoming_events_user_can_attend
 from totem.email import emails
+from totem.utils.slack import notify_slack
 
 from . import analytics
 from .forms import LoginForm
@@ -220,9 +221,12 @@ def user_feedback_view(request):
         form = FeedbackForm(data)
         if form.is_valid():
             if request.user.is_authenticated:
+                name = request.user.name
                 Feedback.objects.create(**form.cleaned_data, user=request.user)
             else:
+                name = "Anonymous"
                 Feedback.objects.create(**form.cleaned_data)
             messages.success(request, "Feedback successfully submitted. Thank you!")
+            notify_slack(f"Feedback from {name}! \nMessage: \n{form.cleaned_data['message']}")
             form = FeedbackForm()
     return render(request, "users/feedback.html", context={"form": form})
