@@ -222,20 +222,19 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         return full_url(self.get_absolute_url())
 
     def save(self, *args, **kwargs):
-        if settings.SAVE_TO_GOOGLE_CALENDAR:
-            cal_event = calendar.save_event(
-                event_id=self.slug,
-                start=self.start.isoformat(),
-                end=self.end().isoformat(),
-                summary=self.circle.title,
-                description=self.cal_link(),
-            )
+        cal_event = calendar.save_event(
+            event_id=self.slug,
+            start=self.start.isoformat(),
+            end=self.end().isoformat(),
+            summary=self.circle.title,
+            description=self.cal_link(),
+        )
+        if cal_event:
             self.meeting_url = cal_event.hangoutLink
         super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        if settings.SAVE_TO_GOOGLE_CALENDAR:
-            calendar.delete_event(event_id=self.slug)
+        calendar.delete_event(event_id=self.slug)
         super().delete(*args, **kwargs)
 
     def password(self):

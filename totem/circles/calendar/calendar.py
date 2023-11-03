@@ -177,7 +177,9 @@ def _to_gcal_id(s: str) -> str:
     return base64.b32hexencode(s.encode()).strip(b"=").lower().decode()
 
 
-def save_event(event_id: str, start: str, end: str, summary: str, description: str) -> "CalendarEvent":
+def save_event(event_id: str, start: str, end: str, summary: str, description: str) -> "CalendarEvent | None":
+    if not settings.SAVE_TO_GOOGLE_CALENDAR:
+        return
     service = get_service_client()
     cal_id = settings.GOOGLE_CALENDAR_ID
     event_id = _to_gcal_id(event_id)
@@ -211,6 +213,8 @@ def save_event(event_id: str, start: str, end: str, summary: str, description: s
 
 
 def delete_event(event_id: str):
+    if not settings.SAVE_TO_GOOGLE_CALENDAR:
+        return
     service = get_service_client()
     event_id = _to_gcal_id(event_id)
     cal_id = settings.GOOGLE_CALENDAR_ID
