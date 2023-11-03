@@ -231,6 +231,11 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
             self.meeting_url = cal_event.hangoutLink
         super().save(*args, **kwargs)
 
+    def delete(self, *args, **kwargs):
+        if settings.SAVE_TO_GOOGLE_CALENDAR:
+            calendar.delete_event(event_id=self.slug)
+        super().delete(*args, **kwargs)
+
     def password(self):
         return basic_hash(hmac(f"{self.slug}|{self.meeting_url}"))
 

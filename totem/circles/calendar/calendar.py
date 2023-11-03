@@ -173,11 +173,15 @@ def get_event_ical(event_id: str):
     return event.data
 
 
+def _to_gcal_id(s: str) -> str:
+    return base64.b32hexencode(s.encode()).strip(b"=").lower().decode()
+
+
 def save_event(event_id: str, start: str, end: str, summary: str, description: str) -> "CalendarEvent":
     service = get_service_client()
     cal_id = settings.GOOGLE_CALENDAR_ID
-    event_id = base64.b32hexencode(event_id.encode()).strip(b"=").lower().decode()
-    random_string = base64.b32hexencode(os.urandom(10)).strip(b"=").lower().decode()
+    event_id = _to_gcal_id(event_id)
+    random_string = _to_gcal_id(os.urandom(10).hex())
     event = {
         "id": event_id,
         "summary": summary,
@@ -198,7 +202,16 @@ def save_event(event_id: str, start: str, end: str, summary: str, description: s
         },
     }
     try:
-        event = service.events().update(eventId=event_id, calendarId=cal_id, body=event).execute()
+        event = (
+            service.events().update(eventId=event_id, calendarId=cal_id, body=event, conferenceDataVersion=1).execute()
+        )
     except HttpError:
         event = service.events().insert(calendarId=cal_id, body=event, conferenceDataVersion=1).execute()
     return CalendarEvent(**event)
+
+
+def delete_event(event_id: str):
+    service = get_service_client()
+    event_id = _to_gcal_id(event_id)
+    cal_id = settings.GOOGLE_CALENDAR_ID
+    service.events().delete(calendarId=cal_id, eventId=event_id).execute()
