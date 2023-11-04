@@ -26,7 +26,7 @@ def user_detail_view(request, slug):
             events = [e.next_event() for e in user.created_circles.all()[:10] if e.next_event()]
             return render(request, "users/user_detail.html", context={"user": user, "events": events})
     except (User.DoesNotExist, ObjectDoesNotExist):
-        raise Http404
+        pass
     raise Http404
 
 
@@ -39,7 +39,6 @@ class UserUpdateForm(forms.ModelForm):
 @login_required
 def user_redirect_view(request, *args, **kwargs):
     user = request.user
-    assert user.is_authenticated
     try:
         if user.onboard and user.onboard.onboarded:
             return redirect("users:dashboard")

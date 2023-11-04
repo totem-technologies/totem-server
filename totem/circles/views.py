@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpRequest
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -41,7 +42,7 @@ def detail(request, slug):
 
 def _circle_detail(request, user: User, circle: Circle, event):
     if not circle.published and not user.is_staff:
-        raise Http404
+        raise PermissionDenied
 
     attending = False
     joinable = False

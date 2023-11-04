@@ -5,6 +5,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
+from django.core.exceptions import PermissionDenied
 from django.http import Http404
 from django.shortcuts import redirect as django_redirect
 from django.shortcuts import render
@@ -116,7 +117,7 @@ def redirect(request, slug):
 @login_required
 def redirect_qr(request, slug):
     if not request.user.is_staff:
-        raise Http404
+        raise PermissionDenied
     try:
         redirect = Redirect.get_by_slug(slug)
     except Redirect.DoesNotExist:
@@ -140,7 +141,7 @@ def home_redirect(request):
 @login_required
 def webflow_page(request, page=None):
     if not request.user.is_staff:
-        raise Http404
+        raise PermissionDenied
 
     def _get():
         return get_webflow_page(page)
