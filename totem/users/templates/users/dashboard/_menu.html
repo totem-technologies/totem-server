@@ -4,9 +4,11 @@
             <a href="#upcoming">My Upcoming Sessions</a>
         </li>
     {% endif %}
-    <li>
-        <a href="#recommended">Recommended Circles</a>
-    </li>
+    {% if recommended_events %}
+        <li>
+            <a href="#recommended">Recommended Circles</a>
+        </li>
+    {% endif %}
     <li>
         <a href="{% url "users:profile" %}">My Profile</a>
     </li>
