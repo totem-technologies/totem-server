@@ -190,13 +190,13 @@ def _token_subscribe(request: HttpRequest, circle: Circle):
     sent_token = request.GET.get("token")
 
     if not user_slug or not sent_token:
-        raise Http404
+        raise PermissionDenied
 
     user = User.objects.get(slug=user_slug)
     token = circle.subscribe_token(user)
 
     if sent_token != token:
-        raise Http404
+        raise PermissionDenied
 
     if request.GET.get("action") == "unsubscribe":
         circle.unsubscribe(user)

@@ -120,7 +120,7 @@ class AnonSubscribeViewTest(TestCase):
     def test_anon_subscribe_wrong_token(self):
         url = reverse("circles:subscribe", args=[self.circle.slug])
         response = self.client.get(f"{url}?user={self.user.slug}&token=wrong-token")
-        assert response.status_code == 404
+        assert response.status_code == 403
         self.assertFalse(self.user in self.circle.subscribed.all())
 
     def test_anon_subscribe_no_token(self):
