@@ -6,32 +6,24 @@
       <mj-button background-color="#F4DC92" color="#000"></mj-button>
       <mj-text color="#2B2B2B"></mj-text>
     </mj-attributes>
-    <mj-font
-      href="https://fonts.googleapis.com/css?family=Kanit:normal,italic,bold&display=swap"
-      name="Kanit"
-    ></mj-font>
-    <mj-font
-      href="https://fonts.googleapis.com/css?family=Cabin:normal,italic,bold&display=swap"
-      name="Cabin"
-    ></mj-font>
+    <mj-font href="https://fonts.googleapis.com/css?family=Kanit:normal,italic,bold&display=swap" name="Kanit"></mj-font>
+    <mj-font href="https://fonts.googleapis.com/css?family=Cabin:normal,italic,bold&display=swap" name="Cabin"></mj-font>
     <mj-style inline="inline">
-      .link-nostyle { color: inherit; text-decoration: none }
+      .link-nostyle {
+        color: inherit;
+        text-decoration: none
+      }
     </mj-style>
   </mj-head>
   <mj-body>
     <mj-section>
       <mj-column>
         <mj-spacer height="20px"></mj-spacer>
-        <mj-image
-          align="left"
-          padding="0px"
-          src="{% static 'images/totem-logo.png' %}"
-          width="100px"
-        ></mj-image>
+        <mj-image align="left" padding="0px" src="{% static 'images/totem-logo.png' %}" width="100px"></mj-image>
         <mj-spacer height="20px"></mj-spacer>
       </mj-column>
     </mj-section>
-    {% block content %} {% endblock content %} {% include
-    'email/emails/_footer.mjml' %}
+    {% block content %} {% endblock content %}
+    {% include 'email/emails/_footer.mjml' %}
   </mj-body>
 </mjml>
