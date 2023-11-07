@@ -1,0 +1,5 @@
+
+{{title}}
+{{message}}
+To continue, please click this link: {{ link }}
+If this was not you, please ignore this email.

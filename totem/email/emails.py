@@ -1,54 +1,41 @@
 from __future__ import annotations
 
 import urllib.parse
-from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from django.conf import settings
-from django.template.loader import render_to_string
 from django.urls import reverse
-from mjml import mjml2html
+from django.utils.safestring import SafeString
 
 if TYPE_CHECKING:
     from totem.circles.models import CircleEvent
     from totem.users.models import User
 
-from .utils import send_template_mail
-
-# list files in templates/email/emails
-files = Path(__file__).parent.joinpath("templates/email/emails").glob("*.mjml")
-templates = {file.stem: file.name for file in files}
+from .utils import send_mjml_mail
 
 
 def send_returning_login_email(email: str, url: str):
     _send_button_email(
         recipient=email,
-        subject="Sign in to Totem!",
-        message="It's great to see you again, welcome back. Use the magic link button below \
-            to access your account. If this wasn't you, please ignore this email.",
+        subject="Totem sign in link",
+        title="Sign in link",
+        message="You requested a link to sign in, and here it is! Note that this link expires in an hour and can only be used once.",
         button_text="Sign in",
         link=url,
     )
-
-
-def send_new_login_email(email: str, url: str):
-    _send_button_email(
-        recipient=email,
-        subject="Welcome to ✨Totem✨!",
-        message="We're excited to have you join us. However, we won't be able to reach you until you \
-            confirm your email address. Please confirm by clicking the button below. If this wasn't you, \
-                please ignore this email.",
-        button_text="Confirm",
-        link=url,
-    )
+    if settings.DEBUG:
+        print("------------------------------------------")
+        print(f"Sending email to {email} with link\n{url}")
+        print("------------------------------------------")
 
 
 def send_change_email(old_email: str, new_email: str, login_url: str):
     _send_button_email(
         recipient=new_email,
         subject="Confirm your new email address",
+        title="Confirm your new email address",
         message="You're almost there! Please confirm your new email address by clicking the button \
-            below. If this wasn't you, please ignore this email.",
+            below.",
         button_text="Confirm",
         link=login_url,
     )
@@ -59,7 +46,8 @@ def send_notify_circle_starting(event: CircleEvent, user: User):
     start = event.start.astimezone(user.timezone).strftime("%I:%M %p %Z on %A, %B %d")
     _send_button_email(
         recipient=user.email,
-        subject="Your Circle is starting soon!",
+        subject="Your Circle is starting in an hour",
+        title="Get Ready",
         message=f"Your Circle, {event.circle.title}, is starting at {start}. \
             Click the button below to join the Circle. If you are more than 5 minutes late, you may not be allowed to participate.",
         button_text="Join Circle",
@@ -74,7 +62,8 @@ def send_notify_circle_advertisement(event: CircleEvent, user: User):
     unsubscribe_url += f"?user={user.slug}&token={event.circle.subscribe_token(user)}&action=unsubscribe"
     _send_button_email(
         recipient=user.email,
-        subject="Join an upcoming Circle!",
+        subject="Join an upcoming Circle",
+        title="New Circle",
         message=f'A session for a Circle you are subscribed to, "{event.circle.title}", is coming up at {start}. \
             Click the button below to reserve a spot before this one fills up. If you no longer wish to get notifications about this Circle, \
                 you can unsubscribe here: {unsubscribe_url}',
@@ -83,15 +72,15 @@ def send_notify_circle_advertisement(event: CircleEvent, user: User):
     )
 
 
-def _send_button_email(*, recipient: str, subject: str, message: str, button_text: str, link: str):
-    link = make_email_url(link)
-    send_template_mail(
-        template_id="vywj2lpv631l7oqz",
-        recipient=recipient,
+def _send_button_email(*, recipient: str, subject: str, title: str, message: str, button_text: str, link: str):
+    link = SafeString(make_email_url(link))
+    send_mjml_mail(
+        template="button",
+        recipient_list=[recipient],
         subject=subject,
         context={
-            "subject": subject,
             "message": message,
+            "title": title,
             "button_text": button_text,
             "link": link,
             "support_email": settings.EMAIL_SUPPORT_ADDRESS,
@@ -101,7 +90,3 @@ def _send_button_email(*, recipient: str, subject: str, message: str, button_tex
 
 def make_email_url(link):
     return urllib.parse.urljoin(settings.EMAIL_BASE_URL, link)
-
-
-def render_email(template: str, context: dict[str, Any]) -> str:
-    return mjml2html(render_to_string(f"email/emails/{template}.mjml", context=context))

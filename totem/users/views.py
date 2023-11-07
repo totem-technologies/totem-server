@@ -74,7 +74,7 @@ class LogInView(FormView):
         success_url = form.cleaned_data.get("success_url")
         email = form.cleaned_data["email"].lower()
         after_login_url = form.cleaned_data.get("after_login_url") or self.request.GET.get("next")
-        created = login(email, self.request, after_login_url=after_login_url)
+        created = login(self.request, email, after_login_url=after_login_url)
         if success_url:
             self.success_url = success_url
         elif created:
@@ -84,7 +84,7 @@ class LogInView(FormView):
         return super().form_valid(form)
 
 
-def login(email: str, request, after_login_url: str | None = None, mobile: bool = False) -> bool:
+def login(request, email: str, after_login_url: str | None = None, mobile: bool = False) -> bool:
     """Login a user by sending them a login link via email. If it's a new user, log them in automatically and send them
     a welcome email.
 

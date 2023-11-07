@@ -1,0 +1,5 @@
+
+Totem sign in link
+
+To continue, please click this link: {{ link }}
+If this was not you, please ignore this email.
