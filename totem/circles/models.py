@@ -167,7 +167,6 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
     def add_attendee(self, user):
         if self.can_attend(user=user):
             self.attendees.add(user)
-            self.save()
             notify_slack(f"New Circle attendee: {user.email} for {self.circle.title} by {self.circle.author.name}")
 
     def started(self):
@@ -199,7 +198,6 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         if self.started():
             raise CircleEventException("Circle has already started")
         self.attendees.remove(user)
-        self.save()
 
     def notify(self, force=False):
         # Notify users who are attending that the circle is about to start
@@ -223,7 +221,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
     def cal_link(self):
         return full_url(self.get_absolute_url())
 
-    def save(self, *args, **kwargs):
+    def save_to_calendar(self):
         cal_event = calendar.save_event(
             event_id=self.slug,
             start=self.start.isoformat(),
@@ -233,7 +231,6 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         )
         if cal_event:
             self.meeting_url = cal_event.hangoutLink
-        super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         calendar.delete_event(event_id=self.slug)

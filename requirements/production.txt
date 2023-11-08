@@ -14,9 +14,9 @@ asgiref==3.7.2
     # via django
 backoff==2.2.1
     # via posthog
-boto3==1.28.74
+boto3==1.28.80
     # via django-storages
-botocore==1.31.74
+botocore==1.31.80
     # via
     #   boto3
     #   s3transfer
@@ -32,7 +32,7 @@ cffi==1.16.0
     # via
     #   argon2-cffi-bindings
     #   cryptography
-charset-normalizer==3.3.1
+charset-normalizer==3.3.2
     # via requests
 click==8.1.7
     # via uvicorn
@@ -42,7 +42,7 @@ cssselect==1.2.0
     # via -r requirements/base.in
 defusedxml==0.7.1
     # via python3-openid
-django==4.2.6
+django==4.2.7
     # via
     #   -r requirements/base.in
     #   django-allauth
@@ -84,11 +84,11 @@ django-taggit==4.0.0
     # via -r requirements/base.in
 django-timezone-field==6.0.1
     # via -r requirements/base.in
-google-api-core==2.12.0
+google-api-core==2.13.0
     # via google-api-python-client
-google-api-python-client==2.105.0
+google-api-python-client==2.107.0
     # via -r requirements/base.in
-google-auth==2.23.3
+google-auth==2.23.4
     # via
     #   google-api-core
     #   google-api-python-client
@@ -112,7 +112,7 @@ httplib2==0.22.0
     #   google-auth-httplib2
 httptools==0.6.1
     # via uvicorn
-icalendar==5.0.10
+icalendar==5.0.11
     # via
     #   caldav
     #   recurring-ical-events
@@ -129,7 +129,9 @@ lxml==4.9.3
     # via
     #   -r requirements/base.in
     #   caldav
-markdown==3.5
+mailerlite==0.1.3
+    # via -r requirements/base.in
+markdown==3.5.1
     # via -r requirements/base.in
 mjml-python==1.2.1
     # via -r requirements/base.in
@@ -147,7 +149,7 @@ pillow==10.1.0
     #   pilkit
 posthog==3.0.2
     # via -r requirements/base.in
-protobuf==4.24.4
+protobuf==4.25.0
     # via
     #   google-api-core
     #   googleapis-common-protos
@@ -207,6 +209,7 @@ requests==2.31.0
     #   django-allauth
     #   django-anymail
     #   google-api-core
+    #   mailerlite
     #   posthog
     #   requests-oauthlib
 requests-oauthlib==1.3.1
@@ -217,7 +220,7 @@ rsa==4.9
     # via google-auth
 s3transfer==0.7.0
     # via boto3
-sentry-sdk[django]==1.32.0
+sentry-sdk[django]==1.34.0
     # via
     #   -r requirements/base.in
     #   sentry-sdk
@@ -257,5 +260,5 @@ websockets==12.0
     # via uvicorn
 whitenoise==6.6.0
     # via -r requirements/base.in
-x-wr-timezone==0.0.5
+x-wr-timezone==0.0.6
     # via recurring-ical-events

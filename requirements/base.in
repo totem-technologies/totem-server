@@ -6,6 +6,7 @@ google-auth-oauthlib<2
 gunicorn<22
 hiredis==2.2.3
 lxml<5
+mailerlite<1
 markdown<3.6.0
 mjml-python<2
 Pillow<11

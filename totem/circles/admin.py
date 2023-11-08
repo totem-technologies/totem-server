@@ -1,3 +1,5 @@
+from typing import Any
+
 from django.contrib import admin
 from django.utils import timezone
 
@@ -30,9 +32,21 @@ class CircleAdmin(admin.ModelAdmin):
         form.base_fields["subscribed"].initial = [request.user]
         return form
 
+    def save_formset(self, request: Any, form: Any, formset: Any, change: Any) -> None:
+        if change:
+            obj_list = formset.save(commit=False)
+            for obj in obj_list:
+                if isinstance(obj, CircleEvent):
+                    obj.save_to_calendar()
+        super().save_formset(request, form, formset, change)
+
 
 @admin.register(CircleEvent)
 class CircleEventAdmin(admin.ModelAdmin):
     list_display = ("start", "circle", "slug")
     list_filter = ["circle"]
     filter_horizontal = ["attendees", "joined"]
+
+    def save_model(self, request, obj: CircleEvent, form, change):
+        obj.save_to_calendar()
+        super().save_model(request, obj, form, change)

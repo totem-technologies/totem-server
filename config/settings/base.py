@@ -291,6 +291,7 @@ EMAIL_SUBJECT_PREFIX = env(
     default="[Totem]",  # type: ignore
 )
 EMAIL_SUPPORT_ADDRESS = "help@totem.org"
+MAILERLITE_API_KEY = env("MAILERLITE_API_KEY", default="")  # type: ignore
 
 # ADMIN
 # ------------------------------------------------------------------------------

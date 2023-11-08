@@ -22,9 +22,9 @@ backoff==2.2.1
     # via posthog
 black==23.10.1
     # via -r requirements/local.in
-boto3==1.28.74
+boto3==1.28.80
     # via django-storages
-botocore==1.31.74
+botocore==1.31.80
     # via
     #   boto3
     #   s3transfer
@@ -44,7 +44,7 @@ cffi==1.16.0
     #   cryptography
 cfgv==3.4.0
     # via pre-commit
-charset-normalizer==3.3.1
+charset-normalizer==3.3.2
     # via requests
 click==8.1.7
     # via
@@ -60,7 +60,7 @@ coverage==7.3.2
     #   django-coverage-plugin
 cryptography==41.0.5
     # via pyjwt
-cssbeautifier==1.14.9
+cssbeautifier==1.14.11
     # via djlint
 cssselect==1.2.0
     # via -r requirements/base.in
@@ -74,7 +74,7 @@ dill==0.3.7
     # via pylint
 distlib==0.3.7
     # via virtualenv
-django==4.2.6
+django==4.2.7
     # via
     #   -r requirements/base.in
     #   django-allauth
@@ -142,15 +142,15 @@ executing==2.0.1
     # via stack-data
 factory-boy==3.3.0
     # via -r requirements/local.in
-faker==19.12.0
+faker==19.13.0
     # via factory-boy
 filelock==3.13.1
     # via virtualenv
-google-api-core==2.12.0
+google-api-core==2.13.0
     # via google-api-python-client
-google-api-python-client==2.105.0
+google-api-python-client==2.107.0
     # via -r requirements/base.in
-google-auth==2.23.3
+google-auth==2.23.4
     # via
     #   google-api-core
     #   google-api-python-client
@@ -178,7 +178,7 @@ httplib2==0.22.0
     #   google-auth-httplib2
 httptools==0.6.1
     # via uvicorn
-icalendar==5.0.10
+icalendar==5.0.11
     # via
     #   caldav
     #   recurring-ical-events
@@ -193,7 +193,7 @@ iniconfig==2.0.0
     # via pytest
 ipdb==0.13.13
     # via -r requirements/local.in
-ipython==8.17.1
+ipython==8.17.2
     # via ipdb
 isort==5.12.0
     # via pylint
@@ -203,7 +203,7 @@ jmespath==1.0.1
     # via
     #   boto3
     #   botocore
-jsbeautifier==1.14.9
+jsbeautifier==1.14.11
     # via
     #   cssbeautifier
     #   djlint
@@ -213,7 +213,9 @@ lxml==4.9.3
     # via
     #   -r requirements/base.in
     #   caldav
-markdown==3.5
+mailerlite==0.1.3
+    # via -r requirements/base.in
+markdown==3.5.1
     # via -r requirements/base.in
 markupsafe==2.1.3
     # via werkzeug
@@ -273,7 +275,7 @@ pre-commit==3.5.0
     # via -r requirements/local.in
 prompt-toolkit==3.0.39
     # via ipython
-protobuf==4.24.4
+protobuf==4.25.0
     # via
     #   google-api-core
     #   googleapis-common-protos
@@ -364,6 +366,7 @@ requests==2.31.0
     #   django-allauth
     #   django-anymail
     #   google-api-core
+    #   mailerlite
     #   posthog
     #   requests-oauthlib
 requests-oauthlib==1.3.1
@@ -372,11 +375,11 @@ requests-oauthlib==1.3.1
     #   google-auth-oauthlib
 rsa==4.9
     # via google-auth
-ruff==0.1.3
+ruff==0.1.4
     # via -r requirements/local.in
 s3transfer==0.7.0
     # via boto3
-sentry-sdk[django]==1.32.0
+sentry-sdk[django]==1.34.0
     # via
     #   -r requirements/base.in
     #   sentry-sdk
@@ -397,7 +400,7 @@ stack-data==0.6.3
     # via ipython
 termcolor==2.3.0
     # via pytest-sugar
-tomlkit==0.12.1
+tomlkit==0.12.2
     # via pylint
 tqdm==4.66.1
     # via djlint
@@ -454,7 +457,7 @@ wheel==0.41.3
     # via pip-tools
 whitenoise==6.6.0
     # via -r requirements/base.in
-x-wr-timezone==0.0.5
+x-wr-timezone==0.0.6
     # via recurring-ical-events
 
 # The following packages are considered to be unsafe in a requirements file:
