@@ -81,7 +81,10 @@ class Circle(AdminURLMixin, MarkdownMixin, SluggedModel):
             MaxValueValidator(1000, message="Price must be less than or equal to 1000"),
         ],
     )
-    recurring = models.CharField(max_length=255, help_text="Example: Every Tuesday at 5pm")
+    recurring = models.CharField(
+        max_length=255,
+        help_text="Example: Once a month (or week, day, etc). Do not put specific times or days of the week.",
+    )
     subscribed = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="subscribed_circles")
     events: QuerySet["CircleEvent"]
 
