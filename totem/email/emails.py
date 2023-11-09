@@ -25,7 +25,7 @@ def send_returning_login_email(email: str, url: str):
     )
     if settings.DEBUG:
         print("------------------------------------------")
-        print(f"Sending email to {email} with link\n{url}")
+        print(f"Sending email to {email} with link\n{make_email_url(url)}")
         print("------------------------------------------")
 
 
@@ -46,7 +46,7 @@ def send_notify_circle_starting(event: CircleEvent, user: User):
     start = event.start.astimezone(user.timezone).strftime("%I:%M %p %Z on %A, %B %d")
     _send_button_email(
         recipient=user.email,
-        subject="Your Circle is starting in an hour",
+        subject="Your Circle is starting soon",
         title="Get Ready",
         message=f"Your Circle, {event.circle.title}, is starting at {start}. \
             Click the button below to join the Circle. If you are more than 5 minutes late, you may not be allowed to participate.",

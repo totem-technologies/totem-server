@@ -16,16 +16,16 @@
                 </svg>
             </h1>
         </div>
-        <p class="text-center mt-4 text-xl">You may not have access to this page.</p>
         {% if not request.user.is_authenticated %}
-            <p class="text-center mt-4">
-                Please <a class="a" href="{% url 'users:login' %}?next={{ request.path }}">log in</a> and try again.
-            </p>
+            <p class="text-center mt-4 text-xl">You may to log in to access this.</p>
         {% else %}
-            <p class="text-center mt-4">
-                You can trying using a different account. <a class="a" href="{% url 'users:login' %}?next={{ request.path }}">Log in</a> and try again.
-            </p>
+            <p class="text-center mt-4 text-xl">Restricted access.</p>
+            <p class="text-center mt-4">You can trying logging in with a different account.</p>
         {% endif %}
+        <p class="text-center mt-4">
+            <a class="btn btn-primary"
+               href="{% url 'users:login' %}?next={{ request.path }}">log in</a>
+        </p>
         <p class="text-center mt-4">
             If you think this is a mistake, <a class="a" href="{% url "users:feedback" %}">let us know</a>.
         </p>

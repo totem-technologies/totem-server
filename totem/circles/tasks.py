@@ -8,7 +8,7 @@ from .models import CircleEvent
 def notify_circle_ready():
     upcoming_circles = CircleEvent.objects.filter(
         start__gte=timezone.now(),
-        start__lte=timezone.now() + timedelta(minutes=60),
+        start__lte=timezone.now() + timedelta(minutes=20),
         notified=False,
     )
     for event in upcoming_circles:
