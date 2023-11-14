@@ -20,11 +20,11 @@ asttokens==2.4.1
     # via stack-data
 backoff==2.2.1
     # via posthog
-black==23.10.1
+black==23.11.0
     # via -r requirements/local.in
-boto3==1.28.80
+boto3==1.29.0
     # via django-storages
-botocore==1.31.80
+botocore==1.32.0
     # via
     #   boto3
     #   s3transfer
@@ -142,13 +142,13 @@ executing==2.0.1
     # via stack-data
 factory-boy==3.3.0
     # via -r requirements/local.in
-faker==19.13.0
+faker==20.0.3
     # via factory-boy
 filelock==3.13.1
     # via virtualenv
-google-api-core==2.13.0
+google-api-core==2.14.0
     # via google-api-python-client
-google-api-python-client==2.107.0
+google-api-python-client==2.108.0
     # via -r requirements/base.in
 google-auth==2.23.4
     # via
@@ -213,8 +213,6 @@ lxml==4.9.3
     # via
     #   -r requirements/base.in
     #   caldav
-mailerlite==0.1.3
-    # via -r requirements/base.in
 markdown==3.5.1
     # via -r requirements/base.in
 markupsafe==2.1.3
@@ -273,7 +271,7 @@ posthog==3.0.2
     # via -r requirements/base.in
 pre-commit==3.5.0
     # via -r requirements/local.in
-prompt-toolkit==3.0.39
+prompt-toolkit==3.0.41
     # via ipython
 protobuf==4.25.0
     # via
@@ -320,7 +318,7 @@ pytest==7.4.3
     #   -r requirements/local.in
     #   pytest-django
     #   pytest-sugar
-pytest-django==4.6.0
+pytest-django==4.7.0
     # via -r requirements/local.in
 pytest-sugar==0.9.7
     # via -r requirements/local.in
@@ -366,7 +364,6 @@ requests==2.31.0
     #   django-allauth
     #   django-anymail
     #   google-api-core
-    #   mailerlite
     #   posthog
     #   requests-oauthlib
 requests-oauthlib==1.3.1
@@ -375,11 +372,11 @@ requests-oauthlib==1.3.1
     #   google-auth-oauthlib
 rsa==4.9
     # via google-auth
-ruff==0.1.4
+ruff==0.1.5
     # via -r requirements/local.in
 s3transfer==0.7.0
     # via boto3
-sentry-sdk[django]==1.34.0
+sentry-sdk[django]==1.35.0
     # via
     #   -r requirements/base.in
     #   sentry-sdk
@@ -445,7 +442,7 @@ watchfiles==0.19.0
     # via
     #   -r requirements/local.in
     #   uvicorn
-wcwidth==0.2.9
+wcwidth==0.2.10
     # via prompt-toolkit
 websockets==12.0
     # via uvicorn
