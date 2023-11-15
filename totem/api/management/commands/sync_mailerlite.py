@@ -17,7 +17,10 @@ class Command(BaseCommand):
                 self._doit()
 
     def _doit(self):
+        test = settings.SENTRY_ENVIRONMENT != "production"
+        if test:
+            print("Running in test mode.")
         print("Syncing Mailerlite subscribers...")
         users = list(User.objects.all())
-        upload_users_to_mailerlite_batch(users)
+        upload_users_to_mailerlite_batch(users, test=test)
         print("Done.")

@@ -58,25 +58,30 @@ def chunked_users(users: "list[User]", chunk_size=50):
         yield users[i : i + chunk_size]
 
 
-def create_batch_request(chunk):
+def create_batch_request(chunk, test):
     """
     Creates a batch request for a chunk of users.
     """
     batch_data = []
     groups = []
     status = None
-    prepend = ""
-    if settings.SENTRY_ENVIRONMENT != "production":
+    if test:
         groups.append(TEST_GROUP_ID)
         status = "unsubscribed"
-        prepend = "totemtest-"
     for user in chunk:
+        email = user.email
+        if not email:
+            continue
+        if test:
+            username = email.split("@")[0]
+            domain = email.split("@")[1]
+            email = f"{username}@totemtest-{domain}"
         batch_data.append(
             Request(
                 method="POST",
                 path=MAILERLITE_SUBSCRIBERS_URL,
                 body=InsertRequest(
-                    email=f"{prepend}{user.email}",
+                    email=email,
                     fields={"name": user.name},
                     groups=groups,
                     status=status,
@@ -97,7 +102,7 @@ def send_batch_request(api_key, batch_data):
     return response.json()
 
 
-def upload_users_to_mailerlite_batch(users: "list[User]", api_key=settings.MAILERLITE_API_KEY):
+def upload_users_to_mailerlite_batch(users: "list[User]", test=True, api_key=settings.MAILERLITE_API_KEY):
     """
     Uploads users to MailerLite using batch operation with chunks.
     """
@@ -105,7 +110,7 @@ def upload_users_to_mailerlite_batch(users: "list[User]", api_key=settings.MAILE
         raise Exception("MailerLite API key not set.")
     errors = []
     for chunk in chunked_users(users):
-        batch_data = create_batch_request(chunk)
+        batch_data = create_batch_request(chunk, test)
         responses = send_batch_request(api_key, batch_data)
         for response in responses.get("responses", []):
             if response.get("code", 400) > 299:
