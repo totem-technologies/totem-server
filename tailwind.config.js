@@ -90,14 +90,6 @@ module.exports = {
     },
   },
   plugins: [
-    /**
-     * '@tailwindcss/forms' is the forms plugin that provides a minimal styling
-     * for forms. If you don't like it or have own styling for forms,
-     * comment the line below to disable '@tailwindcss/forms'.
-     */
-    require("@tailwindcss/forms")({
-      strategy: "class", // only generate classes
-    }),
     require("@tailwindcss/typography"),
     require("@tailwindcss/line-clamp"),
     require("@tailwindcss/aspect-ratio"),
@@ -107,7 +99,7 @@ module.exports = {
     themes: [
       {
         mytheme: {
-          ...require("daisyui/src/theming/themes")["[data-theme=bumblebee]"],
+          ...require("daisyui/src/theming/themes").bumblebee,
           primary: totemColors.yellow,
         },
       },

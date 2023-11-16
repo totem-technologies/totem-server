@@ -1,6 +1,5 @@
 import { Fragment, h } from "preact"
-import register from "./register"
-
+import register from "preact-custom-element"
 import Button from "./button"
 import Card from "./card"
 import Dropdown from "./dropdown"

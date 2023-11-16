@@ -131,6 +131,5 @@ html {
   top: 15%;
 }
 
-/* Alpinejs */
-[x-cloak] { display: none !important; }
+
 [slot] { display: none !important; }
