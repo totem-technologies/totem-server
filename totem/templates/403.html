@@ -24,10 +24,10 @@
         {% endif %}
         <p class="text-center mt-4">
             <a class="btn btn-primary"
-               href="{% url 'users:login' %}?next={{ request.path }}">log in</a>
+               href="{% url 'users:login' %}?next={{ request.path }}">Log in</a>
         </p>
         <p class="text-center mt-4">
-            If you think this is a mistake, <a class="a" href="{% url "users:feedback" %}">let us know</a>.
+            If you think this is a mistake, <a class="link" href="{% url "users:feedback" %}">let us know</a>.
         </p>
     </div>
 {% endblock content %}

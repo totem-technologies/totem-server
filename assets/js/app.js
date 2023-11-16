@@ -1,5 +1,6 @@
 import components from "./components"
 import emailSpellChecker from "./emailSpellCheck"
+import fingerprint from "./fingerprint"
 import htmxLoader from "./htmx-loader"
 import timezoneDetect from "./timezone"
 
@@ -14,6 +15,7 @@ timezoneDetect()
 htmxLoader()
 window.addEventListener("DOMContentLoaded", () => {
   emailSpellChecker()
+  fingerprint()
 })
 
 console.log(
