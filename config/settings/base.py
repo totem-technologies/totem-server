@@ -65,39 +65,40 @@ WSGI_APPLICATION = "config.wsgi.application"
 # APPS
 # ------------------------------------------------------------------------------
 DJANGO_APPS = [
+    "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
-    "django.contrib.sessions",
-    "django.contrib.messages",
-    "django.contrib.staticfiles",
-    "django.contrib.sitemaps",
     "django.contrib.humanize",
-    "django.contrib.admin",
+    "django.contrib.messages",
+    "django.contrib.sessions",
+    "django.contrib.sitemaps",
+    "django.contrib.staticfiles",
     "django.forms",
 ]
 THIRD_PARTY_APPS = [
-    "ninja",
-    "allauth",
     "allauth.account",
     "allauth.socialaccount",
-    "taggit",
+    "allauth",
+    "corsheaders",
     "imagekit",
     "impersonate",
+    "ninja",
+    "taggit",
 ]
 
 LOCAL_APPS = [
-    "totem.users",
-    "totem.utils",
-    "totem.plans",
-    "totem.pages",
+    "totem.api",
+    "totem.circles",
     "totem.course",
-    "totem.repos",
+    "totem.dev",
     "totem.email",
     "totem.onboard",
-    "totem.circles",
+    "totem.pages",
+    "totem.plans",
+    "totem.repos",
     "totem.uploads",
-    "totem.dev",
-    "totem.api",
+    "totem.users",
+    "totem.utils",
 ]
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
@@ -150,6 +151,7 @@ MIDDLEWARE = [
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -419,3 +421,8 @@ SLACK_WEBHOOK_URL = env("SLACK_WEBHOOK_URL", default=None)  # type: ignore
 IMPERSONATE = {
     "REQUIRE_SUPERUSER": True,
 }
+
+
+# CORS
+# ------------------------------------------------------------------------------
+CORS_ALLOWED_ORIGINS = ["https://app.posthog.com"]

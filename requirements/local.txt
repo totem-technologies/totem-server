@@ -13,7 +13,10 @@ argon2-cffi==23.1.0
 argon2-cffi-bindings==21.2.0
     # via argon2-cffi
 asgiref==3.7.2
-    # via django
+    # via
+    #   django
+    #   django-cors-headers
+    #   django-htmx
 astroid==3.0.1
     # via pylint
 asttokens==2.4.1
@@ -22,9 +25,9 @@ backoff==2.2.1
     # via posthog
 black==23.11.0
     # via -r requirements/local.in
-boto3==1.29.0
+boto3==1.29.2
     # via django-storages
-botocore==1.32.0
+botocore==1.32.2
     # via
     #   boto3
     #   s3transfer
@@ -80,6 +83,7 @@ django==4.2.7
     #   django-allauth
     #   django-anymail
     #   django-appconf
+    #   django-cors-headers
     #   django-debug-toolbar
     #   django-extensions
     #   django-htmx
@@ -98,6 +102,8 @@ django-anymail==10.1
     # via -r requirements/base.in
 django-appconf==1.0.5
     # via django-imagekit
+django-cors-headers==4.3.1
+    # via -r requirements/base.in
 django-coverage-plugin==3.1.0
     # via -r requirements/local.in
 django-debug-toolbar==4.2.0
@@ -106,7 +112,7 @@ django-environ==0.11.2
     # via -r requirements/base.in
 django-extensions==3.2.3
     # via -r requirements/local.in
-django-htmx==1.17.0
+django-htmx==1.17.2
     # via -r requirements/base.in
 django-imagekit==5.0.0
     # via -r requirements/base.in
@@ -273,7 +279,7 @@ pre-commit==3.5.0
     # via -r requirements/local.in
 prompt-toolkit==3.0.41
     # via ipython
-protobuf==4.25.0
+protobuf==4.25.1
     # via
     #   google-api-core
     #   googleapis-common-protos
@@ -397,7 +403,7 @@ stack-data==0.6.3
     # via ipython
 termcolor==2.3.0
     # via pytest-sugar
-tomlkit==0.12.2
+tomlkit==0.12.3
     # via pylint
 tqdm==4.66.1
     # via djlint
