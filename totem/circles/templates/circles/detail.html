@@ -1,6 +1,5 @@
 {% extends "base.html" %}
 {% load static %}
-{% load settings_value %}
 {% load avatar %}
 {% load markdown %}
 {# djlint:off #}
@@ -15,18 +14,19 @@
     <div class="m-auto px-5 pb-2 flex max-w-5xl">
         <a class="no-underline items-center space-x-2 flex"
            href="{% url 'circles:list' %}">
-            <h2 class="h3">All Circles</h2>
+            <h2 class="h3">←All Circles</h2>
         </a>
     </div>
     <div class="m-auto px-5 max-w-5xl">
         {% if object.image %}
             <style>
-            .circle-bg-image{
-                background-image: linear-gradient(185deg, rgba(196, 204, 255, 0.52), rgba(117, 19, 93, 0.73)), url({{ object.image.url }});
-                background-size: cover;
-                background-position: center;
-                background-repeat: no-repeat;
-            }
+                .circle-bg-image {
+                    background-image: linear-gradient(185deg, rgba(196, 204, 255, 0.52), rgba(117, 19, 93, 0.73)),
+                    url({{ object.image.url }});
+                    background-size: cover;
+                    background-position: center;
+                    background-repeat: no-repeat;
+                }
             </style>
         {% endif %}
         <div class="circle-bg-image rounded-2xl shadow-lg relative bg-gradient-to-r from-purple-500 to-pink-500">
@@ -157,38 +157,39 @@
                     {% endif %}
                 </div>
                 <div>Duration: {{ event.duration_minutes }} min</div>
-                {% if event %}
-                    <div>{{ object.recurring }}</div>
-                {% else %}
-                    <div>
-                        This Circle has no upcoming scheduled sessions. Let us know if you'd like one! <a class="link"
-    href="mailto:{% settings_value 'EMAIL_SUPPORT_ADDRESS' %}">
-                        {% settings_value 'EMAIL_SUPPORT_ADDRESS' %}
+                {% if event %}<div>{{ object.recurring }}</div>{% endif %}
+            </div>
+            <hr class="w-48 h-0.5 mx-auto my-4 bg-gray-700 border-0 rounded md:my-10">
+            <h3 class="h3 mb-2">
+                About this Circle
+                {% if request.user.is_staff %}
+                    (<a class="link" target="_blank" href="{{ object.get_admin_url }}">Edit</a>)
+                {% endif %}
+            </h3>
+            <div class="tprose pb-5">{{ object.content_html }}</div>
+            <h3 class="h3 md:pb-0 pb-5">About the Keeper</h3>
+            <div>
+                <div>
+                    <a class="link md:float-left md:pr-5 block"
+                       href="{{ object.author.get_keeper_url }}">
+                        {% avatar user=object.author classes="m-auto" %}
                     </a>
                 </div>
-            {% endif %}
-        </div>
-        <hr class="w-48 h-0.5 mx-auto my-4 bg-gray-700 border-0 rounded md:my-10">
-        <h3 class="h3">
-            About this Circle
-            {% if request.user.is_staff %}
-                (<a class="link" target="_blank" href="{{ object.get_admin_url }}">Edit</a>)
-            {% endif %}
-        </h3>
-        <div class="tprose pb-5">{{ object.content_html }}</div>
-        <h3 class="h3 md:pb-0 pb-5">About the Keeper</h3>
-        <div>
-            <div>
-                <a class="link md:float-left md:pr-5 block"
-                   href="{{ object.author.get_keeper_url }}">
-                    {% avatar user=object.author classes="m-auto" %}
-                </a>
+                <div class="tprose inline">{{ object.author.keeper_profile.bio|to_html|truncatewords:70 }}</div>
+                <div class="text-right pt-5 md:pt-0">
+                    <a class="link" href="{{ object.author.get_keeper_url }}">Read more →</a>
+                </div>
             </div>
-            <div class="tprose inline">{{ object.author.keeper_profile.bio|to_html|truncatewords:70 }}</div>
-            <div class="text-right pt-5 md:pt-0">
-                <a class="link" href="{{ object.author.get_keeper_url }}">Read more →</a>
+            <div class="bg-white p-5 rounded-2xl border w-80 mt-5 border-gray-200 max-md:w-full m-auto">
+                <div class="pb-3">
+                    <strong>Issues or suggestions?</strong>
+                </div>
+                <div class="text-center">
+                    Talk to the Keeper
+                    <br>
+                    <a class=" link" href="mailto:{{ object.author.email }}"><strong>{{ object.author.email }}</strong></a>
+                </div>
             </div>
         </div>
     </div>
-</div>
 {% endblock content %}

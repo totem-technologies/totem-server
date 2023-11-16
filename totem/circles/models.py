@@ -100,9 +100,6 @@ class Circle(AdminURLMixin, MarkdownMixin, SluggedModel):
     def next_event(self):
         return self.events.filter(start__gte=timezone.now()).order_by("start").first()
 
-    def other_events(self, event: "CircleEvent"):
-        return self.events.filter(start__gte=timezone.now()).exclude(slug=event.slug).order_by("start")[:10]
-
     def is_free(self):
         return self.price == 0
 
@@ -120,6 +117,10 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
     open = models.BooleanField(default=True, help_text="Is this Circle for more attendees?")
     cancelled = models.BooleanField(default=False, help_text="Is this Circle cancelled?")
     start = models.DateTimeField(default=timezone.now)
+    listed = models.BooleanField(
+        default=True,
+        help_text="Is this Circle discoverable? False means events are only accessible via direct link, or to people attending.",
+    )
     duration_minutes = models.IntegerField(_("Minutes"), default=60)
     attendees = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="events_attending")
     joined = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="events_joined")

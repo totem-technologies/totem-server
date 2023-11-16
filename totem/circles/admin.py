@@ -9,7 +9,7 @@ from .models import Circle, CircleEvent
 class CircleEventInline(admin.StackedInline):
     model = CircleEvent
     extra = 0
-    filter_horizontal = ["attendees"]
+    filter_horizontal = ["attendees", "joined"]
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -19,6 +19,7 @@ class CircleEventInline(admin.StackedInline):
 
 @admin.register(Circle)
 class CircleAdmin(admin.ModelAdmin):
+    save_on_top = True
     list_display = ("title", "slug", "published")
     readonly_fields = ("subscribed_list",)
     filter_horizontal = ["subscribed"]

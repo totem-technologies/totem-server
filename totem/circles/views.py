@@ -3,12 +3,11 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpRequest
 from django.shortcuts import redirect, render
-from django.utils import timezone
 
 from totem.users.models import User
 from totem.utils.hash import basic_hash
 
-from .filters import logged_out_sessions_list
+from .filters import all_upcoming_recommended_events, other_events_in_circle
 from .models import Circle, CircleEvent, CircleEventException
 
 ICS_QUERY_PARAM = "key"
@@ -53,15 +52,9 @@ def _circle_detail(request, user: User, circle: Circle, event):
             attending = event.attendees.contains(user)
             joinable = event.can_join(user)
 
-    # if attending:
-    #     ih = ics_hash(slug, request.user.ics_key)
-    #     ics_url = (
-    #         request.build_absolute_uri(reverse("circles:ics", kwargs={"slug": slug})) + f"?{ICS_QUERY_PARAM}={ih}"
-    #     )
-    #     ics_url = ics_url.replace("http://", "https://")
     other_events = []
     if event:
-        other_events = circle.other_events(event=event)
+        other_events = other_events_in_circle(user=user, event=event)
 
     return render(
         request,
@@ -75,28 +68,6 @@ def _circle_detail(request, user: User, circle: Circle, event):
             "other_events": other_events,
         },
     )
-
-
-# def ics(request, slug):
-#     # cannot depend on user since this is a public URL, accessed by a calendar app
-#     circle = _get_circle(slug)
-#     if not circle.published and not request.user.is_staff:
-#         raise Http404
-#     # check the ics key
-#     ih = request.GET.get(ICS_QUERY_PARAM)
-#     if not ih:
-#         raise Http404
-#     attendees = circle.attendees.all()
-#     for attendee in attendees:
-#         if ih == ics_hash(slug, attendee.ics_key):
-#             break
-#         raise Http404
-#     ics = calendar.get_event_ical(circle.ical_uuid)
-#     # add REFRESH-INTERVAL
-#     response = HttpResponse(ics, content_type="text/calendar; charset=utf-8")
-#     response["Content-Length"] = len(ics)
-#     response["Content-Disposition"] = "attachment; filename=event.ics"
-#     return response
 
 
 def ics_hash(slug, user_ics_key):
@@ -127,31 +98,9 @@ class CircleEventListItem:
 
 
 def list(request):
-    if request.user.is_authenticated:
-        context = _logged_in_list(request.user)
-    else:
-        events = logged_out_sessions_list()
-        context = {"events": events, "attending_events": []}
+    events = all_upcoming_recommended_events(request.user)
+    context = {"events": events}
     return render(request, "circles/list.html", context=context)
-
-
-def _logged_in_list(user: User):
-    events = CircleEvent.objects.filter(start__gte=timezone.now()).order_by("start")
-    if not user.is_staff:
-        events = events.filter(circle__published=True)
-    attending_events = []
-    can_attend = []
-    for event in events:
-        if event.attendees.contains(user):
-            attending_events.append(event)
-            continue
-        if event.can_attend(silent=True):
-            can_attend.append(event)
-
-    return {
-        "events": can_attend,
-        "attending_events": attending_events,
-    }
 
 
 @login_required

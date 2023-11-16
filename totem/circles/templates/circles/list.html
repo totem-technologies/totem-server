@@ -16,7 +16,9 @@
                 {% for event in events %}
                     {% include "circles/_event_card.html" with event=event only %}
                 {% empty %}
-                    <h3 class="h3">No Circles.</h3>
+                    <p>
+                        There are no upcoming Circles you can join at this time. If you have suggestions for new Circles, please <a class="link" href="{% url 'users:feedback' %}">submit them</a>!
+                    </p>
                 {% endfor %}
             </ul>
         </section>
