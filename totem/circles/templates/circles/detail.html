@@ -7,7 +7,7 @@
 {% block description %}{{ object.content_html|striptags|truncatewords:30 }}{% endblock description %}
 {# djlint:on #}
 {% block javascript %}
-    <script src="{% static 'js/atcb.min.js' %}" defer></script>
+    <script>window.TOTEM_DATA.ensureTimezone = true;</script>
 {% endblock javascript %}
 {% block content %}
     <div class="h-10"></div>
@@ -193,3 +193,6 @@
         </div>
     </div>
 {% endblock content %}
+{% block inline_javascript %}
+    <script src="{% static 'js/atcb.min.js' %}" defer></script>
+{% endblock inline_javascript %}

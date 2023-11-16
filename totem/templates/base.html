@@ -8,11 +8,11 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge" />
     {# djlint:off #}
     <title>Totem - {% block title %}Guided introspection groups{% endblock title %}</title>
-    {# djlint:on #}
     {% include "_analytics.html" %}
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description"
-          content="{% block description %}Totem Circles are a confidential space for us to share and grow. A discussion facilitator, known as the Keeper, will be your guide.{% endblock description %}" />
+    content="{% block description %}Totem Circles are a confidential space for us to share and grow. A discussion facilitator, known as the Keeper, will be your guide.{% endblock description %}" />
+    {# djlint:on #}
     <meta name="author" content="bo@totem.org" />
     {% comment %} Open Graph / Facebook {% endcomment %}
     <meta property="og:type" content="website" />
@@ -35,25 +35,25 @@
           sizes="16x16"
           href="{% static 'images/favicons/favicon-16x16.png' %}" />
     <link href="{% static 'css/styles.css' %}" rel="stylesheet" />
+    {% comment %} Test at https://developers.google.com/search/docs/appearance/structured-data {% endcomment %}
     <script type="application/ld+json">
-      {% comment %} Test at https://developers.google.com/search/docs/appearance/structured-data {% endcomment %}
-      {
-        "@context": "https://schema.org",
-        "@type": "Organization",
-        "url": "https://www.totem.org",
-        "logo": "{% static 'images/totem-symbol.png' %}"
-      }
+        {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "url": "https://www.totem.org",
+            "logo": "{% static 'images/totem-symbol.png' %}"
+        }
     </script>
     <script>
-      window.TOTEM_DATA = {
-        debug: {{ debug|yesno:"true,false" }},
-      }
+        window.TOTEM_DATA = {
+            debug: {{ debug | yesno:"true,false" }},
+        }
     </script>
     {% block css %}
     {% endblock css %}
-    <script defer src="{% static 'js/app.min.js' %}"></script>
     {% block javascript %}
     {% endblock javascript %}
+    <script defer src="{% static 'js/app.min.js' %}"></script>
   </head>
   <body class="bg-primary text-tslate flex flex-col"
         hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
@@ -61,7 +61,8 @@
     <div class="flex-grow min-h-[80vh]">
       {% if messages %}
         {% for message in messages %}
-          <div class="max-w-2xl mt-10 alert-dismissible m-auto bg-blue-100 border border-blue-500 text-blue-500 px-4 py-3 mb-5 rounded relative {% if message.tags %}alert-{{ message.tags }}{% endif %}"
+          <div class="max-w-2xl mt-10 alert-dismissible m-auto bg-blue-100 border border-blue-500 text-blue-500 px-4 py-3 mb-5 rounded relative
+                      {% if message.tags %}alert-{{ message.tags }}{% endif %}"
                role="alert">
             <span class="block sm:inline">{{ message }}</span>
             <span class="absolute top-0 bottom-0 right-0 px-4 py-3" aria-label="Close">
@@ -87,15 +88,14 @@
     {% endblock inline_javascript %}
     {% if debug %}
       <script>
-      document.write('<script src="http://' + (location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1"></' + 'script>')
-</script>
-{% endif %}
-<div id="app-shell" hidden></div>
-{% if request.user.is_impersonate %}
-<div class="fixed bottom-0 right-0 bg-error text-white p-2">
-As {{ request.user.email }}
-<a class="link" href="{% url 'impersonate-stop' %}">Stop</a>
-</div>
-{% endif %}
-</body>
+          document.write('<' + 'script src="http://' + (location.host || 'localhost').split(':')[0] + ':35729/livereload.js?snipver=1"></' + 'script>')
+      </script>
+    {% endif %}
+    {% if request.user.is_impersonate %}
+      <div class="fixed bottom-0 right-0 bg-error text-white p-2">
+        As {{ request.user.email }}
+        <a class="link" href="{% url 'impersonate-stop' %}">Stop</a>
+      </div>
+    {% endif %}
+  </body>
 </html>
