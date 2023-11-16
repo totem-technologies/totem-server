@@ -17,3 +17,8 @@
     </form>
   </div>
 {% endblock inner %}
+{% block after %}
+  <p class="text-gray-400 text-center">
+    Don't have an account? <a class="a" href="{% url 'pages:home' %}#signup">Sign up!</a>
+  </p>
+{% endblock after %}
