@@ -1,3 +1,5 @@
+from typing import Any
+
 from django import forms
 from django.contrib import messages
 from django.contrib.auth import login as django_login
@@ -56,18 +58,30 @@ class MagicLoginView(SesameLoginView):
 
 
 class LogInView(FormView):
-    template_name = "users/login.html"
     form_class = LoginForm
     success_url = reverse_lazy("users:login")
+
+    def get_template_names(self) -> list[str]:
+        if self.request.path == reverse("users:signup"):
+            return ["users/signup.html"]
+        return ["users/login.html"]
 
     def _message(self, email: str):
         messages.success(self.request, f"Please check your inbox at: {email}.")
 
     def get(self, request: HttpRequest, *args, **kwargs):
         response = super().get(request, *args, **kwargs)
+        next = request.GET.get("next")
+        if next:
+            request.session["next"] = next
         # Make sure htmx redirects to the login page with a full refresh
         response.headers["HX-Redirect"] = request.get_full_path()  # type: ignore
         return response
+
+    def get_context_data(self, **kwargs) -> dict[str, Any]:
+        context = super().get_context_data(**kwargs)
+        context["next"] = self.request.GET.get("next")
+        return context
 
     def form_valid(self, form):
         success_url = form.cleaned_data.get("success_url")

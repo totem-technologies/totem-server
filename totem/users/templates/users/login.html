@@ -5,11 +5,9 @@
 {% block head_title %}{% translate "Log In Required" %}{% endblock head_title %}
 {# djlint:on #}
 {% block inner %}
-  <h2 class="h2">Log in to your account</h2>
+  <h2 class="h2">Log in</h2>
   <div class="mt-5 ">
-    <p>
-      If you already have a Totem account, enter your email here to send a link that will log you in.
-    </p>
+    <p>Enter your email here to send a link that will log you in.</p>
     <form class="login mt-5" method="post">
       {% csrf_token %}
       {{ form }}
@@ -19,6 +17,6 @@
 {% endblock inner %}
 {% block after %}
   <p class="text-gray-400 text-center">
-    Don't have an account? <a class="a" href="{% url 'pages:home' %}#signup">Sign up!</a>
+    Don't have an account? <a class="a" href="{% url 'users:signup' %}">Sign up!</a>
   </p>
 {% endblock after %}

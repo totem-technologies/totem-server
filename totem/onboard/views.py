@@ -49,8 +49,16 @@ def onboard_view(request: HttpRequest):
         form = OnboardForm(request.POST)
         if form.is_valid():
             form.save(user, onboard)
+            next = request.session.get("next")
+            if next:
+                del request.session["next"]
+                assert next[0] == "/"
+                return redirect(next)
             return redirect("users:redirect")
     else:
+        next = request.GET.get("next")
+        if next:
+            request.session["next"] = next
         age = current_year() - onboard.year_born if onboard.year_born else None
         initial = onboard.__dict__ | {"name": user.name, "age": age}
         form = OnboardForm(initial=initial)
