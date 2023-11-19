@@ -47,6 +47,7 @@
     <script>
         window.TOTEM_DATA = {
             debug: {{ debug | yesno:"true,false" }},
+            csrf_token: "{{ csrf_token }}",
         }
     </script>
     {% block css %}
