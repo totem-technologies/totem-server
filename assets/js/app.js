@@ -2,6 +2,7 @@ import bot from "./bot"
 import components from "./components"
 import emailSpellChecker from "./emailSpellCheck"
 import htmxLoader from "./htmx-loader"
+import shadowfill from "./shadowfill"
 import timezoneDetect from "./timezone"
 
 import logger from "./logger"
@@ -16,6 +17,7 @@ htmxLoader()
 window.addEventListener("DOMContentLoaded", () => {
   emailSpellChecker()
   bot()
+  shadowfill()
 })
 
 console.log(

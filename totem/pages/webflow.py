@@ -8,9 +8,9 @@ def get_webflow_page(page):
     # proxy webflow pages from remote server
     # Send a GET request to the Webflow page
     if page is None:
-        response = requests_session.get("https://totem-95a46e.webflow.io/")
+        response = requests_session.get("https://vanessas-top-notch-site-fc65f5.webflow.io/")
     else:
-        response = requests_session.get(f"https://totem-95a46e.webflow.io/{page}")
+        response = requests_session.get(f"https://vanessas-top-notch-site-fc65f5.webflow.io/{page}")
     # Return the content of the Webflow page as a response
     return _parse_page(response.content.decode("utf-8"))
 
