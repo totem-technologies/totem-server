@@ -24,6 +24,7 @@ whitenoise==6.6.0
 # ------------------------------------------------------------------------------
 django-allauth==0.54.0
 django-anymail==10.1
+django-auditlog==3.0b4
 django-cors-headers<5
 django-environ==0.11.2
 django-htmx<2

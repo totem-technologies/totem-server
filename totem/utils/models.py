@@ -36,12 +36,7 @@ class SluggedModel(BaseModel):
 
     def save(self, *args, **kwargs):
         while not self.slug:
-            newslug = "".join(
-                random.sample(string.ascii_lowercase, 3)
-                + random.sample(string.digits, 3)
-                + random.sample(string.ascii_lowercase, 3)
-            )
-
+            newslug = make_slug()
             if not self.__class__.objects.filter(slug=newslug).exists():
                 self.slug = newslug
 

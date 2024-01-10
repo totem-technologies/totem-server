@@ -79,6 +79,7 @@ THIRD_PARTY_APPS = [
     "allauth.account",
     "allauth.socialaccount",
     "allauth",
+    "auditlog",
     "corsheaders",
     "imagekit",
     "impersonate",
@@ -162,6 +163,7 @@ MIDDLEWARE = [
     "django_htmx.middleware.HtmxMiddleware",
     "totem.utils.middleware.TimezoneMiddleware",
     "totem.utils.middleware.CDNGuard",
+    "auditlog.middleware.AuditlogMiddleware",
 ]
 
 # STATIC
@@ -426,3 +428,9 @@ IMPERSONATE = {
 # CORS
 # ------------------------------------------------------------------------------
 CORS_ALLOWED_ORIGINS = ["https://app.posthog.com"]
+
+
+# Auditlog
+# ------------------------------------------------------------------------------
+AUDITLOG_INCLUDE_ALL_MODELS = True
+AUDITLOG_DISABLE_ON_RAW_SAVE = True
