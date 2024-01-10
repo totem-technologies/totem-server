@@ -4,6 +4,8 @@
 #
 #    pip-compile --output-file=requirements/production.txt requirements/production.in
 #
+annotated-types==0.6.0
+    # via pydantic
 anyio==4.2.0
     # via watchfiles
 argon2-cffi==23.1.0
@@ -17,9 +19,9 @@ asgiref==3.7.2
     #   django-htmx
 backoff==2.2.1
     # via posthog
-boto3==1.34.15
+boto3==1.34.16
     # via django-storages
-botocore==1.34.15
+botocore==1.34.16
     # via
     #   boto3
     #   s3transfer
@@ -61,9 +63,9 @@ django==4.2.9
     #   django-taggit
     #   django-timezone-field
     #   sentry-sdk
-django-allauth==0.54.0
+django-allauth==0.60.0
     # via -r requirements/base.in
-django-anymail==10.1
+django-anymail==10.2
     # via -r requirements/base.in
 django-appconf==1.0.6
     # via django-imagekit
@@ -79,17 +81,17 @@ django-imagekit==5.0.0
     # via -r requirements/base.in
 django-impersonate==1.9.2
     # via -r requirements/base.in
-django-ninja==0.22.2
+django-ninja==1.1.0
     # via -r requirements/base.in
 django-redis==5.4.0
     # via -r requirements/base.in
-django-sesame==3.2.1
+django-sesame==3.2.2
     # via -r requirements/base.in
 django-storages[s3]==1.14.2
     # via
     #   -r requirements/base.in
     #   django-storages
-django-taggit==4.0.0
+django-taggit==5.0.1
     # via -r requirements/base.in
 django-timezone-field==6.1.0
     # via -r requirements/base.in
@@ -134,7 +136,7 @@ jmespath==1.0.1
     # via
     #   boto3
     #   botocore
-lxml==4.9.4
+lxml==5.1.0
     # via
     #   -r requirements/base.in
     #   caldav
@@ -170,8 +172,10 @@ pyasn1-modules==0.3.0
     # via google-auth
 pycparser==2.21
     # via cffi
-pydantic==1.10.13
+pydantic==2.5.3
     # via django-ninja
+pydantic-core==2.14.6
+    # via pydantic
 pyjwt[crypto]==2.8.0
     # via
     #   django-allauth
@@ -242,6 +246,7 @@ sqlparse==0.4.4
 typing-extensions==4.9.0
     # via
     #   pydantic
+    #   pydantic-core
     #   qrcode
 tzlocal==5.2
     # via caldav
@@ -253,7 +258,7 @@ urllib3==2.0.7
     #   django-anymail
     #   requests
     #   sentry-sdk
-uvicorn[standard]==0.23.2
+uvicorn[standard]==0.25.0
     # via
     #   -r requirements/base.in
     #   uvicorn

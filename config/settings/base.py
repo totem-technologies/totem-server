@@ -159,6 +159,7 @@ MIDDLEWARE = [
     "impersonate.middleware.ImpersonateMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
     "totem.utils.middleware.robotnoindex",
     "django_htmx.middleware.HtmxMiddleware",
     "totem.utils.middleware.TimezoneMiddleware",

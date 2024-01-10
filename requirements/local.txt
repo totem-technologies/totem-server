@@ -4,6 +4,8 @@
 #
 #    pip-compile --output-file=requirements/local.txt requirements/local.in
 #
+annotated-types==0.6.0
+    # via pydantic
 anyio==4.2.0
     # via watchfiles
 argon2-cffi==23.1.0
@@ -23,9 +25,9 @@ backoff==2.2.1
     # via posthog
 black==23.12.1
     # via -r requirements/local.in
-boto3==1.34.15
+boto3==1.34.16
     # via django-storages
-botocore==1.34.15
+botocore==1.34.16
     # via
     #   boto3
     #   s3transfer
@@ -95,9 +97,9 @@ django==4.2.9
     #   django-taggit
     #   django-timezone-field
     #   sentry-sdk
-django-allauth==0.54.0
+django-allauth==0.60.0
     # via -r requirements/base.in
-django-anymail==10.1
+django-anymail==10.2
     # via -r requirements/base.in
 django-appconf==1.0.6
     # via django-imagekit
@@ -119,11 +121,11 @@ django-imagekit==5.0.0
     # via -r requirements/base.in
 django-impersonate==1.9.2
     # via -r requirements/base.in
-django-ninja==0.22.2
+django-ninja==1.1.0
     # via -r requirements/base.in
 django-redis==5.4.0
     # via -r requirements/base.in
-django-sesame==3.2.1
+django-sesame==3.2.2
     # via -r requirements/base.in
 django-storages[s3]==1.14.2
     # via
@@ -135,7 +137,7 @@ django-stubs[compatible-mypy]==4.2.7
     #   django-stubs
 django-stubs-ext==4.2.7
     # via django-stubs
-django-taggit==4.0.0
+django-taggit==5.0.1
     # via -r requirements/base.in
 django-timezone-field==6.1.0
     # via -r requirements/base.in
@@ -149,7 +151,7 @@ executing==2.0.1
     # via stack-data
 factory-boy==3.3.0
     # via -r requirements/local.in
-faker==22.1.0
+faker==22.2.0
     # via factory-boy
 filelock==3.13.1
     # via virtualenv
@@ -216,7 +218,7 @@ jsbeautifier==1.14.11
     #   djlint
 json5==0.9.14
     # via djlint
-lxml==4.9.4
+lxml==5.1.0
     # via
     #   -r requirements/base.in
     #   caldav
@@ -298,8 +300,10 @@ pyasn1-modules==0.3.0
     # via google-auth
 pycparser==2.21
     # via cffi
-pydantic==1.10.13
+pydantic==2.5.3
     # via django-ninja
+pydantic-core==2.14.6
+    # via pydantic
 pygments==2.17.2
     # via ipython
 pyjwt[crypto]==2.8.0
@@ -423,6 +427,7 @@ typing-extensions==4.9.0
     #   django-stubs-ext
     #   mypy
     #   pydantic
+    #   pydantic-core
     #   qrcode
 tzlocal==5.2
     # via caldav
@@ -434,7 +439,7 @@ urllib3==2.0.7
     #   django-anymail
     #   requests
     #   sentry-sdk
-uvicorn[standard]==0.23.2
+uvicorn[standard]==0.25.0
     # via
     #   -r requirements/base.in
     #   uvicorn
@@ -446,7 +451,7 @@ vobject==0.9.6.1
     # via caldav
 watchdog==3.0.0
     # via werkzeug
-watchfiles==0.19.0
+watchfiles==0.21.0
     # via
     #   -r requirements/local.in
     #   uvicorn
@@ -454,7 +459,7 @@ wcwidth==0.2.13
     # via prompt-toolkit
 websockets==12.0
     # via uvicorn
-werkzeug[watchdog]==2.3.6
+werkzeug[watchdog]==3.0.1
     # via
     #   -r requirements/local.in
     #   werkzeug

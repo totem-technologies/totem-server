@@ -5,7 +5,7 @@ google-api-python-client<3
 google-auth-oauthlib<2
 gunicorn<22
 hiredis==2.2.3
-lxml<5
+lxml<6
 markdown<3.6.0
 mjml-python<2
 Pillow<11
@@ -17,23 +17,23 @@ qrcode==7.4.2
 redis==5.0.1
 requests<3
 sentry-sdk[django]<2
-uvicorn[standard]<0.24.0
+uvicorn[standard]<0.26.0
 whitenoise==6.6.0
 
 # Django
 # ------------------------------------------------------------------------------
-django-allauth==0.54.0
-django-anymail==10.1
+django-allauth==0.60.0
+django-anymail==10.2
 django-auditlog==3.0b4
 django-cors-headers<5
 django-environ==0.11.2
 django-htmx<2
 django-imagekit<6.0.0
 django-impersonate<2
-django-ninja<0.23.0
+django-ninja<2
 django-redis==5.4.0
-django-sesame==3.2.1
+django-sesame==3.2.2
 django-storages[s3]==1.14.2
-django-taggit==4.0.0
+django-taggit<6
 django-timezone-field<7
 django<4.3.0
