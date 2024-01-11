@@ -19,7 +19,7 @@
     <mj-section>
       <mj-column>
         <mj-spacer height="20px"></mj-spacer>
-        <mj-image align="left" padding="0px" src="{% static 'images/totem-logo.png' %}" width="100px"></mj-image>
+        <mj-image align="left" padding="10px" src="{% static 'images/totem-logo.png' %}" width="100px"></mj-image>
         <mj-spacer height="20px"></mj-spacer>
       </mj-column>
     </mj-section>

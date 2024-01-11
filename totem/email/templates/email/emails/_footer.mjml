@@ -1,16 +1,14 @@
 {% load static %}
-<mj-section padding-bottom="72px" padding-left="30px" padding-right="30px" padding-top="72px" padding="20px">
-  <mj-column padding="0">
-    <mj-image align="left" padding-bottom="0px" padding-left="10px" padding-right="10px" padding-top="0px" padding="0px" src="{% static 'images/totem-symbol.png' %}" width="48px"></mj-image>
-  </mj-column>
-  <mj-column padding="0">
-    <mj-social align="right" font-size="15px" icon-padding="0px" icon-size="20px" inner-padding="5px" mode="horizontal">
+<mj-section padding-bottom="72px" padding-left="0px" padding-right="0px" padding-top="30px">
+  <mj-column>
+    <mj-image align="center" href="https://www.totem.org" padding-bottom="0px" padding-left="10px" padding-right="10px" padding-top="0px" padding="0px" src="{% static 'images/totem-symbol.png' %}" width="30px"></mj-image>
+    <mj-social align="center" font-size="15px" icon-padding="0px" icon-size="20px" inner-padding="5px" mode="horizontal">
       <mj-social-element src="{% static 'images/email/x.png' %}" alt="https://twitter.com/TotemCircles" href="https://twitter.com/TotemCircles" title="https://twitter.com/TotemCircles"></mj-social-element>
       <mj-social-element src="{% static 'images/email/instagram.png' %}" alt="https://www.instagram.com/totemcircles/" href="https://www.instagram.com/totemcircles/" title="https://www.instagram.com/totemcircles/"></mj-social-element>
       <mj-social-element src="{% static 'images/email/github.png' %}" alt="https://github.com/totem-technologies" href="https://github.com/totem-technologies" title="https://github.com/totem-technologies"></mj-social-element>
     </mj-social>
-    <mj-spacer height="16px"></mj-spacer>
-    <mj-text align="right" color="#5B5B5B" font-family="'Cabin', 'Helvetica', 'Arial', sans-serif" font-size="14px" line-height="1.5" padding-bottom="0px" padding-left="10px" padding-right="10px" padding-top="0px" padding="0px">
+    <mj-spacer height="5px"></mj-spacer>
+    <mj-text align="center" color="#5B5B5B" font-family="'Cabin', 'Helvetica', 'Arial', sans-serif" font-size="14px" line-height="1.5" padding-bottom="0px" padding-left="10px" padding-right="10px" padding-top="0px" padding="0px">
       Totem Technologies, 501(c)(3).
     </mj-text>
   </mj-column>
