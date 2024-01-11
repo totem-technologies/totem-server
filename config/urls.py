@@ -5,6 +5,7 @@ from django.contrib.sitemaps.views import sitemap
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.urls import include, path
 from django.views import defaults as default_views
+from django.views.generic import RedirectView
 
 from totem.api.api import api
 from totem.pages.urls import PagesSitemap
@@ -26,6 +27,14 @@ try:
 except Exception:
     api_path = None
 
+admin_urls = (
+    # Use default login view for admin
+    [path("login/", RedirectView.as_view(pattern_name=settings.LOGIN_URL, permanent=True, query_string=True))]
+    + admin.site.get_urls(),
+    "admin",
+    admin.site.name,
+)
+
 urlpatterns = [
     path("", include("totem.pages.urls", namespace="pages")),
     path("plans/", include("totem.plans.urls", namespace="plans")),
@@ -34,7 +43,7 @@ urlpatterns = [
     path("email/", include("totem.email.urls", namespace="email")),
     path("circles/", include("totem.circles.urls", namespace="circles")),
     # Django Admin, use {% url 'admin:index' %}
-    path(settings.ADMIN_URL, admin.site.urls),
+    path(settings.ADMIN_URL, admin_urls),  # type: ignore
     # API
     api_path,
     # User management
