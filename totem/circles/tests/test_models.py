@@ -64,6 +64,10 @@ class TestCircleEventModel:
         assert not event.notified
         event.notify()
         assert len(mail.outbox) == 1
+        email = mail.outbox[0]
+        assert email.to == [user.email]
+        message = str(email.message())
+        assert "http://testserver/circles/event" in message
         event.refresh_from_db()
         assert event.notified
 
@@ -76,5 +80,10 @@ class TestCircleEventModel:
         assert not event.advertised
         event.advertise()
         assert len(mail.outbox) == 1
+        email = mail.outbox[0]
+        assert email.to == [user.email]
+        message = str(email.message())
+        assert "http://testserver/circles/event" in message
+        assert "http://testserver/circles/subscribe" in message
         event.refresh_from_db()
         assert event.advertised

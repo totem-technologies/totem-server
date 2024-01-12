@@ -69,6 +69,6 @@ def get_templates():
             link="https://totem.org",  # type: ignore
             start="2021-01-01",
             event_title="Test Event",
-            unsubscribe_url="https://totem.org",  # type: ignore
+            unsubscribe_url="https://totem.org?bo=bo&cool=cool",  # type: ignore
         ),
     }
