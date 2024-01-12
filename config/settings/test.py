@@ -31,7 +31,8 @@ EMAIL_BASE_URL = "http://testserver"
 # DEBUGGING FOR TEMPLATES
 # ------------------------------------------------------------------------------
 TEMPLATES[0]["OPTIONS"]["debug"] = True  # type: ignore # noqa: F405
-# Your stuff...
+
+# Make sure we don't talk to any real APIs
 # ------------------------------------------------------------------------------
 POSTHOG_API_KEY = None
 SAVE_TO_GOOGLE_CALENDAR = False

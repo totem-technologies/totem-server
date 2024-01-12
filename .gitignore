@@ -281,3 +281,4 @@ totem/media/
 .envs/*
 !.envs/.local/
 !.envs/.ci/
+.mailpit
