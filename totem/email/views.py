@@ -2,8 +2,8 @@ from django.http import Http404
 from django.shortcuts import render
 from django.views.generic import TemplateView
 
+from .emails import ChangeEmailEmail, CircleAdvertisementEmail, CircleStartingEmail, LoginEmail
 from .models import SubscribedModel
-from .utils import get_templates, render_email
 
 
 class SubscribeView(TemplateView):
@@ -33,14 +33,42 @@ class UnsubscribeView(TemplateView):
 def template_view(request, name=None):
     if name is None:
         return render(request, "email/templates.html", {"templates": get_templates().keys()})
-    sample_data = {
-        "first_name": "John",
-        "last_name": "Doe",
-        "email": "",
-        "link": "https://www.google.com",
-        "subject": "Test Subject",
-        "message": "Test Message",
-        "button_text": "Test Button Text",
-        "title": "Test Title",
+    templates = get_templates()
+    if name not in templates:
+        raise Http404
+    email = templates[name]
+    return render(
+        request,
+        "email/email_viewer.html",
+        context={"html": email.get_template().render_html(), "text": email.get_template().render_text()},
+    )
+
+
+def get_templates():
+    # files = Path(__file__).parent.joinpath("templates/email/emails").glob("*.mjml")
+    # return {file.stem: file.name for file in files}
+    return {
+        "login_email": LoginEmail(
+            recipient="bo@totem.org",
+            url="https://totem.org",  # type: ignore
+        ),
+        "change_email": ChangeEmailEmail(
+            recipient="bo@totem.org",
+            old_email="b2@totem.org",
+            new_email="bo@totem.org",
+            login_url="https://totem.org",  # type: ignore
+        ),
+        "circle_starting": CircleStartingEmail(
+            recipient="bo@totem.org",
+            start="2021-01-01",
+            event_title="Test Event",
+            link="https://totem.org",  # type: ignore
+        ),
+        "circle_advertisement": CircleAdvertisementEmail(
+            recipient="bo@totem.org",
+            link="https://totem.org",  # type: ignore
+            start="2021-01-01",
+            event_title="Test Event",
+            unsubscribe_url="https://totem.org",  # type: ignore
+        ),
     }
-    return render(request, "email/email_viewer.html", context={"email": render_email(name, sample_data)})

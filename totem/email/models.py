@@ -4,8 +4,6 @@ from django.conf import settings
 from django.db import models
 from django.urls import reverse
 
-from totem.email.utils import send_mail
-
 # subscribe: form, welcome email, subscribed page
 # unsubscribe: unsubscribe link, unsubscribe page, unsubscribe email
 
@@ -22,20 +20,10 @@ class SubscribedModel(models.Model):
     updated = models.DateTimeField(auto_now=True)
 
     def send_subscribe_email(self):
-        send_mail(
-            "Welcome to ✨Totem✨",
-            "subscribe",
-            self,
-            [self.user.email],
-        )
+        raise NotImplementedError
 
     def send_welcome_email(self):
-        send_mail(
-            "Welcome to ✨Totem✨",
-            "welcome",
-            self,
-            [self.user.email],
-        )
+        raise NotImplementedError
 
     def subscribe(self):
         self.subscribed = True

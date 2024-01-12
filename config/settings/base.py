@@ -296,6 +296,7 @@ EMAIL_SUBJECT_PREFIX = env(
     default="[Totem]",  # type: ignore
 )
 EMAIL_SUPPORT_ADDRESS = "help@totem.org"
+EMAIL_SHOW_ENV_BANNER = env.bool("EMAIL_SHOW_ENV_BANNER", default=False)  # type: ignore
 MAILERLITE_API_KEY = env("MAILERLITE_API_KEY", default="")  # type: ignore
 
 # ADMIN
