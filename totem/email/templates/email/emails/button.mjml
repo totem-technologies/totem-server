@@ -1,26 +1,26 @@
 {% extends 'email/emails/_base.mjml' %} {% load static %} {% block content %}
-<mj-section background-color="#F3F1E9" border-radius="24px" padding-bottom="50px" padding-left="40px" padding-right="40px" padding-top="48px" padding="40px">
+<mj-section mj-class="section">
   <mj-column padding="0">
-    <mj-text font-size="50px" line-height="1.1" padding="0px">
+    <mj-text mj-class="h1">
       <strong>{{title}}</strong>
     </mj-text>
-    <mj-spacer height="16px"></mj-spacer>
+    <mj-spacer height="10px"></mj-spacer>
     {% block message %}
-    <mj-text font-size="20px" line-height="1.6" padding="0px">
+    <mj-text mj-class="p">
       {{message}}
     </mj-text>
     {% endblock message %}
     <mj-spacer height="40px"></mj-spacer>
-    <mj-button href="{{link}}" align="left" border-radius="40px" font-size="20px" line-height="1.75" padding="0px" align="center">
+    <mj-button href="{{link}}" align="center">
       <strong>{{button_text}}</strong>
     </mj-button>
     <mj-spacer height="48px"></mj-spacer>
-    <mj-text color="#7a7a7a" font-family="'Cabin', 'Helvetica', 'Arial', sans-serif" font-size="14px" line-height="1.6" padding="0px">
+    <mj-text mj-class="sub">
       If you didn't request this link, you can safely ignore this email. If the
       button doesn't work, copy and paste the link below into your browser:
     </mj-text>
-    <mj-spacer height="16px"></mj-spacer>
-    <mj-text color="#7a7a7a" align="center" font-family="'Cabin', 'Helvetica', 'Arial', sans-serif" font-size="14px" line-height="1.6" padding="0px">
+    <mj-spacer height="10px"></mj-spacer>
+    <mj-text mj-class="sub" align="center">
       <a class="link-nostyle" href="{{link}}">{{link}}</a>
     </mj-text>
   </mj-column>
