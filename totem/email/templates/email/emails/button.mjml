@@ -5,9 +5,11 @@
       <strong>{{title}}</strong>
     </mj-text>
     <mj-spacer height="16px"></mj-spacer>
-    <mj-text font-family="'Cabin', 'Helvetica', 'Arial', sans-serif" font-size="20px" line-height="1.6" padding="0px">
+    {% block message %}
+    <mj-text font-size="20px" line-height="1.6" padding="0px">
       {{message}}
     </mj-text>
+    {% endblock message %}
     <mj-spacer height="40px"></mj-spacer>
     <mj-button href="{{link}}" align="left" border-radius="40px" font-size="20px" line-height="1.75" padding="0px" align="center">
       <strong>{{button_text}}</strong>

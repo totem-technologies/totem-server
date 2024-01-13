@@ -2,7 +2,13 @@ from django.http import Http404
 from django.shortcuts import render
 from django.views.generic import TemplateView
 
-from .emails import ChangeEmailEmail, CircleAdvertisementEmail, CircleStartingEmail, LoginEmail
+from .emails import (
+    ChangeEmailEmail,
+    CircleAdvertisementEmail,
+    CircleStartingEmail,
+    CircleTomorrowReminderEmail,
+    LoginEmail,
+)
 from .models import SubscribedModel
 
 
@@ -40,7 +46,7 @@ def template_view(request, name=None):
     return render(
         request,
         "email/email_viewer.html",
-        context={"html": email.get_template().render_html(), "text": email.get_template().render_text()},
+        context={"html": email.render_html(), "text": email.render_text()},
     )
 
 
@@ -50,13 +56,11 @@ def get_templates():
     return {
         "login_email": LoginEmail(
             recipient="bo@totem.org",
-            url="https://totem.org",  # type: ignore
+            link="https://totem.org",  # type: ignore
         ),
         "change_email": ChangeEmailEmail(
             recipient="bo@totem.org",
-            old_email="b2@totem.org",
-            new_email="bo@totem.org",
-            login_url="https://totem.org",  # type: ignore
+            link="https://totem.org",  # type: ignore
         ),
         "circle_starting": CircleStartingEmail(
             recipient="bo@totem.org",
@@ -70,5 +74,11 @@ def get_templates():
             start="2021-01-01",
             event_title="Test Event",
             unsubscribe_url="https://totem.org?bo=bo&cool=cool",  # type: ignore
+        ),
+        "circle_tomorrow_reminder": CircleTomorrowReminderEmail(
+            recipient="bo@totem.org",
+            link="https://totem.org",  # type: ignore
+            start="2021-01-01",
+            event_title="Test Event",
         ),
     }
