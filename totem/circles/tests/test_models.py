@@ -87,3 +87,19 @@ class TestCircleEventModel:
         assert "http://testserver/circles/subscribe" in message
         event.refresh_from_db()
         assert event.advertised
+
+    def test_notify_tomorrow(self, db):
+        user = UserFactory()
+        event = CircleEventFactory()
+        event.attendees.add(user)
+        assert mail.outbox == []
+        event.save()
+        assert not event.notified_tomorrow
+        event.notify_tomorrow()
+        assert len(mail.outbox) == 1
+        email = mail.outbox[0]
+        assert email.to == [user.email]
+        message = str(email.message())
+        assert "http://testserver/circles/event" in message
+        event.refresh_from_db()
+        assert event.notified_tomorrow

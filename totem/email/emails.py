@@ -135,6 +135,16 @@ def send_notify_circle_starting(event: CircleEvent, user: User):
     ).send()
 
 
+def send_notify_circle_tomorrow(event: CircleEvent, user: User):
+    start = to_user_timezone(user, event.start)
+    CircleTomorrowReminderEmail(
+        recipient=user.email,
+        start=start,
+        event_title=event.circle.title,
+        link=make_email_url(event.get_absolute_url()),  # type: ignore
+    ).send()
+
+
 def send_notify_circle_advertisement(event: CircleEvent, user: User):
     start = to_user_timezone(user, event.start)
     unsubscribe_url = make_email_url(reverse("circles:subscribe", kwargs={"slug": event.circle.slug}))

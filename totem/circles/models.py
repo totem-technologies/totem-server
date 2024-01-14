@@ -15,7 +15,11 @@ from imagekit.models import ProcessedImageField
 from imagekit.processors import ResizeToFit
 from taggit.managers import TaggableManager
 
-from totem.email.emails import send_notify_circle_advertisement, send_notify_circle_starting
+from totem.email.emails import (
+    send_notify_circle_advertisement,
+    send_notify_circle_starting,
+    send_notify_circle_tomorrow,
+)
 from totem.utils.hash import basic_hash, hmac
 from totem.utils.md import MarkdownField, MarkdownMixin
 from totem.utils.models import AdminURLMixin, SluggedModel
@@ -128,6 +132,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
     circle = models.ForeignKey(Circle, on_delete=models.CASCADE, related_name="events")
     meeting_url = models.CharField(max_length=255, blank=True)
     notified = models.BooleanField(default=False)
+    notified_tomorrow = models.BooleanField(default=False)
     advertised = models.BooleanField(default=False)
 
     def get_absolute_url(self) -> str:
@@ -219,7 +224,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         self.notified_tomorrow = True
         self.save()
         for user in self.attendees.all():
-            send_notify_circle_starting(self, user)
+            send_notify_circle_tomorrow(self, user)
 
     def advertise(self, force=False):
         # Notify users who are subscribed that a new event is available, if they aren't already attending.

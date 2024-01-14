@@ -17,17 +17,17 @@ def notify_circle_ready():
 
 def notify_circle_tomorrow():
     upcoming_circles = CircleEvent.objects.filter(
-        start__gte=timezone.now(),
+        start__gte=timezone.now() + timedelta(hours=20),
         start__lte=timezone.now() + timedelta(days=1),
-        notified=False,
+        notified_tomorrow=False,
     )
     for event in upcoming_circles:
-        event.notify()
+        event.notify_tomorrow()
 
 
 def advertise_circle():
     upcoming_circles = CircleEvent.objects.filter(
-        start__gte=timezone.now(),
+        start__gte=timezone.now() + timedelta(days=1),
         start__lte=timezone.now() + timedelta(days=7),
         advertised=False,
     )
