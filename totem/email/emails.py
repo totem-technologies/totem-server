@@ -15,6 +15,8 @@ from django.template.loader import render_to_string
 from mjml import mjml2html
 from pydantic import AnyHttpUrl, BaseModel
 
+from totem.utils.pool import global_pool
+
 from .models import EmailLog
 from .utils import send_mail
 
@@ -34,21 +36,28 @@ class Email(BaseModel):
     def render_text(self) -> str:
         return render_to_string(f"email/emails/{self.template}.txt", context=self.model_dump())
 
-    def send(self):
-        sent = send_mail(
-            subject=self.subject,
-            html_message=self.render_html(),
-            text_message=self.render_text(),
-            recipient_list=[self.recipient],
-        )
-        if sent:
-            print(f"Sent email to {self.recipient} with subject {self.subject}")
-            EmailLog.objects.create(
+    def send(self, blocking: bool = True):
+        if blocking:
+            send_mail(
                 subject=self.subject,
-                template=self.template,
-                context=self.model_dump(mode="json"),
-                recipient=self.recipient,
+                html_message=self.render_html(),
+                text_message=self.render_text(),
+                recipient_list=[self.recipient],
             )
+        else:
+            global_pool.add_task(
+                send_mail,
+                subject=self.subject,
+                html_message=self.render_html(),
+                text_message=self.render_text(),
+                recipient_list=[self.recipient],
+            )
+        EmailLog.objects.create(
+            subject=self.subject,
+            template=self.template,
+            context=self.model_dump(mode="json"),
+            recipient=self.recipient,
+        )
 
 
 class ButtonEmail(Email):
@@ -177,7 +186,7 @@ def send_notify_circle_signup(event: CircleEvent, user: User):
         start=start,
         iso_start=event.start.astimezone(user.timezone).isoformat(),
         event_title=event.circle.title,
-    ).send()
+    ).send(blocking=False)
 
 
 def to_human_time(user: User, dt: datetime):

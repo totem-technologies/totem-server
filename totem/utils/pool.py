@@ -71,3 +71,6 @@ class ThreadPool:
             self.queue.put(_Sentinel())
         for thread in self.threads:
             thread.join()  # Wait for threads to finish
+
+
+global_pool = ThreadPool()
