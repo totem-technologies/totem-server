@@ -5,6 +5,7 @@ from django.views.generic import TemplateView
 from .emails import (
     ChangeEmailEmail,
     CircleAdvertisementEmail,
+    CircleSignupEmail,
     CircleStartingEmail,
     CircleTomorrowReminderEmail,
     LoginEmail,
@@ -79,6 +80,13 @@ def get_templates():
             recipient="bo@totem.org",
             link="https://totem.org",  # type: ignore
             start="2021-01-01",
+            event_title="Test Event",
+        ),
+        "circle_signup": CircleSignupEmail(
+            recipient="bo@totem.org",
+            link="https://totem.org",  # type: ignore
+            start="2021-01-01",
+            iso_start="2021-01-01",
             event_title="Test Event",
         ),
     }

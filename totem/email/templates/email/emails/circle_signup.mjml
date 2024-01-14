@@ -1,0 +1,11 @@
+{% extends 'email/emails/button.mjml' %}
+{% block message %}
+<mj-text font-size="20px" line-height="1.6" padding="0px">
+  You have successfully saved your spot in this Circle! We're excited to see you there.
+</mj-text>
+<mj-spacer height="10px" />
+<mj-text font-size="20px" line-height="1.6" padding="0px">
+  <strong>Circle:</strong> {{ event_title }}<br>
+  <strong>When:</strong> {{ start }}<br>
+</mj-text>
+{% endblock message %}

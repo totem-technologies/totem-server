@@ -39,7 +39,7 @@ def detail(request, slug):
     return _circle_detail(request, request.user, circle, event)
 
 
-def _circle_detail(request, user: User, circle: Circle, event):
+def _circle_detail(request: HttpRequest, user: User, circle: Circle, event):
     if not circle.published and not user.is_staff:
         raise PermissionDenied
 
@@ -77,7 +77,7 @@ def ics_hash(slug, user_ics_key):
 
 
 @login_required
-def rsvp(request, event_slug):
+def rsvp(request: HttpRequest, event_slug):
     event = _get_circle_event(event_slug)
     if request.POST:
         try:
@@ -132,6 +132,16 @@ def subscribe(request: HttpRequest, slug: str):
     if return_url:
         return redirect(return_url)
     return redirect("circles:detail", slug=slug)
+
+
+def calendar(request: HttpRequest, event_slug: str):
+    event = _get_circle_event(event_slug)
+    user = request.user
+
+    if not event.circle.published and not user.is_staff:  # type: ignore
+        raise PermissionDenied
+
+    return render(request, "circles/calendaradd.html", {"event": event})
 
 
 def _token_subscribe(request: HttpRequest, circle: Circle):

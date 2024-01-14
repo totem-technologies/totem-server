@@ -105,6 +105,17 @@ class CircleTomorrowReminderEmail(Email):
     title: str = "Circle Tomorrow"
 
 
+class CircleSignupEmail(Email):
+    template: str = "circle_signup"
+    start: str
+    event_title: str
+    iso_start: str
+    link: AnyHttpUrl
+    button_text: str = "Add to calendar"
+    subject: str = "Your spot is saved"
+    title: str = "Spot Saved"
+
+
 def send_returning_login_email(email: str, url: str):
     _url = make_email_url(url)
     LoginEmail(
@@ -126,7 +137,7 @@ def send_change_email(old_email: str, new_email: str, login_url: str):
 
 
 def send_notify_circle_starting(event: CircleEvent, user: User):
-    start = to_user_timezone(user, event.start)
+    start = to_human_time(user, event.start)
     CircleStartingEmail(
         recipient=user.email,
         start=start,
@@ -136,7 +147,7 @@ def send_notify_circle_starting(event: CircleEvent, user: User):
 
 
 def send_notify_circle_tomorrow(event: CircleEvent, user: User):
-    start = to_user_timezone(user, event.start)
+    start = to_human_time(user, event.start)
     CircleTomorrowReminderEmail(
         recipient=user.email,
         start=start,
@@ -146,7 +157,7 @@ def send_notify_circle_tomorrow(event: CircleEvent, user: User):
 
 
 def send_notify_circle_advertisement(event: CircleEvent, user: User):
-    start = to_user_timezone(user, event.start)
+    start = to_human_time(user, event.start)
     unsubscribe_url = make_email_url(reverse("circles:subscribe", kwargs={"slug": event.circle.slug}))
     unsubscribe_url += f"?user={user.slug}&token={event.circle.subscribe_token(user)}&action=unsubscribe"
     CircleAdvertisementEmail(
@@ -158,7 +169,18 @@ def send_notify_circle_advertisement(event: CircleEvent, user: User):
     ).send()
 
 
-def to_user_timezone(user: User, dt: datetime):
+def send_notify_circle_signup(event: CircleEvent, user: User):
+    start = to_human_time(user, event.start)
+    CircleSignupEmail(
+        recipient=user.email,
+        link=make_email_url(reverse("circles:calendar", kwargs={"event_slug": event.slug})),  # type: ignore
+        start=start,
+        iso_start=event.start.astimezone(user.timezone).isoformat(),
+        event_title=event.circle.title,
+    ).send()
+
+
+def to_human_time(user: User, dt: datetime):
     # 06:56 PM EDT on Friday, August 25
     return dt.astimezone(user.timezone).strftime("%I:%M %p %Z on %A, %B %d")
 

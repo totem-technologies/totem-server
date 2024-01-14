@@ -21,6 +21,7 @@ urlpatterns = [
     path("rsvp/<str:event_slug>/", views.rsvp, name="rsvp"),
     path("join/<str:event_slug>/", views.join, name="join"),
     path("event/<str:event_slug>/", views.event_detail, name="event_detail"),
+    path("calendar/<str:event_slug>/", views.calendar, name="calendar"),
     path("subscribe/<str:slug>/", views.subscribe, name="subscribe"),
     path("<str:slug>/", views.detail, name="detail"),
     # path("<str:slug>/event.ics", views.ics, name="ics"),

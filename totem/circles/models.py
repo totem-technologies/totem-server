@@ -17,6 +17,7 @@ from taggit.managers import TaggableManager
 
 from totem.email.emails import (
     send_notify_circle_advertisement,
+    send_notify_circle_signup,
     send_notify_circle_starting,
     send_notify_circle_tomorrow,
 )
@@ -176,6 +177,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
     def add_attendee(self, user):
         if self.can_attend(user=user):
             self.attendees.add(user)
+            send_notify_circle_signup(self, user)
             notify_slack(f"New Circle attendee: {user.email} for {self.circle.title} by {self.circle.author.name}")
 
     def started(self):

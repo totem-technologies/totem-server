@@ -137,3 +137,32 @@ class AnonSubscribeViewTest(TestCase):
         self.assertTemplateUsed(response, "circles/subscribed.html")
         self.assertTrue(response.context["unsubscribed"])
         self.assertFalse(self.user in self.circle.subscribed.all())
+
+
+class CalendarViewTest(TestCase):
+    def setUp(self):
+        self.user = UserFactory()
+        self.circle = CircleFactory()
+        self.event = CircleEventFactory(circle=self.circle)
+        self.event.add_attendee(self.user)
+
+    def test_calendar(self):
+        url = reverse("circles:calendar", args=[self.event.slug])
+        response = self.client.get(url)
+        assert response.status_code == 200
+        self.assertTemplateUsed(response, "circles/calendaradd.html")
+        self.assertTrue(self.user in self.event.attendees.all())
+
+    def test_calendar_unauth(self):
+        self.client.logout()
+        url = reverse("circles:calendar", args=[self.event.slug])
+        response = self.client.get(url)
+        assert response.status_code == 200
+        assert self.circle.title in response.content.decode()
+
+    def test_calendar_unsubscribed(self):
+        self.circle.unsubscribe(self.user)
+        url = reverse("circles:calendar", args=[self.event.slug])
+        response = self.client.get(url)
+        assert response.status_code == 200
+        assert self.circle.title in response.content.decode()
