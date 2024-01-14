@@ -17,7 +17,7 @@
                     {% for circle in subscribed_circles %}
                         <tr>
                             <td class="text-ellipsis">
-                                <a class="hover:text-tblue" href="{{ circle.get_absolute_url }}">{{ circle.title }}</a>
+                                <a class="link" href="{{ circle.get_absolute_url }}">{{ circle.title }}</a>
                             </td>
                             <td class="text-right">
                                 <form method="post" action="{% url 'circles:subscribe' slug=circle.slug %}">
