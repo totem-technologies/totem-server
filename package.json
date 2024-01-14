@@ -7,7 +7,7 @@
     "build": "concurrently \"npm run build:tailwind\" \"npm run build:js\" \"npm run build:atcb\"",
     "build:js": "npm run esb -- --minify",
     "build:tailwind": "NODE_ENV=production npm run tw",
-    "build:atcb": "esbuild node_modules/add-to-calendar-button/dist/atcb-no-pro.js --legal-comments=none --drop:console --minify --outfile=totem/static/js/atcb.min.js",
+    "build:atcb": "esbuild node_modules/add-to-calendar-button/dist/atcb-no-pro.js --legal-comments=none --drop:console --minify --outfile=totem/static/js/atcb.min.js && perl -pi -e s,add-to-calendar-pro.com,totem.org,g totem/static/js/atcb.min.js",
     "dev": "concurrently --kill-others \"npm run watch:js\" \"npm run watch:tailwind\" \"npm run livereload\"",
     "watch:js": "npm run esb -- --define:process.env.NODE_ENV=\"\\\"development\\\"\" --watch",
     "watch:tailwind": "NODE_ENV=development npm run tw -- --watch",

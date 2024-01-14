@@ -35,7 +35,6 @@ assets-watch:
 
 assets:
 	npm run build
-	sed -i '' 's/add-to-calendar-pro.com/totem.org/g' totem/static/js/atcb.min.js
 
 .venv:
 	python3 -m venv .venv
