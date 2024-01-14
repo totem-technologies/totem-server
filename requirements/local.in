@@ -10,6 +10,7 @@ mypy<2  # https://github.com/python/mypy
 django-stubs[compatible-mypy]<5  # https://github.com/typeddjango/django-stubs
 pytest<8  # https://github.com/pytest-dev/pytest
 pytest-sugar<1  # https://github.com/Frozenball/pytest-sugar
+pytest-socket<1  # https://github.com/miketheman/pytest-socket
 
 # Code quality
 # ------------------------------------------------------------------------------
