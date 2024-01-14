@@ -436,3 +436,4 @@ CORS_ALLOWED_ORIGINS = ["https://app.posthog.com"]
 # ------------------------------------------------------------------------------
 AUDITLOG_INCLUDE_ALL_MODELS = True
 AUDITLOG_DISABLE_ON_RAW_SAVE = True
+AUDITLOG_EXCLUDE_TRACKING_MODELS = ["totem.email.models.EmailLog"]

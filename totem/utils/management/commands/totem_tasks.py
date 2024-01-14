@@ -1,8 +1,11 @@
+from collections.abc import Callable
+
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from sentry_sdk.crons.decorator import monitor
 
 from totem.circles.tasks import tasks as circle_tasks
+from totem.email.tasks import tasks as email_tasks
 
 
 class Command(BaseCommand):
@@ -22,7 +25,7 @@ class Command(BaseCommand):
 
 
 def run_tasks_impl():
-    tasks = []
-    tasks.extend(circle_tasks)
-    for task in tasks:
-        task()
+    tasks: list[list[Callable]] = [circle_tasks, email_tasks]
+    for task_list in tasks:
+        for task in task_list:
+            task()

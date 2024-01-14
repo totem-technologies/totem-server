@@ -212,6 +212,15 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         for user in self.attendees.all():
             send_notify_circle_starting(self, user)
 
+    def notify_tomorrow(self, force=False):
+        # Notify users who are attending that the circle is starting tomorrow
+        if force is False and self.notified_tomorrow:
+            return
+        self.notified_tomorrow = True
+        self.save()
+        for user in self.attendees.all():
+            send_notify_circle_starting(self, user)
+
     def advertise(self, force=False):
         # Notify users who are subscribed that a new event is available, if they aren't already attending.
         if force is False and self.advertised:

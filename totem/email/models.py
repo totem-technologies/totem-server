@@ -1,8 +1,10 @@
 import uuid
+from datetime import timedelta
 
 from django.conf import settings
 from django.db import models
 from django.urls import reverse
+from django.utils import timezone
 
 # subscribe: form, welcome email, subscribed page
 # unsubscribe: unsubscribe link, unsubscribe page, unsubscribe email
@@ -43,13 +45,18 @@ class SubscribedModel(models.Model):
 
 
 class EmailLog(models.Model):
-    subscribed = models.ForeignKey(SubscribedModel, on_delete=models.CASCADE)
+    recipient = models.CharField(max_length=255)
     subject = models.CharField(max_length=255)
-    body = models.TextField()
+    template = models.CharField(max_length=255)
+    context = models.JSONField(null=True)
     created = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.subscribed.user.email} - {self.subject} ({self.created})"
+        return f"{self.recipient} - {self.subject} ({self.created})"
+
+    @classmethod
+    def clear_old(cls):
+        cls.objects.filter(created__lte=timezone.now() - timedelta(days=30)).delete()
 
     class Meta:
         verbose_name_plural = "Email Logs"

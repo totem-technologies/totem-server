@@ -15,6 +15,7 @@ from django.template.loader import render_to_string
 from mjml import mjml2html
 from pydantic import AnyHttpUrl, BaseModel
 
+from .models import EmailLog
 from .utils import send_mail
 
 
@@ -34,12 +35,20 @@ class Email(BaseModel):
         return render_to_string(f"email/emails/{self.template}.txt", context=self.model_dump())
 
     def send(self):
-        send_mail(
+        sent = send_mail(
             subject=self.subject,
             html_message=self.render_html(),
             text_message=self.render_text(),
             recipient_list=[self.recipient],
         )
+        if sent:
+            print(f"Sent email to {self.recipient} with subject {self.subject}")
+            EmailLog.objects.create(
+                subject=self.subject,
+                template=self.template,
+                context=self.model_dump(mode="json"),
+                recipient=self.recipient,
+            )
 
 
 class ButtonEmail(Email):
