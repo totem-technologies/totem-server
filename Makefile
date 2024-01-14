@@ -35,7 +35,7 @@ assets-watch:
 
 assets:
 	npm run build
-	cp -f node_modules/add-to-calendar-button/dist/atcb.js totem/static/js/atcb.min.js
+	sed -i '' 's/add-to-calendar-pro.com/totem.org/g' totem/static/js/atcb.min.js
 
 .venv:
 	python3 -m venv .venv

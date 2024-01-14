@@ -4,7 +4,6 @@ const botdPromise = load()
 
 export default function () {
   const forms = document.querySelectorAll('[data-bot="true"]')
-
   forms.forEach((form) => {
     form.addEventListener("submit", async (event) => {
       event.preventDefault()
