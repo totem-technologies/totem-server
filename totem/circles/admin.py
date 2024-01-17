@@ -9,7 +9,7 @@ from .models import Circle, CircleEvent
 class CircleEventInline(admin.StackedInline):
     model = CircleEvent
     extra = 0
-    filter_horizontal = ["attendees", "joined"]
+    autocomplete_fields = ["attendees", "joined"]
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -22,7 +22,7 @@ class CircleAdmin(admin.ModelAdmin):
     save_on_top = True
     list_display = ("title", "slug", "published")
     readonly_fields = ("subscribed_list",)
-    filter_horizontal = ["subscribed"]
+    autocomplete_fields = ["subscribed"]
     inlines = [
         CircleEventInline,
     ]
@@ -46,7 +46,7 @@ class CircleAdmin(admin.ModelAdmin):
 class CircleEventAdmin(admin.ModelAdmin):
     list_display = ("start", "circle", "slug")
     list_filter = ["circle"]
-    filter_horizontal = ["attendees", "joined"]
+    autocomplete_fields = ["attendees", "joined"]
 
     def save_model(self, request, obj: CircleEvent, form, change):
         obj.save_to_calendar()
