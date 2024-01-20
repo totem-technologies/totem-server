@@ -43,6 +43,9 @@ install_local: .venv
 	source .venv/bin/activate && pip install -Ur requirements/local.txt
 	npm install
 
+fixtures:
+	docker-compose -f local.yml run --rm django python manage.py load_dev_data
+
 pipcompile:
 	pip-compile --upgrade --output-file requirements/local.txt requirements/local.in
 	pip-compile --upgrade --output-file requirements/production.txt requirements/production.in

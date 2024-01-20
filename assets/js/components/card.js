@@ -1,7 +1,7 @@
 function Card(props) {
-  const imgeUrl = props.image ? `url(${props.image})` : ""
+  const imgeUrl = props.image ? `, url(${props.image})` : ""
   backgroundImageStyle = {
-    backgroundImage: `linear-gradient(185deg, rgba(196, 204, 255, 0.52), rgba(117, 19, 93, 0.73)), ${imgeUrl}`,
+    backgroundImage: `linear-gradient(185deg, rgba(196, 204, 255, 0.52), rgba(117, 19, 93, 0.73))${imgeUrl}`,
     backgroundSize: "cover",
     backgroundPosition: "center",
     backgroundRepeat: "no-repeat",

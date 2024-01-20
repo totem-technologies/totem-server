@@ -31,6 +31,7 @@ def all_upcoming_recommended_events(user: User | None, limit: int = 10):
         events = events.exclude(joined=user)
     # are there any seats?
     events = events.annotate(attendee_count=Count("attendees")).filter(attendee_count__lt=F("seats"))
+    events = events.prefetch_related("circle__author")
     return events[:limit]
 
 

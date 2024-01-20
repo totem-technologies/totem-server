@@ -1,6 +1,9 @@
 from .base import *  # noqa
 from .base import env
 
+
+SITE_HOST: str = SITE_HOST  # noqa: F405
+
 # GENERAL
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#debug
@@ -12,7 +15,8 @@ SECRET_KEY = env(
 )
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
 # 10.0.2.2 for android emulator
-ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", "10.0.2.2"]
+ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", "10.0.2.2", SITE_HOST]
+CSRF_TRUSTED_ORIGINS = [f"https://{SITE_HOST}", f"http://{SITE_HOST}"]
 
 # CACHES
 # ------------------------------------------------------------------------------

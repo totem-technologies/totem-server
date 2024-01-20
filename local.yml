@@ -22,6 +22,8 @@ services:
     ports:
       - "8000:8000"
     command: /start
+    labels:
+      - dev.orbstack.domains=totem.local
 
   postgres:
     build:
