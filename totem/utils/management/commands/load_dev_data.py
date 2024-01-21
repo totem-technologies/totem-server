@@ -31,7 +31,7 @@ def load_fixtures_impl():
 
     # Create staff
     staff = []
-    for i in range(15):
+    for i in range(5):
         u = User.objects.create_user(
             name=fake.name(),
             email=fake.email(),
@@ -62,7 +62,7 @@ def load_fixtures_impl():
                 published=True,
                 title=fake.bs().title(),
                 subtitle=fake.sentence(),
-                author=staff[i],
+                author=staff[i % len(staff)],
                 content=fake.paragraph(nb_sentences=20),
                 recurring="Every week",
             )

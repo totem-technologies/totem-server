@@ -8,9 +8,9 @@ from sesame.utils import get_query_string
 
 from totem.circles.tests.factories import CircleEventFactory, CircleFactory
 from totem.onboard.models import OnboardModel
-from totem.users.models import User
+from totem.users.models import Feedback, User
 from totem.users.tests.factories import KeeperProfileFactory, UserFactory
-from totem.users.views import user_redirect_view
+from totem.users.views import FEEDBACK_SUCCESS_MESSAGE, user_redirect_view
 
 from ..views import user_index_view
 
@@ -97,7 +97,7 @@ def test_magic_login_view_verify_email(client):
     qs = get_query_string(user)
     response = client.get(reverse("magic-login") + qs)
     assert response.status_code == 302
-    assert len(get_messages(response)) == 0
+    assert len(get_messages(response.wsgi_request)) == 0
     user.refresh_from_db()
     assert user.verified is True
 
@@ -142,3 +142,34 @@ class UserProfileViewTest(TestCase):
         self.assertEqual(len(response.context["subscribed_circles"]), 1)
         self.assertEqual(len(response.context["circle_history"]), 1)
         self.assertEqual(response.context["circle_count"], 1)
+
+
+class UserFeedbackViewTest(TestCase):
+    def test_user_feedback_view_authenticated(self):
+        user = UserFactory()
+        self.client.force_login(user)
+        response = self.client.post(reverse("users:feedback"), data={"message": "Test feedback"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Feedback.objects.count(), 1)
+        feedback = Feedback.objects.first()
+        assert feedback
+        self.assertEqual(feedback.user, user)
+        messages = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertIn(FEEDBACK_SUCCESS_MESSAGE, messages)
+
+    def test_user_feedback_view_anonymous(self):
+        response = self.client.post(reverse("users:feedback"), data={"message": "Test feedback"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Feedback.objects.count(), 1)
+        feedback = Feedback.objects.first()
+        assert feedback
+        self.assertIsNone(feedback.user)
+        messages = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertIn(FEEDBACK_SUCCESS_MESSAGE, messages)
+
+    def test_user_feedback_view_invalid_form(self):
+        response = self.client.post(reverse("users:feedback"), data={"message": ""})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Feedback.objects.count(), 0)
+        messages = [str(m) for m in get_messages(response.wsgi_request)]
+        self.assertNotIn(FEEDBACK_SUCCESS_MESSAGE, messages)

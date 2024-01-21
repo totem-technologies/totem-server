@@ -1,3 +1,8 @@
+/**
+ * Initializes the bot detection functionality and attaches event listeners to forms with `data-bot="true"`.
+ * When a form is submitted, it checks if the user is a bot using the @fingerprintjs/botd library.
+ * If a bot is detected, an error is thrown. Otherwise, a CSRF token is added to the form and the form is submitted.
+ */
 import { load } from "@fingerprintjs/botd"
 
 const botdPromise = load()

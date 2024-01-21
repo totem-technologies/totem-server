@@ -225,19 +225,26 @@ class FeedbackForm(forms.ModelForm):
         }
 
 
+FEEDBACK_SUCCESS_MESSAGE = "Feedback successfully submitted. Thank you!"
+
+
 def user_feedback_view(request):
+    banned_words = ["USD"]
     form = FeedbackForm()
     if request.method == "POST":
         data = request.POST.copy()
         form = FeedbackForm(data)
         if form.is_valid():
+            cleaned = form.cleaned_data
+            is_spam = any(word in cleaned["message"] for word in banned_words)
             if request.user.is_authenticated:
                 name = request.user.name
-                Feedback.objects.create(**form.cleaned_data, user=request.user)
+                Feedback.objects.create(**cleaned, user=request.user)
             else:
                 name = "Anonymous"
-                Feedback.objects.create(**form.cleaned_data)
-            messages.success(request, "Feedback successfully submitted. Thank you!")
-            notify_slack(f"Feedback from {name}! \nMessage: \n{form.cleaned_data['message']}")
+                Feedback.objects.create(**cleaned)
+            messages.success(request, FEEDBACK_SUCCESS_MESSAGE)
+            if not is_spam:
+                notify_slack(f"Feedback from {name}! \nMessage: \n{form.cleaned_data['message']}")
             form = FeedbackForm()
     return render(request, "users/feedback.html", context={"form": form})

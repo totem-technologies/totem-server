@@ -5,8 +5,7 @@
         <p class="pb-5">
             We love hearing about how we can improve Totem. If you have any feedback, please let us know!
         </p>
-        <form action="{% url "users:feedback" %}" method="post">
-            {% csrf_token %}
+        <form action="{% url "users:feedback" %}" method="post" data-bot="true">
             {{ form.non_field_errors }}
             {% if not request.user.is_authenticated %}
                 <div>
