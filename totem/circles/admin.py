@@ -13,8 +13,13 @@ class CircleEventInline(admin.StackedInline):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        now_minus_1_hour = timezone.now() - timezone.timedelta(hours=1)
-        return qs.filter(start__gte=now_minus_1_hour).order_by("start")
+        now_minus_2_hour = timezone.now() - timezone.timedelta(hours=2)
+        return qs.filter(start__gte=now_minus_2_hour).order_by("start")
+
+    def get_formset(self, request, obj=None, **kwargs):
+        formset = super().get_formset(request, obj, **kwargs)
+        formset.form.base_fields["attendees"].initial = [request.user]
+        return formset
 
 
 @admin.register(Circle)
