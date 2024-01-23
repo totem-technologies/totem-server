@@ -108,34 +108,33 @@ class AnonSubscribeViewTest(TestCase):
     def setUp(self):
         self.user = UserFactory()
         self.circle = CircleFactory()
-        self.token = self.circle.subscribe_token(self.user)
+        self.token_url = self.circle.subscribe_url(self.user, subscribe=True)
+        self.token_url_unsub = self.circle.subscribe_url(self.user, subscribe=False)
 
     def test_anon_subscribe(self):
-        url = reverse("circles:subscribe", args=[self.circle.slug])
-        response = self.client.get(f"{url}?user={self.user.slug}&token={self.token}")
-        assert response.status_code == 200
-        self.assertTemplateUsed(response, "circles/subscribed.html")
+        self.assertFalse(self.user in self.circle.subscribed.all())
+        response = self.client.get(self.token_url)
+        assert response.status_code == 302
         self.assertTrue(self.user in self.circle.subscribed.all())
 
     def test_anon_subscribe_wrong_token(self):
-        url = reverse("circles:subscribe", args=[self.circle.slug])
-        response = self.client.get(f"{url}?user={self.user.slug}&token=wrong-token")
-        assert response.status_code == 403
+        self.assertFalse(self.user in self.circle.subscribed.all())
+        response = self.client.get(self.token_url[:-3])
+        assert response.status_code == 302
         self.assertFalse(self.user in self.circle.subscribed.all())
 
     def test_anon_subscribe_no_token(self):
+        self.assertFalse(self.user in self.circle.subscribed.all())
         url = reverse("circles:subscribe", args=[self.circle.slug])
-        response = self.client.get(f"{url}?user={self.user.slug}")
-        assert response.status_code == 200
-        self.assertTemplateUsed(response, "circles/subscribed.html")
+        response = self.client.get(url)
+        assert response.status_code == 302
         self.assertFalse(self.user in self.circle.subscribed.all())
 
     def test_anon_subscribe_unsubscribe(self):
-        url = reverse("circles:subscribe", args=[self.circle.slug])
-        response = self.client.get(f"{url}?user={self.user.slug}&token={self.token}&action=unsubscribe")
-        assert response.status_code == 200
-        self.assertTemplateUsed(response, "circles/subscribed.html")
-        self.assertTrue(response.context["unsubscribed"])
+        self.circle.subscribe(self.user)
+        self.assertTrue(self.user in self.circle.subscribed.all())
+        response = self.client.get(self.token_url_unsub)
+        assert response.status_code == 302
         self.assertFalse(self.user in self.circle.subscribed.all())
 
 

@@ -27,6 +27,7 @@ from totem.utils.models import AdminURLMixin, SluggedModel
 from totem.utils.slack import notify_slack
 from totem.utils.utils import full_url
 
+from .actions import SubscribeAction, SubscribeActionParameters
 from .calendar import calendar
 
 if TYPE_CHECKING:
@@ -114,8 +115,8 @@ class Circle(AdminURLMixin, MarkdownMixin, SluggedModel):
     def unsubscribe(self, user):
         return self.subscribed.remove(user)
 
-    def subscribe_token(self, user):
-        return basic_hash(f"{self.slug}-{user.email}-{user.api_key}")
+    def subscribe_url(self, user, subscribe: bool) -> str:
+        return SubscribeAction.build_url(user, SubscribeActionParameters(circle_slug=self.slug, subscribe=subscribe))
 
 
 class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):

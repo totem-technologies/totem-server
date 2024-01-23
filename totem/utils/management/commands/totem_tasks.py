@@ -6,6 +6,7 @@ from sentry_sdk.crons.decorator import monitor
 
 from totem.circles.tasks import tasks as circle_tasks
 from totem.email.tasks import tasks as email_tasks
+from totem.users.tasks import tasks as user_tasks
 
 
 class Command(BaseCommand):
@@ -25,7 +26,7 @@ class Command(BaseCommand):
 
 
 def run_tasks_impl():
-    tasks: list[list[Callable]] = [circle_tasks, email_tasks]
+    tasks: list[list[Callable]] = [circle_tasks, email_tasks, user_tasks]
     for task_list in tasks:
         for task in task_list:
             task()

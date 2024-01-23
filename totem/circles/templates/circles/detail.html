@@ -119,6 +119,7 @@
                                 <button class="a text-gray-400 pt-2" type="submit" value="Submit">Unsubscribe</button>
                             </div>
                         {% else %}
+                            <input type="hidden" name="action" value="subscribe">
                             <div class="pb-2">Subscribe to this Circle to get updates when new sessions are added.</div>
                             <button class="w-full btn btn-outline p-2 px-6" type="submit" value="Submit">Subscribe</button>
                         {% endif %}

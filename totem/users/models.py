@@ -1,5 +1,6 @@
 import time
 import uuid
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 from django.conf import settings
@@ -7,6 +8,7 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.db.models import BooleanField, CharField, EmailField, TextChoices, UUIDField
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.html import escape as html_escape
 from django.utils.html import strip_tags
 from django.utils.translation import gettext_lazy as _
@@ -155,3 +157,22 @@ class Feedback(models.Model):
 
     def __str__(self):
         return f"<Feedback: {self.date_created}>"
+
+
+def default_expires_at() -> datetime:
+    return timezone.now() + timedelta(days=7)
+
+
+class ActionToken(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    action = models.CharField(max_length=100)
+    parameters = models.JSONField(default=dict)
+    expires_at = models.DateTimeField(default=default_expires_at)
+
+    def is_valid(self) -> bool:
+        return timezone.now() < self.expires_at
+
+    @classmethod
+    def cleanup(cls):
+        cls.objects.filter(expires_at__lt=timezone.now()).delete()

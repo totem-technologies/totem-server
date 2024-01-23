@@ -7,6 +7,7 @@ from django.shortcuts import redirect, render
 from totem.users.models import User
 from totem.utils.hash import basic_hash
 
+from .actions import SubscribeAction
 from .filters import all_upcoming_recommended_events, other_events_in_circle
 from .models import Circle, CircleEvent, CircleEventException
 
@@ -115,22 +116,33 @@ def join(request, event_slug):
 
 
 def subscribe(request: HttpRequest, slug: str):
-    circle = _get_circle(slug)
-    user = request.user
+    token = request.GET.get("token")
 
-    if request.GET.get("token"):
-        return _token_subscribe(request, circle)
-
-    if request.method != "POST":
-        return render(request, "circles/subscribed.html", {"circle": circle})
-
-    return_url = request.POST.get("return_url")
-    if request.POST.get("action") == "unsubscribe":
-        circle.unsubscribe(user)
+    if request.POST:
+        user = request.user
+        if not user.is_authenticated:
+            raise PermissionDenied
+        sub = request.POST.get("action") == "subscribe"
+    elif token:
+        try:
+            user, params = SubscribeAction.resolve(token)
+            sub = params.subscribe
+            slug = params.circle_slug
+        except Exception:
+            messages.error(request, "Invalid or expired link. If you think this is an error, please contact us.")
+            return redirect("circles:detail", slug=slug)
     else:
+        return redirect("circles:detail", slug=slug)
+
+    circle = _get_circle(slug)
+    if sub:
         circle.subscribe(user)
-    if return_url:
-        return redirect(return_url)
+        message = "You are now subscribed to this Circle."
+    else:
+        circle.unsubscribe(user)
+        message = "You are now unsubscribed from this Circle."
+
+    messages.add_message(request, messages.SUCCESS, message)
     return redirect("circles:detail", slug=slug)
 
 
@@ -142,24 +154,3 @@ def calendar(request: HttpRequest, event_slug: str):
         raise PermissionDenied
 
     return render(request, "circles/calendaradd.html", {"event": event})
-
-
-def _token_subscribe(request: HttpRequest, circle: Circle):
-    user_slug = request.GET.get("user")
-    sent_token = request.GET.get("token")
-
-    if not user_slug or not sent_token:
-        raise PermissionDenied
-
-    user = User.objects.get(slug=user_slug)
-    token = circle.subscribe_token(user)
-
-    if sent_token != token:
-        raise PermissionDenied
-
-    if request.GET.get("action") == "unsubscribe":
-        circle.unsubscribe(user)
-        return render(request, "circles/subscribed.html", {"circle": circle, "unsubscribed": True})
-    else:
-        circle.subscribe(user)
-        return render(request, "circles/subscribed.html", {"circle": circle})

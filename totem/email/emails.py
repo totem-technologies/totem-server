@@ -167,14 +167,12 @@ def send_notify_circle_tomorrow(event: CircleEvent, user: User):
 
 def send_notify_circle_advertisement(event: CircleEvent, user: User):
     start = to_human_time(user, event.start)
-    unsubscribe_url = make_email_url(reverse("circles:subscribe", kwargs={"slug": event.circle.slug}))
-    unsubscribe_url += f"?user={user.slug}&token={event.circle.subscribe_token(user)}&action=unsubscribe"
     CircleAdvertisementEmail(
         recipient=user.email,
         link=make_email_url(event.get_absolute_url()),  # type: ignore
         start=start,
         event_title=event.circle.title,
-        unsubscribe_url=unsubscribe_url,  # type: ignore
+        unsubscribe_url=event.circle.subscribe_url(user, subscribe=False),  # type: ignore
     ).send()
 
 
