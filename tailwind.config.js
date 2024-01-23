@@ -86,6 +86,7 @@ module.exports = {
       },
       fontFamily: {
         serif: ["Erode", "serif"],
+        sans: ["Montserrat", "sans-serif"],
       },
     },
   },
@@ -100,7 +101,7 @@ module.exports = {
       {
         mytheme: {
           ...require("daisyui/src/theming/themes").bumblebee,
-          primary: totemColors.yellow,
+          primary: totemColors.mauve,
         },
       },
     ], // true: all themes | false: only light + dark | array: specific themes like this ["light", "dark", "cupcake"]
