@@ -25,9 +25,9 @@ backoff==2.2.1
     # via posthog
 black==23.12.1
     # via -r requirements/local.in
-boto3==1.34.19
+boto3==1.34.28
     # via django-storages
-botocore==1.34.19
+botocore==1.34.28
     # via
     #   boto3
     #   s3transfer
@@ -61,7 +61,7 @@ coverage==7.4.0
     # via
     #   -r requirements/local.in
     #   django-coverage-plugin
-cryptography==41.0.7
+cryptography==42.0.1
     # via pyjwt
 cssbeautifier==1.14.11
     # via djlint
@@ -151,15 +151,15 @@ executing==2.0.1
     # via stack-data
 factory-boy==3.3.0
     # via -r requirements/local.in
-faker==22.2.0
+faker==22.5.1
     # via factory-boy
 filelock==3.13.1
     # via virtualenv
 google-api-core==2.15.0
     # via google-api-python-client
-google-api-python-client==2.113.0
+google-api-python-client==2.115.0
     # via -r requirements/base.in
-google-auth==2.26.2
+google-auth==2.27.0
     # via
     #   google-api-core
     #   google-api-python-client
@@ -224,13 +224,13 @@ lxml==5.1.0
     #   caldav
 markdown==3.5.2
     # via -r requirements/base.in
-markupsafe==2.1.3
+markupsafe==2.1.4
     # via werkzeug
 matplotlib-inline==0.1.6
     # via ipython
 mccabe==0.7.0
     # via pylint
-mjml-python==1.2.2
+mjml-python==1.2.4
     # via -r requirements/base.in
 monotonic==1.6
     # via posthog
@@ -274,9 +274,9 @@ platformdirs==4.1.0
     #   black
     #   pylint
     #   virtualenv
-pluggy==1.3.0
+pluggy==1.4.0
     # via pytest
-posthog==3.3.1
+posthog==3.3.2
     # via -r requirements/base.in
 pre-commit==3.6.0
     # via -r requirements/local.in
@@ -346,7 +346,7 @@ python-dateutil==2.8.2
     #   posthog
     #   recurring-ical-events
     #   vobject
-python-dotenv==1.0.0
+python-dotenv==1.0.1
     # via uvicorn
 python3-openid==3.2.0
     # via django-allauth
@@ -387,7 +387,7 @@ requests-oauthlib==1.3.1
     #   google-auth-oauthlib
 rsa==4.9
     # via google-auth
-ruff==0.1.13
+ruff==0.1.14
     # via -r requirements/local.in
 s3transfer==0.10.0
     # via boto3
