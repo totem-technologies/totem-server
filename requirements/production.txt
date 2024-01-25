@@ -47,7 +47,7 @@ cssselect==1.2.0
     # via -r requirements/base.in
 defusedxml==0.7.1
     # via python3-openid
-django==4.2.9
+django==5.0.1
     # via
     #   -r requirements/base.in
     #   django-allauth
@@ -63,7 +63,7 @@ django==4.2.9
     #   django-taggit
     #   django-timezone-field
     #   sentry-sdk
-django-allauth==0.60.0
+django-allauth==0.60.1
     # via -r requirements/base.in
 django-anymail==10.2
     # via -r requirements/base.in
@@ -115,8 +115,6 @@ gunicorn==21.2.0
     # via -r requirements/base.in
 h11==0.14.0
     # via uvicorn
-hiredis==2.2.3
-    # via -r requirements/base.in
 httplib2==0.22.0
     # via
     #   google-api-python-client
@@ -211,9 +209,7 @@ qrcode==7.4.2
 recurring-ical-events==2.1.2
     # via caldav
 redis==5.0.1
-    # via
-    #   -r requirements/base.in
-    #   django-redis
+    # via django-redis
 requests==2.31.0
     # via
     #   -r requirements/base.in
@@ -258,7 +254,7 @@ urllib3==2.0.7
     #   django-anymail
     #   requests
     #   sentry-sdk
-uvicorn[standard]==0.25.0
+uvicorn[standard]==0.27.0
     # via
     #   -r requirements/base.in
     #   uvicorn

@@ -69,14 +69,13 @@
                     <button type="submit"
                             name="profile_avatar_type"
                             value="{{ choice.0 }}"
-                            class="tab {% if choice.0 == user.profile_avatar_type %}tab-active{% endif %}">
-                        {{ choice.1 }}
-                    </button>
+                            class="tab
+                                   {% if choice.0 == user.profile_avatar_type %}tab-active{% endif %}">{{ choice.1 }}</button>
                 {% endfor %}
             </div>
         </form>
         <div class="text-center">
-            <button class="btn btn-sm mt-5" onclick="location.reload()">Done</button>
+            <button class="btn btn-sm mt-5" onclick="window.location = window.location">Done</button>
         </div>
     </div>
 </div>
