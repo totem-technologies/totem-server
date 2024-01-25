@@ -35,4 +35,4 @@ def advertise_circle():
         event.advertise()
 
 
-tasks = [notify_circle_ready, advertise_circle]
+tasks = [notify_circle_ready, advertise_circle, notify_circle_tomorrow]
