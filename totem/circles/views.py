@@ -105,8 +105,8 @@ def list(request):
     limit = int(request.GET.get("limit", 9))
     if limit > 100:
         raise ValueError
-    events = all_upcoming_recommended_events(request.user, category=category, limit=limit + 1)
-    context: dict[str, Any] = {"events": events.all()[:limit]}
+    events = all_upcoming_recommended_events(request.user, category=category, limit=limit + 1).all()
+    context: dict[str, Any] = {"events": events[:limit]}
     context["selected_category"] = category or ""
     categories = [
         {"value": "", "label": "All"},
@@ -117,7 +117,7 @@ def list(request):
             {"value": category[1], "label": category[0]},
         )
     context["categories"] = categories
-    context["show_load_more"] = events.count() > limit
+    context["show_load_more"] = len(events) > limit
     return render(request, "circles/list.html", context=context)
 
 
