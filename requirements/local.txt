@@ -25,9 +25,9 @@ backoff==2.2.1
     # via posthog
 black==23.12.1
     # via -r requirements/local.in
-boto3==1.34.28
+boto3==1.34.31
     # via django-storages
-botocore==1.34.28
+botocore==1.34.31
     # via
     #   boto3
     #   s3transfer
@@ -57,11 +57,11 @@ click==8.1.7
     #   uvicorn
 colorama==0.4.6
     # via djlint
-coverage==7.4.0
+coverage==7.4.1
     # via
     #   -r requirements/local.in
     #   django-coverage-plugin
-cryptography==42.0.1
+cryptography==42.0.2
     # via pyjwt
 cssbeautifier==1.14.11
     # via djlint
@@ -73,7 +73,7 @@ decorator==5.1.1
     #   ipython
 defusedxml==0.7.1
     # via python3-openid
-dill==0.3.7
+dill==0.3.8
     # via pylint
 distlib==0.3.8
     # via virtualenv
@@ -151,13 +151,13 @@ executing==2.0.1
     # via stack-data
 factory-boy==3.3.0
     # via -r requirements/local.in
-faker==22.5.1
+faker==22.6.0
     # via factory-boy
 filelock==3.13.1
     # via virtualenv
-google-api-core==2.15.0
+google-api-core==2.16.1
     # via google-api-python-client
-google-api-python-client==2.115.0
+google-api-python-client==2.116.0
     # via -r requirements/base.in
 google-auth==2.27.0
     # via
@@ -228,7 +228,7 @@ matplotlib-inline==0.1.6
     # via ipython
 mccabe==0.7.0
     # via pylint
-mjml-python==1.2.4
+mjml-python==1.3.0
     # via -r requirements/base.in
 monotonic==1.6
     # via posthog
@@ -274,7 +274,7 @@ platformdirs==4.1.0
     #   virtualenv
 pluggy==1.4.0
     # via pytest
-posthog==3.3.2
+posthog==3.3.4
     # via -r requirements/base.in
 pre-commit==3.6.0
     # via -r requirements/local.in
@@ -298,9 +298,9 @@ pyasn1-modules==0.3.0
     # via google-auth
 pycparser==2.21
     # via cffi
-pydantic==2.5.3
+pydantic==2.6.0
     # via django-ninja
-pydantic-core==2.14.6
+pydantic-core==2.16.1
     # via pydantic
 pygments==2.17.2
     # via ipython
@@ -328,9 +328,9 @@ pytest==7.4.4
     #   pytest-django
     #   pytest-socket
     #   pytest-sugar
-pytest-django==4.7.0
+pytest-django==4.8.0
     # via -r requirements/local.in
-pytest-socket==0.6.0
+pytest-socket==0.7.0
     # via -r requirements/local.in
 pytest-sugar==0.9.7
     # via -r requirements/local.in
@@ -383,11 +383,11 @@ requests-oauthlib==1.3.1
     #   google-auth-oauthlib
 rsa==4.9
     # via google-auth
-ruff==0.1.14
+ruff==0.1.15
     # via -r requirements/local.in
 s3transfer==0.10.0
     # via boto3
-sentry-sdk[django]==1.39.2
+sentry-sdk[django]==1.40.0
     # via
     #   -r requirements/base.in
     #   sentry-sdk
@@ -416,7 +416,7 @@ traitlets==5.14.1
     # via
     #   ipython
     #   matplotlib-inline
-types-pytz==2023.3.1.1
+types-pytz==2023.4.0.20240130
     # via django-stubs
 types-pyyaml==6.0.12.12
     # via django-stubs
@@ -438,7 +438,7 @@ urllib3==2.0.7
     #   django-anymail
     #   requests
     #   sentry-sdk
-uvicorn[standard]==0.27.0
+uvicorn[standard]==0.27.0.post1
     # via
     #   -r requirements/base.in
     #   uvicorn

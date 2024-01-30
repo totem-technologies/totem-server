@@ -65,7 +65,7 @@ class MarkdownMixin:
 
 class MarkdownField(TextField):
     def __init__(self, *args, **kwargs):
-        kwargs["max_length"] = kwargs.get("max_length", 500)
+        kwargs["max_length"] = kwargs.get("max_length", 10000)
         kwargs["validators"] = kwargs.get(
             "validators", [MarkdownMixin.validate_markdown, MaxLengthValidator(kwargs["max_length"])]
         )

@@ -142,7 +142,9 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
     cancelled = models.BooleanField(default=False, help_text="Is this Circle cancelled?")
     circle = models.ForeignKey(Circle, on_delete=models.CASCADE, related_name="events")
     content = MarkdownField(
-        default="", help_text="Optional description for this specific Circle session. Markdown is supported."
+        help_text="Optional description for this specific Circle session. Markdown is supported.",
+        null=True,
+        blank=True,
     )
     duration_minutes = models.IntegerField(_("Minutes"), default=60)
     joined = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="events_joined")
