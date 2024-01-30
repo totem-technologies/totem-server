@@ -30,32 +30,32 @@
         <section class="max-w-5xl m-auto pb-20">
             <div class="h-10"></div>
             <div class="divider">Next Upcoming Circles</div>
-            <ul role="list"
-                id="search-results"
-                class="grid sm:grid-cols-2 grid-cols-1 gap-6 pb-5 md:grid-cols-3 pt-10">
-                {% for event in events %}
-                    {% include "circles/_event_card.html" with event=event only %}
-                {% endfor %}
-            </ul>
-            {% if not events %}
-                <p class="text-center">
-                    There are no upcoming Circles you can join at this time. If you have suggestions for new Circles, please <a class="link" href="{% url 'users:feedback' %}">submit them</a>!
-                </p>
-            {% endif %}
-            {% if show_load_more %}
-                <div class="text-center">
-                    <button class="btn mt-10"
-                            hx-get="{% url 'circles:list' %}"
-                            hx-target="#search-results"
-                            hx-select="#search-results"
-                            value="51"
-                            name="limit"
-                            hx-include="#search-form"
-                            hx-swap="outerHTML"
-                            hx-push-url="true"
-                            aria-label="Load more Circles">Load more Circles</button>
-                </div>
-            {% endif %}
+            <div id="search-results">
+                <ul role="list"
+                    class="grid sm:grid-cols-2 grid-cols-1 gap-6 pb-5 md:grid-cols-3 pt-10">
+                    {% for event in events %}
+                        {% include "circles/_event_card.html" with event=event only %}
+                    {% endfor %}
+                </ul>
+                {% if show_load_more %}
+                    <div class="text-center">
+                        <button class="btn mt-10"
+                                hx-get="{% url 'circles:list' %}"
+                                hx-target="#search-results"
+                                hx-select="#search-results"
+                                value="51"
+                                name="limit"
+                                hx-include="#search-form"
+                                hx-swap="outerHTML"
+                                hx-push-url="true"
+                                aria-label="Load more Circles">Load more Circles</button>
+                    </div>
+                {% else %}
+                    <p class="text-center mt-10">
+                        There are no more upcoming Circles you can join at this time. If you have suggestions for new Circles, please <a class="link" href="{% url 'users:feedback' %}">submit them</a>!
+                    </p>
+                {% endif %}
+            </div>
         </section>
     </div>
 {% endblock content %}
