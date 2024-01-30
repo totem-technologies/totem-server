@@ -1,3 +1,5 @@
+from typing import Any
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -9,7 +11,7 @@ from totem.utils.hash import basic_hash
 
 from .actions import SubscribeAction
 from .filters import all_upcoming_recommended_events, other_events_in_circle
-from .models import Circle, CircleEvent, CircleEventException
+from .models import Circle, CircleCategory, CircleEvent, CircleEventException
 
 ICS_QUERY_PARAM = "key"
 
@@ -99,8 +101,23 @@ class CircleEventListItem:
 
 
 def list(request):
-    events = all_upcoming_recommended_events(request.user)
-    context = {"events": events}
+    category = request.GET.get("category")
+    limit = int(request.GET.get("limit", 9))
+    if limit > 100:
+        raise ValueError
+    events = all_upcoming_recommended_events(request.user, category=category, limit=limit + 1)
+    context: dict[str, Any] = {"events": events.all()[:limit]}
+    context["selected_category"] = category or ""
+    categories = [
+        {"value": "", "label": "All"},
+    ]
+    categories_values = CircleCategory.objects.values_list("name", "slug").distinct()
+    for category in categories_values:
+        categories.append(
+            {"value": category[1], "label": category[0]},
+        )
+    context["categories"] = categories
+    context["show_load_more"] = events.count() > limit
     return render(request, "circles/list.html", context=context)
 
 

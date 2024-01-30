@@ -5,20 +5,57 @@
 {% block title %}Circles{% endblock title %}
 {# djlint:on #}
 {% block content %}
+    <div class="mx-auto text-center px-5">
+        <div class="py-16">
+            <h1 class="h1">Circles</h1>
+            <p class="p mx-auto mt-4 max-w-3xl">Thoughtful spaces, designed for you.</p>
+        </div>
+        <div class="join" id="search-form">
+            {% for category in categories %}
+                <input class="join-item btn checked:text-white"
+                       type="radio"
+                       name="category"
+                       value="{{ category.value }}"
+                       hx-get="{% url 'circles:list' %}"
+                       hx-target="#search-results"
+                       hx-select="#search-results"
+                       hx-swap="outerHTML"
+                       hx-push-url="true"
+                       aria-label="{{ category.label }}"
+                       {% if category.value == selected_category %}checked{% endif %} />
+            {% endfor %}
+        </div>
+    </div>
     <div class="px-5">
-        <section class="max-w-5xl pt-10 m-auto pb-20">
-            <h1 class="h2 pb-10">Circles</h1>
-            <h2 class="h3 pb-5">Upcoming Circles</h2>
+        <section class="max-w-5xl m-auto pb-20">
+            <div class="h-10"></div>
+            <div class="divider">Next Upcoming Circles</div>
             <ul role="list"
-                class="grid sm:grid-cols-2 grid-cols-1 gap-6 pb-5 md:grid-cols-3">
+                id="search-results"
+                class="grid sm:grid-cols-2 grid-cols-1 gap-6 pb-5 md:grid-cols-3 pt-10">
                 {% for event in events %}
                     {% include "circles/_event_card.html" with event=event only %}
-                {% empty %}
-                    <p>
-                        There are no upcoming Circles you can join at this time. If you have suggestions for new Circles, please <a class="link" href="{% url 'users:feedback' %}">submit them</a>!
-                    </p>
                 {% endfor %}
             </ul>
+            {% if not events %}
+                <p class="text-center">
+                    There are no upcoming Circles you can join at this time. If you have suggestions for new Circles, please <a class="link" href="{% url 'users:feedback' %}">submit them</a>!
+                </p>
+            {% endif %}
+            {% if show_load_more %}
+                <div class="text-center">
+                    <button class="btn mt-10"
+                            hx-get="{% url 'circles:list' %}"
+                            hx-target="#search-results"
+                            hx-select="#search-results"
+                            value="51"
+                            name="limit"
+                            hx-include="#search-form"
+                            hx-swap="outerHTML"
+                            hx-push-url="true"
+                            aria-label="Load more Circles">Load more Circles</button>
+                </div>
+            {% endif %}
         </section>
     </div>
 {% endblock content %}

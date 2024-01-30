@@ -52,21 +52,35 @@ def load_fixtures_impl():
             )
         )
 
+    # Create Circle Categories
+    from totem.circles.models import CircleCategory
+
+    categories = []
+    for i in range(5):
+        categories.append(
+            CircleCategory.objects.create(
+                name=fake.word(),
+                slug=fake.slug(),
+                description=fake.paragraph(nb_sentences=20),
+            )
+        )
+
     # Create circles
     from totem.circles.models import Circle
 
     circles = []
     for i in range(15):
-        circles.append(
-            Circle.objects.create(
-                published=True,
-                title=fake.bs().title(),
-                subtitle=fake.sentence(),
-                author=staff[i % len(staff)],
-                content=fake.paragraph(nb_sentences=20),
-                recurring="Every week",
-            )
+        c = Circle.objects.create(
+            published=True,
+            title=fake.bs().title(),
+            subtitle=fake.sentence(),
+            author=staff[i % len(staff)],
+            content=fake.paragraph(nb_sentences=20),
+            recurring="Every week",
         )
+        c.categories.add(*random.sample(categories, 2))
+        c.subscribed.add(c.author, *random.sample(users, 4))
+        circles.append(c)
 
     # Create circle events
     from totem.circles.models import CircleEvent
@@ -75,7 +89,7 @@ def load_fixtures_impl():
         for i in range(15):
             e = CircleEvent.objects.create(
                 circle=circle,
-                start=fake.date_time_between(start_date="+1d", end_date="+1y", tzinfo=timezone.utc),
+                start=timezone.make_aware(fake.date_time_between(start_date="+1d", end_date="+1y")),
                 meeting_url=fake.url(),
             )
             e.attendees.add(circle.author)

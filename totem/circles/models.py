@@ -58,9 +58,22 @@ def upload_to_id_image(instance, filename: str):
     return f"circles/{user_slug}/{new_filename}.{extension}"
 
 
+class CircleCategory(models.Model):
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True)
+    description = models.CharField(max_length=2000, blank=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name_plural = "circle categories"
+
+
 class Circle(AdminURLMixin, MarkdownMixin, SluggedModel):
     title = models.CharField(max_length=255)
     subtitle = models.CharField(max_length=2000)
+    categories = models.ManyToManyField(CircleCategory, blank=True)
     image = ProcessedImageField(
         blank=True,
         null=True,
@@ -68,7 +81,7 @@ class Circle(AdminURLMixin, MarkdownMixin, SluggedModel):
         spec=CircleImageSpec,  # type: ignore
         help_text="Image for the Circle, must be under 5mb",
     )
-    tags = TaggableManager()
+    tags = TaggableManager(blank=True)
     content = MarkdownField(default="")
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -120,22 +133,25 @@ class Circle(AdminURLMixin, MarkdownMixin, SluggedModel):
 
 
 class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
-    open = models.BooleanField(default=True, help_text="Is this Circle for more attendees?")
-    cancelled = models.BooleanField(default=False, help_text="Is this Circle cancelled?")
-    start = models.DateTimeField(default=timezone.now)
     listed = models.BooleanField(
         default=True,
         help_text="Is this Circle discoverable? False means events are only accessible via direct link, or to people attending.",
     )
-    duration_minutes = models.IntegerField(_("Minutes"), default=60)
+    advertised = models.BooleanField(default=False)
     attendees = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="events_attending")
-    joined = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="events_joined")
-    seats = models.IntegerField(default=8)
+    cancelled = models.BooleanField(default=False, help_text="Is this Circle cancelled?")
     circle = models.ForeignKey(Circle, on_delete=models.CASCADE, related_name="events")
+    content = MarkdownField(
+        default="", help_text="Optional description for this specific Circle session. Markdown is supported."
+    )
+    duration_minutes = models.IntegerField(_("Minutes"), default=60)
+    joined = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="events_joined")
     meeting_url = models.CharField(max_length=255, blank=True)
     notified = models.BooleanField(default=False)
     notified_tomorrow = models.BooleanField(default=False)
-    advertised = models.BooleanField(default=False)
+    open = models.BooleanField(default=True, help_text="Is this Circle for more attendees?")
+    seats = models.IntegerField(default=8)
+    start = models.DateTimeField(default=timezone.now)
 
     def get_absolute_url(self) -> str:
         return reverse("circles:event_detail", kwargs={"event_slug": self.slug})

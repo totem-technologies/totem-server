@@ -3,13 +3,40 @@ from typing import Any
 from django.contrib import admin
 from django.utils import timezone
 
-from .models import Circle, CircleEvent
+from .models import Circle, CircleCategory, CircleEvent
+
+
+@admin.register(CircleCategory)
+class CircleCategoryAdmin(admin.ModelAdmin):
+    list_display = ("name", "slug")
+    search_fields = ("name",)
 
 
 class CircleEventInline(admin.StackedInline):
     model = CircleEvent
     extra = 0
     autocomplete_fields = ["attendees", "joined"]
+    fieldsets = [
+        (
+            None,
+            {
+                "fields": [
+                    "start",
+                    "open",
+                    "listed",
+                    "cancelled",
+                    "seats",
+                    "attendees",
+                    "joined",
+                ]
+            },
+        ),
+        ("Content", {"fields": ["content"], "classes": ["collapse"]}),
+        (
+            "Advanced",
+            {"fields": ["meeting_url", "notified", "notified_tomorrow", "advertised"], "classes": ["collapse"]},
+        ),
+    ]
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -27,7 +54,7 @@ class CircleAdmin(admin.ModelAdmin):
     save_on_top = True
     list_display = ("title", "slug", "published")
     readonly_fields = ("subscribed_list",)
-    autocomplete_fields = ["subscribed"]
+    autocomplete_fields = ["subscribed", "categories"]
     inlines = [
         CircleEventInline,
     ]

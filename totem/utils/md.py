@@ -21,7 +21,7 @@ class _MarkdownWidget(widgets.Textarea):
             attrs["class"] = ""
 
         attrs["class"] += " markdown-widget"
-        attrs["height"] = "600px"
+        attrs["height"] = "400px"
 
         html = super().render(name, value, attrs, renderer=renderer)
 
@@ -65,7 +65,7 @@ class MarkdownMixin:
 
 class MarkdownField(TextField):
     def __init__(self, *args, **kwargs):
-        kwargs["max_length"] = kwargs.get("max_length", 10000)
+        kwargs["max_length"] = kwargs.get("max_length", 500)
         kwargs["validators"] = kwargs.get(
             "validators", [MarkdownMixin.validate_markdown, MaxLengthValidator(kwargs["max_length"])]
         )

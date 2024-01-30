@@ -71,6 +71,10 @@
   .btn-primary {
     @apply text-white;
   }
+
+  .btn:is(input[type="radio"]:checked) {
+    @apply text-white;
+  }
 }
 
 /* .shimmer {

@@ -32,7 +32,7 @@ function Card(props) {
     </a>
   )
   return (
-    <div class="relative overflow-clip rounded-3xl border border-gray-200 bg-white shadow transition-shadow hover:shadow-xl sm:max-w-[300px]">
+    <div class="relative overflow-clip rounded-3xl border border-gray-200 bg-white shadow transition-shadow hover:shadow-xl">
       {image}
       <div class="p-5">
         <div class="flex flex-col">
