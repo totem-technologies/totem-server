@@ -1,42 +1,20 @@
-import lxml.html
 import requests
+from django.conf import settings
 
 requests_session = requests.Session()
 
 
-def get_webflow_page(page):
+def get_webflow_page(page: str | None) -> str:
+    print(f"getting webflow page {page}")
     # proxy webflow pages from remote server
     # Send a GET request to the Webflow page
+    base_url = settings.WEBFLOW_BASE_URL
     if page is None:
-        response = requests_session.get("https://vanessas-top-notch-site-fc65f5.webflow.io/")
+        content = _get(base_url)
     else:
-        response = requests_session.get(f"https://vanessas-top-notch-site-fc65f5.webflow.io/{page}")
-    # Return the content of the Webflow page as a response
-    return _parse_page(response.content.decode("utf-8"))
+        content = _get(f"{base_url}{page}")
+    return content
 
 
-def _parse_page(content: str) -> str:
-    # Find the start and end of the content
-    parser = lxml.html.HTMLParser(encoding="utf-8")
-    doc = lxml.html.fromstring(content, parser=parser)
-    # Find the start and end of the content
-    els = doc.cssselect("body")
-    scripts = doc.cssselect("head script")
-    css = doc.cssselect("head style")
-    links = doc.cssselect("head link[type='text/css']")
-    # Return the content between the start and end
-    if els:
-        content = ""
-        for el in scripts:
-            content += str(lxml.html.tostring(el, encoding="unicode"))
-        for el in css:
-            content += str(lxml.html.tostring(el, encoding="unicode"))
-        for el in links:
-            content += str(lxml.html.tostring(el, encoding="unicode"))
-
-        for el in els[0].iterchildren():
-            content += str(lxml.html.tostring(el, encoding="unicode"))
-
-        return content
-    else:
-        return ""
+def _get(url: str) -> str:
+    return requests_session.get(url, timeout=5).content.decode("utf-8")

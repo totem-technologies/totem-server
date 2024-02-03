@@ -1,6 +1,6 @@
 from django.contrib.sitemaps import Sitemap
-from django.urls import path, reverse
-from django.views.generic import RedirectView, TemplateView
+from django.urls import path, re_path, reverse
+from django.views.generic import TemplateView
 
 from . import views
 
@@ -25,6 +25,17 @@ class PagesSitemap(Sitemap):
         return reverse(item)
 
 
+webflow_pages = [
+    "team",
+    "how-totem-works",
+    "privacy-policy",
+    "terms-of-service",
+    "why-we-made-totem",
+]
+
+webflow_patterns = [re_path(rf"^{page}/", views.webflow_proxy, name=page) for page in webflow_pages]
+
+
 app_name = "pages"
 urlpatterns = [
     path("", views.home, name="home"),
@@ -35,7 +46,6 @@ urlpatterns = [
     path("tos/", TemplateView.as_view(template_name="pages/tos.html"), name="tos"),
     path("privacy/", TemplateView.as_view(template_name="pages/privacy.html"), name="privacy"),
     path("training/", views.training, name="training"),
-    path("privacy-policy/", RedirectView.as_view(pattern_name="pages:privacy"), name="privacy-policy"),
     path("keepers/<str:name>/", views.keepers, name="keepers"),
     path("team/pam/", TemplateView.as_view(template_name="pages/pam.html"), name="team-pam"),
     path("metrics/", TemplateView.as_view(template_name="pages/metrics.html"), name="metrics"),
@@ -44,6 +54,9 @@ urlpatterns = [
     ),
     path("r/<slug:slug>/qr/", views.redirect_qr, name="redirect_qr"),
     path("r/<slug:slug>/", views.redirect, name="redirect"),
-    path("webflow/", views.webflow_page, name="webflow"),
-    path("webflow/<str:page>/", views.webflow_page, name="webflow"),
+    path("webflow/", views.dev_webflow_page, name="webflow"),
+    path("webflow/_test", views.webflow_page, name="webflow:test", kwargs={"page": "how-totem-works"}),
+    path("webflow/<path:page>/", views.dev_webflow_page, name="webflow:path"),
 ]
+
+# urlpatterns += webflow_patterns

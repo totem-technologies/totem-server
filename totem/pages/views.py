@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.shortcuts import redirect as django_redirect
 from django.shortcuts import render
 from django.urls import reverse_lazy
@@ -138,18 +138,28 @@ def home_redirect(request):
     return django_redirect(to=reverse_lazy("pages:home"))
 
 
-@login_required
-def webflow_page(request, page=None):
-    if not request.user.is_staff:
-        raise PermissionDenied
-
-    def _get():
+def webflow_page(request, page: str | None = None):
+    def _get() -> str:
         return get_webflow_page(page)
 
     ten_minutes = 60 * 10
     key = f"webflow:{page or 'home'}"
     should_refresh = request.GET.get("refresh", False)
     if should_refresh:
+        print(f"refreshing {key}")
         cache.delete(key)
-    content = cache.get_or_set(key, _get, ten_minutes)
-    return render(request, "pages/webflow.html", {"page": page, "content": content})
+    content: str | None = cache.get_or_set(key, _get, ten_minutes)
+    if content is None:
+        raise Http404
+    return HttpResponse(content, content_type="text/html")
+
+
+@login_required
+def dev_webflow_page(request, page=None):
+    if not request.user.is_staff:
+        raise PermissionDenied
+    return webflow_page(request, page)
+
+
+def webflow_proxy(request):
+    return webflow_page(request, page=request.path_info[1:])

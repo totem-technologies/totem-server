@@ -434,3 +434,8 @@ CORS_ALLOWED_ORIGINS = ["https://app.posthog.com"]
 AUDITLOG_INCLUDE_ALL_MODELS = True
 AUDITLOG_DISABLE_ON_RAW_SAVE = True
 AUDITLOG_EXCLUDE_TRACKING_MODELS = ["totem.email.models.EmailLog"]
+
+
+# Webflow
+# ------------------------------------------------------------------------------
+WEBFLOW_BASE_URL = env("WEBFLOW_BASE_URL", default="https://wf.totem.org/")  # type: ignore
