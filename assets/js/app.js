@@ -18,6 +18,10 @@ window.addEventListener("DOMContentLoaded", () => {
   emailSpellChecker()
   bot()
   shadowfill()
+  document.querySelectorAll(".no-js").forEach((el) => {
+    // Remove elements with the no-js class
+    el.remove()
+  })
 })
 
 console.log(
