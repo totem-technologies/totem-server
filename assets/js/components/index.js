@@ -1,12 +1,9 @@
 import { Fragment, h } from "preact"
 import register from "preact-custom-element"
-import Button from "./button"
-import Card from "./card"
-import Dropdown from "./dropdown"
 import NavBar from "./navbar"
 import PromptSearch from "./promptSearch"
 
-var components = [Button, Dropdown, PromptSearch, Card, NavBar]
+var components = [PromptSearch, NavBar]
 
 export default function () {
   window.h = h

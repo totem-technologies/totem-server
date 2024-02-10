@@ -1,14 +1,54 @@
 {% load avatar %}
 <div class="w-full">
-    <t-card class="sm:m-0 m-auto"
-    {% if event.circle.image %}image="{{ event.circle.image.url }}"{% endif %}
-    href="{% url "circles:event_detail" event_slug=event.slug %}">
-    <span slot="title">{{ event.circle.title|truncatechars:23 }}</span>
-    <span slot="description">By {{ event.circle.author.name.split.0 }}</span>
-    <span slot="buttonText">Join</span>
-    <span slot="avatar">{% avatar event.circle.author %}</span>
-    <span slot="start">{{ event.start|date:'M jS' }} @
-        <span>{{ event.start|date:'P T' }}</span>
-    </span>
-    </t-card>
+    <div class="relative overflow-clip rounded-3xl border border-gray-200 bg-white shadow transition-shadow hover:shadow-xl">
+        <a href="{% url "circles:event_detail" event_slug=event.slug %}">
+            <div class="relative flex flex-col rounded-t-3xl p-5 pb-2"
+                 style="background-size: cover;
+                        {% if event.circle.image %}
+                            background-image: linear-gradient(185deg, rgba(196, 204, 255, 0.52), rgba(117, 19, 93, 0.73)), url({{ event.circle.image.url }});
+                        {% else %}
+                            background-image: linear-gradient(185deg, rgba(196, 204, 255, 0.52), rgba(117, 19, 93, 0.73));
+                        {% endif %}
+                        background-position: center;
+                        background-repeat: no-repeat;
+                        height: 150px">
+                <div class="flex flex-1 items-center">
+                    <h5 class="mb-2 break-words text-2xl font-bold tracking-tight text-white drop-shadow-lg">
+                        {{ event.circle.title|truncatechars:23 }}
+                    </h5>
+                </div>
+                <div class="flex items-start justify-between ">
+                    <div class="pr-4">
+                        <p class="mb-3 font-normal text-white">By {{ event.circle.author.name.split.0 }}</p>
+                    </div>
+                    <div>
+                        <div class="w-[50px] rounded-full">
+                            <a href="{% url "circles:event_detail" event_slug=event.slug %}">
+                                {% avatar event.circle.author %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </a>
+        <div class="p-5">
+            <div class="flex flex-col">
+                <p class="mb-3 font-normal text-gray-700 ">
+                    {{ event.start|date:'M jS' }} @
+                    <span>{{ event.start|date:'P T' }}</span>
+                </p>
+                <a href="{% url "circles:event_detail" event_slug=event.slug %}"
+                   class="btn btn-primary btn-sm inline-flex items-center">
+                    Join
+                    <svg class="ml-2 h-3.5 w-3.5"
+                         aria-hidden="true"
+                         xmlns="http://www.w3.org/2000/svg"
+                         fill="none"
+                         viewBox="0 0 14 10">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9" />
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </div>
 </div>

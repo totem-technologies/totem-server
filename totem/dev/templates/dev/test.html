@@ -3,34 +3,5 @@
 {% block content %}
     <section class="max-w-5xl m-auto">
         <h1 class="h1">Test</h1>
-        <t-button color='blue'>
-        I'm a button
-        </t-button>
-        <t-button>Me too!</t-button>
-        <t-dropdown name="bo">
-        <span slot="button">
-            <button>Dropit</button>
-        </span>
-        <span slot="menu">
-            <div class="text-red-600">
-                <ul>
-                    <li>1</li>
-                    <li>2</li>
-                </ul>
-            </div>
-        </span>
-        </t-dropdown>
-        <t-popover>
-        <span slot="trigger">
-            <button class="btn btn-primary">yolo</button>
-        </span>
-        <span slot="content">I'm content!</span>
-        </t-popover>
-        <t-card image="https://placehold.co/600x100/EEE/31343C">
-        <span slot="title">I'm a card</span>
-        <span slot="description">I'm a card</span>
-        <span slot="buttonText">I'm a card</span>
-        <span slot="avatar">{% avatar request.user %}</span>
-        </t-card>
     </section>
 {% endblock content %}
