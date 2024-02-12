@@ -3,9 +3,6 @@ import PromptSearch from "./promptSearch"
 var components = [PromptSearch]
 
 export default function () {
-  // window.h = h
-  // window.Fragment = Fragment
-
   components.forEach((c) => {
     customElementWC(c.tagName, c.propsDefault || {}, c)
   })
