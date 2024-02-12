@@ -61,6 +61,7 @@ module.exports = {
 
     // Javascript files
     "./assets/js/**/*.js",
+    "./assets/js/**/*.jsx",
 
     // '../../**/*.py'
   ],

@@ -5,13 +5,12 @@
   "scripts": {
     "start": "npm run dev",
     "build": "concurrently \"npm run build:tailwind\" \"npm run build:js\" \"npm run build:atcb\"",
-    "build:js": "npm run esb -- --minify",
+    "build:js": "./build.mjs",
     "build:tailwind": "NODE_ENV=production npm run tw",
     "build:atcb": "esbuild node_modules/add-to-calendar-button/dist/atcb-no-pro.js --legal-comments=none --drop:console --minify --outfile=totem/static/js/atcb.min.js && perl -pi -e s,add-to-calendar-pro.com,totem.org,g totem/static/js/atcb.min.js",
     "dev": "concurrently --kill-others \"npm run watch:js\" \"npm run watch:tailwind\" \"npm run livereload\"",
-    "watch:js": "npm run esb -- --define:process.env.NODE_ENV=\"\\\"development\\\"\" --watch",
+    "watch:js": "./build.mjs watch",
     "watch:tailwind": "NODE_ENV=development npm run tw -- --watch",
-    "esb": "esbuild --bundle --legal-comments=none --sourcemap ./assets/js/app.js --outfile=./totem/static/js/app.min.js --loader:.js=jsx --jsx-factory=h --jsx-fragment=Fragment",
     "tw": "tailwindcss --postcss -i ./assets/css/styles.css -o ./totem/static/css/styles.css --minify",
     "livereload": "livereload ./totem/ -e 'html,css,js,py,mjml' --wait 200"
   },
@@ -24,7 +23,9 @@
     "@tailwindcss/typography": "^0.5.2",
     "concurrently": "^8.2.0",
     "daisyui": "^4.0.2",
-    "esbuild": "^0.19.0",
+    "esbuild": "^0.20.0",
+    "eslint": "^8.56.0",
+    "eslint-plugin-solid": "^0.13.1",
     "livereload": "^0.9.3",
     "postcss": "^8.4.14",
     "postcss-import": "^16.0.0",
@@ -35,17 +36,11 @@
     "tailwindcss": "^3.2.7"
   },
   "dependencies": {
-    "@headlessui/react": "^1.7.18",
-    "@heroicons/react": "^2.1.1",
-    "@preact/signals": "^1.2.2",
-    "@radix-ui/react-popover": "1.0.7",
     "@zootools/email-spell-checker": "^1.12.0",
     "add-to-calendar-button": "^2.3.1",
+    "esbuild-plugin-solid": "^0.5.0",
     "htmx.org": "^1.9.6",
-    "preact": "^10.17.1",
-    "preact-custom-element": "^4.2.1",
-    "react": "npm:@preact/compat",
-    "react-dom": "npm:@preact/compat",
-    "react-tiny-popover": "^8.0.4"
+    "solid-element": "^1.8.0",
+    "solid-js": "^1.8.14"
   }
 }

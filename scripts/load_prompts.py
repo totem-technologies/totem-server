@@ -3,8 +3,9 @@ import json
 from totem.repos.models import Prompt
 
 # load prompts from json file and save to db in the django model "Prompts"
+# copy and run this in ./manage.py shell i guess
 
-with open("prompts.json") as f:
+with open("scripts/prompts.json") as f:
     data = json.load(f)
 
 for prompt in data:

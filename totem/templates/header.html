@@ -1,48 +1,106 @@
 {% load static %}
 {% load avatar %}
-<header class="text-gray-600 body-font md:px-5 min-h-[65px] px-2 border-b-[1px] border-gray-300 ">
-  <script id="navbar-data" type="application/json">
-    {
-      "logo": "{% static 'images/totem-logo.png' %}",
-      "symbol": "{% static 'images/totem-symbol.png' %}",
-      "user": {
-        "auth": {{ request.user.is_authenticated|yesno:"true,false" }},
-        "name": "{{ user.name }}",
-        "home": "{% url "users:redirect" %}"
-      },
-      "links": {
-        "home": "{% url "pages:home" %}",
-        "logout": "{% url "account_logout" %}",
-        "login": "{% url "users:login" %}",
-        "profile": "{% url "users:profile" %}",
-        "feedback": "{% url "users:feedback" %}",
-        "marketing": [
-          {
-            "title": "How it works", "href": "{% url "pages:how-it-works" %}"
-          },
-          {
-            "title": "Why we made Totem", "href": "{% url "pages:about" %}"
-          },
-          {
-            "title": "Team", "href": "{% url "pages:team" %}"
-          }
-        ],
-        "account": [
-        {% if request.user.is_staff %}
-          {
-            "title": "Admin", "target":"_blank", "href": "{% url "admin:index" %}"
-          },
+<header class="text-gray-600 body-font md:px-5 min-h-[65px] px-2 border-b-[1px] border-gray-300">
+  <div class="center drawer drawer-end mx-auto flex flex-wrap items-center justify-between py-2 md:px-5">
+    <input id="nav-bar-drawer" type="checkbox" class="drawer-toggle" />
+    <a class="title-font items-center font-medium text-gray-900"
+       href="{% url "pages:home" %}">
+      <img class="hidden sm:block"
+           src="{% static 'images/totem-logo.png' %}"
+           width="100"
+           alt="" />
+      <img class="sm:hidden"
+           src="{% static 'images/totem-symbol.png' %}"
+           width="30"
+           alt="" />
+    </a>
+    <div class="hidden pt-2 md:block">
+      {% if not request.user.is_authenticated %}
+        <a class="pr-5 hover:text-tblue" href="{% url "pages:how-it-works" %}">How it works</a>
+        <a class="pr-5 hover:text-tblue" href="{% url "pages:about" %}">Why we made Totem</a>
+        <a class="pr-5 hover:text-tblue" href="{% url "pages:team" %}">Team</a>
+      {% endif %}
+    </div>
+    <div class="flex drawer-content items-center gap-2">
+      {% if request.user.is_authenticated %}
+        <label for="nav-bar-drawer"
+               aria-label="open sidebar"
+               class="btn btn-square btn-ghost rounded-full">
+          {% avatar request.user size=40 %}
+        </label>
+      {% else %}
+        <a class="inline py-3 pr-2 text-sm text-gray-500"
+           href="{% url "users:login" %}">Login</a>
+        <a class="btn btn-primary btn-sm" href="{% url "pages:home" %}#signup">Start</a>
+        <span class="drawer-content md:hidden">
+          <label for="nav-bar-drawer"
+                 aria-label="open sidebar"
+                 class="btn btn-square btn-ghost">
+            <svg class="cursor-pointer text-gray-500 md:hidden"
+                 width="17"
+                 height="17"
+                 viewBox="0 0 24 24"
+                 xmlns="http://www.w3.org/2000/svg">
+              <g fill="none">
+              <path d="M24 0v24H0V0h24ZM12.593 23.258l-.011.002l-.071.035l-.02.004l-.014-.004l-.071-.035c-.01-.004-.019-.001-.024.005l-.004.01l-.017.428l.005.02l.01.013l.104.074l.015.004l.012-.004l.104-.074l.012-.016l.004-.017l-.017-.427c-.002-.01-.009-.017-.017-.018Zm.265-.113l-.013.002l-.185.093l-.01.01l-.003.011l.018.43l.005.012l.008.007l.201.093c.012.004.023 0 .029-.008l.004-.014l-.034-.614c-.003-.012-.01-.02-.02-.022Zm-.715.002a.023.023 0 0 0-.027.006l-.006.014l-.034.614c0 .012.007.02.017.024l.015-.002l.201-.093l.01-.008l.004-.011l.017-.43l-.003-.012l-.01-.01l-.184-.092Z" />
+              <path fill="#000000" d="M20 17.5a1.5 1.5 0 0 1 .144 2.993L20 20.5H4a1.5 1.5 0 0 1-.144-2.993L4 17.5h16Zm0-7a1.5 1.5 0 0 1 0 3H4a1.5 1.5 0 0 1 0-3h16Zm0-7a1.5 1.5 0 0 1 0 3H4a1.5 1.5 0 1 1 0-3h16Z" />
+              </g>
+            </svg>
+          </label>
+        </span>
+      {% endif %}
+    </div>
+    <div class="drawer-side z-50">
+      <label for="nav-bar-drawer"
+             aria-label="close sidebar"
+             class="drawer-overlay"></label>
+      <div class="min-h-full w-80 bg-tcreme p-4">
+        <div class="text-right">
+          <label for="nav-bar-drawer"
+                 aria-label="open sidebar"
+                 class="btn btn-square btn-ghost text-right">
+            <svg width="30"
+                 height="30"
+                 class="cursor-pointer text-gray-500"
+                 viewBox="0 0 24 24"
+                 xmlns="http://www.w3.org/2000/svg">
+              <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m7 7l10 10M7 17L17 7" />
+            </svg>
+          </label>
+        </div>
+        {% if request.user.is_authenticated %}
+          <ul class="menu">
+            <li>
+              <a class="pr-5 hover:text-tblue" href="{% url "pages:home" %}">My Home</a>
+            </li>
+            <li>
+              <a class="pr-5 hover:text-tblue" href="{% url "users:profile" %}">My Profile</a>
+            </li>
+            {% if request.user.is_staff %}
+              <li>
+                <a class="pr-5 hover:text-tblue"
+                   href="{% url "admin:index" %}"
+                   target="_blank">Admin</a>
+              </li>
+            {% endif %}
+            <li>
+              <a class="pr-5 hover:text-tblue" href="{% url "users:feedback" %}">Feedback</a>
+            </li>
+            <li>
+              <a class="pr-5 hover:text-tblue" href="{% url "account_logout" %}">Logout</a>
+            </li>
+          </ul>
+        {% else %}
+          <ul class="menu">
+            <li>
+              <a class="pr-5 hover:text-tblue" href="{% url "pages:home" %}">Home</a>
+            </li>
+            <li>
+              <a class="pr-5 hover:text-tblue" href="{% url "users:feedback" %}">Feedback</a>
+            </li>
+          </ul>
         {% endif %}
-          {
-            "title": "My Profile", "href": "{% url "users:profile" %}"
-          }
-        ]
-      }
-    }
-  </script>
-  <t-navbar dataid="navbar-data">
-  {% if request.user.is_authenticated %}
-    <span slot="avatar">{% avatar request.user size=40 %}</span>
-  {% endif %}
-  </t-navbar>
+      </div>
+    </div>
+  </div>
 </header>

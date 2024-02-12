@@ -7,13 +7,14 @@ import timezoneDetect from "./timezone"
 
 import logger from "./logger"
 
-dismiss_alert = function (e) {
+window.dismiss_alert = function (e) {
   e.closest(".alert-dismissible").remove()
 }
 
 components()
 timezoneDetect()
 htmxLoader()
+
 window.addEventListener("DOMContentLoaded", () => {
   emailSpellChecker()
   bot()
