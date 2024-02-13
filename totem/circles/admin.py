@@ -53,7 +53,7 @@ class CircleEventInline(admin.StackedInline):
 class CircleAdmin(admin.ModelAdmin):
     save_on_top = True
     list_display = ("title", "slug", "published")
-    readonly_fields = ("subscribed_list",)
+    readonly_fields = ("subscribed_list", "date_created", "date_modified")
     autocomplete_fields = ["subscribed", "categories"]
     inlines = [
         CircleEventInline,
@@ -79,6 +79,7 @@ class CircleEventAdmin(admin.ModelAdmin):
     list_display = ("start", "circle", "slug")
     list_filter = ["circle"]
     autocomplete_fields = ["attendees", "joined"]
+    readonly_fields = ("date_created", "date_modified")
 
     def save_model(self, request, obj: CircleEvent, form, change):
         obj.save_to_calendar()
