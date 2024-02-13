@@ -2,7 +2,6 @@ import base64
 import os
 from dataclasses import dataclass
 
-import caldav
 from django.conf import settings
 from google.auth.credentials import Credentials
 from google.auth.transport.requests import Request
@@ -110,67 +109,27 @@ class MemoryCache(Cache):
 
 
 credentials: Credentials | None = None
-client: caldav.DAVClient | None = None
+cal_id = settings.GOOGLE_CALENDAR_ID
 service = None
 
 
-def _init(calendar_id=settings.GOOGLE_CALENDAR_ID, service_json=settings.GOOGLE_SERVICE_JSON):
-    global credentials, client, service
+def _init(service_json=settings.GOOGLE_SERVICE_JSON):
+    global credentials, service
     if credentials is None:
         SCOPES = ["https://www.googleapis.com/auth/calendar"]
-        caldavurl = f"https://apidata.googleusercontent.com/caldav/v2/{calendar_id}/events"
         credentials = service_account.Credentials.from_service_account_info(service_json, scopes=SCOPES)
         credentials = credentials.with_subject("bo@totem.org")
-        client = caldav.DAVClient(caldavurl, auth=OAuth(credentials))
         service = build("calendar", "v3", credentials=credentials, cache=MemoryCache())
     if credentials.expired or credentials.token is None:
         credentials.refresh(Request())
-    return client, service
-
-
-def get_caldev_client():
-    client, _ = _init()
-    if client is None:
-        raise Exception("Client is None")
-    return client
-
-
-def get_service_client():
-    _, service = _init()
-    if service is None:
-        raise Exception("Service is None")
     return service
 
 
-# # events_result = service.events().list(calendarId=CAL_ID, singleEvents=True).execute()
-# events_result = service.events().get(calendarId=calid, eventId="51h15rb48o1ighm3rn79dn6vhi").execute()
-# print(events_result)
-# for event in events_result["items"]:
-#     print(event)
-#     print()
-# # print(events_result)
-# events = events_result.get("items", [])
-# event_id = events[0]["id"]
-# event = events[0]
-# # service.events().update(
-# #     calendarId=CAL_ID, eventId=event_id,
-# #     body={"end":{"date":"2023-07-15"},"start":{"date":"2023-07-15"},"summary":"Kilroy was here?","extendedProperties": {
-# #     "private": {
-# #       "petsAllowed": "yes"
-# #     }
-# #   }
-# #  }).execute()
-
-
-# def get_calendar_event(id: str):
-#     events_result = service.events().get(calendarId=calid, eventId="51h15rb48o1ighm3rn79dn6vhi").execute()
-
-
-def get_event_ical(event_id: str):
-    client = get_caldev_client()
-    calendar = client.principal().calendars()[0]
-    event = calendar.event(event_id)
-    return event.data
+def get_service_client():
+    service = _init()
+    if service is None:
+        raise Exception("Service is None")
+    return service
 
 
 def _to_gcal_id(s: str) -> str:
@@ -181,7 +140,6 @@ def save_event(event_id: str, start: str, end: str, summary: str, description: s
     if not settings.SAVE_TO_GOOGLE_CALENDAR:
         return
     service = get_service_client()
-    cal_id = settings.GOOGLE_CALENDAR_ID
     event_id = _to_gcal_id(event_id)
     random_string = _to_gcal_id(os.urandom(10).hex())
     event = {
@@ -217,5 +175,4 @@ def delete_event(event_id: str):
         return
     service = get_service_client()
     event_id = _to_gcal_id(event_id)
-    cal_id = settings.GOOGLE_CALENDAR_ID
     service.events().delete(calendarId=cal_id, eventId=event_id).execute()

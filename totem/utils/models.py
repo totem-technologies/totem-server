@@ -34,13 +34,5 @@ class AdminURLMixin:
 class SluggedModel(BaseModel):
     slug = models.SlugField(db_index=True, unique=True, editable=False, blank=True, default=make_slug)
 
-    def save(self, *args, **kwargs):
-        while not self.slug:
-            newslug = make_slug()
-            if not self.__class__.objects.filter(slug=newslug).exists():
-                self.slug = newslug
-
-        super().save(*args, **kwargs)
-
     class Meta:
         abstract = True

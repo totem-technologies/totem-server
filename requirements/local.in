@@ -8,18 +8,17 @@ watchfiles==0.21.0  # https://github.com/samuelcolvin/watchfiles
 # ------------------------------------------------------------------------------
 mypy<2  # https://github.com/python/mypy
 django-stubs[compatible-mypy]<5  # https://github.com/typeddjango/django-stubs
-pytest<8  # https://github.com/pytest-dev/pytest
-pytest-sugar<1  # https://github.com/Frozenball/pytest-sugar
+pytest<9  # https://github.com/pytest-dev/pytest
+pytest-sugar<2  # https://github.com/Frozenball/pytest-sugar
 pytest-socket<1  # https://github.com/miketheman/pytest-socket
 
 # Code quality
 # ------------------------------------------------------------------------------
-black<24.0.0  # https://github.com/psf/black
 coverage<8.0.0  # https://github.com/nedbat/coveragepy
 pip-tools<8
 pre-commit<4  # https://github.com/pre-commit/pre-commit
 pylint-django<3.0.0  # https://github.com/PyCQA/pylint-django
-ruff<0.2.0 # https://github.com/astral-sh/ruff
+ruff<0.3.0 # https://github.com/astral-sh/ruff
 
 # Django
 # ------------------------------------------------------------------------------
