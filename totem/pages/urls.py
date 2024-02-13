@@ -55,8 +55,8 @@ urlpatterns = [
     path("r/<slug:slug>/qr/", views.redirect_qr, name="redirect_qr"),
     path("r/<slug:slug>/", views.redirect, name="redirect"),
     path("webflow/", views.dev_webflow_page, name="webflow"),
-    path("webflow/_test", views.webflow_page, name="webflow:test", kwargs={"page": "how-totem-works"}),
-    path("webflow/<path:page>/", views.dev_webflow_page, name="webflow:path"),
+    path("webflow/_test", views.webflow_page, name="webflow-test", kwargs={"page": "how-totem-works"}),
+    path("webflow/<path:page>/", views.dev_webflow_page, name="webflow-path"),
 ]
 
 # urlpatterns += webflow_patterns
