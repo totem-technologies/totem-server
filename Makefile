@@ -1,6 +1,5 @@
 run:
-	npm run build
-	docker compose -f local.yml up
+	./node_modules/.bin/concurrently "docker compose -f local.yml up" "npm run dev"
 
 build:
 	docker-compose -f local.yml build
