@@ -51,9 +51,3 @@ services:
       MP_DATA_FILE: /data/mailpit.db
       MP_SMTP_AUTH_ACCEPT_ANY: 1
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
-  # assets:
-  #   build:
-  #     context: .
-  #     dockerfile: ./compose/local/assets/Dockerfile
-  #   image: totem_local_assets
-  #   container_name: totem_local_assets
