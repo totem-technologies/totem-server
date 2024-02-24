@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load static %}
+{% load avatar %}
+{# djlint:off #}
+{% block title %}Circles{% endblock title %}
+{# djlint:on #}
+{% block content %}
+    <div class="mx-auto text-center px-5">
+        <div class="py-16">
+            <h1 class="h1">Circles</h1>
+            <p class="p mx-auto mt-4 max-w-3xl">Thoughtful spaces, designed for you.</p>
+        </div>
+        {% comment %} <div class="join max-md:join-vertical" id="search-form">
+            {% for category in categories %}
+            <input class="join-item btn checked:text-white" type="radio" name="category" value="{{ category.value }}" hx-get="{% url 'circles:list' %}" hx-target="#search-results" hx-select="#search-results" hx-swap="outerHTML" hx-push-url="true" aria-label="{{ category.label }}" {% if category.value == selected_category %}checked{% endif %} />
+            {% endfor %}
+        </div> {% endcomment %}
+        <div class="flex max-w-5xl m-auto justify-between">
+            <div>
+                <div class="pb-2">Category</div>
+                <select class="select max-w-96 w-auto" name="Slect" id="category-select">
+                    {% for category in categories %}
+                        <option value="{{ category.value }}"
+                                {% if category.value == selected_category %}checked{% endif %}
+                                hx-get="{% url 'circles:list' %}"
+                                hx-target="#search-results"
+                                hx-select="#search-results"
+                                hx-swap="outerHTML"
+                                hx-push-url="true">{{ category.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <div class="pb-2">Start date</div>
+                <t-datepicker />
+            </div>
+        </div>
+    </div>
+    <div class="px-5">
+        <section class="max-w-5xl m-auto pb-20">
+            <div class="divider">Next Upcoming Circles</div>
+            <div id="search-results">
+                <ul role="list"
+                    class="grid sm:grid-cols-2 grid-cols-1 gap-6 pb-5 md:grid-cols-3 pt-10">
+                    {% for event in events %}
+                        {% include "circles/_event_card.html" with event=event only %}
+                    {% endfor %}
+                </ul>
+                {% if show_load_more %}
+                    <div class="text-center">
+                        <button class="btn mt-10"
+                                hx-get="{% url 'circles:list' %}"
+                                hx-target="#search-results"
+                                hx-select="#search-results"
+                                value="51"
+                                name="limit"
+                                hx-include="#search-form"
+                                hx-swap="outerHTML"
+                                hx-push-url="true"
+                                aria-label="Load more Circles">Load more Circles</button>
+                    </div>
+                {% else %}
+                    <p class="text-center mt-10">
+                        There are no more upcoming Circles you can join at this time. If you have suggestions for new Circles, please <a class="link" href="{% url 'users:feedback' %}">submit them</a>!
+                    </p>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+{% endblock content %}

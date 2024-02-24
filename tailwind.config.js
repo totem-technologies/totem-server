@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 /**
  * This is a minimal config.
  *
@@ -62,6 +63,7 @@ module.exports = {
     // Javascript files
     "./assets/js/**/*.js",
     "./assets/js/**/*.jsx",
+    "./assets/js/**/*.tsx",
 
     // '../../**/*.py'
   ],

@@ -13,6 +13,7 @@ var options = {
   metafile: true,
   loader: {
     ".svg": "dataurl",
+    // ".css": "local-css",
   },
   logLevel: "info",
   sourcemap: true,

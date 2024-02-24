@@ -1,6 +1,7 @@
 import { customElement, noShadowDOM } from "solid-element"
+import DatePickerComponent from "./datePicker"
 import PromptSearch from "./promptSearch"
-var components = [PromptSearch]
+var components = [PromptSearch, DatePickerComponent]
 
 export default function () {
   components.forEach((c) => {

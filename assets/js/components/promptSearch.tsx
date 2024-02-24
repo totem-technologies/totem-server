@@ -1,6 +1,11 @@
 import { For, createEffect, createSignal, onMount } from "solid-js"
 
-function Tag(props) {
+type PromptItem = {
+  prompt: string
+  tags: Array<string>
+}
+
+function Tag(props: any) {
   return (
     <button
       onClick={() => props.onClick(props.tag)}
@@ -12,7 +17,7 @@ function Tag(props) {
   )
 }
 
-function Prompt(props) {
+function Prompt(props: any) {
   return (
     <li class="mb-2 rounded-lg border-2 bg-white px-4 py-2">
       <div class="pb-3">{props.prompt}</div>
@@ -23,14 +28,14 @@ function Prompt(props) {
   )
 }
 
-function PromptSearch(props) {
+function PromptSearch(props: any) {
   const [search, setSearch] = createSignal(
     new URLSearchParams(window.location.search).get("search") || ""
   )
-  const [data, setData] = createSignal([])
+  const [data, setData] = createSignal<Array<PromptItem>>([])
 
   onMount(() => {
-    let data = JSON.parse(document.getElementById(props.dataid).textContent)
+    let data = JSON.parse(document.getElementById(props.dataid)!.textContent!)
     setData(data)
   })
 
@@ -55,7 +60,7 @@ function PromptSearch(props) {
       // eslint-disable-next-line no-unused-vars
       let [idxs, _info, order] = uf.search(haystack(), search())
       if (order) {
-        return order.map((i) => idxs.map((i) => data()[i])[i])
+        return order.map((i: number) => idxs.map((i: number) => data()[i])[i])
       }
     }
   }

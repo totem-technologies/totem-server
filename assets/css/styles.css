@@ -77,45 +77,6 @@
   }
 }
 
-/* .shimmer {
-  background: linear-gradient(
-    135deg,
-    #f4dc92 0%,
-    #f4dc92 40%,
-    #ffffff 50%,
-    #f4dc92 60%,
-    #f4dc92 100%
-  );
-  background-repeat: no-repeat;
-  background-position: 0px;
-  background-size: 300%;
-}
-
-.shimmer:hover {
-  background-color: #f4dc92;
-  animation: light 1s;
-  -webkit-animation: light 1s;
-} */
-
-/* @keyframes light {
-  0% {
-    background-position: -600px;
-  }
-  100% {
-    background-position: 0px;
-  }
-}
-
-@-webkit-keyframes light {
-  0% {
-    background-position: -600px;
-  }
-  100% {
-    background-position: 0px;
-  }
-} */
-
-
 /* Django */
 form .errorlist {
   @apply text-red-700 text-sm;
@@ -150,6 +111,5 @@ html {
   position: absolute;
   top: 15%;
 }
-
 
 [slot] { display: none !important; }

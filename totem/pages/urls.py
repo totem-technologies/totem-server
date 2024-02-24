@@ -26,11 +26,12 @@ class PagesSitemap(Sitemap):
 
 
 webflow_pages = [
-    "team",
-    "how-totem-works",
-    "privacy-policy",
-    "terms-of-service",
-    "why-we-made-totem",
+    # "team",
+    # "how-it-works",
+    # "privacy",
+    # "tos",
+    # "about",
+    "topics/mothers",
 ]
 
 webflow_patterns = [re_path(rf"^{page}/", views.webflow_proxy, name=page) for page in webflow_pages]
@@ -59,4 +60,4 @@ urlpatterns = [
     path("webflow/<path:page>/", views.dev_webflow_page, name="webflow-path"),
 ]
 
-# urlpatterns += webflow_patterns
+urlpatterns += webflow_patterns
