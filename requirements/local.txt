@@ -57,7 +57,9 @@ coverage==7.4.1
     #   -r requirements/local.in
     #   django-coverage-plugin
 cryptography==42.0.2
-    # via pyjwt
+    # via
+    #   django-anymail
+    #   pyjwt
 cssbeautifier==1.14.11
     # via djlint
 cssselect==1.2.0
@@ -304,7 +306,7 @@ pypng==0.20220715.0
     # via qrcode
 pyproject-hooks==1.0.0
     # via build
-pytest==8.0.0
+pytest==8.0.2
     # via
     #   -r requirements/local.in
     #   pytest-django
