@@ -23,6 +23,7 @@ urlpatterns = [
     path("event/<str:event_slug>/", views.event_detail, name="event_detail"),
     path("calendar/<str:event_slug>/", views.calendar, name="calendar"),
     path("subscribe/<str:slug>/", views.subscribe, name="subscribe"),
+    path("topic/<slug:slug>/", views.topic, name="topic"),
     path("<str:slug>/", views.detail, name="detail"),
     # path("<str:slug>/event.ics", views.ics, name="ics"),
     # path("sitemap.xml", CirclesSitemap),

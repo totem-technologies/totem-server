@@ -10,7 +10,7 @@ from totem.users.models import User
 from totem.utils.hash import basic_hash
 
 from .actions import SubscribeAction
-from .filters import all_upcoming_recommended_events, other_events_in_circle
+from .filters import all_upcoming_recommended_circles, all_upcoming_recommended_events, other_events_in_circle
 from .models import Circle, CircleCategory, CircleEvent, CircleEventException
 
 ICS_QUERY_PARAM = "key"
@@ -116,6 +116,32 @@ def list(request):
         categories.append(
             {"value": category[1], "label": category[0]},
         )
+    context["categories"] = categories
+    context["show_load_more"] = len(events) > limit
+    return render(request, "circles/list.html", context=context)
+
+
+def topic(request, slug):
+    category = slug
+    limit = int(request.GET.get("limit", 9))
+    if limit > 100:
+        raise ValueError
+    events = all_upcoming_recommended_circles(request.user, category=category, limit=limit + 1).all()
+    context: dict[str, Any] = {"events": events[:limit]}
+    context["selected_category"] = category or ""
+    categories = []
+    categories_values = CircleCategory.objects.values_list("name", "slug").distinct()
+    for category in categories_values:
+        value = category[1]
+        if value == slug:
+            continue
+        categories.append(
+            {"value": category[1], "label": category[0]},
+        )
+    circles = set()
+    for event in events:
+        circles.add(event.circle)
+    context["circles"] = circles
     context["categories"] = categories
     context["show_load_more"] = len(events) > limit
     return render(request, "circles/list.html", context=context)

@@ -72,6 +72,8 @@ class LogInView(FormView):
     def get(self, request: HttpRequest, *args, **kwargs):
         response = super().get(request, *args, **kwargs)
         next = request.GET.get("next")
+        if request.user.is_authenticated:
+            return redirect(next or "users:redirect")
         if next:
             request.session["next"] = next
         # Make sure htmx redirects to the login page with a full refresh

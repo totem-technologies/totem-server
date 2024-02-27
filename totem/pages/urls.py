@@ -31,6 +31,7 @@ webflow_pages = [
     # "privacy",
     # "tos",
     # "about",
+    "guidelines",
     "topics/mothers",
 ]
 

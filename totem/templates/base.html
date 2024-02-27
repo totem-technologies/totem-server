@@ -49,6 +49,8 @@
         window.TOTEM_DATA = {
             debug: {{ debug | yesno:"true,false" }},
             csrf_token: "{{ csrf_token }}",
+            is_authenticated: {{ request.user.is_authenticated | yesno:"true,false" }},
+            reload_on_login: false,
         }
     </script>
     {% block css %}
@@ -70,7 +72,7 @@
       </div>
     </noscript>
     {% include "header.html" %}
-    <div class="flex-grow min-h-[92vh]">
+    <main class="flex-grow min-h-[92vh]">
       {% if messages %}
         {% for message in messages %}
           <div class="max-w-2xl mt-10 alert-dismissible m-auto bg-blue-100 border border-blue-500 text-blue-500 px-4 py-3 mb-5 rounded relative
@@ -92,7 +94,7 @@
       {% endif %}
       {% block content %}
       {% endblock content %}
-    </div>
+    </main>
     {% include "footer.html" %}
     {% block modal %}
     {% endblock modal %}

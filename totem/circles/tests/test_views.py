@@ -48,7 +48,7 @@ class TestJoinView:
         event = CircleEventFactory()
         response = client.get(reverse("circles:join", kwargs={"event_slug": event.slug}))
         assert response.status_code == 302
-        assert "login" in response.url
+        assert "signup" in response.url
 
     def test_join_not_attend(self, client, db):
         event = CircleEventFactory()

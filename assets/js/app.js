@@ -2,6 +2,7 @@ import bot from "./bot"
 import components from "./components"
 import emailSpellChecker from "./emailSpellCheck"
 import htmxLoader from "./htmx-loader"
+import loginChannel from "./loginChannel"
 import shadowfill from "./shadowfill"
 import timezoneDetect from "./timezone"
 
@@ -14,6 +15,7 @@ window.dismiss_alert = function (e) {
 components()
 timezoneDetect()
 htmxLoader()
+loginChannel()
 
 window.addEventListener("DOMContentLoaded", () => {
   emailSpellChecker()

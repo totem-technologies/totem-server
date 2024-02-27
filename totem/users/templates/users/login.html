@@ -4,6 +4,9 @@
 {# djlint:off #}
 {% block head_title %}{% translate "Log In Required" %}{% endblock head_title %}
 {# djlint:on #}
+{% block javascript %}
+  <script>window.TOTEM_DATA.reload_on_login = true;</script>
+{% endblock javascript %}
 {% block inner %}
   <h2 class="h2">Log in</h2>
   <div class="mt-5 ">

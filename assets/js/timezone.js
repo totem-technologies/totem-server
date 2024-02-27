@@ -6,7 +6,7 @@ export default function () {
     .split(";")
     .some((item) => item.trim().startsWith("totem_timezone="))
   if (timezone && !hasTimezone) {
-    document.cookie = `totem_timezone=${timezone}; SameSite=Strict`
+    document.cookie = `totem_timezone=${timezone}; SameSite=Strict; Secure; path=/; max-age=31536000`
     if (window.TOTEM_DATA.ensureTimezone === true) {
       location.reload()
     }

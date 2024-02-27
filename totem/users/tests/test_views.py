@@ -67,7 +67,7 @@ def test_user_index_view():
     request.user = AnonymousUser()
     response = user_index_view(request)
     assert isinstance(response, HttpResponseRedirect)
-    assert response.url == reverse("users:login") + "?next=/someroute"
+    assert response.url == reverse("users:signup") + "?next=/someroute"
 
     user = UserFactory()
     request.user = user
