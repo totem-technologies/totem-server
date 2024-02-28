@@ -7,7 +7,7 @@ from .models import CircleEvent
 
 
 def other_events_in_circle(user: User | None, event: CircleEvent, limit: int = 10):
-    events = CircleEvent.objects.filter(circle=event.circle, start__gte=timezone.now(), cancelled=False)
+    events = CircleEvent.objects.filter(circle=event.circle, start__gte=timezone.now(), cancelled=False).distinct()
     if user and user.is_authenticated:
         # show users events they are already attending
         events = events.filter(Q(open=True, listed=True) | Q(attendees=user))
@@ -17,7 +17,6 @@ def other_events_in_circle(user: User | None, event: CircleEvent, limit: int = 1
     events = events.order_by("start")
     if not user or not user.is_staff:
         events = events.filter(circle__published=True)
-
     return events[:limit]
 
 
