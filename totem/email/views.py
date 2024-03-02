@@ -39,7 +39,7 @@ class UnsubscribeView(TemplateView):
 
 
 def template_view(request, name=None):
-    if not settings.DEBUG or not request.user.is_staff:
+    if not settings.DEBUG and not request.user.is_staff:
         raise Http404
     if name is None:
         return render(request, "email/templates.html", {"templates": get_templates().keys()})
