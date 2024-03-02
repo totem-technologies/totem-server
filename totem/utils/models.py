@@ -1,6 +1,7 @@
 import random
 import string
 from typing import Any
+from uuid import uuid4
 
 from django.db import models
 from django.db.models.options import Options
@@ -8,6 +9,7 @@ from django.urls import reverse
 
 
 def make_slug():
+    random.seed(str(uuid4()))
     return "".join(
         random.sample(string.ascii_lowercase, 3)
         + random.sample(string.digits, 3)

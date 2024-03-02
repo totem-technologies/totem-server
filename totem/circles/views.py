@@ -2,6 +2,7 @@ from typing import Any
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpRequest
 from django.shortcuts import redirect, render
@@ -14,6 +15,7 @@ from .filters import all_upcoming_recommended_circles, all_upcoming_recommended_
 from .models import Circle, CircleCategory, CircleEvent, CircleEventException
 
 ICS_QUERY_PARAM = "key"
+AUTO_RSVP_SESSION_KEY = "auto_rsvp"
 
 
 def _get_circle(slug: str) -> Circle:
@@ -45,6 +47,13 @@ def detail(request, slug):
 def _circle_detail(request: HttpRequest, user: User, circle: Circle, event):
     if not circle.published and not user.is_staff:
         raise PermissionDenied
+
+    if user.is_authenticated and request.session.get(AUTO_RSVP_SESSION_KEY):
+        event_slug = request.session[AUTO_RSVP_SESSION_KEY]
+        del request.session[AUTO_RSVP_SESSION_KEY]
+        if event_slug == event.slug:
+            _add_or_remove_attendee(user, event, True)
+            messages.success(request, "Your spot in this Circle has been reserved.")
 
     attending = False
     joinable = False
@@ -79,16 +88,23 @@ def ics_hash(slug, user_ics_key):
     return basic_hash(slug + str(user_ics_key))
 
 
-@login_required
+def _add_or_remove_attendee(user, event: CircleEvent, add: bool):
+    if add:
+        event.add_attendee(user)
+        event.circle.subscribe(user)
+    else:
+        event.remove_attendee(user)
+
+
 def rsvp(request: HttpRequest, event_slug):
+    if not request.user.is_authenticated:
+        request.session[AUTO_RSVP_SESSION_KEY] = event_slug
+        return redirect_to_login(request.get_full_path())
+
     event = _get_circle_event(event_slug)
     if request.POST:
         try:
-            if request.POST.get("action") == "remove":
-                event.remove_attendee(request.user)
-            else:
-                event.add_attendee(request.user)
-                event.circle.subscribe(request.user)
+            _add_or_remove_attendee(request.user, event, request.POST.get("action") != "remove")
         except CircleEventException as e:
             messages.error(request, str(e))
     return redirect("circles:event_detail", event_slug=event.slug)
