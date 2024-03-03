@@ -38,7 +38,7 @@ CACHES = {
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
 USE_MAILPIT = env.bool("USE_MAILPIT", default=False)  # type: ignore
-EMAIL_BASE_URL = env("EMAIL_BASE_URL", default=f"http://{SITE_HOST}")  # noqa: F405 # type: ignore
+EMAIL_BASE_URL = env("EMAIL_BASE_URL", default=f"https://{SITE_HOST}")  # noqa: F405 # type: ignore
 if USE_MAILPIT:
     EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
     EMAIL_HOST = "mailpit"

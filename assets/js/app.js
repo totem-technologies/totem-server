@@ -1,5 +1,6 @@
 import bot from "./bot"
 import components from "./components"
+import copyToClipboard from "./copyToClipboard"
 import emailSpellChecker from "./emailSpellCheck"
 import htmxLoader from "./htmx-loader"
 import loginChannel from "./loginChannel"
@@ -16,6 +17,7 @@ components()
 timezoneDetect()
 htmxLoader()
 loginChannel()
+copyToClipboard()
 
 window.addEventListener("DOMContentLoaded", () => {
   emailSpellChecker()
