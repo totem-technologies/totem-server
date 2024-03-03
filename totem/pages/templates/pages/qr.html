@@ -1,30 +1,36 @@
-<!DOCTYPE html>
-</html>
-<head>
-    <meta charset="UTF-8">
-    <meta name="robots" content="noindex">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="robots" content="noindex" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="QR Test" />
+    <meta name="keywords" content="Add your meta keywords here" />
     <title>QR Code</title>
     <style>
-        body{
-            background-color:lightgrey;
-        }
+      body {
+        background-color: lightgrey;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <a href="data:image/png;base64,{{ img }}">
-        <img src="data:image/png;base64,{{ img }}" width=300 height=300 alt="">
+      <img
+        src="data:image/png;base64,{{ img }}"
+        width="300"
+        height="300"
+        alt="" />
     </a>
-    <p>
-        Link: <a href="{{ obj.full_url }}">{{ obj.full_url }}</a>
-    </p>
+    <p>Link: <a href="{{ obj.full_url }}">{{ obj.full_url }}</a></p>
     {% if obj.alternate_slug %}
-        <p>
-            Alternate link: <a href="{{ obj.full_alternate_url }}">{{ obj.full_alternate_url }}</a>
-        </p>
+      <p>
+        Alternate link:
+        <a href="{{ obj.full_alternate_url }}">{{ obj.full_alternate_url }}</a>
+      </p>
     {% endif %}
     <p>
-        Redirect to: <a href="{{ obj.full_redirect_url }}">{{ obj.full_redirect_url }}</a>
+      Redirect to:
+      <a href="{{ obj.full_redirect_url }}">{{ obj.full_redirect_url }}</a>
     </p>
-</body>
+  </body>
 </html>
