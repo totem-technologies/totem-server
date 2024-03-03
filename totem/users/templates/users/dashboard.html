@@ -3,18 +3,18 @@
 {% block title %}My Home{% endblock title %}
 {# djlint:on #}
 {% block content %}
-    <div class="px-5">
-        <div class="h-10"></div>
-        <div class="max-w-5xl m-auto md:flex">
-            <div class="flex-1">
-                <h2 class="h2 pb-10">My Home</h2>
-                {% if attending_events %}
-                    {% include "users/dashboard/_upcoming.html" %}
-                {% endif %}
-                {% include "users/dashboard/_recommended.html" %}
-                {% comment %} {% include "users/dashboard/_athome.html" %} {% endcomment %}
-                {% comment %} {% include "users/dashboard/_resources.html" %} {% endcomment %}
-            </div>
-        </div>
+  <div class="px-5">
+    <div class="h-10"></div>
+    <div class="m-auto max-w-5xl md:flex">
+      <div class="flex-1">
+        <h2 class="h2 pb-10">My Home</h2>
+        {% if attending_events %}
+          {% include "users/dashboard/_upcoming.html" %}
+        {% endif %}
+        {% include "users/dashboard/_recommended.html" %}
+        {% comment %}{% include "users/dashboard/_athome.html" %}{% endcomment %}
+        {% comment %}{% include "users/dashboard/_resources.html" %}{% endcomment %}
+      </div>
     </div>
+  </div>
 {% endblock content %}

@@ -1,87 +1,107 @@
 {% extends "base.html" %}
 {% load static %}
 {% block content %}
-  <div class="section relative m-auto px-5 pt-10 overflow-x-clip text-center">
-    <img class="absolute left-1/2 -translate-x-1/2 -top-10 -z-10 overflow-clip opacity-60"
-         src="{% static 'images/home/brush2.png' %}"
-         alt="" />
-    <h1 class="h1 pt-10 pb-10 bg-gradient-to-r from-tpink to-tmauve bg-clip-text text-transparent md:text-8xl drop-shadow-xl">
+  <div class="section relative m-auto overflow-x-clip px-5 pt-10 text-center">
+    <img
+      class="absolute -top-10 left-1/2 -z-10 -translate-x-1/2 overflow-clip opacity-60"
+      src="{% static 'images/home/brush2.png' %}"
+      alt="" />
+    <h1
+      class="h1 bg-gradient-to-r from-tpink to-tmauve bg-clip-text pb-10 pt-10 text-transparent drop-shadow-xl md:text-8xl">
       Guided introspection for the modern world
     </h1>
-    <p class="tprose pt-10 m-auto">
-      Totem is a community-driven approach to self-discovery and
-      growth. It's our modern take on the practice of <strong>Circle</strong>,
-      to address our collective need for support, community, and empathy.
+    <p class="tprose m-auto pt-10">
+      Totem is a community-driven approach to self-discovery and growth. It's
+      our modern take on the practice of <strong>Circle</strong>, to address our
+      collective need for support, community, and empathy.
     </p>
   </div>
-  <div class="mx-auto max-md:mb-20 m-10 text-center md:mt-3">
+  <div class="m-10 mx-auto text-center max-md:mb-20 md:mt-3">
     <a class="btn btn-primary" href="#signup">Get started</a>
   </div>
   <section class="tprose m-auto max-w-5xl">
-    <div class="container mx-auto flex flex-col items-center px-5 md:py-24 md:flex-row">
+    <div
+      class="container mx-auto flex flex-col items-center px-5 md:flex-row md:py-24">
       <div class=" w-5/6 md:w-1/3 lg:w-full lg:max-w-lg">
-        <img height="400"
-             width="400"
-             class="rounded-2xl tshadow object-cover object-center m-auto"
-             alt="hero"
-             src="{% static 'images/home/peoplegrid.jpg' %}" />
+        <img
+          height="400"
+          width="400"
+          class="tshadow m-auto rounded-2xl object-cover object-center"
+          alt="hero"
+          src="{% static 'images/home/peoplegrid.jpg' %}" />
       </div>
-      <div class="flex flex-col relative md:w-1/2 md:items-start md:pl-16 md:text-left lg:flex-grow lg:pl-24">
-        <img class="absolute top-auto -z-10 rotate-180 overflow-clip opacity-60 md:-translate-x-1/4"
-             src="{% static 'images/home/brush.png' %}"
-             alt="" />
+      <div
+        class="relative flex flex-col md:w-1/2 md:items-start md:pl-16 md:text-left lg:flex-grow lg:pl-24">
+        <img
+          class="absolute top-auto -z-10 rotate-180 overflow-clip opacity-60 md:-translate-x-1/4"
+          src="{% static 'images/home/brush.png' %}"
+          alt="" />
         <h2 class="mb-4">A Safe Place</h2>
         <p class="mb-0 leading-relaxed">
-          Our <strong>Keepers</strong>, or moderators, guide you through the Circle.
+          Our <strong>Keepers</strong>, or moderators, guide you through the
+          Circle.
         </p>
         <p class="mb-8 leading-relaxed">
-          Keepers create safe spaces where you are free to speak your truth without interruption, from the comfort of your own home.
+          Keepers create safe spaces where you are free to speak your truth
+          without interruption, from the comfort of your own home.
         </p>
       </div>
     </div>
   </section>
   <section id="signup" class="section relative m-auto max-w-5xl pt-10">
-    <img class="absolute md:-top-20 -z-10 overflow-clip opacity-60"
-         src="{% static 'images/home/brush-lightpink.png' %}"
-         alt="" />
+    <img
+      class="absolute -z-10 overflow-clip opacity-60 md:-top-20"
+      src="{% static 'images/home/brush-lightpink.png' %}"
+      alt="" />
     <div class="items-center justify-center md:flex">
-      <div class="px-10 tprose md:w-1/2">
+      <div class="tprose px-10 md:w-1/2">
         <h2 class=" pb-2">Get started with a Welcome Circle</h2>
         <p>
-          Welcome Circles are a great way to get started with Totem. They're free, and you can join one from home.
+          Welcome Circles are a great way to get started with Totem. They're
+          free, and you can join one from home.
         </p>
         <br />
       </div>
-      <div class="rounded-xl bg-white tshadow p-10 max-md:mx-2 max-md:mt-10 md:w-1/3">
-        <form id="home-join-form"
-              data-bot="true"
-              method="post"
-              action="{{ signup_form.form_url }}">
+      <div
+        class="tshadow rounded-xl bg-white p-10 max-md:mx-2 max-md:mt-10 md:w-1/3">
+        <form
+          id="home-join-form"
+          data-bot="true"
+          method="post"
+          action="{{ signup_form.form_url }}">
           {{ signup_form }}
-          <button class="btn btn-primary w-full mt-3" type="submit">Join</button>
+          <button class="btn btn-primary mt-3 w-full" type="submit">
+            Join
+          </button>
         </form>
         <p class="mt-5 text-center text-xs text-gray-400">
           By continuing, you agree to our
           <br />
           <a class="underline" href="{% url 'pages:tos' %}">Terms of Service</a>
           and
-          <a class="underline" href="{% url 'pages:privacy' %}">Privacy Policies</a>
+          <a class="underline" href="{% url 'pages:privacy' %}"
+            >Privacy Policies</a
+          >
         </p>
       </div>
     </div>
   </section>
   <section class="section m-auto max-w-5xl overflow-x-auto">
-    <div class="grid grid-cols-[repeat(3,_minmax(270px,_1fr))] px-5 max-md:min-w-fit max-md:pt-10">
+    <div
+      class="grid grid-cols-[repeat(3,_minmax(270px,_1fr))] px-5 max-md:min-w-fit max-md:pt-10">
       {% for quote in quotes %}
         <blockquote class="relative p-5 max-md:w-64">
-          <svg class="absolute -left-2 -top-2 h-10 w-10 transform opacity-10 dark:text-tslate"
-               width="16"
-               height="16"
-               viewBox="0 0 16 16"
-               fill="none"
-               xmlns="http://www.w3.org/2000/svg"
-               aria-hidden="true">
-            <path d="M7.39762 10.3C7.39762 11.0733 7.14888 11.7 6.6514 12.18C6.15392 12.6333 5.52552 12.86 4.76621 12.86C3.84979 12.86 3.09047 12.5533 2.48825 11.94C1.91222 11.3266 1.62421 10.4467 1.62421 9.29999C1.62421 8.07332 1.96459 6.87332 2.64535 5.69999C3.35231 4.49999 4.33418 3.55332 5.59098 2.85999L6.4943 4.25999C5.81354 4.73999 5.26369 5.27332 4.84476 5.85999C4.45201 6.44666 4.19017 7.12666 4.05926 7.89999C4.29491 7.79332 4.56983 7.73999 4.88403 7.73999C5.61716 7.73999 6.21938 7.97999 6.69067 8.45999C7.16197 8.93999 7.39762 9.55333 7.39762 10.3ZM14.6242 10.3C14.6242 11.0733 14.3755 11.7 13.878 12.18C13.3805 12.6333 12.7521 12.86 11.9928 12.86C11.0764 12.86 10.3171 12.5533 9.71484 11.94C9.13881 11.3266 8.85079 10.4467 8.85079 9.29999C8.85079 8.07332 9.19117 6.87332 9.87194 5.69999C10.5789 4.49999 11.5608 3.55332 12.8176 2.85999L13.7209 4.25999C13.0401 4.73999 12.4903 5.27332 12.0713 5.85999C11.6786 6.44666 11.4168 7.12666 11.2858 7.89999C11.5215 7.79332 11.7964 7.73999 12.1106 7.73999C12.8437 7.73999 13.446 7.97999 13.9173 8.45999C14.3886 8.93999 14.6242 9.55333 14.6242 10.3Z" fill="currentColor" />
+          <svg
+            class="absolute -left-2 -top-2 h-10 w-10 transform opacity-10 dark:text-tslate"
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true">
+            <path
+              d="M7.39762 10.3C7.39762 11.0733 7.14888 11.7 6.6514 12.18C6.15392 12.6333 5.52552 12.86 4.76621 12.86C3.84979 12.86 3.09047 12.5533 2.48825 11.94C1.91222 11.3266 1.62421 10.4467 1.62421 9.29999C1.62421 8.07332 1.96459 6.87332 2.64535 5.69999C3.35231 4.49999 4.33418 3.55332 5.59098 2.85999L6.4943 4.25999C5.81354 4.73999 5.26369 5.27332 4.84476 5.85999C4.45201 6.44666 4.19017 7.12666 4.05926 7.89999C4.29491 7.79332 4.56983 7.73999 4.88403 7.73999C5.61716 7.73999 6.21938 7.97999 6.69067 8.45999C7.16197 8.93999 7.39762 9.55333 7.39762 10.3ZM14.6242 10.3C14.6242 11.0733 14.3755 11.7 13.878 12.18C13.3805 12.6333 12.7521 12.86 11.9928 12.86C11.0764 12.86 10.3171 12.5533 9.71484 11.94C9.13881 11.3266 8.85079 10.4467 8.85079 9.29999C8.85079 8.07332 9.19117 6.87332 9.87194 5.69999C10.5789 4.49999 11.5608 3.55332 12.8176 2.85999L13.7209 4.25999C13.0401 4.73999 12.4903 5.27332 12.0713 5.85999C11.6786 6.44666 11.4168 7.12666 11.2858 7.89999C11.5215 7.79332 11.7964 7.73999 12.1106 7.73999C12.8437 7.73999 13.446 7.97999 13.9173 8.45999C14.3886 8.93999 14.6242 9.55333 14.6242 10.3Z"
+              fill="currentColor" />
           </svg>
           <div class="relative z-10">
             <p>
@@ -93,18 +113,23 @@
     </div>
   </section>
   <section class=" m-auto max-w-5xl">
-    <div class="container mx-auto flex flex-col items-center px-5 pb-10 md:flex-row">
-      <div class="mb-16 w-5/6 md:order-2 md:mb-0 md:w-1/2 lg:w-full lg:max-w-lg">
-        <img height="512"
-             width="512"
-             class="rounded-2xl object-cover tshadow object-center"
-             alt="hero"
-             src="{% static 'images/home/group_of_teenagers_sitting_around_in_a_circe._Forrest.jpg' %}" />
+    <div
+      class="container mx-auto flex flex-col items-center px-5 pb-10 md:flex-row">
+      <div
+        class="mb-16 w-5/6 md:order-2 md:mb-0 md:w-1/2 lg:w-full lg:max-w-lg">
+        <img
+          height="512"
+          width="512"
+          class="tshadow rounded-2xl object-cover object-center"
+          alt="hero"
+          src="{% static 'images/home/group_of_teenagers_sitting_around_in_a_circe._Forrest.jpg' %}" />
       </div>
-      <div class="flex flex-col relative md:order-1 md:w-1/2 md:items-start md:pr-16 md:text-left lg:flex-grow lg:pr-24">
-        <img class="absolute top-auto -z-10 overflow-clip opacity-60"
-             src="{% static 'images/home/brush.png' %}"
-             alt="" />
+      <div
+        class="relative flex flex-col md:order-1 md:w-1/2 md:items-start md:pr-16 md:text-left lg:flex-grow lg:pr-24">
+        <img
+          class="absolute top-auto -z-10 overflow-clip opacity-60"
+          src="{% static 'images/home/brush.png' %}"
+          alt="" />
         <h2 class="h2 mb-4">Ancient Technology</h2>
         <p class="mb-8 leading-relaxed">
           For centuries, our ancestors have been sitting in circle. They used a
@@ -112,36 +137,44 @@
           circle, they’ve built complex societies based on peace and
           understanding. A select few have been keeping this practice alive.
         </p>
-        <a class="btn btn-primary w-full" href="{% url 'pages:how-it-works' %}">How it works</a>
+        <a class="btn btn-primary w-full" href="{% url 'pages:how-it-works' %}"
+          >How it works</a
+        >
       </div>
     </div>
   </section>
   <section class="m-auto max-w-5xl">
-    <div class="container mx-auto flex flex-col items-center px-5 pb-10 md:flex-row">
+    <div
+      class="container mx-auto flex flex-col items-center px-5 pb-10 md:flex-row">
       <div class="mb-10 w-5/6 md:mb-0 md:w-1/2 lg:w-full lg:max-w-lg">
-        <img height="512"
-             width="512"
-             class="rounded-2xl object-cover tshadow object-center"
-             alt="hero"
-             src="{% static 'images/home/one_girl_full_image_talking_explaining_surrounded.jpg' %}" />
+        <img
+          height="512"
+          width="512"
+          class="tshadow rounded-2xl object-cover object-center"
+          alt="hero"
+          src="{% static 'images/home/one_girl_full_image_talking_explaining_surrounded.jpg' %}" />
       </div>
-      <div class="flex flex-col relative md:w-1/2 md:items-start md:pl-16 md:text-left lg:flex-grow lg:pl-24">
-        <img class="absolute top-auto -z-10 rotate-180 overflow-clip opacity-60 md:-translate-x-1/4"
-             src="{% static 'images/home/brush.png' %}"
-             alt="" />
+      <div
+        class="relative flex flex-col md:w-1/2 md:items-start md:pl-16 md:text-left lg:flex-grow lg:pl-24">
+        <img
+          class="absolute top-auto -z-10 rotate-180 overflow-clip opacity-60 md:-translate-x-1/4"
+          src="{% static 'images/home/brush.png' %}"
+          alt="" />
         <h2 class="h2 mb-4">Who is Totem?</h2>
         <p class="mb-8 leading-relaxed">
-          We are a community of people who want to share our stories, and to hear
-          yours. Circles are moderated by <strong>Keepers</strong>: people who
-          specialize in safe communication. You are free to speak your truth
+          We are a community of people who want to share our stories, and to
+          hear yours. Circles are moderated by <strong>Keepers</strong>: people
+          who specialize in safe communication. You are free to speak your truth
           without interruption.
         </p>
-        <a class="btn btn-primary w-full" href="{% url 'pages:team' %}">Meet the team</a>
+        <a class="btn btn-primary w-full" href="{% url 'pages:team' %}"
+          >Meet the team</a
+        >
       </div>
     </div>
   </section>
   {% include "pages/partials/_features.html" %}
-  <section class="section m-auto max-w-5xl pb-10 px-5">
+  <section class="section m-auto max-w-5xl px-5 pb-10">
     <h2 class="h2">Frequently Asked Questions</h2>
     {% include "pages/partials/_faqs.html" %}
   </section>

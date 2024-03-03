@@ -3,11 +3,12 @@
 {% block title %}{{ user.name }}{% endblock title %}
 {# djlint:on #}
 {% block content %}
-  <div class="max-w-xl m-auto">
+  <div class="m-auto max-w-xl">
     <h1 class="h1 pb-10">{{ user.name }}'s Profile</h1>
-    <form class="form-horizontal"
-          method="post"
-          action="{% url 'users:update' %}">
+    <form
+      class="form-horizontal"
+      method="post"
+      action="{% url 'users:update' %}">
       {% csrf_token %}
       {{ form }}
       <div class="control-group">

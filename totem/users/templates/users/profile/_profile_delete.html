@@ -1,27 +1,31 @@
 <div class="pb-10">
-    <h3 class="h3">Delete Account</h3>
-    <div class="divider"></div>
-    <p class="text-danger pt-5">
-        This will delete your Totem account <strong>completely</strong>. We will remove all data associated from this account. This action cannot be undone.
-    </p>
-    <button class="btn btn-error btn-sm mt-10"
-            onclick="delete_account_modal.showModal()">Delete Account</button>
-    <dialog id="delete_account_modal" class="modal">
-        <div class="modal-box">
-            <h3 class="font-bold text-lg">Delete Account?</h3>
-            <p class="py-4">
-                To delete your Totem Account and all associated data, use the <strong>Delete Account</strong> button.
-                This cannot be undone.
-            </p>
-            <div class="modal-action">
-                <form method="dialog">
-                    <button class="btn">Close</button>
-                </form>
-                <form action="{% url 'users:profile-delete' %}" method="post">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-error">Delete Account</button>
-                </form>
-            </div>
-        </div>
-    </dialog>
+  <h3 class="h3">Delete Account</h3>
+  <div class="divider"></div>
+  <p class="text-danger pt-5">
+    This will delete your Totem account <strong>completely</strong>. We will
+    remove all data associated from this account. This action cannot be undone.
+  </p>
+  <button
+    class="btn btn-error btn-sm mt-10"
+    onclick="delete_account_modal.showModal()">
+    Delete Account
+  </button>
+  <dialog id="delete_account_modal" class="modal">
+    <div class="modal-box">
+      <h3 class="text-lg font-bold">Delete Account?</h3>
+      <p class="py-4">
+        To delete your Totem Account and all associated data, use the
+        <strong>Delete Account</strong> button. This cannot be undone.
+      </p>
+      <div class="modal-action">
+        <form method="dialog">
+          <button class="btn">Close</button>
+        </form>
+        <form action="{% url 'users:profile-delete' %}" method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-error">Delete Account</button>
+        </form>
+      </div>
+    </div>
+  </dialog>
 </div>

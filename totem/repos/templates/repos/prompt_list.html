@@ -1,19 +1,23 @@
 {% extends "base.html" %}
 {% load static %}
 {% block title %}
-    Prompts
+  Prompts
 {% endblock title %}
 {% block content %}
-    <div class="section m-auto pt-10 px-5 max-w-3xl">
-        <h1 class="h1">Prompts</h1>
-        <p class="pt-4">
-            These prompts are created for Totem by expert Keepers. They are designed to encourage authentic communication. Please try them out in your Circles!
-        </p>
-        <p class="pt-4">You can use the search bar below, or filter by tag by selecting the tag pill.</p>
-        {{ search_data|json_script:"search_data" }}
-        <t-promptsearch dataid="search_data"></t-promptsearch>
-    </div>
+  <div class="section m-auto max-w-3xl px-5 pt-10">
+    <h1 class="h1">Prompts</h1>
+    <p class="pt-4">
+      These prompts are created for Totem by expert Keepers. They are designed
+      to encourage authentic communication. Please try them out in your Circles!
+    </p>
+    <p class="pt-4">
+      You can use the search bar below, or filter by tag by selecting the tag
+      pill.
+    </p>
+    {{ search_data|json_script:"search_data" }}
+    <t-promptsearch dataid="search_data"></t-promptsearch>
+  </div>
 {% endblock content %}
 {% block inline_javascript %}
-    <script src="{% static 'js/ufuzzy.min.js' %}"></script>
+  <script src="{% static 'js/ufuzzy.min.js' %}"></script>
 {% endblock inline_javascript %}

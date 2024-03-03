@@ -5,7 +5,9 @@
 {% block head_title %}{% translate "Log In Required" %}{% endblock head_title %}
 {# djlint:on #}
 {% block javascript %}
-  <script>window.TOTEM_DATA.reload_on_login = true;</script>
+  <script>
+    window.TOTEM_DATA.reload_on_login = true
+  </script>
 {% endblock javascript %}
 {% block inner %}
   <h2 class="h2">Log in</h2>
@@ -13,12 +15,17 @@
     <p>Enter your email here to send a link that will log you in.</p>
     <form class="login mt-5" data-bot="true" method="post">
       {{ form }}
-      <button class="btn btn-primary mt-4 flex w-full justify-center" type="submit">Send Link</button>
+      <button
+        class="btn btn-primary mt-4 flex w-full justify-center"
+        type="submit">
+        Send Link
+      </button>
     </form>
   </div>
 {% endblock inner %}
 {% block after %}
-  <p class="text-gray-400 text-center">
-    Don't have an account? <a class="a" href="{% url 'users:signup' %}">Sign up!</a>
+  <p class="text-center text-gray-400">
+    Don't have an account?
+    <a class="a" href="{% url 'users:signup' %}">Sign up!</a>
   </p>
 {% endblock after %}

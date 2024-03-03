@@ -1,19 +1,27 @@
 {% load avatar %}
-<li class="col-span-1 divide-y hover:tshadow divide-gray-200 transition-all duration-500 rounded-3xl bg-white">
-    <a href="{% url 'circles:detail' slug=circle.slug %}">
-        <div class="flex w-full items-start justify-between space-x-6 p-6">
-            <div class="flex-1">
-                <h2 class="h2 text-gray-900">{{ circle.title }}</h2>
-                <p>by {{ circle.author.name }}</p>
-                <p class="text-red-500">{{ circle.next_event.start|date:"D, M j, g:i a T" }}</p>
-                {% for tag in circle.tags.all %}
-                    <span class="inline-flex flex-shrink-0 items-center badge badge-primary">{{ tag }}</span>
-                {% endfor %}
-                <p class="mt-1 text-sm text-gray-500">{{ circle.subtitle }}</p>
-                {% if is_attending %}<p>Attending</p>{% endif %}
-                {% if not circle.published %}<p class="mt-1 text-sm text-red-500">Not published</p>{% endif %}
-            </div>
-            {% avatar circle.author classes="w-1/4 flex-shrink-0 rounded-full bg-gray-300" %}
-        </div>
-    </a>
+<li
+  class="hover:tshadow col-span-1 divide-y divide-gray-200 rounded-3xl bg-white transition-all duration-500">
+  <a href="{% url 'circles:detail' slug=circle.slug %}">
+    <div class="flex w-full items-start justify-between space-x-6 p-6">
+      <div class="flex-1">
+        <h2 class="h2 text-gray-900">{{ circle.title }}</h2>
+        <p>by {{ circle.author.name }}</p>
+        <p class="text-red-500">
+          {{ circle.next_event.start|date:"D, M j, g:i a T" }}
+        </p>
+        {% for tag in circle.tags.all %}
+          <span
+            class="badge badge-primary inline-flex flex-shrink-0 items-center"
+            >{{ tag }}</span
+          >
+        {% endfor %}
+        <p class="mt-1 text-sm text-gray-500">{{ circle.subtitle }}</p>
+        {% if is_attending %}<p>Attending</p>{% endif %}
+        {% if not circle.published %}
+          <p class="mt-1 text-sm text-red-500">Not published</p>
+        {% endif %}
+      </div>
+      {% avatar circle.author classes="w-1/4 flex-shrink-0 rounded-full bg-gray-300" %}
+    </div>
+  </a>
 </li>

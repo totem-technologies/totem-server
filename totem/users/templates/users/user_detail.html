@@ -7,19 +7,22 @@
   {{ object.name }}
 {% endblock title %}
 {% block content %}
-  <section class="section max-w-4xl m-auto tprose pt-10 px-5">
-    <div class="md:float-left md:pr-10 pb-10 md:pb-2">{% avatar user size=250 classes="m-auto" %}</div>
+  <section class="section tprose m-auto max-w-4xl px-5 pt-10">
+    <div class="pb-10 md:float-left md:pb-2 md:pr-10">
+      {% avatar user size=250 classes="m-auto" %}
+    </div>
     <div>
       <h1 class="h1">{{ user.name }}</h1>
       <p>{{ user.keeper_profile.bio|to_html }}</p>
     </div>
   </section>
-  <section class="section max-w-4xl m-auto pt-10 px-5">
+  <section class="section m-auto max-w-4xl px-5 pt-10">
     {% if events %}
       <div>
         <h3 class="h3 pb-5">Circles by {{ user.name }}</h3>
-        <ul role="list"
-            class="grid sm:grid-cols-2 grid-cols-1 gap-6 pb-5 md:grid-cols-3">
+        <ul
+          role="list"
+          class="grid grid-cols-1 gap-6 pb-5 sm:grid-cols-2 md:grid-cols-3">
           {% for event in events %}
             {% include "circles/_event_card.html" with event=event only %}
           {% endfor %}

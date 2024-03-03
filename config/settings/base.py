@@ -1,6 +1,7 @@
 """
 Base settings to build other settings files upon.
 """
+
 import base64
 import json
 from pathlib import Path

@@ -10,8 +10,7 @@ function Tag(props: any) {
     <button
       onClick={() => props.onClick(props.tag)}
       type="button"
-      class="mr-2 mt-1 inline-flex items-center rounded-full bg-tyellow px-3 py-1 text-xs font-medium leading-4 text-gray-700 hover:opacity-70"
-    >
+      class="mr-2 mt-1 inline-flex items-center rounded-full bg-tyellow px-3 py-1 text-xs font-medium leading-4 text-gray-700 hover:opacity-70">
       {props.tag}
     </button>
   )
@@ -86,8 +85,7 @@ function PromptSearch(props: any) {
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
+              xmlns="http://www.w3.org/2000/svg">
               <path
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -109,8 +107,7 @@ function PromptSearch(props: any) {
           <button
             onClick={() => setSearch("")}
             type="button"
-            class="mt-2 rounded-full bg-gray-200 px-3 py-1 text-xs font-medium leading-4 text-gray-700 hover:opacity-70"
-          >
+            class="mt-2 rounded-full bg-gray-200 px-3 py-1 text-xs font-medium leading-4 text-gray-700 hover:opacity-70">
             X Clear search
           </button>
         </div>

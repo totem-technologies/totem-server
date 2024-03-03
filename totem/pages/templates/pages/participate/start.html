@@ -1,35 +1,48 @@
 {% extends "base.html" %}
 {% block content %}
-  <div class="max-w-4xl m-auto">
-    <div class="mt-10 mx-4">
+  <div class="m-auto max-w-4xl">
+    <div class="mx-4 mt-10">
       <h1 class="h1">Hello, friend.</h1>
     </div>
-    <div class="md:flex section">
+    <div class="section md:flex">
       <div class="tprose md:w-1/2">
         <p>
-          Totem is an <strong>invite-only community</strong>. You won't need to browse extensive lists, as we carefully select members for each Circle. Share some details about yourself, and our Keepers will find the perfect match. Usually, we place people within a week.
+          Totem is an <strong>invite-only community</strong>. You won't need to
+          browse extensive lists, as we carefully select members for each
+          Circle. Share some details about yourself, and our Keepers will find
+          the perfect match. Usually, we place people within a week.
         </p>
       </div>
       {% if email %}
-        <div class="md:w-1/2 md:pl-10 tprose">
+        <div class="tprose md:w-1/2 md:pl-10">
           <p>
             An email has been sent to:
-            <br>
+            <br />
             <strong>{{ email|truncatechars:40 }}</strong>
-            <br>
+            <br />
             Please use the link there to continue.
           </p>
         </div>
       {% else %}
-        <form class="section md:w-1/2 md:pl-10 pt-5" method="post">
+        <form class="section pt-5 md:w-1/2 md:pl-10" method="post">
           <h2 class="h2 mb-3">Create Account</h2>
           {% csrf_token %}
           {{ form }}
-          <button class="btn btn-primary mt-5 w-full justify-center" type="submit">Continue</button>
-          <p class="text-center mt-5 text-sm">
+          <button
+            class="btn btn-primary mt-5 w-full justify-center"
+            type="submit">
+            Continue
+          </button>
+          <p class="mt-5 text-center text-sm">
             By continuing, you agree to our
-            <br>
-            <a class="underline" href="{% url 'pages:tos' %}">Terms of Service</a> and <a class="underline" href="{% url 'pages:privacy' %}">Privacy Policies</a>
+            <br />
+            <a class="underline" href="{% url 'pages:tos' %}"
+              >Terms of Service</a
+            >
+            and
+            <a class="underline" href="{% url 'pages:privacy' %}"
+              >Privacy Policies</a
+            >
           </p>
         </form>
       {% endif %}

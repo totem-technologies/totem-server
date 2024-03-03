@@ -1,15 +1,15 @@
 <ul class="menu w-56 rounded-box">
-    {% if attending_events %}
-        <li>
-            <a href="#upcoming">My Upcoming Sessions</a>
-        </li>
-    {% endif %}
-    {% if recommended_events %}
-        <li>
-            <a href="#recommended">Recommended Circles</a>
-        </li>
-    {% endif %}
+  {% if attending_events %}
     <li>
-        <a href="{% url "users:profile" %}">My Profile</a>
+      <a href="#upcoming">My Upcoming Sessions</a>
     </li>
+  {% endif %}
+  {% if recommended_events %}
+    <li>
+      <a href="#recommended">Recommended Circles</a>
+    </li>
+  {% endif %}
+  <li>
+    <a href="{% url "users:profile" %}">My Profile</a>
+  </li>
 </ul>

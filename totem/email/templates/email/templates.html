@@ -1,13 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
-    <div class="m-auto max-w-4xl pt-20">
-        <h1 class="h1 pb-10">Emails</h1>
-        <ul class="list-disc">
-            {% for tem in templates %}
-                <li class="list-item">
-                    <a href="{% url "email:template" name=tem %}" class="link list-link">{{ tem }}</a>
-                </li>
-            {% endfor %}
-        </ul>
-    </div>
+  <div class="m-auto max-w-4xl pt-20">
+    <h1 class="h1 pb-10">Emails</h1>
+    <ul class="list-disc">
+      {% for tem in templates %}
+        <li class="list-item">
+          <a href="{% url "email:template" name=tem %}" class="list-link link"
+            >{{ tem }}</a
+          >
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
 {% endblock content %}

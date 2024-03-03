@@ -3,17 +3,19 @@
 {% block title %}My Profile{% endblock title %}
 {# djlint:on #}
 {% block content %}
-    <div class="px-5">
-        <div class="h-10"></div>
-        <div class="max-w-5xl m-auto md:flex">
-            <div class="md:pr-10">{% include "users/profile/_profile_avatar.html" %}</div>
-            <div class="flex-1">
-                <h2 class="h2 pb-10">My Profile</h2>
-                {% include "users/profile/_profile_info.html" %}
-                {% include "users/profile/_profile_notifications.html" %}
-                {% include "users/profile/_profile_history.html" %}
-                {% include "users/profile/_profile_delete.html" %}
-            </div>
-        </div>
+  <div class="px-5">
+    <div class="h-10"></div>
+    <div class="m-auto max-w-5xl md:flex">
+      <div class="md:pr-10">
+        {% include "users/profile/_profile_avatar.html" %}
+      </div>
+      <div class="flex-1">
+        <h2 class="h2 pb-10">My Profile</h2>
+        {% include "users/profile/_profile_info.html" %}
+        {% include "users/profile/_profile_notifications.html" %}
+        {% include "users/profile/_profile_history.html" %}
+        {% include "users/profile/_profile_delete.html" %}
+      </div>
     </div>
+  </div>
 {% endblock content %}

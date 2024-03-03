@@ -5,120 +5,163 @@
 {# djlint:on #}
 {% block content %}
   <section class="relative overflow-hidden">
-    <img class="absolute -z-10 overflow-clip opacity-50 left-1/2 -translate-x-1/2 md:top-1/2 top-40 md:-translate-y-1/2 w-full max-w-4xl"
-         src="{% static 'images/howitworks/brush-pink.png' %}"
-         alt="" />
-    <h1 class="mt-10 h1 tracking-tight sm:text-6xl text-center">How Totem Works</h1>
-    <div class="mx-auto max-w-5xl px-6 pb-15 pt-10 sm:pb-10 lg:flex lg:px-8 lg:py-30">
+    <img
+      class="absolute left-1/2 top-40 -z-10 w-full max-w-4xl -translate-x-1/2 overflow-clip opacity-50 md:top-1/2 md:-translate-y-1/2"
+      src="{% static 'images/howitworks/brush-pink.png' %}"
+      alt="" />
+    <h1 class="h1 mt-10 text-center tracking-tight sm:text-6xl">
+      How Totem Works
+    </h1>
+    <div
+      class="pb-15 lg:py-30 mx-auto max-w-5xl px-6 pt-10 sm:pb-10 lg:flex lg:px-8">
       <div class="p-5 pt-10">
-        <img src="{% static 'images/howitworks/circlepeople.jpg' %}"
-             alt="App screenshot"
-             width="800"
-             height="800"
-             class="lg:w-[30rem] md:w-1/2 w-3/4 rounded-3xl tshadow m-auto">
+        <img
+          src="{% static 'images/howitworks/circlepeople.jpg' %}"
+          alt="App screenshot"
+          width="800"
+          height="800"
+          class="tshadow m-auto w-3/4 rounded-3xl md:w-1/2 lg:w-[30rem]" />
       </div>
-      <div class="lg:pl-10 mx-auto max-w-2xl lg:mx-0 lg:max-w-xl lg:pt-8">
-        <h2 class="mt-10 h2 tracking-tight">How we start</h2>
+      <div class="mx-auto max-w-2xl lg:mx-0 lg:max-w-xl lg:pl-10 lg:pt-8">
+        <h2 class="h2 mt-10 tracking-tight">How we start</h2>
         <p class="mt-6 text-xl leading-8 text-gray-600">
-          Our Circles have 3-8 participants, with a Circle Keeper guiding the group and maintaining a safe space for sharing.
+          Our Circles have 3-8 participants, with a Circle Keeper guiding the
+          group and maintaining a safe space for sharing.
         </p>
         <p class="mt-6 text-base leading-8 text-gray-600">
-          The keeper starts with an opening ceremony, like a song, poem, or guided meditation, to bring everyone's attention to the present moment.
+          The keeper starts with an opening ceremony, like a song, poem, or
+          guided meditation, to bring everyone's attention to the present
+          moment.
         </p>
       </div>
     </div>
   </section>
   <!-- Content section -->
-  <div class="overflow-hidden relative pb-20">
-    <img class="absolute -z-10 overflow-clip opacity-80 left-1/2 -translate-x-1/2 md:top-1/2 top-40 md:-translate-y-1/2 w-full max-w-5xl"
-         src="{% static 'images/howitworks/brush-yellow-swoosh.png' %}"
-         alt="" />
+  <div class="relative overflow-hidden pb-20">
+    <img
+      class="absolute left-1/2 top-40 -z-10 w-full max-w-5xl -translate-x-1/2 overflow-clip opacity-80 md:top-1/2 md:-translate-y-1/2"
+      src="{% static 'images/howitworks/brush-yellow-swoosh.png' %}"
+      alt="" />
     <div class="mx-auto max-w-5xl lg:flex">
-      <div class="mx-auto grid max-w-2xl grid-cols-1 gap-x-12 gap-y-16 lg:mx-0 lg:min-w-full lg:max-w-none lg:flex-none lg:gap-y-8">
-        <div class="lg:col-end-1 lg:w-full lg:max-w-[40rem] lg:pb-8 lg:pl-10 md:px-0 px-6">
-          <h2 class="mt-10 h2 tracking-tight">How we share</h2>
+      <div
+        class="mx-auto grid max-w-2xl grid-cols-1 gap-x-12 gap-y-16 lg:mx-0 lg:min-w-full lg:max-w-none lg:flex-none lg:gap-y-8">
+        <div
+          class="px-6 md:px-0 lg:col-end-1 lg:w-full lg:max-w-[40rem] lg:pb-8 lg:pl-10">
+          <h2 class="h2 mt-10 tracking-tight">How we share</h2>
           <p class="mt-6 text-xl leading-8 text-gray-600">
-            The keeper, who is holding the totem or talking piece, then asks the first prompt. The keeper answers the
-            prompt, based on their own experience, before passing the totem to the next
-            person in the Circle's talking order.
+            The keeper, who is holding the totem or talking piece, then asks the
+            first prompt. The keeper answers the prompt, based on their own
+            experience, before passing the totem to the next person in the
+            Circle's talking order.
           </p>
           <p class="mt-6 text-base leading-7 text-gray-600">
-            When you have the talking piece, it's your turn to share. You can speak as much or as little as you'd like. And if you don't want to share, <strong>you can always pass the totem</strong> onto the next participant.
+            When you have the talking piece, it's your turn to share. You can
+            speak as much or as little as you'd like. And if you don't want to
+            share, <strong>you can always pass the totem</strong> onto the next
+            participant.
           </p>
         </div>
-        <div class="flex-wrap items-start justify-end gap-6 sm:gap-8 lg:contents hidden">
-          <div class="w-0 flex-auto lg:ml-auto lg:w-auto lg:flex-none lg:self-end">
-            <img src="{% static 'images/howitworks/1.jpg' %}"
-                 alt=""
-                 class="w-[16rem] max-w-none rounded-3xl bg-gray-50 object-cover">
+        <div
+          class="hidden flex-wrap items-start justify-end gap-6 sm:gap-8 lg:contents">
+          <div
+            class="w-0 flex-auto lg:ml-auto lg:w-auto lg:flex-none lg:self-end">
+            <img
+              src="{% static 'images/howitworks/1.jpg' %}"
+              alt=""
+              class="w-[16rem] max-w-none rounded-3xl bg-gray-50 object-cover" />
           </div>
-          <div class=" lg:col-span-2 lg:col-end-2 lg:ml-auto lg:flex lg:w-full lg:items-start lg:justify-end lg:gap-x-8">
-            <div class="order-first flex w-64 flex-none justify-end self-end lg:w-auto">
-              <img src="{% static 'images/howitworks/5.jpg' %}"
-                   alt=""
-                   class="w-[8rem] max-w-none flex-none rounded-3xl bg-gray-50 object-cover">
+          <div
+            class=" lg:col-span-2 lg:col-end-2 lg:ml-auto lg:flex lg:w-full lg:items-start lg:justify-end lg:gap-x-8">
+            <div
+              class="order-first flex w-64 flex-none justify-end self-end lg:w-auto">
+              <img
+                src="{% static 'images/howitworks/5.jpg' %}"
+                alt=""
+                class="w-[8rem] max-w-none flex-none rounded-3xl bg-gray-50 object-cover" />
             </div>
-            <div class="order-first flex w-64 flex-none justify-end self-end lg:w-auto">
-              <img src="{% static 'images/howitworks/2.jpg' %}"
-                   alt=""
-                   class="w-[12rem] max-w-none flex-none rounded-3xl bg-gray-50 object-cover">
+            <div
+              class="order-first flex w-64 flex-none justify-end self-end lg:w-auto">
+              <img
+                src="{% static 'images/howitworks/2.jpg' %}"
+                alt=""
+                class="w-[12rem] max-w-none flex-none rounded-3xl bg-gray-50 object-cover" />
             </div>
             <div class="flex w-10 flex-auto justify-end lg:w-auto lg:flex-none">
-              <img src="{% static 'images/howitworks/4.jpg' %}"
-                   alt=""
-                   class="w-[16rem] max-w-none flex-none rounded-3xl bg-gray-50 object-cover">
+              <img
+                src="{% static 'images/howitworks/4.jpg' %}"
+                alt=""
+                class="w-[16rem] max-w-none flex-none rounded-3xl bg-gray-50 object-cover" />
             </div>
-            <div class="hidden sm:block sm:w-0 sm:flex-auto lg:w-auto lg:flex-none">
-              <img src="{% static 'images/howitworks/3.jpg' %}"
-                   alt=""
-                   class="w-[12rem] max-w-none rounded-3xl bg-gray-50 object-cover">
+            <div
+              class="hidden sm:block sm:w-0 sm:flex-auto lg:w-auto lg:flex-none">
+              <img
+                src="{% static 'images/howitworks/3.jpg' %}"
+                alt=""
+                class="w-[12rem] max-w-none rounded-3xl bg-gray-50 object-cover" />
             </div>
           </div>
         </div>
-        <div class="lg:hidden flex flex-wrap justify-center gap-10 col-span-2 columns-2 basis-1/2">
-          <img src="{% static 'images/howitworks/1.jpg' %}"
-               alt=""
-               class="tshadow w-1/3 rounded-3xl bg-gray-50 object-cover">
-          <img src="{% static 'images/howitworks/2.jpg' %}"
-               alt=""
-               class="tshadow w-1/3 rounded-3xl bg-gray-50 object-cover">
-          <img src="{% static 'images/howitworks/4.jpg' %}"
-               alt=""
-               class="tshadow w-1/3 rounded-3xl bg-gray-50 object-cover">
-          <img src="{% static 'images/howitworks/3.jpg' %}"
-               alt=""
-               class="tshadow w-1/3 rounded-3xl bg-gray-50 object-cover">
+        <div
+          class="col-span-2 flex basis-1/2 columns-2 flex-wrap justify-center gap-10 lg:hidden">
+          <img
+            src="{% static 'images/howitworks/1.jpg' %}"
+            alt=""
+            class="tshadow w-1/3 rounded-3xl bg-gray-50 object-cover" />
+          <img
+            src="{% static 'images/howitworks/2.jpg' %}"
+            alt=""
+            class="tshadow w-1/3 rounded-3xl bg-gray-50 object-cover" />
+          <img
+            src="{% static 'images/howitworks/4.jpg' %}"
+            alt=""
+            class="tshadow w-1/3 rounded-3xl bg-gray-50 object-cover" />
+          <img
+            src="{% static 'images/howitworks/3.jpg' %}"
+            alt=""
+            class="tshadow w-1/3 rounded-3xl bg-gray-50 object-cover" />
         </div>
       </div>
     </div>
   </div>
   <section class="relative overflow-hidden pb-10">
-    <img class="absolute -z-10 overflow-clip opacity-80 left-1/2 -translate-x-1/2 md:top-1/2 top-0 md:-translate-y-1/2 w-full max-w-5xl"
-         src="{% static 'images/howitworks/blue-swoop.png' %}"
-         alt="" />
-    <div class="mx-auto max-w-5xl px-6 sm:pb-10 lg:flex lg:px-8 flex-row-reverse">
-      <div class="lg:pl-10 mx-auto max-w-2xl lg:mx-0 pb-10 ">
+    <img
+      class="absolute left-1/2 top-0 -z-10 w-full max-w-5xl -translate-x-1/2 overflow-clip opacity-80 md:top-1/2 md:-translate-y-1/2"
+      src="{% static 'images/howitworks/blue-swoop.png' %}"
+      alt="" />
+    <div
+      class="mx-auto max-w-5xl flex-row-reverse px-6 sm:pb-10 lg:flex lg:px-8">
+      <div class="mx-auto max-w-2xl pb-10 lg:mx-0 lg:pl-10 ">
         <h2 class="h2 tracking-tight">How we end</h2>
         <p class="mt-6 text-xl leading-8 text-gray-600">
-          Every time the totem gets back to the Keeper, they will ask the Circle a new prompt and continue the sharing cycle until time is up.
+          Every time the totem gets back to the Keeper, they will ask the Circle
+          a new prompt and continue the sharing cycle until time is up.
         </p>
         <p class="mt-6 text-base leading-8 text-gray-600">
-          The Keeper ends each Circle with a closing ceremony, like a quote, poem, or excerpt from a book, before releasing everybody back to their own lives.
+          The Keeper ends each Circle with a closing ceremony, like a quote,
+          poem, or excerpt from a book, before releasing everybody back to their
+          own lives.
         </p>
       </div>
-      <figure class="rounded-2xl relative lg:w-1/3 bg-white p-6 shadow-lg ring-1 ring-gray-900/5">
-        <svg class="absolute left-3 top-3 h-10 w-10 opacity-10 dark:text-tslate"
-             width="16"
-             height="16"
-             viewBox="0 0 16 16"
-             fill="none"
-             xmlns="http://www.w3.org/2000/svg"
-             aria-hidden="true">
-          <path d="M7.39762 10.3C7.39762 11.0733 7.14888 11.7 6.6514 12.18C6.15392 12.6333 5.52552 12.86 4.76621 12.86C3.84979 12.86 3.09047 12.5533 2.48825 11.94C1.91222 11.3266 1.62421 10.4467 1.62421 9.29999C1.62421 8.07332 1.96459 6.87332 2.64535 5.69999C3.35231 4.49999 4.33418 3.55332 5.59098 2.85999L6.4943 4.25999C5.81354 4.73999 5.26369 5.27332 4.84476 5.85999C4.45201 6.44666 4.19017 7.12666 4.05926 7.89999C4.29491 7.79332 4.56983 7.73999 4.88403 7.73999C5.61716 7.73999 6.21938 7.97999 6.69067 8.45999C7.16197 8.93999 7.39762 9.55333 7.39762 10.3ZM14.6242 10.3C14.6242 11.0733 14.3755 11.7 13.878 12.18C13.3805 12.6333 12.7521 12.86 11.9928 12.86C11.0764 12.86 10.3171 12.5533 9.71484 11.94C9.13881 11.3266 8.85079 10.4467 8.85079 9.29999C8.85079 8.07332 9.19117 6.87332 9.87194 5.69999C10.5789 4.49999 11.5608 3.55332 12.8176 2.85999L13.7209 4.25999C13.0401 4.73999 12.4903 5.27332 12.0713 5.85999C11.6786 6.44666 11.4168 7.12666 11.2858 7.89999C11.5215 7.79332 11.7964 7.73999 12.1106 7.73999C12.8437 7.73999 13.446 7.97999 13.9173 8.45999C14.3886 8.93999 14.6242 9.55333 14.6242 10.3Z" fill="currentColor" />
+      <figure
+        class="relative rounded-2xl bg-white p-6 shadow-lg ring-1 ring-gray-900/5 lg:w-1/3">
+        <svg
+          class="absolute left-3 top-3 h-10 w-10 opacity-10 dark:text-tslate"
+          width="16"
+          height="16"
+          viewBox="0 0 16 16"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          aria-hidden="true">
+          <path
+            d="M7.39762 10.3C7.39762 11.0733 7.14888 11.7 6.6514 12.18C6.15392 12.6333 5.52552 12.86 4.76621 12.86C3.84979 12.86 3.09047 12.5533 2.48825 11.94C1.91222 11.3266 1.62421 10.4467 1.62421 9.29999C1.62421 8.07332 1.96459 6.87332 2.64535 5.69999C3.35231 4.49999 4.33418 3.55332 5.59098 2.85999L6.4943 4.25999C5.81354 4.73999 5.26369 5.27332 4.84476 5.85999C4.45201 6.44666 4.19017 7.12666 4.05926 7.89999C4.29491 7.79332 4.56983 7.73999 4.88403 7.73999C5.61716 7.73999 6.21938 7.97999 6.69067 8.45999C7.16197 8.93999 7.39762 9.55333 7.39762 10.3ZM14.6242 10.3C14.6242 11.0733 14.3755 11.7 13.878 12.18C13.3805 12.6333 12.7521 12.86 11.9928 12.86C11.0764 12.86 10.3171 12.5533 9.71484 11.94C9.13881 11.3266 8.85079 10.4467 8.85079 9.29999C8.85079 8.07332 9.19117 6.87332 9.87194 5.69999C10.5789 4.49999 11.5608 3.55332 12.8176 2.85999L13.7209 4.25999C13.0401 4.73999 12.4903 5.27332 12.0713 5.85999C11.6786 6.44666 11.4168 7.12666 11.2858 7.89999C11.5215 7.79332 11.7964 7.73999 12.1106 7.73999C12.8437 7.73999 13.446 7.97999 13.9173 8.45999C14.3886 8.93999 14.6242 9.55333 14.6242 10.3Z"
+            fill="currentColor" />
         </svg>
         <blockquote class="text-gray-900">
           <p>
-            "Our ancestors gathered around a fire in a Circle. Families gather around the kitchen table in a Circle. Now, we are learning to gather in a Circle as a community to solve problems, support one another, and connect to one another."
+            "Our ancestors gathered around a fire in a Circle. Families gather
+            around the kitchen table in a Circle. Now, we are learning to gather
+            in a Circle as a community to solve problems, support one another,
+            and connect to one another."
           </p>
         </blockquote>
         <aside class="mt-6 flex items-center gap-x-4">
