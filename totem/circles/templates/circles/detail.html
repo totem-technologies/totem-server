@@ -185,7 +185,7 @@
                 {% if not object.published %}
                     <div class="text-red-500">This circle is not published yet.</div>
                 {% endif %}
-                <div class="flex gap-4">
+                <div class="flex flex-col md:flex-row md:gap-4 gap-2">
                     <div class="flex">
                         <div class="pr-1">{% icons 'price' %}</div>
                         {% if object.is_free %}
