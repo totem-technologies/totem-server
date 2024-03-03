@@ -1,5 +1,4 @@
 # Ignore all HTML files:
-*.html
 *.css
 *.min.*
 *.mjml

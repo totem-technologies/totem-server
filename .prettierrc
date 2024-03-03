@@ -3,5 +3,14 @@
   "tabWidth": 2,
   "semi": false,
   "singleQuote": false,
-  "plugins": ["prettier-plugin-tailwindcss"]
+  "bracketSameLine": true,
+  "plugins": ["prettier-plugin-tailwindcss", "prettier-plugin-jinja-template"],
+  "overrides": [
+    {
+      "files": ["*.html"],
+      "options": {
+        "parser": "jinja-template"
+      }
+    }
+  ]
 }

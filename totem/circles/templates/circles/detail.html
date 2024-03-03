@@ -8,244 +8,321 @@
 {% block description %}{{ object.content_html|striptags|truncatewords:30 }}{% endblock description %}
 {# djlint:on #}
 {% block javascript %}
-    <script>window.TOTEM_DATA.ensureTimezone = true;</script>
+  <script>
+    window.TOTEM_DATA.ensureTimezone = true
+  </script>
 {% endblock javascript %}
 {% block content %}
-    <div class="h-10"></div>
-    <div class="m-auto px-5 pb-2 flex max-w-5xl">
-        <a class="no-underline items-center space-x-2 flex"
-           href="{% url 'circles:list' %}">
-            <h2 class="font-bold text-gray-400">← All Circles</h2>
-        </a>
-    </div>
-    <div class="m-auto px-5 max-w-5xl">
+  <div class="h-10"></div>
+  <div class="m-auto flex max-w-5xl px-5 pb-2">
+    <a
+      class="flex items-center space-x-2 no-underline"
+      href="{% url 'circles:list' %}">
+      <h2 class="font-bold text-gray-400">← All Circles</h2>
+    </a>
+  </div>
+  <div class="m-auto max-w-5xl px-5">
+    <!-- prettier-ignore-start -->
         {# djlint:off #}
-            <style>
-                .circle-bg-image {
-                    background-image: linear-gradient(185deg, rgba(1, 1, 1, 0.15), rgba(152, 122, 165, 1)){% if object.image %},url({{ object.image.url }}){% endif %};
-                    background-size: cover;
-                    background-position: center;
-                    background-repeat: no-repeat;
-                }
-</style>
+        <style>
+            .circle-bg-image {
+                background-image: linear-gradient(185deg, rgba(1, 1, 1, 0.15), rgba(152, 122, 165, 1)){% if object.image %},url({{ object.image.url }}){% endif %};
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+            }
+        </style>
         {# djlint:on #}
-        <div class="circle-bg-image rounded-2xl shadow-lg relative">
-            {% comment %} Share button {% endcomment %}
-            <div class="absolute top-5 right-5">
-                <button onclick="share_modal.showModal()"
-                        class="btn max-sm:hidden btn-sm pr-[0.5] bg-white text-tslate">
-                    {% icons "share" size=15 %}
-                    Share
-                </button>
-                <button onclick="share_modal.showModal()"
-                        class="btn btn-circle sm:hidden pr-[0.5] bg-white text-tslate">
-                    {% icons "share" size=20 %}
-                </button>
-            </div>
-            <dialog id="share_modal" class="modal modal-bottom sm:modal-middle">
-                <div class="modal-box">
-                    <div class="modal-action absolute top-0 right-5">
-                        <form method="dialog">
-                            <!-- if there is a button in form, it will close the modal -->
-                            <button class="btn btn-ghost btn-sm" aria-label="Close">X</button>
-                        </form>
-                    </div>
-                    {% include "circles/_social_share.html" with circle=object only %}
-                </div>
-                <form method="dialog" class="modal-backdrop">
-                    <button>close</button>
+    <!-- prettier-ignore-end -->
+    <div class="circle-bg-image relative rounded-2xl shadow-lg">
+      {% comment %}Share button{% endcomment %}
+      <div class="absolute right-5 top-5">
+        <button
+          onclick="share_modal.showModal()"
+          class="btn btn-sm bg-white pr-[0.5] text-tslate max-sm:hidden">
+          {% icons "share" size=15 %} Share
+        </button>
+        <button
+          onclick="share_modal.showModal()"
+          class="btn btn-circle bg-white pr-[0.5] text-tslate sm:hidden">
+          {% icons "share" size=20 %}
+        </button>
+      </div>
+      <dialog id="share_modal" class="modal modal-bottom sm:modal-middle">
+        <div class="modal-box">
+          <div class="modal-action absolute right-5 top-0">
+            <form method="dialog">
+              <!-- if there is a button in form, it will close the modal -->
+              <button class="btn btn-ghost btn-sm" aria-label="Close">X</button>
+            </form>
+          </div>
+          {% include "circles/_social_share.html" with circle=object only %}
+        </div>
+        <form method="dialog" class="modal-backdrop">
+          <button>close</button>
+        </form>
+      </dialog>
+      <div class="m-auto w-[200px] pt-10">
+        <a class="inline" href="{{ object.author.get_keeper_url }}">
+          {% avatar object.author size=200 classes="m-auto" %}
+        </a>
+      </div>
+      <div class="p-5 text-center">
+        <h1 class="h1 pb-3 text-white">{{ object.title }}</h1>
+        <div class="h3 text-white">{{ object.subtitle }}</div>
+        <div class="text-white">
+          By
+          <strong
+            ><a href="{{ object.author.get_keeper_url }}"
+              >{{ object.author.name }}</a
+            ></strong
+          >
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="m-auto max-w-5xl flex-row-reverse px-5 md:flex">
+    <div
+      hx-select=".hx-circle-sidebar"
+      hx-swap="outerHTML"
+      hx-target="this"
+      class="hx-circle-sidebar">
+      <div
+        class="z-20 mt-5 rounded-2xl border border-gray-200 bg-white p-5 md:top-20 md:w-80">
+        {% if event %}
+          <div>
+            <strong
+              >{{ event.start|date:'l, F j' }}
+              <span class="inline-block"
+                >@ {{ event.start|date:'P T' }}</span
+              ></strong
+            >
+          </div>
+          <div>Seats left: {{ event.seats_left }}</div>
+          <div class="pt-3 text-center">
+            {% if event.cancelled %}
+              <p>This Circle session has been cancelled.</p>
+            {% elif joinable %}
+              <p class="pb-4">The Circle is starting now!</p>
+              <a
+                class="btn btn-primary w-full"
+                target="_blank"
+                href="{% url 'circles:join' event_slug=event.slug %}"
+                >Join Circle</a
+              >
+            {% elif event.ended %}
+              <p>This Circle session has ended.</p>
+            {% elif event.started %}
+              <p>This Circle session has already started.</p>
+            {% elif not event.open and not attending %}
+              <p>This Circle is not open to new participants.</p>
+            {% else %}
+              {% if attending %}
+                <add-to-calendar-button
+                  hideCheckmark
+                  styleLight="--btn-shadow:none; --btn-shadow-hover:none"
+                  inline
+                  hideBranding
+                  {% if debug %}debug{% endif %}
+                  buttonStyle="round"
+                  listStyle="overlay"
+                  name="Totem - {{ event.circle.title }}"
+                  options="'Apple','Google','Outlook.com'"
+                  location="{{ event.cal_link }}?r=cal_link"
+                  startDate="{{ event.start|date:"Y-m-d" }}"
+                  endDate="{{ event.end|date:"Y-m-d" }}"
+                  startTime="{{ event.start|date:"H:i" }}"
+                  endTime="{{ event.end|date:"H:i" }}"
+                  timeZone="{{ user.timezone }}"></add-to-calendar-button>
+                <form
+                  hx-post="{% url 'circles:rsvp' event_slug=event.slug %}"
+                  action="{% url 'circles:rsvp' event_slug=event.slug %}"
+                  method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="remove" />
+                  <button
+                    class="a pt-2 text-gray-400"
+                    type="submit"
+                    value="Submit">
+                    Give up spot
+                  </button>
                 </form>
-            </dialog>
-            <div class="pt-10 m-auto w-[200px]">
-                <a class="inline" href="{{ object.author.get_keeper_url }}">
-                    {% avatar object.author size=200 classes="m-auto" %}
-                </a>
-            </div>
-            <div class="p-5 text-center">
-                <h1 class="h1 pb-3 text-white">{{ object.title }}</h1>
-                <div class="h3 text-white">{{ object.subtitle }}</div>
-                <div class="text-white">
-                    By
-                    <strong><a href="{{ object.author.get_keeper_url }}">{{ object.author.name }}</a></strong>
-                </div>
-            </div>
+              {% else %}
+                <form
+                  hx-post="{% url 'circles:rsvp' event_slug=event.slug %}"
+                  action="{% url 'circles:rsvp' event_slug=event.slug %}"
+                  method="post">
+                  {% csrf_token %}
+                  <button
+                    class="shimmer btn btn-primary w-full p-2 px-6 max-md:btn-sm"
+                    type="submit"
+                    value="Submit">
+                    Reserve a spot
+                  </button>
+                </form>
+              {% endif %}
+            {% endif %}
+          </div>
+        {% else %}
+          <div class="text-center">
+            <p>This Circle has no upcoming scheduled sessions.</p>
+          </div>
+        {% endif %}
+      </div>
+      {% if request.user.is_authenticated %}
+        <div
+          class="mt-5 w-80 rounded-2xl border border-gray-200 bg-white p-5 max-md:w-full">
+          <form
+            hx-post="{% url 'circles:subscribe' slug=object.slug %}"
+            action="{% url 'circles:subscribe' slug=object.slug %}"
+            method="post">
+            {% csrf_token %}
+            {% if subscribed %}
+              <div>
+                You are currently <strong>subscribed</strong> to this Circle.
+                You'll get updates when new sessions are added.
+              </div>
+              <input type="hidden" name="action" value="unsubscribe" />
+              <div class="text-center">
+                <button
+                  class="a pt-2 text-gray-400"
+                  type="submit"
+                  value="Submit">
+                  Unsubscribe
+                </button>
+              </div>
+            {% else %}
+              <input type="hidden" name="action" value="subscribe" />
+              <div class="pb-2">
+                Subscribe to this Circle to get updates when new sessions are
+                added.
+              </div>
+              <button
+                class="btn btn-outline w-full p-2 px-6"
+                type="submit"
+                value="Submit">
+                Subscribe
+              </button>
+            {% endif %}
+          </form>
         </div>
+      {% endif %}
+      {% if attending %}
+        <div
+          class="mt-5 w-80 rounded-2xl border border-gray-200 bg-white p-5 max-md:w-full">
+          <div class="pb-3">
+            <strong>Attending</strong>
+          </div>
+          <div class="flex flex-wrap justify-center">
+            {% for attendee in event.attendees.all %}
+              <div class="w-1/4 py-3">
+                {% avatar attendee size=50 classes="m-auto" %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+      {% if other_events %}
+        <div
+          class="collapse mt-5 w-80 rounded-2xl border border-gray-200 bg-white max-md:collapse-plus md:collapse-open max-md:w-full">
+          <input type="checkbox" />
+          <div class="collapse-title flex items-center font-bold text-gray-400">
+            Other Sessions
+          </div>
+          <div class="collapse-content">
+            {% for other_event in other_events %}
+              <div class="pb-1">
+                <a
+                  class="btn btn-ghost btn-sm"
+                  href="{{ other_event.get_absolute_url }}"
+                  >{{ other_event.start|date:'M jS' }} @
+                  {{ other_event.start|date:'P T' }}</a
+                >
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
     </div>
-    <div class="md:flex flex-row-reverse max-w-5xl m-auto px-5">
-        <div hx-select=".hx-circle-sidebar"
-             hx-swap="outerHTML"
-             hx-target="this"
-             class="hx-circle-sidebar">
-            <div class="mt-5 bg-white p-5 rounded-2xl border md:w-80 md:top-20 border-gray-200 z-20">
-                {% if event %}
-                    <div>
-                        <strong>{{ event.start|date:'l, F j' }} <span class="inline-block">@ {{ event.start|date:'P T' }}</span></strong>
-                    </div>
-                    <div>Seats left: {{ event.seats_left }}</div>
-                    <div class="text-center pt-3">
-                        {% if event.cancelled %}
-                            <p>This Circle session has been cancelled.</p>
-                        {% elif joinable %}
-                            <p class="pb-4">The Circle is starting now!</p>
-                            <a class="w-full btn btn-primary"
-                               target="_blank"
-                               href="{% url 'circles:join' event_slug=event.slug %}">Join Circle</a>
-                        {% elif event.ended %}
-                            <p>This Circle session has ended.</p>
-                        {% elif event.started %}
-                            <p>This Circle session has already started.</p>
-                        {% elif not event.open and not attending %}
-                            <p>This Circle is not open to new participants.</p>
-                        {% else %}
-                            {% if attending %}
-                                {# djlint:off #}
-                                <add-to-calendar-button hideCheckmark styleLight="--btn-shadow:none; --btn-shadow-hover:none" inline hideBranding
-                                {% if debug %}debug{% endif %}
-                                buttonStyle="round" listStyle="overlay" name="Totem - {{ event.circle.title }}" options="'Apple','Google','Outlook.com'"
-                                location="{{ event.cal_link }}?r=cal_link" startDate="{{ event.start|date:"Y-m-d" }}"
-                                endDate="{{ event.end|date:"Y-m-d" }}" startTime="{{ event.start|date:"H:i" }}"
-                                endTime="{{ event.end|date:"H:i" }}" timeZone="{{ user.timezone }}"></add-to-calendar-button>
-                                {# djlint:on #}
-                                <form hx-post="{% url 'circles:rsvp' event_slug=event.slug %}"
-                                      action="{% url 'circles:rsvp' event_slug=event.slug %}"
-                                      method="post">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="action" value="remove">
-                                    <button class="a text-gray-400 pt-2" type="submit" value="Submit">Give up spot</button>
-                                </form>
-                            {% else %}
-                                <form hx-post="{% url 'circles:rsvp' event_slug=event.slug %}"
-                                      action="{% url 'circles:rsvp' event_slug=event.slug %}"
-                                      method="post">
-                                    {% csrf_token %}
-                                    <button class="w-full btn btn-primary max-md:btn-sm p-2 px-6 shimmer"
-                                            type="submit"
-                                            value="Submit">Reserve a spot</button>
-                                </form>
-                            {% endif %}
-                        {% endif %}
-                    </div>
-                {% else %}
-                    <div class="text-center">
-                        <p>This Circle has no upcoming scheduled sessions.</p>
-                    </div>
-                {% endif %}
+    <div class="mt-5 flex-grow pr-4">
+      <div>
+        {% if not object.published %}
+          <div class="text-red-500">This circle is not published yet.</div>
+        {% endif %}
+        <div class="flex flex-col gap-2 md:flex-row md:gap-4">
+          <div class="flex">
+            <div class="pr-1">{% icons 'price' %}</div>
+            {% if object.is_free %}
+              No Cost
+            {% else %}
+              ${{ object.price }}
+            {% endif %}
+          </div>
+          <div class="tooltip flex" data-tip="How long this Circle is.">
+            <div class="pr-1">{% icons 'clock' %}</div>
+            {{ event.duration_minutes }} min
+          </div>
+          {% if event %}
+            <div
+              class="tooltip flex"
+              data-tip="How often this Circle generally runs. There may be changes in the schedule due to holidays or other events.">
+              <div class="pr-1">{% icons 'recur' %}</div>
+              <div>{{ object.recurring }}</div>
             </div>
-            {% if request.user.is_authenticated %}
-                <div class="bg-white p-5 mt-5 rounded-2xl border w-80 border-gray-200 max-md:w-full">
-                    <form hx-post="{% url 'circles:subscribe' slug=object.slug %}"
-                          action="{% url 'circles:subscribe' slug=object.slug %}"
-                          method="post">
-                        {% csrf_token %}
-                        {% if subscribed %}
-                            <div>
-                                You are currently <strong>subscribed</strong> to this Circle. You'll get updates when new sessions are added.
-                            </div>
-                            <input type="hidden" name="action" value="unsubscribe">
-                            <div class="text-center">
-                                <button class="a text-gray-400 pt-2" type="submit" value="Submit">Unsubscribe</button>
-                            </div>
-                        {% else %}
-                            <input type="hidden" name="action" value="subscribe">
-                            <div class="pb-2">Subscribe to this Circle to get updates when new sessions are added.</div>
-                            <button class="w-full btn btn-outline p-2 px-6" type="submit" value="Submit">Subscribe</button>
-                        {% endif %}
-                    </form>
-                </div>
-            {% endif %}
-            {% if attending %}
-                <div class="bg-white p-5 rounded-2xl border w-80 mt-5 border-gray-200 max-md:w-full">
-                    <div class="pb-3">
-                        <strong>Attending</strong>
-                    </div>
-                    <div class="flex justify-center flex-wrap">
-                        {% for attendee in event.attendees.all %}
-                            <div class="w-1/4 py-3">{% avatar attendee size=50 classes="m-auto" %}</div>
-                        {% endfor %}
-                    </div>
-                </div>
-            {% endif %}
-            {% if other_events %}
-                <div class="collapse max-md:collapse-plus md:collapse-open rounded-2xl bg-white border w-80 mt-5 border-gray-200 max-md:w-full">
-                    <input type="checkbox" />
-                    <div class="collapse-title font-bold flex items-center text-gray-400">Other Sessions</div>
-                    <div class="collapse-content">
-                        {% for other_event in other_events %}
-                            <div class="pb-1">
-                                <a class="btn btn-ghost btn-sm"
-                                   href="{{ other_event.get_absolute_url }}">{{ other_event.start|date:'M jS' }} @ {{ other_event.start|date:'P T' }}</a>
-                            </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            {% endif %}
+          {% endif %}
         </div>
-        <div class="pr-4 mt-5 flex-grow">
-            <div>
-                {% if not object.published %}
-                    <div class="text-red-500">This circle is not published yet.</div>
-                {% endif %}
-                <div class="flex flex-col md:flex-row md:gap-4 gap-2">
-                    <div class="flex">
-                        <div class="pr-1">{% icons 'price' %}</div>
-                        {% if object.is_free %}
-                            No Cost
-                        {% else %}
-                            ${{ object.price }}
-                        {% endif %}
-                    </div>
-                    <div class="flex tooltip" data-tip="How long this Circle is.">
-                        <div class="pr-1">{% icons 'clock' %}</div>
-                        {{ event.duration_minutes }} min
-                    </div>
-                    {% if event %}
-                        <div class="flex tooltip"
-                             data-tip="How often this Circle generally runs. There may be changes in the schedule due to holidays or other events.">
-                            <div class="pr-1">{% icons 'recur' %}</div>
-                            <div>{{ object.recurring }}</div>
-                        </div>
-                    {% endif %}
-                </div>
-            </div>
-            <div class="h-5"></div>
-            {% if event and event.content_html or request.user.is_staff %}
-                <h3 class="font-bold text-gray-400">
-                    About this Session
-                    {% if request.user.is_staff %}
-                        (<a class="link" target="_blank" href="{{ event.get_admin_url }}">Edit</a>)
-                    {% endif %}
-                </h3>
-                <div class="tprose">{{ event.content_html }}</div>
-            {% endif %}
-            <h3 class="font-bold text-gray-400">
-                About this Circle
-                {% if request.user.is_staff %}
-                    (<a class="link" target="_blank" href="{{ object.get_admin_url }}">Edit</a>)
-                {% endif %}
-            </h3>
-            <div class="tprose">{{ object.content_html }}</div>
-            <h3 class="font-bold text-gray-400 md:pb-0 pb-5">About the Keeper</h3>
-            <div>
-                <div>
-                    <a class="link md:float-left md:pr-5 block"
-                       href="{{ object.author.get_keeper_url }}">
-                        {% avatar user=object.author classes="m-auto" %}
-                    </a>
-                </div>
-                <div class="tprose inline">{{ object.author.keeper_profile.bio|to_html|truncatewords:70 }}</div>
-                <div class="text-center md:pt-0">
-                    <a class="btn btn-ghost" href="{{ object.author.get_keeper_url }}">Read more</a>
-                </div>
-            </div>
-            <div class="bg-white p-5 rounded-2xl border mt-5 border-gray-200 w-full m-auto">
-                <div>
-                    Reach out to the Keeper:
-                    <a class=" link" href="mailto:{{ object.author.email }}"><strong>{{ object.author.email }}</strong></a>
-                </div>
-            </div>
+      </div>
+      <div class="h-5"></div>
+      {% if event and event.content_html or request.user.is_staff %}
+        <h3 class="font-bold text-gray-400">
+          About this Session
+          {% if request.user.is_staff %}
+            (<a class="link" target="_blank" href="{{ event.get_admin_url }}"
+              >Edit</a
+            >)
+          {% endif %}
+        </h3>
+        <div class="tprose">{{ event.content_html }}</div>
+      {% endif %}
+      <h3 class="font-bold text-gray-400">
+        About this Circle
+        {% if request.user.is_staff %}
+          (<a class="link" target="_blank" href="{{ object.get_admin_url }}"
+            >Edit</a
+          >)
+        {% endif %}
+      </h3>
+      <div class="tprose">{{ object.content_html }}</div>
+      <h3 class="pb-5 font-bold text-gray-400 md:pb-0">About the Keeper</h3>
+      <div>
+        <div>
+          <a
+            class="link block md:float-left md:pr-5"
+            href="{{ object.author.get_keeper_url }}">
+            {% avatar user=object.author classes="m-auto" %}
+          </a>
         </div>
+        <div class="tprose inline">
+          {{ object.author.keeper_profile.bio|to_html|truncatewords:70 }}
+        </div>
+        <div class="text-center md:pt-0">
+          <a class="btn btn-ghost" href="{{ object.author.get_keeper_url }}"
+            >Read more</a
+          >
+        </div>
+      </div>
+      <div
+        class="m-auto mt-5 w-full rounded-2xl border border-gray-200 bg-white p-5">
+        <div>
+          Reach out to the Keeper:
+          <a class=" link" href="mailto:{{ object.author.email }}"
+            ><strong>{{ object.author.email }}</strong></a
+          >
+        </div>
+      </div>
     </div>
+  </div>
 {% endblock content %}
 {% block inline_javascript %}
-    <script src="{% static 'js/atcb.min.js' %}" defer></script>
+  <script src="{% static 'js/atcb.min.js' %}" defer></script>
 {% endblock inline_javascript %}
