@@ -15,14 +15,14 @@
     <div class="m-auto px-5 pb-2 flex max-w-5xl">
         <a class="no-underline items-center space-x-2 flex"
            href="{% url 'circles:list' %}">
-            <h2 class="h3">←All Circles</h2>
+            <h2 class="font-bold text-gray-400">← All Circles</h2>
         </a>
     </div>
     <div class="m-auto px-5 max-w-5xl">
         {# djlint:off #}
             <style>
                 .circle-bg-image {
-                    background-image: linear-gradient(185deg, rgba(196, 204, 255, 0.52), rgba(117, 19, 93, 0.73)){% if object.image %},url({{ object.image.url }}){% endif %};
+                    background-image: linear-gradient(185deg, rgba(1, 1, 1, 0.15), rgba(152, 122, 165, 1)){% if object.image %},url({{ object.image.url }}){% endif %};
                     background-size: cover;
                     background-position: center;
                     background-repeat: no-repeat;
@@ -166,14 +166,18 @@
                 </div>
             {% endif %}
             {% if other_events %}
-                <ul class="menu rounded-2xl bg-white border w-80 mt-5 border-gray-200 max-md:w-full">
-                    <li class="menu-title">Other Sessions</li>
-                    {% for other_event in other_events %}
-                        <li>
-                            <a href="{{ other_event.get_absolute_url }}">{{ other_event.start|date:'M jS' }} @ {{ other_event.start|date:'P T' }}</a>
-                        </li>
-                    {% endfor %}
-                </ul>
+                <div class="collapse max-md:collapse-plus md:collapse-open rounded-2xl bg-white border w-80 mt-5 border-gray-200 max-md:w-full">
+                    <input type="checkbox" />
+                    <div class="collapse-title font-bold flex items-center text-gray-400">Other Sessions</div>
+                    <div class="collapse-content">
+                        {% for other_event in other_events %}
+                            <div class="pb-1">
+                                <a class="btn btn-ghost btn-sm"
+                                   href="{{ other_event.get_absolute_url }}">{{ other_event.start|date:'M jS' }} @ {{ other_event.start|date:'P T' }}</a>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
             {% endif %}
         </div>
         <div class="pr-4 mt-5 flex-grow">
@@ -181,25 +185,46 @@
                 {% if not object.published %}
                     <div class="text-red-500">This circle is not published yet.</div>
                 {% endif %}
-                <div>
-                    {% if object.is_free %}
-                        Price: <strong>Free</strong>
-                    {% else %}
-                        Price: <strong>${{ object.price }}</strong>
+                <div class="flex gap-4">
+                    <div class="flex">
+                        <div class="pr-1">{% icons 'price' %}</div>
+                        {% if object.is_free %}
+                            No Cost
+                        {% else %}
+                            ${{ object.price }}
+                        {% endif %}
+                    </div>
+                    <div class="flex tooltip" data-tip="How long this Circle is.">
+                        <div class="pr-1">{% icons 'clock' %}</div>
+                        {{ event.duration_minutes }} min
+                    </div>
+                    {% if event %}
+                        <div class="flex tooltip"
+                             data-tip="How often this Circle generally runs. There may be changes in the schedule due to holidays or other events.">
+                            <div class="pr-1">{% icons 'recur' %}</div>
+                            <div>{{ object.recurring }}</div>
+                        </div>
                     {% endif %}
                 </div>
-                <div>Duration: {{ event.duration_minutes }} min</div>
-                {% if event %}<div>{{ object.recurring }}</div>{% endif %}
             </div>
-            <hr class="w-48 h-0.5 mx-auto my-4 bg-gray-700 border-0 rounded md:my-10">
-            <h3 class="h3 mb-2">
+            <div class="h-5"></div>
+            {% if event and event.content_html or request.user.is_staff %}
+                <h3 class="font-bold text-gray-400">
+                    About this Session
+                    {% if request.user.is_staff %}
+                        (<a class="link" target="_blank" href="{{ event.get_admin_url }}">Edit</a>)
+                    {% endif %}
+                </h3>
+                <div class="tprose">{{ event.content_html }}</div>
+            {% endif %}
+            <h3 class="font-bold text-gray-400">
                 About this Circle
                 {% if request.user.is_staff %}
                     (<a class="link" target="_blank" href="{{ object.get_admin_url }}">Edit</a>)
                 {% endif %}
             </h3>
-            <div class="tprose pb-5">{{ object.content_html }}</div>
-            <h3 class="h3 md:pb-0 pb-5">About the Keeper</h3>
+            <div class="tprose">{{ object.content_html }}</div>
+            <h3 class="font-bold text-gray-400 md:pb-0 pb-5">About the Keeper</h3>
             <div>
                 <div>
                     <a class="link md:float-left md:pr-5 block"
@@ -208,17 +233,13 @@
                     </a>
                 </div>
                 <div class="tprose inline">{{ object.author.keeper_profile.bio|to_html|truncatewords:70 }}</div>
-                <div class="text-right pt-5 md:pt-0">
-                    <a class="link" href="{{ object.author.get_keeper_url }}">Read more →</a>
+                <div class="text-center md:pt-0">
+                    <a class="btn btn-ghost" href="{{ object.author.get_keeper_url }}">Read more</a>
                 </div>
             </div>
-            <div class="bg-white p-5 rounded-2xl border w-80 mt-5 border-gray-200 max-md:w-full m-auto">
-                <div class="pb-3">
-                    <strong>Issues or suggestions?</strong>
-                </div>
-                <div class="text-center">
-                    Talk to the Keeper
-                    <br>
+            <div class="bg-white p-5 rounded-2xl border mt-5 border-gray-200 w-full m-auto">
+                <div>
+                    Reach out to the Keeper:
                     <a class=" link" href="mailto:{{ object.author.email }}"><strong>{{ object.author.email }}</strong></a>
                 </div>
             </div>

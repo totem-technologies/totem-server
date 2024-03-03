@@ -2,14 +2,15 @@
 <div class="pb-5">
     {% if recommended_events %}
         <strong>
-            <h3 class="pb-3" id="recommended">Recommended Circles</h3>
+            <h3 class="pb-3" id="recommended">
+                Recommended Circles (<a class="link" href="{% url "circles:list" %}">See all Circles</a>)
+            </h3>
         </strong>
         <ul role="list" class="grid sm:grid-cols-2 grid-cols-1 gap-6 pb-5">
             {% for event in recommended_events %}
                 {% include "circles/_event_card.html" with event=event only %}
             {% endfor %}
         </ul>
-        <a class="link" href="{% url "circles:list" %}">See all upcoming Circles →</a>
     {% else %}
         <p>
             There are no upcoming Circles to show you yet. We're just getting started though, and we're slowly rolling out new spaces for more people.

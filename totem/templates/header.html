@@ -71,7 +71,7 @@
         {% if request.user.is_authenticated %}
           <ul class="menu">
             <li>
-              <a class="pr-5 hover:text-tblue" href="{% url "pages:home" %}">My Home</a>
+              <a class="pr-5 hover:text-tblue" href="{% url "users:redirect" %}">My Home</a>
             </li>
             <li>
               <a class="pr-5 hover:text-tblue" href="{% url "users:profile" %}">My Profile</a>
