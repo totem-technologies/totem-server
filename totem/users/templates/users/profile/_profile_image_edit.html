@@ -1,81 +1,111 @@
 {% load avatar %}
-<div class="hx-profile-image-form bg-white rounded-box p-4 flex flex-col justify-center items-center m-auto transition-all duration-300"
-     hx-select=".hx-profile-image-form"
-     hx-swap="outerHTML"
-     hx-target="this">
+<div
+  class="hx-profile-image-form m-auto flex flex-col items-center justify-center rounded-box bg-white p-4 transition-all duration-300"
+  hx-select=".hx-profile-image-form"
+  hx-swap="outerHTML"
+  hx-target="this">
+  <!-- prettier-ignore-start -->
     <script>
-                function profile_randomize() {
-                    document.getElementsByName("randomize")[0].click();
-                }
-                function profile_upload() {
-                    const pimage = document.getElementsByName("profile_image")[0];
-                    pimage.onchange = function() {
-                        document.getElementsByName("image_submit")[0].click();
-                    }
-                    pimage.click();
-                }
-                function profile_action() {
-                    {% if user.profile_avatar_type == "IM" %}
-                        profile_upload();
-                    {% elif user.profile_avatar_type == "TD" %}
-                        profile_randomize();
-                    {% endif %}
-                }
+        function profile_randomize() {
+            document.getElementsByName("randomize")[0].click();
+        }
+        function profile_upload() {
+            const pimage = document.getElementsByName("profile_image")[0];
+            pimage.onchange = function() {
+                document.getElementsByName("image_submit")[0].click();
+            }
+            pimage.click();
+        }
+        function profile_action() {
+            {% if user.profile_avatar_type == "IM" %}
+                profile_upload();
+            {% elif user.profile_avatar_type == "TD" %}
+                profile_randomize();
+            {% endif %}
+        }
     </script>
-    <div class="relative inline-block cursor-pointer mb-5"
-         onclick="profile_action()">
-        {% avatar user=request.user blank_ok=True %}
-        <div class="opacity-0 rounded-full w-full h-full bg-tcreme hover:opacity-100 transition-opacity absolute top-0 left-0 bg-opacity-70">
-            {% if user.profile_avatar_type == "IM" %}
-                <h3 class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">Upload</h3>
-            {% elif user.profile_avatar_type == "TD" %}
-                <h3 class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">Randomize</h3>
-            {% endif %}
-        </div>
-        <div class="absolute bottom-2 rounded-full bg-white p-1 right-2">
-            {% if user.profile_avatar_type == "IM" %}
-                <svg width="25"
-                     class="absolute bottom-0 rounded-full bg-white p-1 right-0"
-                     height="25"
-                     viewBox="0 0 24 24"
-                     xmlns="http://www.w3.org/2000/svg">
-                    <path fill="#000000" d="M11 16V7.85l-2.6 2.6L7 9l5-5l5 5l-1.4 1.45l-2.6-2.6V16h-2Zm-5 4q-.825 0-1.413-.588T4 18v-3h2v3h12v-3h2v3q0 .825-.588 1.413T18 20H6Z" />
-                </svg>
-            {% elif user.profile_avatar_type == "TD" %}
-                <svg width="25"
-                     class="absolute bottom-0 rounded-full bg-tcreme p-1 right-0"
-                     height="25"
-                     viewBox="0 0 512 512"
-                     xmlns="http://www.w3.org/2000/svg">
-                    <path fill="#000000" d="M341.3 28.3v85.3H128c-70.7 0-128 57.3-128 128c0 21.5 5.8 41.4 15.2 59.2L68 263.2c-2.4-6.8-4-13.9-4-21.5c0-35.4 28.7-64 64-64h213.3V263L512 156.3V135L341.3 28.3zM444 262.8c2.4 6.8 4 13.9 4 21.5c0 35.4-28.6 64-64 64H170.7V263L0 369.7V391l170.7 106.7v-85.3H384c70.7 0 128-57.3 128-128c0-21.5-5.8-41.4-15.2-59.2L444 262.8z" />
-                </svg>
-            {% endif %}
-        </div>
+    <!-- prettier-ignore-end -->
+  <div
+    class="relative mb-5 inline-block cursor-pointer"
+    onclick="profile_action()">
+    {% avatar user=request.user blank_ok=True %}
+    <div
+      class="absolute left-0 top-0 h-full w-full rounded-full bg-tcreme bg-opacity-70 opacity-0 transition-opacity hover:opacity-100">
+      {% if user.profile_avatar_type == "IM" %}
+        <h3
+          class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transform">
+          Upload
+        </h3>
+      {% elif user.profile_avatar_type == "TD" %}
+        <h3
+          class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transform">
+          Randomize
+        </h3>
+      {% endif %}
     </div>
-    <div>
-        <form hx-post="{% url "users:profile-image" %}"
-              action="{% url "users:profile-image" %}"
-              method="post"
-              enctype="multipart/form-data">
-            {% csrf_token %}
-            <button type="submit" class="hidden" name="randomize" value="true"></button>
-            <input type="file"
-                   class="hidden"
-                   name="profile_image"
-                   accept="image/png, image/jpeg">
-            <button type="submit" class="hidden" name="image_submit"></button>
-            <div class="tabs tabs-boxed inline-block">
-                {% for choice in form.fields.profile_avatar_type.choices %}
-                    <button type="submit"
-                            name="profile_avatar_type"
-                            value="{{ choice.0 }}"
-                            class="tab
-                                   {% if choice.0 == user.profile_avatar_type %}tab-active{% endif %}">{{ choice.1 }}</button>
-                {% endfor %}
-            </div>
-        </form>
-        <div class="text-center">
-            <button class="btn btn-sm mt-5" onclick="window.location = window.location">Done</button>
-        </div>
+    <div class="absolute bottom-2 right-2 rounded-full bg-white p-1">
+      {% if user.profile_avatar_type == "IM" %}
+        <svg
+          width="25"
+          class="absolute bottom-0 right-0 rounded-full bg-white p-1"
+          height="25"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg">
+          <path
+            fill="#000000"
+            d="M11 16V7.85l-2.6 2.6L7 9l5-5l5 5l-1.4 1.45l-2.6-2.6V16h-2Zm-5 4q-.825 0-1.413-.588T4 18v-3h2v3h12v-3h2v3q0 .825-.588 1.413T18 20H6Z" />
+        </svg>
+      {% elif user.profile_avatar_type == "TD" %}
+        <svg
+          width="25"
+          class="absolute bottom-0 right-0 rounded-full bg-tcreme p-1"
+          height="25"
+          viewBox="0 0 512 512"
+          xmlns="http://www.w3.org/2000/svg">
+          <path
+            fill="#000000"
+            d="M341.3 28.3v85.3H128c-70.7 0-128 57.3-128 128c0 21.5 5.8 41.4 15.2 59.2L68 263.2c-2.4-6.8-4-13.9-4-21.5c0-35.4 28.7-64 64-64h213.3V263L512 156.3V135L341.3 28.3zM444 262.8c2.4 6.8 4 13.9 4 21.5c0 35.4-28.6 64-64 64H170.7V263L0 369.7V391l170.7 106.7v-85.3H384c70.7 0 128-57.3 128-128c0-21.5-5.8-41.4-15.2-59.2L444 262.8z" />
+        </svg>
+      {% endif %}
     </div>
+  </div>
+  <div>
+    <form
+      hx-post="{% url "users:profile-image" %}"
+      action="{% url "users:profile-image" %}"
+      method="post"
+      enctype="multipart/form-data">
+      {% csrf_token %}
+      <button
+        type="submit"
+        class="hidden"
+        name="randomize"
+        value="true"></button>
+      <input
+        type="file"
+        class="hidden"
+        name="profile_image"
+        accept="image/png, image/jpeg" />
+      <button type="submit" class="hidden" name="image_submit"></button>
+      <div class="tabs-boxed tabs inline-block">
+        {% for choice in form.fields.profile_avatar_type.choices %}
+          <button
+            type="submit"
+            name="profile_avatar_type"
+            value="{{ choice.0 }}"
+            class="{% if choice.0 == user.profile_avatar_type %}tab-active{% endif %}
+                                   tab">
+            {{ choice.1 }}
+          </button>
+        {% endfor %}
+      </div>
+    </form>
+    <div class="text-center">
+      <button
+        class="btn btn-sm mt-5"
+        onclick="window.location = window.location">
+        Done
+      </button>
+    </div>
+  </div>
 </div>
