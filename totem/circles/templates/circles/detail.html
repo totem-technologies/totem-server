@@ -33,8 +33,13 @@
             {% comment %} Share button {% endcomment %}
             <div class="absolute top-5 right-5">
                 <button onclick="share_modal.showModal()"
-                        class="btn btn-circle pr-[0.5] bg-white text-tslate">
-                    {% icons "share" %}
+                        class="btn max-sm:hidden btn-sm pr-[0.5] bg-white text-tslate">
+                    {% icons "share" size=15 %}
+                    Share
+                </button>
+                <button onclick="share_modal.showModal()"
+                        class="btn btn-circle sm:hidden pr-[0.5] bg-white text-tslate">
+                    {% icons "share" size=20 %}
                 </button>
             </div>
             <dialog id="share_modal" class="modal modal-bottom sm:modal-middle">
