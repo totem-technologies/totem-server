@@ -1,7 +1,6 @@
 from typing import Any
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpRequest
@@ -10,7 +9,7 @@ from django.shortcuts import redirect, render
 from totem.users.models import User
 from totem.utils.hash import basic_hash
 
-from .actions import SubscribeAction
+from .actions import JoinCircleAction, SubscribeAction
 from .filters import all_upcoming_recommended_circles, all_upcoming_recommended_events, other_events_in_circle
 from .models import Circle, CircleCategory, CircleEvent, CircleEventException
 
@@ -163,14 +162,33 @@ def topic(request, slug):
     return render(request, "circles/list.html", context=context)
 
 
-@login_required
 def join(request, event_slug):
+    token = request.GET.get("token")
+    if token:
+        try:
+            user, params = JoinCircleAction.resolve(token)
+            token_event_slug = params["event_slug"]
+            if token_event_slug != event_slug:
+                raise PermissionDenied
+        except Exception:
+            messages.error(
+                request, "Invalid or expired link. If you think this is an error, please contact us: help@totem.org."
+            )
+            return redirect("circles:event_detail", event_slug=event_slug)
+    elif request.user.is_authenticated:
+        user = request.user
+    else:
+        return redirect_to_login(request.get_full_path())
+
     event = _get_circle_event(event_slug)
-    user = request.user
     if event.can_join(user):
         event.joined.add(user)
         return redirect(event.meeting_url, permanent=False)
-    messages.info(request, "Cannot join at this time.")
+
+    if event.started():
+        messages.info(request, "This event has already started.")
+    else:
+        messages.info(request, "Cannot join at this time. Please try again later.")
     return redirect("circles:event_detail", event_slug=event.slug)
 
 
@@ -185,8 +203,8 @@ def subscribe(request: HttpRequest, slug: str):
     elif token:
         try:
             user, params = SubscribeAction.resolve(token)
-            sub = params.subscribe
-            slug = params.circle_slug
+            sub = params["subscribe"]
+            slug = params["circle_slug"]
         except Exception:
             messages.error(request, "Invalid or expired link. If you think this is an error, please contact us.")
             return redirect("circles:detail", slug=slug)

@@ -8,6 +8,7 @@ from django.utils import timezone
 
 from totem.users.tests.factories import UserFactory
 
+from ..actions import JoinCircleAction
 from ..views import AUTO_RSVP_SESSION_KEY
 from .factories import CircleCategoryFactory, CircleEventFactory, CircleFactory
 
@@ -88,6 +89,19 @@ class TestJoinView:
         assert response.status_code == 302
         assert event.slug in response.url
         assert user not in event.joined.all()
+
+    def test_join_with_token(self, client, db):
+        event = CircleEventFactory(start=timezone.now() + datetime.timedelta(minutes=14))
+        event.save()
+        user = UserFactory()
+        user.save()
+        # Don't log in, just use the token
+        event.add_attendee(user)
+        url = JoinCircleAction(user=user, parameters={"event_slug": event.slug}).build_url()
+        response = client.get(url)
+        assert response.status_code == 302
+        assert event.meeting_url in response.url
+        assert user in event.joined.all()
 
 
 class AnonSubscribeViewTest(TestCase):

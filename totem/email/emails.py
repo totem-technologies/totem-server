@@ -151,7 +151,7 @@ def send_notify_circle_starting(event: CircleEvent, user: User):
         recipient=user.email,
         start=start,
         event_title=event.circle.title,
-        link=make_email_url(event.get_absolute_url()),  # type: ignore
+        link=event.join_url(user),  # type: ignore
     ).send()
 
 

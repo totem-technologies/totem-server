@@ -1,20 +1,28 @@
-from dataclasses import dataclass
+from typing import TypedDict
 
 from django.urls import reverse
 
-from totem.users.actions import ActionBase
+from totem.users.actions_base import ActionBase
 
 
-@dataclass
-class SubscribeActionParameters:
+class SubscribeActionParameters(TypedDict):
     circle_slug: str
     subscribe: bool
 
 
 class SubscribeAction(ActionBase[SubscribeActionParameters]):
     action_id = "circles:subscribe"
-    __parameters_type__ = SubscribeActionParameters
 
-    @classmethod
-    def get_url(cls, parameters):
-        return reverse(cls.action_id, kwargs={"slug": parameters.circle_slug})
+    def get_url(self):
+        return reverse(self.action_id, kwargs={"slug": self.parameters["circle_slug"]})
+
+
+class JoinCircleParameters(TypedDict):
+    event_slug: str
+
+
+class JoinCircleAction(ActionBase[JoinCircleParameters]):
+    action_id = "circles:join"
+
+    def get_url(self) -> str:
+        return reverse("circles:join", kwargs={"event_slug": self.parameters["event_slug"]})

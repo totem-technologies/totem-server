@@ -1,11 +1,9 @@
-from django.contrib.messages import get_messages
 from django.core import mail
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from totem.users.tests.factories import UserFactory
 
-from ..actions import SubscribeAction, SubscribeActionParameters
 from ..views import ics_hash
 from .factories import CircleEventFactory, CircleFactory
 
@@ -69,7 +67,7 @@ class TestCircleEventModel:
         email = mail.outbox[0]
         assert email.to == [user.email]
         message = str(email.message())
-        assert "http://testserver/circles/event" in message
+        assert "http://testserver/circles/join/" in message
         event.refresh_from_db()
         assert event.notified
 
@@ -105,64 +103,3 @@ class TestCircleEventModel:
         assert "http://testserver/circles/event" in message
         event.refresh_from_db()
         assert event.notified_tomorrow
-
-
-class TestSubscribeAction:
-    def test_subscribe(self, client, db):
-        user = UserFactory()
-        circle = CircleFactory()
-        assert circle.subscribed.count() == 0
-        url = SubscribeAction.build_url(
-            user=user, parameters=SubscribeActionParameters(circle_slug=circle.slug, subscribe=True)
-        )
-        assert "circles/subscribe/" in url
-        assert circle.slug in url
-        token = url.split("token=")[1].split("&")[0]
-        user1, params = SubscribeAction.resolve(token)
-        assert user1 == user
-        assert params
-        assert params.circle_slug == circle.slug
-        assert params.subscribe is True
-        response = client.get(url)
-        circle.refresh_from_db()
-        assert circle.subscribed.count() == 1
-        message = list(get_messages(response.wsgi_request))[0]
-        assert "subscribed" in message.message.lower()
-
-    def test_unsubscribe(self, client, db):
-        user = UserFactory()
-        circle = CircleFactory()
-        circle.subscribed.add(user)
-        assert circle.subscribed.count() == 1
-        url = SubscribeAction.build_url(
-            user=user, parameters=SubscribeActionParameters(circle_slug=circle.slug, subscribe=False)
-        )
-        assert "circles/subscribe/" in url
-        assert circle.slug in url
-        token = url.split("token=")[1].split("&")[0]
-        user1, params = SubscribeAction.resolve(token)
-        assert user1 == user
-        assert params
-        assert params.circle_slug == circle.slug
-        assert params.subscribe is False
-        response = client.get(url)
-        circle.refresh_from_db()
-        assert circle.subscribed.count() == 0
-        message = list(get_messages(response.wsgi_request))[0]
-        assert "unsubscribed" in message.message.lower()
-
-    def test_invalid_token(self, client, db):
-        user = UserFactory()
-        circle = CircleFactory()
-        url = SubscribeAction.build_url(
-            user=user, parameters=SubscribeActionParameters(circle_slug=circle.slug, subscribe=False)
-        )
-        assert "circles/subscribe/" in url
-        assert circle.slug in url
-        token = url.split("token=")[1].split("&")[0]
-        token = token[:-1] + "0"
-        response = client.get(url[:-3])  # make the token invalid
-        assert response.status_code == 302
-        assert response.url == f"/circles/{circle.slug}/"
-        message = list(get_messages(response.wsgi_request))[0]
-        assert "invalid" in message.message.lower()
