@@ -70,6 +70,7 @@ def get_templates():
             recipient="bo@totem.org",
             start="2021-01-01",
             event_title="Test Event",
+            event_link="https://totem.org/event",  # type: ignore
             link="https://totem.org",  # type: ignore
         ),
         "circle_advertisement": CircleAdvertisementEmail(

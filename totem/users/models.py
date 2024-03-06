@@ -138,7 +138,7 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
         self.name = html_escape(strip_tags(self.name.strip()))
 
 
-class KeeperProfile(models.Model, MarkdownMixin):
+class KeeperProfile(AdminURLMixin, models.Model, MarkdownMixin):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="keeper_profile")
     bio = MarkdownField(blank=True)
 

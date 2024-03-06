@@ -1,6 +1,6 @@
 {% extends 'email/emails/button.mjml' %}
 {% block message %}
-<mj-text font-size="20px" line-height="1.6" padding="0px">
+<mj-text mj-class="p">
   Your Circle, {{event_title}}, is starting tomorrow at <strong>{{start}}</strong>.
   Click the button below to find the Add to Calendar button. Remember, if you are more than 5 minutes late, you may not be allowed to participate.
 </mj-text>

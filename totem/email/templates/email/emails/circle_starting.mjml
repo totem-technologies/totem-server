@@ -1,7 +1,7 @@
 {% extends 'email/emails/button.mjml' %}
 {% block message %}
-<mj-text font-size="20px" line-height="1.6" padding="0px">
-  Your Circle, {{event_title}}, is starting soon at <strong>{{start}}</strong>.
+<mj-text mj-class="p">
+  Your Circle, <a class="link-nostyle" href="{{event_link}}">{{event_title}}</a>, is starting soon at <strong>{{start}}</strong>.
   Click the button below to join the Circle. If you are more than 5 minutes late, you may not be allowed to participate.
 </mj-text>
 {% endblock message %}

@@ -4,7 +4,7 @@
 {% load avatar %}
 {% load markdown %}
 {% block title %}
-  {{ object.name }}
+  {{ user.name }}
 {% endblock title %}
 {% block content %}
   <section class="section tprose m-auto max-w-4xl px-5 pt-10">
@@ -14,6 +14,14 @@
     <div>
       <h1 class="h1">{{ user.name }}</h1>
       <p>{{ user.keeper_profile.bio|to_html }}</p>
+      {% if request.user.is_staff %}
+        (<a
+          class="link"
+          target="_blank"
+          href="{{ user.keeper_profile.get_admin_url }}"
+          >Edit</a
+        >)
+      {% endif %}
     </div>
   </section>
   <section class="section m-auto max-w-4xl px-5 pt-10">

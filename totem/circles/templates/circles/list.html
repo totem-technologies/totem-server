@@ -44,7 +44,7 @@
         {% if show_load_more %}
           <div class="text-center">
             <button
-              class="btn mt-10"
+              class="btn btn-ghost mt-10"
               hx-get="{% url 'circles:list' %}"
               hx-target="#search-results"
               hx-select="#search-results"
@@ -53,8 +53,8 @@
               hx-include="#search-form"
               hx-swap="outerHTML"
               hx-push-url="true"
-              aria-label="Load more Circles">
-              Load more Circles
+              aria-label="More Circles">
+              More Circles
             </button>
           </div>
         {% else %}

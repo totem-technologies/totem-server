@@ -4,11 +4,11 @@
     <mj-attributes>
       <mj-all font-family="Montserrat, Helvetica, Arial, sans-serif"></mj-all>
       <mj-button background-color="#987AA5" color="#FFF" border-radius="40px" font-size="20px" line-height="1.75" padding="0px"></mj-button>
-      <mj-class name="h1" color="#262F37" font-size="40px" font-weight="bold" line-height="1.6" padding="0px" />
-      <mj-class name="p" color="#262F37" font-size="18px" line-height="1.6" padding="0px" />
+      <mj-class name="h1" color="#262F37" font-size="32px" font-weight="bold" line-height="1.6" padding="0px" />
+      <mj-class name="p" color="#262F37" font-size="16px" line-height="1.6" padding="0px" />
       <mj-class name="sub" color="#7a7a7a" font-size="14px" line-height="1.6" padding="0px" />
       <mj-class name="section" background-color="#F3F1E9" border-radius="24px" padding="40px" />
-      <mj-text color="#2B2B2B"></mj-text>
+      <mj-text color="#2B2B2B" font-size="16px" line-height="1.6" padding="0px"></mj-text>
     </mj-attributes>
     <mj-font href="https://fonts.googleapis.com/css?family=Montserrat:normal,italic,bold&display=swap" name="Montserrat"></mj-font>
     <mj-style inline="inline">
@@ -32,7 +32,7 @@
     {% endif %}
     <mj-section>
       <mj-column>
-        <mj-image align="left" href="https://www.totem.org" padding="5px" src="{% static 'images/totem-logo.png' %}" width="100px"></mj-image>
+        <mj-image align="left" href="https://www.totem.org" padding="5px" src="{% static 'images/totem-logo.png' %}" width="70px"></mj-image>
       </mj-column>
     </mj-section>
     {% block content %} {% endblock content %}

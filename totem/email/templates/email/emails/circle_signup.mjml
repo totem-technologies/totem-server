@@ -1,10 +1,10 @@
 {% extends 'email/emails/button.mjml' %}
 {% block message %}
-<mj-text font-size="20px" line-height="1.6" padding="0px">
-  You have successfully saved your spot in this Circle! We're excited to see you there.
+<mj-text mj-class="p">
+  You have successfully saved your spot in this Circle! We're excited to see you there. Use the button below to add this session to your calendar.
 </mj-text>
 <mj-spacer height="10px" />
-<mj-text font-size="20px" line-height="1.6" padding="0px">
+<mj-text mj-class="p">
   <strong>Circle:</strong> {{ event_title }}<br>
   <strong>When:</strong> {{ start }}<br>
 </mj-text>

@@ -87,6 +87,7 @@ class CircleStartingEmail(Email):
     template: str = "circle_starting"
     start: str
     event_title: str
+    event_link: AnyHttpUrl
     link: AnyHttpUrl
     button_text: str = "Join Circle"
     subject: str = "Your Circle is starting soon"
@@ -141,7 +142,7 @@ def send_returning_login_email(email: str, url: str):
 def send_change_email(old_email: str, new_email: str, login_url: str):
     ChangeEmailEmail(
         recipient=new_email,
-        link=make_email_url(login_url),  # type: ignore
+        link=make_email_url(login_url),
     ).send()
 
 
@@ -151,6 +152,7 @@ def send_notify_circle_starting(event: CircleEvent, user: User):
         recipient=user.email,
         start=start,
         event_title=event.circle.title,
+        event_link=make_email_url(event.get_absolute_url()),
         link=event.join_url(user),  # type: ignore
     ).send()
 
@@ -161,7 +163,7 @@ def send_notify_circle_tomorrow(event: CircleEvent, user: User):
         recipient=user.email,
         start=start,
         event_title=event.circle.title,
-        link=make_email_url(event.get_absolute_url()),  # type: ignore
+        link=make_email_url(event.get_absolute_url()),
     ).send()
 
 
@@ -169,7 +171,7 @@ def send_notify_circle_advertisement(event: CircleEvent, user: User):
     start = to_human_time(user, event.start)
     CircleAdvertisementEmail(
         recipient=user.email,
-        link=make_email_url(event.get_absolute_url()),  # type: ignore
+        link=make_email_url(event.get_absolute_url()),
         start=start,
         event_title=event.circle.title,
         unsubscribe_url=event.circle.subscribe_url(user, subscribe=False),  # type: ignore
@@ -192,5 +194,5 @@ def to_human_time(user: User, dt: datetime):
     return dt.astimezone(user.timezone).strftime("%I:%M %p %Z on %A, %B %d")
 
 
-def make_email_url(link) -> str:
+def make_email_url(link) -> AnyHttpUrl:
     return urllib.parse.urljoin(settings.EMAIL_BASE_URL, link)

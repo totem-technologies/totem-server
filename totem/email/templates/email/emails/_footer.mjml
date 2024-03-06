@@ -8,7 +8,7 @@
       <mj-social-element src="{% static 'images/email/github.png' %}" alt="https://github.com/totem-technologies" href="https://github.com/totem-technologies" title="https://github.com/totem-technologies"></mj-social-element>
     </mj-social>
     <mj-spacer height="5px"></mj-spacer>
-    <mj-text align="center" color="#5B5B5B" font-family="'Cabin', 'Helvetica', 'Arial', sans-serif" font-size="14px" line-height="1.5" padding-bottom="0px" padding-left="10px" padding-right="10px" padding-top="0px" padding="0px">
+    <mj-text align="center" mj-class="sub">
       Totem Technologies, 501(c)(3).
     </mj-text>
   </mj-column>

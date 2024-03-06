@@ -43,11 +43,11 @@ def detail(request, slug):
     return _circle_detail(request, request.user, circle, event)
 
 
-def _circle_detail(request: HttpRequest, user: User, circle: Circle, event):
+def _circle_detail(request: HttpRequest, user: User, circle: Circle, event: CircleEvent | None):
     if not circle.published and not user.is_staff:
         raise PermissionDenied
 
-    if user.is_authenticated and request.session.get(AUTO_RSVP_SESSION_KEY):
+    if user.is_authenticated and request.session.get(AUTO_RSVP_SESSION_KEY) and event:
         event_slug = request.session[AUTO_RSVP_SESSION_KEY]
         del request.session[AUTO_RSVP_SESSION_KEY]
         if event_slug == event.slug:
