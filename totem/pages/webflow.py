@@ -10,11 +10,11 @@ def get_webflow_page(page: str | None) -> str:
     # Send a GET request to the Webflow page
     base_url = settings.WEBFLOW_BASE_URL
     if page is None:
-        content = _get(base_url)
+        content = get(base_url)
     else:
-        content = _get(f"{base_url}{page}")
+        content = get(f"{base_url}{page}")
     return content
 
 
-def _get(url: str) -> str:
+def get(url: str) -> str:
     return requests_session.get(url, timeout=5).content.decode("utf-8")

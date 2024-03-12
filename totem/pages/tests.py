@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.conf import settings
 from django.test import Client, TestCase
 from django.urls import reverse
@@ -18,15 +20,22 @@ class TestPages:
         response = client.get(url)
         assert response.status_code == 200
 
-    def test_add(self, client):
-        url = reverse("pages:about")
-        response = client.get(url)
-        assert response.status_code == 200
+    def test_about(self, client):
+        mock_content = "<h1>mock content</h1>"
+        with patch("totem.pages.webflow.get", return_value=mock_content):
+            url = reverse("pages:about")
+            response = client.get(url)
+            assert response.status_code == 200
+            assert response.content.decode("utf-8") == mock_content
 
-    def test_view_user(self, client):
-        url = reverse("pages:how-it-works")
-        response = client.get(url)
-        assert response.status_code == 200
+    def test_view_how_it_works(self, client):
+        # mock .webflow.get to return a string
+        mock_content = "<h1>mock content</h1>"
+        with patch("totem.pages.webflow.get", return_value=mock_content):
+            url = reverse("pages:how-it-works")
+            response = client.get(url)
+            assert response.status_code == 200
+            assert response.content.decode("utf-8") == mock_content
 
     def test_team(self, client):
         url = reverse("pages:team")

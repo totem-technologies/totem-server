@@ -28,3 +28,4 @@ django-extensions<4  # https://github.com/django-extensions/django-extensions
 djlint<2  # https://pypi.org/project/djlint/
 factory-boy<4  # https://github.com/FactoryBoy/factory_boy
 pytest-django<5  # https://github.com/pytest-dev/pytest-django
+pytest-xdist<4  # https://github.com/pytest-dev/pytest-xdist
