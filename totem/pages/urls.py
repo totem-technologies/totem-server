@@ -27,12 +27,12 @@ class PagesSitemap(Sitemap):
 
 webflow_pages = [
     # "team",
-    # "how-it-works",
-    # "privacy",
-    # "tos",
-    # "about",
+    "how-it-works",
+    "about",
     "guidelines",
     "topics/mothers",
+    "topics/lgbtq",
+    "topics/creatives",
 ]
 
 webflow_patterns = [re_path(rf"^{page}/", views.webflow_proxy, name=page) for page in webflow_pages]
@@ -42,9 +42,9 @@ app_name = "pages"
 urlpatterns = [
     path("", views.home, name="home"),
     path("home-redirect/", views.home_redirect, name="home-redirect"),
-    path("team/", views.TeamView.as_view(), name="team"),
-    path("about/", TemplateView.as_view(template_name="pages/about.html"), name="about"),
-    path("how-it-works/", views.HowItWorksView.as_view(), name="how-it-works"),
+    path("team/", views.team_view, name="team"),
+    # path("about/", TemplateView.as_view(template_name="pages/about.html"), name="about"),
+    # path("how-it-works/", views.HowItWorksView.as_view(), name="how-it-works"),
     path("tos/", TemplateView.as_view(template_name="pages/tos.html"), name="tos"),
     path("privacy/", TemplateView.as_view(template_name="pages/privacy.html"), name="privacy"),
     path("training/", views.training, name="training"),

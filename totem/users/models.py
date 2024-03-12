@@ -119,6 +119,9 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
     def get_keeper_url(self):
         return reverse("users:detail", kwargs={"slug": self.slug})
 
+    def is_keeper(self):
+        return hasattr(self, "keeper_profile")
+
     def identify(self):
         analytics.identify_user(self)
 
@@ -140,6 +143,7 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
 
 class KeeperProfile(AdminURLMixin, models.Model, MarkdownMixin):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="keeper_profile")
+    title = CharField(max_length=255, default="Keeper")
     bio = MarkdownField(blank=True)
 
     def __str__(self):

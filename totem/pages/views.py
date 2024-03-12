@@ -2,7 +2,6 @@ import base64
 from dataclasses import dataclass
 
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
@@ -13,12 +12,11 @@ from django.urls import reverse_lazy
 from django.views.generic import TemplateView
 
 from ..users.forms import LoginForm
+from ..users.models import User
 from . import data
 from .models import Redirect
 from .qrmaker import make_qr
 from .webflow import get_webflow_page
-
-User = get_user_model()
 
 
 @dataclass
@@ -32,7 +30,7 @@ class Member:
         return f"images/team/{self.image}"
 
 
-class TeamView(TemplateView):
+def team_view(request):
     team = [
         Member(name="Bo Lopker", title="Executive Director, Keeper", image="bo.jpg", url=reverse_lazy("pages:about")),
         Member(name="Pam Lopker", title="Board Member", image="pam.jpg", url=reverse_lazy("pages:team-pam")),
@@ -63,11 +61,8 @@ class TeamView(TemplateView):
         Member(name="Steve Ansell", title="Engineer, Phase 2", image="blank.jpg", url="https://phase2industries.com/"),
     ]
     template_name = "pages/team.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["team"] = self.team
-        return context
+    context = {"team": team, "keepers": keepers}
+    return render(request, template_name, context=context)
 
 
 @dataclass
@@ -102,7 +97,11 @@ def home(request):
 
 
 def keepers(request, name):
-    return render(request, f"pages/keepers/{name}.html")
+    try:
+        user = User.objects.get(email=f"{name}@totem.org")
+    except User.DoesNotExist:
+        raise Http404
+    return django_redirect(to=user.get_keeper_url())
 
 
 def redirect(request, slug):
