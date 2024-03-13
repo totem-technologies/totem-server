@@ -17,7 +17,7 @@
     <div class="hidden pt-2 md:block">
       {% if not request.user.is_authenticated %}
         <a class="pr-5 hover:text-tblue" href="{% url "pages:how-it-works" %}">How it works</a>
-        <a class="pr-5 hover:text-tblue" href="{% url "pages:about" %}">Why we made Totem</a>
+        <a class="pr-5 hover:text-tblue" href="{% url "pages:about" %}">About</a>
         <a class="pr-5 hover:text-tblue" href="{% url "pages:team" %}">Team</a>
       {% endif %}
     </div>

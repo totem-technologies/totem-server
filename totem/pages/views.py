@@ -8,7 +8,7 @@ from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpResponse
 from django.shortcuts import redirect as django_redirect
 from django.shortcuts import render
-from django.urls import reverse_lazy
+from django.urls import reverse
 from django.views.generic import TemplateView
 
 from ..users.forms import LoginForm
@@ -32,25 +32,30 @@ class Member:
 
 def team_view(request):
     team = [
-        Member(name="Bo Lopker", title="Executive Director, Keeper", image="bo.jpg", url=reverse_lazy("pages:about")),
-        Member(name="Pam Lopker", title="Board Member", image="pam.jpg", url=reverse_lazy("pages:team-pam")),
+        Member(
+            name="Bo Lopker",
+            title="Executive Director, Keeper",
+            image="bo.jpg",
+            url=reverse("pages:keepers", kwargs={"name": "bo"}),
+        ),
+        Member(name="Pam Lopker", title="Board Member", image="pam.jpg", url=reverse("pages:team-pam")),
         Member(
             name="Gabe Kenny",
             title="User Research, Keeper",
             image="gabe.jpg",
-            url=reverse_lazy("pages:keepers", kwargs={"name": "gabe"}),
+            url=reverse("pages:keepers", kwargs={"name": "gabe"}),
         ),
         Member(
             name="Heather Gressett",
             title="Content Curator, Keeper",
             image="heather.jpg",
-            url=reverse_lazy("pages:keepers", kwargs={"name": "heather"}),
+            url=reverse("pages:keepers", kwargs={"name": "heather"}),
         ),
         Member(
             name="Vanessa Robinson",
             title="Keeper",
             image="vanessa.jpg",
-            url=reverse_lazy("pages:keepers", kwargs={"name": "vanessa"}),
+            url=reverse("pages:keepers", kwargs={"name": "vanessa"}),
         ),
         Member(
             name="Steve Schalkhauser",
@@ -87,7 +92,7 @@ def home(request):
     if request.user.is_authenticated:
         # Redirect to the dashboard if the user is logged in and they aren't going to the home page from the site.
         if settings.EMAIL_BASE_URL not in request.META.get("HTTP_REFERER", ""):
-            return django_redirect(to=reverse_lazy("users:redirect"))
+            return django_redirect(to=reverse("users:redirect"))
     context = {
         "faqs": data.faqs,
         "quotes": data.quotes,
@@ -133,8 +138,8 @@ def training(request):
 
 def home_redirect(request):
     if request.user.is_authenticated:
-        return django_redirect(to=reverse_lazy("users:redirect"))
-    return django_redirect(to=reverse_lazy("pages:home"))
+        return django_redirect(to=reverse("users:redirect"))
+    return django_redirect(to=reverse("pages:home"))
 
 
 def webflow_page(request, page: str | None = None):
