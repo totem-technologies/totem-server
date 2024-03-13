@@ -8,7 +8,7 @@ python_files = ["tests.py", "test_*.py"]
 [tool.coverage.run]
 include = ["totem/**"]
 omit = ["*/migrations/*", "*/tests/*"]
-plugins = ["django_coverage_plugin"]
+disable_warnings = ["include-ignored"]
 
 
 # ==== black ====

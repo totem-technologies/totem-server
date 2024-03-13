@@ -63,7 +63,7 @@ django==5.0.3
     #   sentry-sdk
 django-allauth==0.61.1
     # via -r requirements/base.in
-django-anymail==10.2
+django-anymail==10.3
     # via -r requirements/base.in
 django-appconf==1.0.6
     # via django-imagekit
@@ -86,9 +86,7 @@ django-redis==5.4.0
 django-sesame==3.2.2
     # via -r requirements/base.in
 django-storages[s3]==1.14.2
-    # via
-    #   -r requirements/base.in
-    #   django-storages
+    # via -r requirements/base.in
 django-taggit==5.0.1
     # via -r requirements/base.in
 django-timezone-field==6.1.0
@@ -166,9 +164,7 @@ pydantic==2.6.4
 pydantic-core==2.16.3
     # via pydantic
 pyjwt[crypto]==2.8.0
-    # via
-    #   django-allauth
-    #   pyjwt
+    # via django-allauth
 pyparsing==3.1.2
     # via httplib2
 pypng==0.20220715.0
@@ -208,9 +204,7 @@ rsa==4.9
 s3transfer==0.10.0
     # via boto3
 sentry-sdk[django]==1.41.0
-    # via
-    #   -r requirements/base.in
-    #   sentry-sdk
+    # via -r requirements/base.in
 six==1.16.0
     # via
     #   posthog
@@ -232,10 +226,8 @@ urllib3==2.0.7
     #   django-anymail
     #   requests
     #   sentry-sdk
-uvicorn[standard]==0.27.1
-    # via
-    #   -r requirements/base.in
-    #   uvicorn
+uvicorn[standard]==0.28.0
+    # via -r requirements/base.in
 uvloop==0.19.0
     # via uvicorn
 watchfiles==0.21.0
