@@ -40,7 +40,7 @@ webflow_patterns = [re_path(rf"^{page}/", views.webflow_proxy, name=page) for pa
 
 app_name = "pages"
 urlpatterns = [
-    path("", views.home, name="home"),
+    path("", views.webflow_page, name="home"),
     path("home-redirect/", views.home_redirect, name="home-redirect"),
     path("team/", views.team_view, name="team"),
     # path("about/", TemplateView.as_view(template_name="pages/about.html"), name="about"),
