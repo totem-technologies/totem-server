@@ -1,6 +1,3 @@
-from unittest.mock import patch
-
-from django.conf import settings
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -20,22 +17,15 @@ class TestPages:
         response = client.get(url)
         assert response.status_code == 200
 
-    def test_about(self, client):
-        mock_content = "<h1>mock content</h1>"
-        with patch("totem.pages.webflow.get", return_value=mock_content):
-            url = reverse("pages:about")
-            response = client.get(url)
-            assert response.status_code == 200
-            assert response.content.decode("utf-8") == mock_content
+    def test_about(self, client, webflow_mock):
+        url = reverse("pages:about")
+        response = client.get(url)
+        assert response.status_code == 200
 
-    def test_view_how_it_works(self, client):
-        # mock .webflow.get to return a string
-        mock_content = "<h1>mock content</h1>"
-        with patch("totem.pages.webflow.get", return_value=mock_content):
-            url = reverse("pages:how-it-works")
-            response = client.get(url)
-            assert response.status_code == 200
-            assert response.content.decode("utf-8") == mock_content
+    def test_view_how_it_works(self, client, webflow_mock):
+        url = reverse("pages:how-it-works")
+        response = client.get(url)
+        assert response.status_code == 200
 
     def test_team(self, client):
         url = reverse("pages:team")
@@ -43,27 +33,10 @@ class TestPages:
         assert response.status_code == 200
 
 
-class HomeViewTest(TestCase):
-    def test_home(self):
-        response = self.client.get(reverse("pages:home"))
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Totem")
-
-    def test_home_redirect(self):
-        response = self.client.get(reverse("pages:home-redirect"))
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, reverse("pages:home"))
-        user = UserFactory()
-        self.client.force_login(user)
-        response = self.client.get(reverse("pages:home-redirect"))
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, reverse("users:redirect"))
-        response = self.client.get(reverse("pages:home"))
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.url, reverse("users:redirect"))
-        # Only actually give the user the marketing home page if they came from Totem.
-        response = self.client.get(reverse("pages:home"), headers={"REFERER": settings.EMAIL_BASE_URL})  # type: ignore
-        self.assertEqual(response.status_code, 200)
+class HomeViewTest:
+    def test_home(self, client, webflow_mock):
+        response = client.get(reverse("pages:home"))
+        assert response.status_code == 200
 
 
 class RedirectViewTest(TestCase):

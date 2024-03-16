@@ -1,7 +1,6 @@
 import base64
 from dataclasses import dataclass
 
-from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
@@ -11,9 +10,7 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.views.generic import TemplateView
 
-from ..users.forms import LoginForm
 from ..users.models import User
-from . import data
 from .models import Redirect
 from .qrmaker import make_qr
 from .webflow import get_webflow_page
@@ -88,17 +85,17 @@ class HowItWorksView(TemplateView):
         return context
 
 
-def home(request):
-    if request.user.is_authenticated:
-        # Redirect to the dashboard if the user is logged in and they aren't going to the home page from the site.
-        if settings.EMAIL_BASE_URL not in request.META.get("HTTP_REFERER", ""):
-            return django_redirect(to=reverse("users:redirect"))
-    context = {
-        "faqs": data.faqs,
-        "quotes": data.quotes,
-        "signup_form": LoginForm(),
-    }
-    return render(request, "pages/home.html", context=context)
+# def home(request):
+#     if request.user.is_authenticated:
+#         # Redirect to the dashboard if the user is logged in and they aren't going to the home page from the site.
+#         if settings.EMAIL_BASE_URL not in request.META.get("HTTP_REFERER", ""):
+#             return django_redirect(to=reverse("users:redirect"))
+#     context = {
+#         "faqs": data.faqs,
+#         "quotes": data.quotes,
+#         "signup_form": LoginForm(),
+#     }
+#     return render(request, "pages/home.html", context=context)
 
 
 def keepers(request, name):
@@ -134,12 +131,6 @@ def redirect_qr(request, slug):
 def training(request):
     enroll_url = "https://secure.totem.org/b/7sI03l8LD1zl5eU9AJ"
     return render(request, "pages/training.html", {"enroll_url": enroll_url})
-
-
-def home_redirect(request):
-    if request.user.is_authenticated:
-        return django_redirect(to=reverse("users:redirect"))
-    return django_redirect(to=reverse("pages:home"))
 
 
 def webflow_page(request, page: str | None = None):
