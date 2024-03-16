@@ -24,7 +24,7 @@
     @apply md:py-10 mx-4;
   }
   .tprose {
-    @apply prose text-tslate lg:prose-xl prose-h1:font-sans prose-h1:font-semibold prose-h2:font-sans max-w-prose;
+    @apply prose;
   }
   .section-prose {
     @apply tprose section;
