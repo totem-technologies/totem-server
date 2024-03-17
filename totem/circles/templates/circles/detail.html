@@ -292,17 +292,28 @@
         {% endif %}
       </h3>
       <div class="tprose">{{ object.content_html }}</div>
-      <h3 class="pb-5 font-bold text-gray-400 md:pb-0">About the Keeper</h3>
-      <div>
-        <div>
+      <h3 class="pb-5 font-bold text-gray-400 md:pb-0">Meet the Keeper</h3>
+      <div class="pt-5">
+        <div class="flex items-center gap-4">
           <a
-            class="link block md:float-left md:pr-5"
+            class="link block md:pr-5"
             href="{{ object.author.get_keeper_url }}">
             {% avatar user=object.author classes="m-auto" %}
           </a>
+          <div class="flex-grow">
+            <h3 class="h3">{{ object.author.name }}</h3>
+            <div class="text-gray-400">
+              {{ object.author.keeper_profile.title }}
+            </div>
+            <a
+              href="{{ object.author.get_keeper_url }}"
+              class="btn btn-outline btn-sm mt-2">
+              View Profile
+            </a>
+          </div>
         </div>
         <div class="tprose inline">
-          {{ object.author.keeper_profile.bio|to_html|truncatewords:70 }}
+          {{ object.author.keeper_profile.bio|to_html|truncatewords:50 }}
         </div>
         <div class="text-center md:pt-0">
           <a class="btn btn-ghost" href="{{ object.author.get_keeper_url }}"
@@ -310,17 +321,29 @@
           >
         </div>
       </div>
-      <div
-        class="m-auto mt-5 w-full rounded-2xl border border-gray-200 bg-white p-5">
-        <div>
-          Reach out to the Keeper:
-          <a class=" link" href="mailto:{{ object.author.email }}"
-            ><strong>{{ object.author.email }}</strong></a
-          >
-        </div>
+
+      <div class="pt-5">
+        Reach out to the Keeper:
+        <a class=" link" href="mailto:{{ object.author.email }}"
+          ><strong>{{ object.author.email }}</strong></a
+        >
       </div>
     </div>
   </div>
+  {% if other_circles %}
+    <div class="m-auto max-w-5xl  px-5 pb-2">
+      <div class="divider py-5">More from {{ object.author.name }}</div>
+      <div>
+        <ul
+          role="list"
+          class="grid grid-cols-1 gap-6 pb-5 sm:grid-cols-2 md:grid-cols-3">
+          {% for event in other_circles %}
+            {% include "circles/_event_card.html" with event=event only %}
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  {% endif %}
 {% endblock content %}
 {% block inline_javascript %}
   <script src="{% static 'js/atcb.min.js' %}" defer></script>

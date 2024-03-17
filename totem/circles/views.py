@@ -10,7 +10,12 @@ from totem.users.models import User
 from totem.utils.hash import basic_hash
 
 from .actions import JoinCircleAction, SubscribeAction
-from .filters import all_upcoming_recommended_circles, all_upcoming_recommended_events, other_events_in_circle
+from .filters import (
+    all_upcoming_recommended_circles,
+    all_upcoming_recommended_events,
+    other_events_in_circle,
+    upcoming_events_by_author,
+)
 from .models import Circle, CircleCategory, CircleEvent, CircleEventException
 
 ICS_QUERY_PARAM = "key"
@@ -67,6 +72,8 @@ def _circle_detail(request: HttpRequest, user: User, circle: Circle, event: Circ
     if event:
         other_events = other_events_in_circle(user=user, event=event)
 
+    other_circles = upcoming_events_by_author(user, circle.author, exclude_circle=circle)[:6]
+
     return render(
         request,
         "circles/detail.html",
@@ -77,6 +84,7 @@ def _circle_detail(request: HttpRequest, user: User, circle: Circle, event: Circ
             "subscribed": subscribed,
             "event": event,
             "other_events": other_events,
+            "other_circles": other_circles,
         },
     )
 
@@ -141,7 +149,7 @@ def topic(request, slug):
     limit = int(request.GET.get("limit", 9))
     if limit > 100:
         raise ValueError
-    events = all_upcoming_recommended_circles(request.user, category=category, limit=limit + 1).all()
+    events = all_upcoming_recommended_circles(request.user, category=category)[: limit + 1].all()
     context: dict[str, Any] = {"events": events[:limit]}
     context["selected_category"] = category or ""
     categories = []

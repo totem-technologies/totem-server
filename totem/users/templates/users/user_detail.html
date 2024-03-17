@@ -7,7 +7,7 @@
   {{ user.name }}
 {% endblock title %}
 {% block content %}
-  <section class="section tprose m-auto max-w-4xl px-5 pt-10">
+  <section class="section tprose m-auto max-w-5xl px-5 pt-10">
     <div class="pb-10 md:float-left md:pb-2 md:pr-10">
       {% avatar user size=250 classes="m-auto" %}
     </div>
@@ -24,10 +24,10 @@
       {% endif %}
     </div>
   </section>
-  <section class="section m-auto max-w-4xl px-5 pt-10">
+  <section class="section m-auto max-w-5xl px-5 pt-5">
     {% if events %}
+      <div class="divider py-5">More from {{ user.name }}</div>
       <div>
-        <h3 class="h3 pb-5">Circles by {{ user.name }}</h3>
         <ul
           role="list"
           class="grid grid-cols-1 gap-6 pb-5 sm:grid-cols-2 md:grid-cols-3">

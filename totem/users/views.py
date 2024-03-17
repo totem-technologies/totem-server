@@ -11,7 +11,7 @@ from django.urls import reverse, reverse_lazy
 from django.views.generic import FormView
 from sesame.views import LoginView as SesameLoginView
 
-from totem.circles.filters import all_upcoming_recommended_events, upcoming_attending_events
+from totem.circles.filters import all_upcoming_recommended_events, upcoming_attending_events, upcoming_events_by_author
 from totem.email import emails
 from totem.utils.slack import notify_slack
 
@@ -24,7 +24,7 @@ def user_detail_view(request, slug):
     try:
         user = User.objects.get(slug=slug)
         if user.keeper_profile:
-            events = [e.next_event() for e in user.created_circles.all()[:10] if e.next_event()]
+            events = upcoming_events_by_author(request.user, user)[:10]
             return render(request, "users/user_detail.html", context={"user": user, "events": events})
     except (User.DoesNotExist, ObjectDoesNotExist):
         pass
