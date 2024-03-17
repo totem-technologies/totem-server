@@ -10,6 +10,7 @@ requests_session = requests.Session()
 
 def notify_slack(message):
     if settings.SLACK_WEBHOOK_URL is None:
+        print("SLACK MESSAGE:", message)
         return
     global_pool.add_task(_notify_task, message)
 

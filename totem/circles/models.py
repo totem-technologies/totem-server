@@ -197,7 +197,8 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         if self.can_attend(user=user):
             self.attendees.add(user)
             send_notify_circle_signup(self, user)
-            notify_slack(f"New Circle attendee: {user.email} for {self.circle.title} by {self.circle.author.name}")
+            if not self.circle.author == user:
+                notify_slack(f"New Circle attendee: {user.email} for {self.circle.title} by {self.circle.author.name}")
 
     def started(self):
         return self.start < timezone.now()
