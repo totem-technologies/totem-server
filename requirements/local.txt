@@ -204,7 +204,7 @@ json5==0.9.24
     # via djlint
 lxml==5.1.0
     # via -r requirements/base.in
-markdown==3.5.2
+markdown==3.6
     # via -r requirements/base.in
 markupsafe==2.1.5
     # via werkzeug
