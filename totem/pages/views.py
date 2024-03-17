@@ -50,7 +50,7 @@ def team_view(request):
         ),
         Member(
             name="Vanessa Robinson",
-            title="Keeper",
+            title="Webmaster, Keeper",
             image="vanessa.jpg",
             url=reverse("pages:keepers", kwargs={"name": "vanessa"}),
         ),
