@@ -23,9 +23,9 @@ asttokens==2.4.1
     # via stack-data
 backoff==2.2.1
     # via posthog
-boto3==1.34.61
+boto3==1.34.64
     # via django-storages
-botocore==1.34.61
+botocore==1.34.64
     # via
     #   boto3
     #   s3transfer
@@ -52,7 +52,7 @@ click==8.1.7
     #   uvicorn
 colorama==0.4.6
     # via djlint
-coverage[toml]==7.4.3
+coverage[toml]==7.4.4
     # via
     #   -r requirements/local.in
     #   pytest-cov
@@ -142,7 +142,7 @@ executing==2.0.1
     # via stack-data
 factory-boy==3.3.0
     # via -r requirements/local.in
-faker==24.1.0
+faker==24.2.0
     # via factory-boy
 filelock==3.13.1
     # via virtualenv
@@ -200,7 +200,7 @@ jsbeautifier==1.15.1
     # via
     #   cssbeautifier
     #   djlint
-json5==0.9.22
+json5==0.9.24
     # via djlint
 lxml==5.1.0
     # via -r requirements/base.in
@@ -212,7 +212,7 @@ matplotlib-inline==0.1.6
     # via ipython
 mccabe==0.7.0
     # via pylint
-mjml-python==1.3.0
+mjml-python==1.3.2
     # via -r requirements/base.in
 monotonic==1.6
     # via posthog
@@ -356,11 +356,11 @@ requests-oauthlib==1.4.0
     #   google-auth-oauthlib
 rsa==4.9
     # via google-auth
-ruff==0.3.2
+ruff==0.3.3
     # via -r requirements/local.in
-s3transfer==0.10.0
+s3transfer==0.10.1
     # via boto3
-sentry-sdk[django]==1.41.0
+sentry-sdk[django]==1.42.0
     # via -r requirements/base.in
 six==1.16.0
     # via
@@ -401,7 +401,7 @@ typing-extensions==4.10.0
     #   qrcode
 uritemplate==4.1.1
     # via google-api-python-client
-urllib3==2.0.7
+urllib3==2.2.1
     # via
     #   botocore
     #   django-anymail

@@ -55,6 +55,12 @@ def team_view(request):
             url=reverse("pages:keepers", kwargs={"name": "vanessa"}),
         ),
         Member(
+            name="Bob Lesser, MPP, LP",
+            title="Psychotherapist Advisor",
+            image="boblesser.webp",
+            url="https://boblesser.com/",
+        ),
+        Member(
             name="Steve Schalkhauser",
             title="Engineer, Phase 2",
             image="blank.jpg",
