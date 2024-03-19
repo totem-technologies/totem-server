@@ -5,9 +5,10 @@ from typing import TYPE_CHECKING
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import BooleanField, CharField, EmailField, TextChoices, UUIDField
-from django.urls import reverse
+from django.db.models import BooleanField, CharField, EmailField, TextChoices, URLField, UUIDField
+from django.urls import Resolver404, resolve, reverse
 from django.utils import timezone
 from django.utils.html import escape as html_escape
 from django.utils.html import strip_tags
@@ -117,10 +118,15 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
         return url
 
     def get_keeper_url(self):
+        if self.keeper_profile.username:
+            return reverse("profiles", kwargs={"name": self.keeper_profile.username})
         return reverse("users:detail", kwargs={"slug": self.slug})
 
     def is_keeper(self):
         return hasattr(self, "keeper_profile")
+
+    def month_joined(self):
+        return self.date_created.strftime("%B %Y")
 
     def identify(self):
         analytics.identify_user(self)
@@ -143,14 +149,39 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
 
 class KeeperProfile(AdminURLMixin, models.Model, MarkdownMixin):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="keeper_profile")
+    username = CharField(
+        max_length=30, unique=True, db_index=True, blank=True, null=True, help_text="Your unique username."
+    )
     title = CharField(max_length=255, default="Keeper")
     bio = MarkdownField(blank=True)
+    location = CharField(max_length=255, default="Earth", help_text="Where are you located? (City, State, Country)")
+    languages = CharField(
+        max_length=255, default="English", help_text="What languages do you speak? (English, Spanish, etc.)"
+    )
+    instagram_username = CharField(max_length=255, blank=True, help_text="Your Instagram username, no @ symbol")
+    x_username = CharField(max_length=255, blank=True, help_text="Your X username, no @ symbol")
+    website = URLField(max_length=255, blank=True, help_text="Your personal website.")
 
     def __str__(self):
         return f"<KeeperProfile: {self.user.name}, email: {self.user.email}>"
 
     def get_absolute_url(self):
         return self.user.get_absolute_url()
+
+    def clean(self):
+        # make sure username is saved lowercase and only contains letters, numbers, and underscores and that it doesn't resolve to a real URL
+        if self.username:
+            self.username = self.username.lower()
+            self.username = "".join(e for e in self.username if e.isalnum() or e == "_")
+            if len(self.username) < 2:
+                raise ValidationError(_("Username must be at least 2 characters long."))
+            try:
+                if resolve(f"/{self.username}/").url_name != "profiles":
+                    raise ValidationError(_("Username is already taken."))
+            except Resolver404:
+                pass
+
+        super().clean()
 
 
 class Feedback(models.Model):

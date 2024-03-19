@@ -257,11 +257,11 @@
               ${{ object.price }}
             {% endif %}
           </div>
-          <div class="tooltip flex" data-tip="How long this Circle is.">
-            <div class="pr-1">{% icons 'clock' %}</div>
-            {{ event.duration_minutes }} min
-          </div>
           {% if event %}
+            <div class="tooltip flex" data-tip="How long this Circle is.">
+              <div class="pr-1">{% icons 'clock' %}</div>
+              {{ event.duration_minutes }} min
+            </div>
             <div
               class="tooltip flex"
               data-tip="How often this Circle generally runs. There may be changes in the schedule due to holidays or other events.">
@@ -301,15 +301,14 @@
             {% avatar user=object.author classes="m-auto" %}
           </a>
           <div class="flex-grow">
-            <h3 class="h3">{{ object.author.name }}</h3>
-            <div class="text-gray-400">
-              {{ object.author.keeper_profile.title }}
-            </div>
-            <a
-              href="{{ object.author.get_keeper_url }}"
-              class="btn btn-outline btn-sm mt-2">
-              View Profile
+            <a href="{{ object.author.get_keeper_url }}">
+              <h3 class="h3 pb-1">{{ object.author.name }}</h3>
             </a>
+            <div
+              class="flex gap-2 pb-1 text-sm font-semibold uppercase text-gray-500">
+              {% icons "location" size=20 %}
+              {{ object.author.keeper_profile.location }}
+            </div>
           </div>
         </div>
         <div class="tprose inline">
@@ -317,7 +316,7 @@
         </div>
         <div class="text-center md:pt-0">
           <a class="btn btn-ghost" href="{{ object.author.get_keeper_url }}"
-            >Read more</a
+            >View profile</a
           >
         </div>
       </div>

@@ -17,7 +17,7 @@ from totem.utils.slack import notify_slack
 
 from . import analytics
 from .forms import LoginForm
-from .models import Feedback, User
+from .models import Feedback, KeeperProfile, User
 
 
 def user_detail_view(request, slug):
@@ -25,10 +25,30 @@ def user_detail_view(request, slug):
         user = User.objects.get(slug=slug)
         if user.keeper_profile:
             events = upcoming_events_by_author(request.user, user)[:10]
-            return render(request, "users/user_detail.html", context={"user": user, "events": events})
+            circle_count = user.events_joined.count()
+            return render(
+                request,
+                "users/user_detail.html",
+                context={"user": user, "events": events, "profile": user.keeper_profile, "circle_count": circle_count},
+            )
     except (User.DoesNotExist, ObjectDoesNotExist):
         pass
     raise Http404
+
+
+def profiles(request, name):
+    try:
+        user = KeeperProfile.objects.get(username=name).user
+        if user.keeper_profile:
+            events = upcoming_events_by_author(request.user, user)[:10]
+            circle_count = user.events_joined.count()
+            return render(
+                request,
+                "users/user_detail.html",
+                context={"user": user, "events": events, "profile": user.keeper_profile, "circle_count": circle_count},
+            )
+    except KeeperProfile.DoesNotExist:
+        raise Http404
 
 
 class UserUpdateForm(forms.ModelForm):

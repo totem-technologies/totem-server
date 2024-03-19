@@ -11,6 +11,7 @@ from totem.api.api import api
 from totem.pages.urls import PagesSitemap
 from totem.plans.urls import PlansSitemap
 from totem.repos.urls import ReposSitemap
+from totem.users import views as user_views
 from totem.users.views import MagicLoginView
 
 sitemap_dict = {
@@ -93,3 +94,6 @@ if settings.DEBUG:
         import debug_toolbar
 
         urlpatterns = [path("__debug__/", include(debug_toolbar.urls))] + urlpatterns
+
+# must be last
+urlpatterns += [path("<str:name>/", user_views.profiles, name="profiles")]  # type: ignore
