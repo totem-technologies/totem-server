@@ -3,6 +3,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+from django.shortcuts import redirect
 from django.urls import include, path
 from django.views import defaults as default_views
 from django.views.generic import RedirectView
@@ -28,6 +29,27 @@ try:
 except Exception:
     api_path = None
 
+
+_reserved_paths = [
+    "admin",
+    "api",
+    "auth",
+    "blog",
+    "careers",
+    "docs",
+    "legal",
+    "local",
+    "media",
+    "members",
+    "status",
+    "support",
+]
+
+
+def reservedView(request):
+    return redirect("pages:home")
+
+
 admin_urls = (
     # Use default login view for admin
     [path("login/", RedirectView.as_view(pattern_name=settings.LOGIN_URL, permanent=True, query_string=True))]
@@ -44,7 +66,7 @@ urlpatterns = [
     path("email/", include("totem.email.urls", namespace="email")),
     path("circles/", include("totem.circles.urls", namespace="circles")),
     # Django Admin, use {% url 'admin:index' %}
-    path(settings.ADMIN_URL, admin_urls),  # type: ignore
+    path(f"admin/{settings.ADMIN_URL}", admin_urls),  # type: ignore
     # API
     api_path,
     # User management
@@ -94,6 +116,9 @@ if settings.DEBUG:
         import debug_toolbar
 
         urlpatterns = [path("__debug__/", include(debug_toolbar.urls))] + urlpatterns
+
+# save some paths for later
+urlpatterns += [path(f"{p}/", reservedView) for p in _reserved_paths]
 
 # must be last
 urlpatterns += [path("<str:name>/", user_views.profiles, name="profiles")]  # type: ignore
