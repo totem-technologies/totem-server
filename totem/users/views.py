@@ -48,7 +48,8 @@ def profiles(request, name):
                 context={"user": user, "events": events, "profile": user.keeper_profile, "circle_count": circle_count},
             )
     except KeeperProfile.DoesNotExist:
-        raise Http404
+        pass
+    raise Http404
 
 
 class UserUpdateForm(forms.ModelForm):
