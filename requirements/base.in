@@ -14,7 +14,7 @@ pytz
 qrcode==7.4.2
 requests<3
 sentry-sdk[django]<2
-uvicorn[standard]<0.29.0
+uvicorn[standard]<0.30.0
 whitenoise==6.6.0
 
 # Django
