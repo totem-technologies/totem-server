@@ -4,4 +4,4 @@ from django.conf import settings
 
 
 def full_url(path: str) -> str:
-    return urljoin(settings.EMAIL_BASE_URL, path)
+    return urljoin(settings.SITE_BASE_URL, path)

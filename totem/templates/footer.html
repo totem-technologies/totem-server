@@ -77,7 +77,7 @@
           class="mt-2 inline-flex justify-center sm:ml-auto sm:mt-0 sm:justify-start">
           <a
             class="ml-3 hover:text-tblue"
-            href="https://twitter.com/TotemCircles"
+            href="{% settings_value 'SOCIAL_LINKS.twitter' %}"
             target="_blank">
             <svg
               fill="currentColor"
@@ -93,7 +93,7 @@
           </a>
           <a
             class="ml-3 hover:text-tblue"
-            href="https://www.instagram.com/totemcircles/"
+            href="{% settings_value 'SOCIAL_LINKS.instagram' %}"
             target="_blank">
             <svg
               fill="none"
@@ -110,7 +110,7 @@
           </a>
           <a
             class="ml-3 hover:text-tblue"
-            href="https://www.linkedin.com/company/totem-technologies-corp/"
+            href="{% settings_value 'SOCIAL_LINKS.linkedin' %}"
             target="_blank">
             <svg
               fill="currentColor"
@@ -128,7 +128,7 @@
           </a>
           <a
             class="ml-3 hover:text-tblue"
-            href="https://github.com/totem-technologies"
+            href="{% settings_value 'SOCIAL_LINKS.github' %}"
             target="_blank">
             <svg
               fill="currentColor"

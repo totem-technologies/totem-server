@@ -195,4 +195,4 @@ def to_human_time(user: User, dt: datetime):
 
 
 def make_email_url(link) -> AnyHttpUrl:
-    return urllib.parse.urljoin(settings.EMAIL_BASE_URL, link)
+    return urllib.parse.urljoin(settings.SITE_BASE_URL, link)

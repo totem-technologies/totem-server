@@ -41,7 +41,7 @@ class ActionBase(Generic[T], ABC):
             kwargs["expires_at"] = expires_at
         token = ActionToken.objects.create(**kwargs)
         link = self.get_url() + f"?token={token.token}"
-        return urllib.parse.urljoin(settings.EMAIL_BASE_URL, link)
+        return urllib.parse.urljoin(settings.SITE_BASE_URL, link)
 
     @classmethod
     def resolve(cls, token: str) -> tuple[User, T]:

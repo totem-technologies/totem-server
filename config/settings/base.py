@@ -280,6 +280,7 @@ EMAIL_BACKEND = env(
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-timeout
 EMAIL_TIMEOUT = 5
 EMAIL_BASE_URL = env("EMAIL_BASE_URL", default=f"https://{SITE_HOST}")  # type: ignore
+SITE_BASE_URL = EMAIL_BASE_URL
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#default-from-email
 DEFAULT_FROM_EMAIL = env(
@@ -440,3 +441,13 @@ AUDITLOG_EXCLUDE_TRACKING_MODELS = ["totem.email.models.EmailLog"]
 # Webflow
 # ------------------------------------------------------------------------------
 WEBFLOW_BASE_URL = env("WEBFLOW_BASE_URL", default="https://wf.totem.org/")  # type: ignore
+
+
+# Social
+# ------------------------------------------------------------------------------
+SOCIAL_LINKS = {
+    "twitter": "https://twitter.com/totemcircles/",
+    "instagram": "https://www.instagram.com/totemorg/",
+    "github": "https://github.com/totem-technologies/",
+    "linkedin": "https://www.linkedin.com/company/totemorg/",
+}

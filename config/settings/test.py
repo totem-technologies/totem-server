@@ -26,7 +26,7 @@ PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
-EMAIL_BASE_URL = "http://testserver"
+SITE_BASE_URL = "http://testserver"
 
 # DEBUGGING FOR TEMPLATES
 # ------------------------------------------------------------------------------

@@ -1,11 +1,14 @@
 {% load static %}
+{% load settings_value %}
 <mj-section padding-bottom="72px" padding-left="0px" padding-right="0px" padding-top="30px">
   <mj-column>
-    <mj-image align="center" href="https://www.totem.org" padding-bottom="0px" padding-left="10px" padding-right="10px" padding-top="0px" padding="0px" src="{% static 'images/totem-symbol.png' %}" width="30px"></mj-image>
+    <mj-image align="center" href="{% settings_value 'SITE_BASE_URL' %}" padding-bottom="0px" padding-left="10px" padding-right="10px" padding-top="0px" padding="0px" src="{% static 'images/totem-symbol.png' %}" width="30px"></mj-image>
     <mj-social align="center" font-size="15px" icon-padding="0px" icon-size="20px" inner-padding="5px" mode="horizontal">
-      <mj-social-element src="{% static 'images/email/x.png' %}" alt="https://twitter.com/TotemCircles" href="https://twitter.com/TotemCircles" title="https://twitter.com/TotemCircles"></mj-social-element>
-      <mj-social-element src="{% static 'images/email/instagram.png' %}" alt="https://www.instagram.com/totemcircles/" href="https://www.instagram.com/totemcircles/" title="https://www.instagram.com/totemcircles/"></mj-social-element>
-      <mj-social-element src="{% static 'images/email/github.png' %}" alt="https://github.com/totem-technologies" href="https://github.com/totem-technologies" title="https://github.com/totem-technologies"></mj-social-element>
+      <mj-social-element src="{% static 'images/email/x.png' %}" alt="{% settings_value 'SOCIAL_LINKS.twitter' %}" href="{% settings_value 'SOCIAL_LINKS.twitter' %}" title="{% settings_value 'SOCIAL_LINKS.twitter' %}"></mj-social-element>
+      <mj-social-element src="{% static 'images/email/instagram.png' %}" alt="{% settings_value 'SOCIAL_LINKS.instagram' %}" href="{% settings_value 'SOCIAL_LINKS.instagram' %}" title="{% settings_value 'SOCIAL_LINKS.instagram' %}"></mj-social-element>
+      <mj-social-element src="{% static 'images/email/github.png' %}" alt="{% settings_value 'SOCIAL_LINKS.github' %}" href="{% settings_value 'SOCIAL_LINKS.github' %}" title="{% settings_value 'SOCIAL_LINKS.github' %}"></mj-social-element>
+      <mj-social-element src="{% static 'images/email/linkedin.png' %}" alt="{% settings_value 'SOCIAL_LINKS.linkedin' %}" href="{% settings_value 'SOCIAL_LINKS.linkedin' %}" title="{% settings_value 'SOCIAL_LINKS.linkedin' %}"></mj-social-element>
+      <mj-social-element src="{% static 'images/email/email.png' %}" alt="mailto:{% settings_value 'EMAIL_SUPPORT_ADDRESS' %}" href="mailto:{% settings_value 'EMAIL_SUPPORT_ADDRESS' %}" title="mailto:{% settings_value 'EMAIL_SUPPORT_ADDRESS' %}"></mj-social-element>
     </mj-social>
     <mj-spacer height="5px"></mj-spacer>
     <mj-text align="center" mj-class="sub">

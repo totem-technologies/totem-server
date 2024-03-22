@@ -22,7 +22,7 @@ def absurl(context, view_name, *args, **kwargs):
 def sharelink(platform, path, message=""):
     """create share links for various social media platforms"""
     # support  for facebook, messanger, whatsapp, twitter, linkedin, email, sms
-    path = urllib.parse.urljoin(settings.EMAIL_BASE_URL, path)
+    path = urllib.parse.urljoin(settings.SITE_BASE_URL, path)
     with_utm = f"{path}?utm_source={platform}"
     encoded_path = urllib.parse.quote(with_utm)
     encoded_message = urllib.parse.quote(message)
@@ -50,4 +50,4 @@ def sharelink(platform, path, message=""):
 
 @register.filter
 def as_absurl(path):
-    return urllib.parse.urljoin(settings.EMAIL_BASE_URL, path)
+    return urllib.parse.urljoin(settings.SITE_BASE_URL, path)
