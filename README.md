@@ -7,6 +7,11 @@
 
 ## Basic Commands
 
+- make
+- make assets
+- make test
+- make deploy
+
 ### Setting Up
 
 Requirements:
