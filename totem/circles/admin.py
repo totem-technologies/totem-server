@@ -6,6 +6,20 @@ from django.utils import timezone
 from .models import Circle, CircleCategory, CircleEvent
 
 
+class DropdownFilter(admin.SimpleListFilter):
+    template = "admin/dropdown_filter.html"
+    parameter_name = "circle"
+    title = "circle"
+
+    def lookups(self, request, model_admin):
+        return Circle.objects.values_list("slug", "title")
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(circle__slug=self.value())
+        return queryset
+
+
 @admin.register(CircleCategory)
 class CircleCategoryAdmin(admin.ModelAdmin):
     list_display = ("name", "slug")
@@ -77,7 +91,7 @@ class CircleAdmin(admin.ModelAdmin):
 @admin.register(CircleEvent)
 class CircleEventAdmin(admin.ModelAdmin):
     list_display = ("start", "circle", "slug")
-    list_filter = ["circle"]
+    list_filter = ["start", DropdownFilter]
     autocomplete_fields = ["attendees", "joined"]
     readonly_fields = ("date_created", "date_modified")
 
