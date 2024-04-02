@@ -1,6 +1,7 @@
 {% extends "admin/base_site.html" %}
 {% load settings_value %}
 {% block extrastyle %}
+  <!-- prettier-ignore-start -->
   <style>
     body:before {
       display: block;
@@ -10,7 +11,8 @@
       text-transform: uppercase;
       color: white;
       content: "{% settings_value 'ENVIRONMENT_NAME' %}";
-      background-color: #~5~#;
+      background-color: {% settings_value 'ENVIRONMENT_COLOR' %};
     }
   </style>
+  <!-- prettier-ignore-end -->
 {% endblock extrastyle %}
