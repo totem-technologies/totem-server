@@ -1,5 +1,5 @@
 {% load static i18n %}
-<!DOCTYPE html>
+<!doctype html>
 {% get_current_language as LANGUAGE_CODE %}
 <html lang="{{ LANGUAGE_CODE }}">
   <head>
@@ -7,44 +7,58 @@
     <meta name="keywords" content="totem,circles" />
     <meta http-equiv="x-ua-compatible" content="ie=edge" />
     {# djlint:off #}
-    <title>Totem - {% block title %}Guided introspection groups{% endblock title %}</title>
+    <title>
+      Totem - {% block title %}Guided introspection groups{% endblock title %}
+    </title>
     {% include "_analytics.html" %}
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description"
-    content="{% block description %}Totem Circles are a confidential space for us to share and grow. A discussion facilitator, known as the Keeper, will be your guide.{% endblock description %}" />
+    <meta
+      name="description"
+      content="{% block description %}
+        Totem Circles are a confidential space for us to share and grow. A
+        discussion facilitator, known as the Keeper, will be your guide.
+      {% endblock description %}" />
     {# djlint:on #}
     <meta name="author" content="bo@totem.org" />
-    {% comment %} Open Graph / Facebook {% endcomment %}
+    {% comment %}Open Graph / Facebook{% endcomment %}
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://www.totem.org/" />
     <meta property="og:image" content="{% static 'images/ogimage.jpg' %}" />
-    {% comment %} Twitter {% endcomment %}
+    {% comment %}Twitter{% endcomment %}
     <meta property="twitter:card" content="summary_large_image" />
     <meta property="twitter:site" content="@totemcircles" />
-    <link rel="icon"
-          href="{% block ogimage %}{% static 'images/favicons/favicon.ico' %}{% endblock ogimage %}" />
-    <link rel="apple-touch-icon"
-          sizes="180x180"
-          href="{% static 'images/favicons/apple-touch-icon.png' %}" />
-    <link rel="icon"
-          type="image/png"
-          sizes="32x32"
-          href="{% static 'images/favicons/favicon-32x32.png' %}" />
-    <link rel="icon"
-          type="image/png"
-          sizes="16x16"
-          href="{% static 'images/favicons/favicon-16x16.png' %}" />
+    <link
+      rel="icon"
+      href="{% block ogimage %}{% static 'images/favicons/favicon.ico' %}{% endblock ogimage %}" />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="{% static 'images/favicons/apple-touch-icon.png' %}" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="{% static 'images/favicons/favicon-32x32.png' %}" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="{% static 'images/favicons/favicon-16x16.png' %}" />
     <link href="{% static 'css/styles.css' %}" rel="stylesheet" />
     <link href="{% static 'js/app.min.css' %}" rel="stylesheet" />
-    {% comment %} Test at https://developers.google.com/search/docs/appearance/structured-data {% endcomment %}
+    {% comment %}
+      Test at
+      https://developers.google.com/search/docs/appearance/structured-data
+    {% endcomment %}
     <script type="application/ld+json">
-        {
-            "@context": "https://schema.org",
-            "@type": "Organization",
-            "url": "https://www.totem.org",
-            "logo": "{% static 'images/totem-symbol.png' %}"
-        }
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "url": "https://www.totem.org",
+        "logo": "{% static 'images/totem-symbol.png' %}"
+      }
     </script>
+    <!-- prettier-ignore-start -->
     <script>
         window.TOTEM_DATA = {
             debug: {{ debug | yesno:"true,false" }},
@@ -53,40 +67,56 @@
             reload_on_login: false,
         }
     </script>
+    <!-- prettier-ignore-end -->
     {% block css %}
     {% endblock css %}
     {% block javascript %}
     {% endblock javascript %}
     <script defer src="{% static 'js/app.min.js' %}"></script>
   </head>
-  <body class="bg-primary text-tslate flex flex-col"
-        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+  <body
+    class="flex flex-col bg-primary text-tslate"
+    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     <noscript>
-      <div class="bg-red-800 text-white text-center no-js">
+      <div class="no-js bg-red-800 text-center text-white">
         <div class="p-10">
-          It looks like you have Javascript disabled. You should <a class="link"
-    href="https://support.google.com/adsense/answer/12654?hl=en">enable it</a>! Many parts of this site wont work without it. You can also view this site's <a class="link"
-    target="_blank"
-    href="https://github.com/totem-technologies/totem-server">source code</a>.
+          It looks like you have Javascript disabled. You should
+          <a
+            class="link"
+            href="https://support.google.com/adsense/answer/12654?hl=en"
+            >enable it</a
+          >! Many parts of this site wont work without it. You can also view
+          this site's
+          <a
+            class="link"
+            target="_blank"
+            href="https://github.com/totem-technologies/totem-server"
+            >source code</a
+          >.
         </div>
       </div>
     </noscript>
     {% include "header.html" %}
-    <main class="flex-grow min-h-[92vh]">
+    <main class="min-h-[92vh] flex-grow">
       {% if messages %}
         {% for message in messages %}
-          <div class="max-w-2xl mt-10 alert-dismissible m-auto bg-blue-100 border border-blue-500 text-blue-500 px-4 py-3 mb-5 rounded relative
-                      {% if message.tags %}alert-{{ message.tags }}{% endif %}"
-               role="alert">
+          <div
+            class="alert-dismissible {% if message.tags %}alert-{{ message.tags }}{% endif %} relative m-auto mb-5 mt-10 max-w-2xl rounded border border-blue-500 bg-blue-100 px-4 py-3
+                      text-blue-500"
+            role="alert">
             <span class="block sm:inline">{{ message }}</span>
-            <span class="absolute top-0 bottom-0 right-0 px-4 py-3" aria-label="Close">
-              <svg class="fill-current h-6 w-6 text-blue-500"
-                   onClick="dismiss_alert(this)"
-                   role="button"
-                   xmlns="http://www.w3.org/2000/svg"
-                   viewBox="0 0 20 20">
+            <span
+              class="absolute bottom-0 right-0 top-0 px-4 py-3"
+              aria-label="Close">
+              <svg
+                class="h-6 w-6 fill-current text-blue-500"
+                onClick="dismiss_alert(this)"
+                role="button"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 20 20">
                 <title>Close</title>
-                <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z" />
+                <path
+                  d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z" />
               </svg>
             </span>
           </div>
@@ -102,11 +132,15 @@
     {% endblock inline_javascript %}
     {% if debug %}
       <script>
-          document.write('<' + 'script src="http://localhost:35729/livereload.js?snipver=1"></' + 'script>')
+        document.write(
+          "<" +
+            'script src="http://localhost:35729/livereload.js?snipver=1"></' +
+            "script>"
+        )
       </script>
     {% endif %}
     {% if request.user.is_impersonate %}
-      <div class="fixed bottom-0 right-0 bg-error text-white p-2">
+      <div class="fixed bottom-0 right-0 bg-error p-2 text-white">
         As {{ request.user.email }}
         <a class="link" href="{% url 'impersonate-stop' %}">Stop</a>
       </div>
