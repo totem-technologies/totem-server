@@ -175,4 +175,11 @@ def delete_event(event_id: str):
         return
     service = get_service_client()
     event_id = _to_gcal_id(event_id)
-    service.events().delete(calendarId=cal_id, eventId=event_id).execute()
+    try:
+        service.events().delete(calendarId=cal_id, eventId=event_id).execute()
+    except HttpError as e:
+        if e.status_code == 410:
+            # It's OK if the event is already deleted
+            pass
+        else:
+            raise e
