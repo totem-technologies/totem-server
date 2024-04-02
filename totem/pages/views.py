@@ -1,4 +1,6 @@
 import base64
+import random
+import uuid
 from dataclasses import dataclass
 
 from django.contrib.auth.decorators import login_required
@@ -68,6 +70,9 @@ def team_view(request):
         ),
         Member(name="Steve Ansell", title="Engineer, Phase 2", image="blank.jpg", url="https://phase2industries.com/"),
     ]
+    # randomly shuffle the team
+    random.seed(str(uuid.uuid4()))
+    random.shuffle(team)
     template_name = "pages/team.html"
     context = {"team": team, "keepers": keepers}
     return render(request, template_name, context=context)
