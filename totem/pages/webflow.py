@@ -5,7 +5,7 @@ requests_session = requests.Session()
 
 
 def get_webflow_page(page: str | None) -> str:
-    print(f"getting webflow page {page}")
+    # print(f"getting webflow page {page}")
     # proxy webflow pages from remote server
     # Send a GET request to the Webflow page
     base_url = settings.WEBFLOW_BASE_URL

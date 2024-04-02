@@ -148,13 +148,13 @@ def webflow_page(request, page: str | None = None):
     def _get() -> str:
         return get_webflow_page(page)
 
-    ten_minutes = 60 * 10
+    one_hour = 60 * 60
     key = f"webflow:{page or 'home'}"
     should_refresh = request.GET.get("refresh", False)
     if should_refresh:
-        print(f"refreshing {key}")
+        # print(f"refreshing {key}")
         cache.delete(key)
-    content: str | None = cache.get_or_set(key, _get, ten_minutes)
+    content: str | None = cache.get_or_set(key, _get, one_hour)
     if content is None:
         raise Http404
     return HttpResponse(content, content_type="text/html")
