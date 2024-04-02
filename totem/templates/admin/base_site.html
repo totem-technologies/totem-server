@@ -1,16 +1,16 @@
 {% extends "admin/base_site.html" %}
 {% load settings_value %}
 {% block extrastyle %}
-    <style>
-        body:before {
-            display: block;
-            line-height: 35px;
-            text-align: center;
-            font-weight: bold;
-            text-transform: uppercase;
-            color: white;
-            content: "{% settings_value 'ENVIRONMENT_NAME' %}";
-            background-color: {% settings_value 'ENVIRONMENT_COLOR' %};
-        }
-    </style>
+  <style>
+    body:before {
+      display: block;
+      line-height: 35px;
+      text-align: center;
+      font-weight: bold;
+      text-transform: uppercase;
+      color: white;
+      content: "{% settings_value 'ENVIRONMENT_NAME' %}";
+      background-color: #~5~#;
+    }
+  </style>
 {% endblock extrastyle %}

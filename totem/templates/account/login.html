@@ -41,14 +41,19 @@
       {% csrf_token %}
       {{ form }}
       {% if redirect_field_value %}
-        <input type="hidden"
-               name="{{ redirect_field_name }}"
-               value="{{ redirect_field_value }}" />
+        <input
+          type="hidden"
+          name="{{ redirect_field_name }}"
+          value="{{ redirect_field_value }}" />
       {% endif %}
-      <button class="btn btn-primary mt-2 flex w-full justify-center" type="submit">
+      <button
+        class="btn btn-primary mt-2 flex w-full justify-center"
+        type="submit">
         {% translate "Sign In" %}
       </button>
-      <a class="a block mt-2" href="{% url 'account_reset_password' %}">{% translate "Forgot Password?" %}</a>
+      <a class="a mt-2 block" href="{% url 'account_reset_password' %}"
+        >{% translate "Forgot Password?" %}</a
+      >
     </form>
   </div>
 {% endblock inner %}

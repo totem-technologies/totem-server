@@ -3,10 +3,11 @@
 {% block title %}{% block head_title %}{% endblock head_title %}{% endblock title %}
 {# djlint:on #}
 {% block content %}
-    <div class="bg-white rounded-2xl flex flex-col justify-center px-6 py-12 lg:px-8 sm:mx-auto sm:w-full sm:max-w-sm my-10">
-        {% block inner %}
-        {% endblock inner %}
-    </div>
-    {% block after %}
-    {% endblock after %}
+  <div
+    class="my-10 flex flex-col justify-center rounded-2xl bg-white px-6 py-12 sm:mx-auto sm:w-full sm:max-w-sm lg:px-8">
+    {% block inner %}
+    {% endblock inner %}
+  </div>
+  {% block after %}
+  {% endblock after %}
 {% endblock content %}

@@ -3,12 +3,13 @@
 {% block title %}Server Error{% endblock title %}
 {# djlint:on #}
 {% block content %}
-    <div class="pt-10">
-        <h1 class="text-9xl h1 text-center">500</h1>
-        <p class="text-center mt-4 text-xl">Sorry! It looks like we had a crash.</p>
-        <p class="text-center mt-4">
-            We track these errors automatically, but if the problem persists feel free to <a class="link" href="mailto:help@totem.org">contact us</a>.
-        </p>
-        <p class="text-center mt-4">In the meantime, try refreshing...</p>
-    </div>
+  <div class="pt-10">
+    <h1 class="h1 text-center text-9xl">500</h1>
+    <p class="mt-4 text-center text-xl">Sorry! It looks like we had a crash.</p>
+    <p class="mt-4 text-center">
+      We track these errors automatically, but if the problem persists feel free
+      to <a class="link" href="mailto:help@totem.org">contact us</a>.
+    </p>
+    <p class="mt-4 text-center">In the meantime, try refreshing...</p>
+  </div>
 {% endblock content %}
