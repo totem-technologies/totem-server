@@ -66,12 +66,11 @@ class TestLogInView:
                 "email": user.email,
                 "name": user.name,
                 "after_login_url": "/foo",
-                "success_url": reverse("pages:home"),
             },
         )
         # Check that the response is a redirect to the success URL
         assert response.status_code == 302
-        assert response.url == reverse("pages:home")
+        assert response.url == reverse("users:login")
         # Check that an email was sent
         assert len(mail.outbox) == 1
         assert mail.outbox[0].to == [user.email]

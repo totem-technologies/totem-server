@@ -1,5 +1,3 @@
-from typing import Any
-
 from django import forms
 from django.contrib import messages
 from django.contrib.auth import login as django_login
@@ -7,8 +5,6 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404, HttpRequest, HttpResponseForbidden
 from django.shortcuts import redirect, render
-from django.urls import reverse, reverse_lazy
-from django.views.generic import FormView
 from sesame.views import LoginView as SesameLoginView
 
 from totem.circles.filters import all_upcoming_recommended_events, upcoming_attending_events, upcoming_events_by_author
@@ -16,7 +12,7 @@ from totem.email import emails
 from totem.utils.slack import notify_slack
 
 from . import analytics
-from .forms import LoginForm
+from .forms import LoginForm, SignupForm
 from .models import Feedback, KeeperProfile, User
 
 
@@ -78,46 +74,38 @@ class MagicLoginView(SesameLoginView):
         return super().login_success()
 
 
-class LogInView(FormView):
-    form_class = LoginForm
-    success_url = reverse_lazy("users:login")
+def login_view(request: HttpRequest):
+    return _auth_view(request, LoginForm, "users/login.html")
 
-    def get_template_names(self) -> list[str]:
-        if self.request.path == reverse("users:signup"):
-            return ["users/signup.html"]
-        return ["users/login.html"]
 
-    def _message(self, email: str):
-        messages.success(self.request, f"Please check your inbox at: {email}.")
+def signup_view(request: HttpRequest):
+    return _auth_view(request, SignupForm, "users/signup.html")
 
-    def get(self, request: HttpRequest, *args, **kwargs):
-        response = super().get(request, *args, **kwargs)
-        next = request.GET.get("next")
+
+def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name: str):
+    next = request.GET.get("next")
+    context = {"next": next}
+    if request.POST:
+        form = form_class(request.POST)
+        if form.is_valid():
+            email: str = form.cleaned_data["email"].lower()
+            after_login_url: str = form.cleaned_data.get("after_login_url", next)
+            created = login(request, email, after_login_url=after_login_url)
+            if created:
+                return redirect("users:redirect")
+            else:
+                messages.success(request, f"Please check your inbox at: {email}.")
+                return redirect(request.get_full_path())
+    else:
         if request.user.is_authenticated:
             return redirect(next or "users:redirect")
         if next:
             request.session["next"] = next
-        # Make sure htmx redirects to the login page with a full refresh
-        response.headers["HX-Redirect"] = request.get_full_path()  # type: ignore
-        return response
-
-    def get_context_data(self, **kwargs) -> dict[str, Any]:
-        context = super().get_context_data(**kwargs)
-        context["next"] = self.request.GET.get("next")
-        return context
-
-    def form_valid(self, form):
-        success_url = form.cleaned_data.get("success_url")
-        email = form.cleaned_data["email"].lower()
-        after_login_url = form.cleaned_data.get("after_login_url") or self.request.GET.get("next")
-        created = login(self.request, email, after_login_url=after_login_url)
-        if success_url:
-            self.success_url = success_url
-        elif created:
-            self.success_url = reverse("users:redirect")
-        if not created:
-            self._message(email)
-        return super().form_valid(form)
+        form = form_class()
+    response = render(request, template_name, context=context | {"form": form})
+    # Make sure htmx redirects to the login page with a full refresh
+    response.headers["HX-Redirect"] = request.get_full_path()  # type: ignore
+    return response
 
 
 def login(request, email: str, after_login_url: str | None = None, mobile: bool = False) -> bool:
