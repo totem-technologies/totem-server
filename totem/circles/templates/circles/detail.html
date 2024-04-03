@@ -13,12 +13,10 @@
   </script>
 {% endblock javascript %}
 {% block content %}
-  <div class="h-10"></div>
-  <div class="m-auto flex max-w-5xl px-5 pb-2">
-    <a
-      class="flex items-center space-x-2 no-underline"
-      href="{% url 'circles:list' %}">
-      <h2 class="font-bold text-gray-400">← All Circles</h2>
+  <div class="h-2"></div>
+  <div class="m-auto max-w-5xl px-5 pb-2">
+    <a href="{% url 'circles:list' %}">
+      <h2 class="font-semibold">← All Circles</h2>
     </a>
   </div>
   <div class="m-auto max-w-5xl px-5">
@@ -88,6 +86,28 @@
       class="hx-circle-sidebar">
       <div
         class="z-20 mt-5 rounded-2xl border border-gray-200 bg-white p-5 md:top-20 md:w-80">
+        <div class="flex flex-wrap gap-x-4 gap-y-2 pb-2">
+          <div class="flex">
+            <div class="pr-1">{% icons 'price' %}</div>
+            {% if object.is_free %}
+              No Cost
+            {% else %}
+              ${{ object.price }}
+            {% endif %}
+          </div>
+          {% if event %}
+            <div class="tooltip flex" data-tip="How long this Circle is.">
+              <div class="pr-1">{% icons 'clock' %}</div>
+              {{ event.duration_minutes }} min
+            </div>
+            <div
+              class="tooltip flex"
+              data-tip="How often this Circle generally runs. There may be changes in the schedule due to holidays or other events.">
+              <div class="pr-1">{% icons 'recur' %}</div>
+              <div>{{ object.recurring }}</div>
+            </div>
+          {% endif %}
+        </div>
         {% if event %}
           <div>
             <strong
@@ -224,7 +244,7 @@
         <div
           class="collapse mt-5 w-80 rounded-2xl border border-gray-200 bg-white max-md:collapse-plus md:collapse-open max-md:w-full">
           <input type="checkbox" />
-          <div class="collapse-title flex items-center font-bold text-gray-400">
+          <div class="collapse-title flex items-center font-semibold">
             Other Sessions
           </div>
           <div class="collapse-content">
@@ -247,32 +267,10 @@
         {% if not object.published %}
           <div class="text-red-500">This circle is not published yet.</div>
         {% endif %}
-        <div class="flex flex-col gap-2 md:flex-row md:gap-4">
-          <div class="flex">
-            <div class="pr-1">{% icons 'price' %}</div>
-            {% if object.is_free %}
-              No Cost
-            {% else %}
-              ${{ object.price }}
-            {% endif %}
-          </div>
-          {% if event %}
-            <div class="tooltip flex" data-tip="How long this Circle is.">
-              <div class="pr-1">{% icons 'clock' %}</div>
-              {{ event.duration_minutes }} min
-            </div>
-            <div
-              class="tooltip flex"
-              data-tip="How often this Circle generally runs. There may be changes in the schedule due to holidays or other events.">
-              <div class="pr-1">{% icons 'recur' %}</div>
-              <div>{{ object.recurring }}</div>
-            </div>
-          {% endif %}
-        </div>
       </div>
       <div class="h-5"></div>
       {% if event and event.content_html or request.user.is_staff %}
-        <h3 class="font-bold text-gray-400">
+        <h3 class="font-semibold">
           About this Session
           {% if request.user.is_staff %}
             (<a class="link" target="_blank" href="{{ event.get_admin_url }}"
@@ -282,7 +280,7 @@
         </h3>
         <div class="tprose">{{ event.content_html }}</div>
       {% endif %}
-      <h3 class="font-bold text-gray-400">
+      <h3 class="font-semibold">
         About this Circle
         {% if request.user.is_staff %}
           (<a class="link" target="_blank" href="{{ object.get_admin_url }}"
@@ -291,7 +289,7 @@
         {% endif %}
       </h3>
       <div class="tprose">{{ object.content_html }}</div>
-      <h3 class="pb-5 font-bold text-gray-400 md:pb-0">Meet the Keeper</h3>
+      <h3 class="pb-5 font-semibold md:pb-0">Meet the Keeper</h3>
       <div class="pt-5">
         <div class="flex items-center gap-4">
           <a
