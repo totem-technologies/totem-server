@@ -109,9 +109,9 @@
           {% endif %}
         </div>
         {% if event %}
-          <div>
+          <div class="pb-2">
             <strong
-              >{{ event.start|date:'l, F j' }}
+              >{{ event.start|date:'D, M jS' }}
               <span class="inline-block"
                 >@ {{ event.start|date:'P T' }}</span
               ></strong
