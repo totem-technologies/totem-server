@@ -4,17 +4,13 @@
     class="relative overflow-clip rounded-3xl border border-gray-200 bg-white shadow transition-shadow hover:shadow-xl">
     <a href="{% url "circles:event_detail" event_slug=event.slug %}">
       <div
-        class="relative flex flex-col rounded-t-3xl p-5 pb-2"
-        style="background-size: cover;
-               background-image: linear-gradient(5deg, rgba(1, 1, 1, 0), rgba(0, 0, 0, 0.6))
+        class="{% if not event.circle.image %}no-image{% endif %} relative flex flex-col rounded-t-3xl p-5 pb-2"
         {% if event.circle.image %}
-          , url({{ event.circle.image.url }});
-        {% else %}
-          ;
-        {% endif %}
-                        background-position: center;
-                        background-repeat: no-repeat;
-                        height: 150px">
+          style="background-size: cover; background-image: linear-gradient(5deg,
+          rgba(1, 1, 1, 0), rgba(0, 0, 0, 0.6)) ,
+          url({{ event.circle.image.url }}); background-position: center;
+          background-repeat: no-repeat;"
+        {% endif %}>
         <div class="flex flex-1 flex-col">
           <h5
             class="mb-2 break-words text-xl font-bold tracking-tight text-white drop-shadow">
