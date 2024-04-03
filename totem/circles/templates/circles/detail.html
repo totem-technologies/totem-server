@@ -26,7 +26,7 @@
         {# djlint:off #}
         <style>
             .circle-bg-image {
-                background-image: linear-gradient(185deg, rgba(1, 1, 1, 0.15), rgba(152, 122, 165, 1)){% if object.image %},url({{ object.image.url }}){% endif %};
+                background-image: linear-gradient(5deg, rgba(1, 1, 1, 0), rgba(0, 0, 0, 0.6)){% if object.image %},url({{ object.image.url }}){% endif %};
                 background-size: cover;
                 background-position: center;
                 background-repeat: no-repeat;
@@ -62,21 +62,21 @@
           <button>close</button>
         </form>
       </dialog>
-      <div class="m-auto w-[200px] pt-10">
-        <a class="inline" href="{{ object.author.get_keeper_url }}">
-          {% avatar object.author size=200 classes="m-auto" %}
-        </a>
-      </div>
-      <div class="p-5 text-center">
-        <h1 class="h1 pb-3 text-white">{{ object.title }}</h1>
-        <div class="h3 text-white">{{ object.subtitle }}</div>
-        <div class="text-white">
-          By
-          <strong
-            ><a href="{{ object.author.get_keeper_url }}"
+      <div class="flex h-[400px] justify-between p-5">
+        <div>
+          <h1 class="h1 pb-3 text-white">{{ object.title }}</h1>
+          <div class="h3 text-white">{{ object.subtitle }}</div>
+          <div class="text-white">
+            with
+            <a href="{{ object.author.get_keeper_url }}"
               >{{ object.author.name }}</a
-            ></strong
-          >
+            >
+          </div>
+        </div>
+        <div class="w-[200px] self-end">
+          <a class="inline-block" href="{{ object.author.get_keeper_url }}">
+            {% avatar object.author size=200 classes="m-auto" %}
+          </a>
         </div>
       </div>
     </div>

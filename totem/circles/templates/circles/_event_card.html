@@ -6,7 +6,7 @@
       <div
         class="relative flex flex-col rounded-t-3xl p-5 pb-2"
         style="background-size: cover;
-               background-image: linear-gradient(5deg, rgba(1, 1, 1, 0.15), rgba(152, 122, 165, 1))
+               background-image: linear-gradient(5deg, rgba(1, 1, 1, 0), rgba(0, 0, 0, 0.6))
         {% if event.circle.image %}
           , url({{ event.circle.image.url }});
         {% else %}
@@ -21,7 +21,7 @@
             {{ event.circle.title|truncatechars:40 }}
           </h5>
           <p class="mb-3 font-normal text-white drop-shadow">
-            By {{ event.circle.author.name|truncatechars:23 }}
+            with {{ event.circle.author.name|truncatechars:23 }}
           </p>
         </div>
         <div class="absolute bottom-2 right-2 w-[70px] rounded-full">
