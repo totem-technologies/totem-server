@@ -75,6 +75,7 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
     username = None  # type: ignore
     api_key = UUIDField(_("API Key"), db_index=True, default=uuid.uuid4)
     ics_key = UUIDField(_("API Key"), db_index=True, default=uuid.uuid4)
+    newsletter_consent = BooleanField(_("Receive updates from Totem"), default=False)
     profile_image = ProcessedImageField(
         blank=True,
         null=True,

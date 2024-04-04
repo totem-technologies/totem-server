@@ -54,6 +54,15 @@ class UserUpdateForm(forms.ModelForm):
         fields = ("name", "email", "timezone")
 
 
+class UserConsentForm(forms.ModelForm):
+    # newsletter_consent = forms.BooleanField(template_name="fields/checkbox.html", required=False)  # type: ignore
+
+    class Meta:
+        model = User
+        fields = ("newsletter_consent",)
+        formfield_callback = lambda f: f.formfield(template_name="fields/checkbox.html")  # noqa: E731
+
+
 @login_required
 def user_redirect_view(request, *args, **kwargs):
     user = request.user
@@ -88,9 +97,11 @@ def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name
     if request.POST:
         form = form_class(request.POST)
         if form.is_valid():
-            email: str = form.cleaned_data["email"].lower()
-            after_login_url: str = form.cleaned_data.get("after_login_url", next)
-            created = login(request, email, after_login_url=after_login_url)
+            data = form.cleaned_data
+            email: str = data["email"].lower()
+            after_login_url: str = data.get("after_login_url", next)
+            create_params = {"newsletter_consent": data.get("newsletter_consent", False)}
+            created = login(request, email=email, create_params=create_params, after_login_url=after_login_url)
             if created:
                 return redirect("users:redirect")
             else:
@@ -108,7 +119,9 @@ def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name
     return response
 
 
-def login(request, email: str, after_login_url: str | None = None, mobile: bool = False) -> bool:
+def login(
+    request, *, email: str, create_params: dict | None = None, after_login_url: str | None = None, mobile: bool = False
+) -> bool:
     """Login a user by sending them a login link via email. If it's a new user, log them in automatically and send them
     a welcome email.
 
@@ -116,7 +129,7 @@ def login(request, email: str, after_login_url: str | None = None, mobile: bool 
         email (str): The email address to send the login link to.
         after_login_url (str, optional): The URL to redirect to after the user logs in. Defaults to None.
     """
-    user, created = User.objects.get_or_create(email=email)
+    user, created = User.objects.get_or_create(email=email, defaults=create_params or {})
 
     url = user.get_login_url(after_login_url, mobile)  # type: ignore
 
@@ -170,6 +183,7 @@ def user_profile_view(request):
 
 def _user_profile_info(request, user: User):
     form = UserUpdateForm(instance=user)
+    consent_form = UserConsentForm(instance=user)
     if request.method == "POST":
         old_email = user.email
         form = UserUpdateForm(request.POST, instance=user)
@@ -183,7 +197,10 @@ def _user_profile_info(request, user: User):
                 message = f"Email successfully updated to {new_email}. Please check your inbox to confirm."
             form.save()
             messages.success(request, message)
-    return {"info_form": form}
+        consent_form = UserConsentForm(request.POST, instance=user)
+        if consent_form.is_valid():
+            consent_form.save()
+    return {"info_form": form, "consent_form": consent_form}
 
 
 class ProfileForm(forms.ModelForm):

@@ -1,0 +1,11 @@
+<div class="form-control">
+  {{ field.errors }}
+  <label class="label cursor-pointer justify-start gap-2">
+    <input
+      type="checkbox"
+      class="checkbox"
+      name="{{ field.name }}"
+      {% if field.value %}checked{% endif %}{% include "django/forms/widgets/attrs.html" %} />
+    <span class="label-text">{{ field.label }}</span>
+  </label>
+</div>

@@ -1,31 +1,41 @@
 import pytest
-from django.contrib.auth import get_user_model
 from django.core import mail
 from django.urls import reverse
 
+from totem.users.models import User
 from totem.users.tests.factories import UserFactory
-
-User = get_user_model()
 
 
 @pytest.mark.django_db
 class TestLogInView:
     def test_login_new_user(self, client):
-        response = client.post(reverse("users:login"), {"email": "testuser@totem.org"})
+        email = "testuser@totem.org"
+        with pytest.raises(User.DoesNotExist):
+            User.objects.get(email=email)
+        response = client.post(reverse("users:login"), {"email": email})
         # Check that the response is a redirect to the success URL
-        print(response)
         assert response.status_code == 302
         assert response.url == reverse("users:redirect")
         # Check that an email NOT was sent
         assert len(mail.outbox) == 0
-        # Check that an email was sent
-        # assert len(mail.outbox) == 1
-        # assert mail.outbox[0].to == ["testuser@totem.org"]
-        # assert mail.outbox[0].subject == "Welcome to ✨Totem✨!"
         # Check that a new user was created
         count = User.objects.count()
         assert count == 1
-        assert User.objects.get(email="testuser@totem.org")
+        user = User.objects.get(email=email)
+        assert user.email == email
+        assert user.newsletter_consent is False
+
+    def test_signup_new_with_consent(self, client):
+        email = "testuserconsent@totem.org"
+        with pytest.raises(User.DoesNotExist):
+            User.objects.get(email=email)
+        response = client.get(reverse("users:signup"))
+        assert "newsletter_consent" in response.content.decode()
+        client.post(reverse("users:signup"), {"email": email, "newsletter_consent": True})
+        # Check that an email NOT was sent
+        assert len(mail.outbox) == 0
+        user = User.objects.get(email=email)
+        assert user.newsletter_consent is True
 
     def test_login_existing_user(self, client):
         # Create an existing user

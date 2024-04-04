@@ -12,7 +12,7 @@ User = get_user_model()
 
 
 class UserAdminChangeForm(admin_forms.UserChangeForm):
-    class Meta(admin_forms.UserChangeForm.Meta):
+    class Meta(admin_forms.UserChangeForm.Meta):  # type: ignore
         model = User
         field_classes = {"email": EmailField}
 
@@ -23,7 +23,7 @@ class UserAdminCreationForm(admin_forms.UserCreationForm):
     To change user signup, see UserSignupForm and UserSocialSignupForm.
     """
 
-    class Meta(admin_forms.UserCreationForm.Meta):
+    class Meta(admin_forms.UserCreationForm.Meta):  # type: ignore
         model = User
         fields = ("email",)
         field_classes = {"email": EmailField}
@@ -56,4 +56,8 @@ class LoginForm(Form):
 
 
 class SignupForm(LoginForm):
-    newsletter_consent = BooleanField(required=False, label=_("I would like to receive updates from Totem."))
+    newsletter_consent = BooleanField(
+        required=False,
+        label=_("Yes, receive email updates (optional)"),
+        template_name="fields/checkbox.html",
+    )
