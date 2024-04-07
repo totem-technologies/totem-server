@@ -4,12 +4,14 @@ from django.utils.translation import gettext_lazy as _
 from impersonate.admin import UserAdminImpersonateMixin
 
 from totem.users.forms import UserAdminChangeForm, UserAdminCreationForm
+from totem.utils.admin import ExportCsvMixin
 
 from .models import Feedback, KeeperProfile, User
 
 
 @admin.register(User)
-class UserAdmin(UserAdminImpersonateMixin, auth_admin.UserAdmin):
+class UserAdmin(UserAdminImpersonateMixin, ExportCsvMixin, auth_admin.UserAdmin):
+    actions = ["export_as_csv"]
     open_new_window = True
     form = UserAdminChangeForm
     add_form = UserAdminCreationForm

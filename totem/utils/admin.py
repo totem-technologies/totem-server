@@ -1,5 +1,9 @@
+import csv
+
 from django.contrib import admin
 from django.contrib.admin.models import DELETION, LogEntry
+from django.db.models.query import QuerySet
+from django.http import HttpRequest, HttpResponse
 from django.urls import reverse
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
@@ -48,3 +52,23 @@ class LogEntryAdmin(admin.ModelAdmin):
 
     object_link.admin_order_field = "object_repr"
     object_link.short_description = "object"
+
+
+class ExportCsvMixin:
+    csv_fields: list | None = None
+
+    def export_as_csv(self, request: HttpRequest, queryset: QuerySet):
+        meta = queryset.model._meta
+        field_names = self.csv_fields or [field.name for field in meta.fields]
+
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = "attachment; filename={}.csv".format(meta)
+        writer = csv.writer(response)
+
+        writer.writerow(field_names)
+        for obj in queryset:
+            writer.writerow([getattr(obj, field) for field in field_names])
+
+        return response
+
+    export_as_csv.short_description = "Export Selected"

@@ -59,5 +59,5 @@ class SignupForm(LoginForm):
     newsletter_consent = BooleanField(
         required=False,
         label=_("Yes, receive email updates (optional)"),
-        template_name="fields/checkbox.html",
+        template_name="fields/checkbox.html",  # type: ignore
     )
