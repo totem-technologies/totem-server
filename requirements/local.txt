@@ -423,7 +423,7 @@ wcwidth==0.2.13
     # via prompt-toolkit
 websockets==12.0
     # via uvicorn
-werkzeug[watchdog]==3.0.1
+werkzeug[watchdog]==3.0.2
     # via
     #   -r requirements/local.in
     #   werkzeug
