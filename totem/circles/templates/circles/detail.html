@@ -21,17 +21,19 @@
   </div>
   <div class="m-auto max-w-5xl px-5">
     <!-- prettier-ignore-start -->
+    {% if object.image %}
         <style>
-            .circle-bg-image {
-                background-image: linear-gradient(5deg, rgba(1, 1, 1, 0), rgba(0, 0, 0, 0.6)){% if object.image %},url({{ object.image.url }}){% endif %};
+            .circle-bg-image-{{ object.slug }}{
+                background-image: linear-gradient(355deg, rgba(1, 1, 1, 0), rgba(0, 0, 0, 0.6)),url({{ object.image.url }});
                 background-size: cover;
                 background-position: center;
                 background-repeat: no-repeat;
             }
         </style>
+    {% endif %}
     <!-- prettier-ignore-end -->
     <div
-      class="{% if object.image %}circle-bg-image{% else %}no-image{% endif %} relative rounded-2xl shadow-lg">
+      class="{% if object.image %}circle-bg-image-{{ object.slug }}{% else %}no-image{% endif %} relative rounded-2xl shadow-lg">
       {% comment %}Share button{% endcomment %}
       <div class="absolute right-5 top-5">
         <button
@@ -59,6 +61,7 @@
           <button>close</button>
         </form>
       </dialog>
+      {% comment %}End share button{% endcomment %}
       <div class="flex h-[400px] justify-between p-5">
         <div>
           <h1 class="h1 pb-3 text-white">{{ object.title }}</h1>
@@ -71,7 +74,7 @@
           </div>
         </div>
         <div class="w-[200px] self-end">
-          <a class="inline-block" href="{{ object.author.get_keeper_url }}">
+          <a href="{{ object.author.get_keeper_url }}">
             {% avatar object.author size=200 classes="m-auto" %}
           </a>
         </div>

@@ -3,42 +3,55 @@
   <div
     class="relative overflow-clip rounded-3xl border border-gray-200 bg-white shadow transition-shadow hover:shadow-xl">
     <a href="{% url "circles:event_detail" event_slug=event.slug %}">
+      <!-- prettier-ignore-start -->
+      {% if event.circle.image %}
+        <style>
+          .circle-bg-image-{{ event.slug }} {
+            background-image: linear-gradient(
+                355deg,
+                rgba(1, 1, 1, 0),
+                rgba(0, 0, 0, 0.6)
+              ),
+              url({{ event.circle.image.url }});
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+          }
+        </style>
+      {% endif %}
+      <!-- prettier-ignore-end -->
       <div
-        class="{% if not event.circle.image %}no-image{% endif %} relative flex flex-col rounded-t-3xl p-5 pb-2"
-        {% if event.circle.image %}
-          style="background-size: cover; background-image: linear-gradient(5deg,
-          rgba(1, 1, 1, 0), rgba(0, 0, 0, 0.6)) ,
-          url({{ event.circle.image.url }}); background-position: center;
-          background-repeat: no-repeat;"
-        {% endif %}>
-        <div class="flex flex-1 flex-col">
-          <h5
-            class="mb-2 break-words text-xl font-bold tracking-tight text-white drop-shadow">
-            {{ event.circle.title|truncatechars:40 }}
-          </h5>
-          <p class="mb-3 font-normal text-white drop-shadow">
-            with {{ event.circle.author.name|truncatechars:23 }}
-          </p>
-        </div>
-        <div class="absolute bottom-2 right-2 w-[70px] rounded-full">
-          <a href="{% url "circles:event_detail" event_slug=event.slug %}">
-            {% avatar event.circle.author %}
-          </a>
+        class="{% if event.circle.image %}circle-bg-image-{{ event.slug }}{% else %}no-image{% endif %} relative flex flex-col rounded-t-3xl p-5">
+        <div class="flex min-h-[100px] justify-between">
+          <div>
+            <h1 class="h3 pb-3 text-white">{{ event.circle.title }}</h1>
+            <div class="text-white">
+              with
+              <a href="{{ event.circle.author.get_keeper_url }}"
+                >{{ event.circle.author.name }}</a
+              >
+            </div>
+          </div>
+          <div class="min-w-[50px] self-end">
+            <a href="{{ event.circle.author.get_keeper_url }}">
+              {% avatar event.circle.author size=100 classes="m-auto" %}
+            </a>
+          </div>
         </div>
       </div>
     </a>
     <div class="p-5">
-      <div class="flex flex-col">
-        <p class="mb-3 font-normal text-gray-700 ">
+      <div class="flex items-center justify-between gap-2">
+        <p class="font-normal text-gray-700 ">
           {{ event.start|date:'M jS' }} @
           <span>{{ event.start|date:'P T' }}</span>
         </p>
         <a
           href="{% url "circles:event_detail" event_slug=event.slug %}"
-          class="btn btn-primary btn-sm inline-flex items-center">
+          class="btn btn-primary btn-sm inline-flex items-center px-5">
           Join
           <svg
-            class="ml-2 h-3.5 w-3.5"
+            class="h-3.5 w-3.5"
             aria-hidden="true"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
