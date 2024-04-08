@@ -254,7 +254,7 @@ pluggy==1.4.0
     # via pytest
 posthog==3.5.0
     # via -r requirements/base.in
-pre-commit==3.6.2
+pre-commit==3.7.0
     # via -r requirements/local.in
 prompt-toolkit==3.0.43
     # via ipython
