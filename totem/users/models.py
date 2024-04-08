@@ -139,6 +139,11 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
         self.profile_avatar_seed = uuid.uuid4()
         self.save()
 
+    def is_onboarded(self):
+        return getattr(self, "onboard", None) is not None
+
+    is_onboarded.boolean = True
+
     def __str__(self):
         return f"<User: {self.name}, slug: {self.slug}, email: {self.email}>"
 
