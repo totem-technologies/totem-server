@@ -45,7 +45,7 @@ cssselect==1.2.0
     # via -r requirements/base.in
 defusedxml==0.7.1
     # via python3-openid
-django==5.0.3
+django==5.0.4
     # via
     #   -r requirements/base.in
     #   django-allauth
