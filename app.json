@@ -19,5 +19,11 @@
       "command": "./manage.py clearsessions",
       "schedule": "@daily"
     }
-  ]
+  ],
+  "scripts": {
+    "dokku": {
+      "predeploy": "python manage.py collectstatic --noinput",
+      "postdeploy": "python manage.py migrate --noinput"
+    }
+  }
 }

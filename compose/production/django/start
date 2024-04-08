@@ -5,6 +5,4 @@ set -o pipefail
 set -o nounset
 
 
-python manage.py migrate
-python /app/manage.py collectstatic --noinput
-exec uvicorn config.asgi:application --host 0.0.0.0 --workers 2
+exec gunicorn config.asgi --workers 2 --bind 0.0.0.0:$PORT --worker-class uvicorn.workers.UvicornWorker
