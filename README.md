@@ -32,3 +32,8 @@ Steps:
 
 - `make deploy` to deploy to the staging server.
 - `make deploy-prod` to deploy to the production server.
+
+## Deployment notes
+
+- Totem used `dokku` for deployment. The `Dockerfile` is used to build the image.
+  - Configure `dokku` to use the production Dockerfile: `dokku builder:set totem selected dockerfile` and `dokku builder-dockerfile:set totem dockerfile-path compose/production/django/Dockerfile`
