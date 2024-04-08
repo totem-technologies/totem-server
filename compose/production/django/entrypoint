@@ -4,8 +4,6 @@ set -o errexit
 set -o pipefail
 set -o nounset
 
-echo "Waiting for postgres..."
-
 if [ -z "${POSTGRES_USER:-}" ]; then
     base_postgres_image_default_user='postgres'
     export POSTGRES_USER="${base_postgres_image_default_user}"
@@ -14,7 +12,5 @@ fi
 if [ -z "${DATABASE_URL:-}" ]; then
     export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
 fi
-
-echo "DATABASE_URL: ${DATABASE_URL}"
 
 exec "$@"
