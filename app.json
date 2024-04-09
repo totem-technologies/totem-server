@@ -5,8 +5,8 @@
       {
         "type": "startup",
         "name": "web check",
-        "path": "/",
-        "contents": "Totem"
+        "path": "/dev/healthcheck/",
+        "contents": "ITSALLOK"
       }
     ]
   },
