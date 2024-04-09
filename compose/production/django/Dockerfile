@@ -23,7 +23,6 @@ COPY ./requirements .
 # Create Python Dependency and Sub-Dependency Wheels.
 RUN uv pip install -r ${BUILD_ENVIRONMENT}.txt
 
-
 # Python 'run' stage
 FROM python as python-run-stage
 
@@ -39,7 +38,6 @@ WORKDIR ${APP_HOME}
 
 RUN addgroup --system django \
   && adduser --system --ingroup django django
-
 
 # Install required system dependencies
 RUN apt-get update && apt-get install --no-install-recommends -y \
@@ -71,6 +69,7 @@ RUN chown django:django ${APP_HOME}
 
 USER django
 
+# Define the default command.
 CMD ["/start"]
 
 ENTRYPOINT ["/entrypoint"]

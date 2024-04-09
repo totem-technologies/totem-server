@@ -60,4 +60,7 @@ RUN chmod +x /start
 # copy application code to WORKDIR
 COPY . ${APP_HOME}
 
+# Define the default command.
+CMD ["/start"]
+
 ENTRYPOINT ["/entrypoint"]
