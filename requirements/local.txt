@@ -202,7 +202,7 @@ jsbeautifier==1.15.1
     #   djlint
 json5==0.9.24
     # via djlint
-lxml==5.1.0
+lxml==5.2.1
     # via -r requirements/base.in
 markdown==3.5.2
     # via -r requirements/base.in

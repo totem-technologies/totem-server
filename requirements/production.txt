@@ -125,7 +125,7 @@ jmespath==1.0.1
     # via
     #   boto3
     #   botocore
-lxml==5.1.0
+lxml==5.2.1
     # via -r requirements/base.in
 markdown==3.5.2
     # via -r requirements/base.in
