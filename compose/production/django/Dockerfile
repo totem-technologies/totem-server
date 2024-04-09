@@ -60,6 +60,9 @@ COPY --chown=django:django ./compose/production/django/start /start
 RUN sed -i 's/\r$//g' /start
 RUN chmod +x /start
 
+COPY --chown=django:django ./compose/production/django/predeploy /predeploy
+RUN sed -i 's/\r$//g' /predeploy
+RUN chmod +x /predeploy
 
 # copy application code to WORKDIR
 COPY --chown=django:django . ${APP_HOME}
