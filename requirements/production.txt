@@ -12,16 +12,16 @@ argon2-cffi==23.1.0
     # via -r requirements/base.in
 argon2-cffi-bindings==21.2.0
     # via argon2-cffi
-asgiref==3.7.2
+asgiref==3.8.1
     # via
     #   django
     #   django-cors-headers
     #   django-htmx
 backoff==2.2.1
     # via posthog
-boto3==1.34.64
+boto3==1.34.80
     # via django-storages
-botocore==1.34.64
+botocore==1.34.80
     # via
     #   boto3
     #   s3transfer
@@ -45,7 +45,7 @@ cssselect==1.2.0
     # via -r requirements/base.in
 defusedxml==0.7.1
     # via python3-openid
-django==5.0.3
+django==5.0.4
     # via
     #   -r requirements/base.in
     #   django-allauth
@@ -91,11 +91,11 @@ django-taggit==5.0.1
     # via -r requirements/base.in
 django-timezone-field==6.1.0
     # via -r requirements/base.in
-google-api-core==2.17.1
+google-api-core==2.18.0
     # via google-api-python-client
-google-api-python-client==2.122.0
+google-api-python-client==2.125.0
     # via -r requirements/base.in
-google-auth==2.28.2
+google-auth==2.29.0
     # via
     #   google-api-core
     #   google-api-python-client
@@ -125,7 +125,7 @@ jmespath==1.0.1
     # via
     #   boto3
     #   botocore
-lxml==5.1.0
+lxml==5.2.1
     # via -r requirements/base.in
 markdown==3.5.2
     # via -r requirements/base.in
@@ -139,25 +139,28 @@ packaging==24.0
     # via gunicorn
 pilkit==3.0
     # via django-imagekit
-pillow==10.2.0
+pillow==10.3.0
     # via
     #   -r requirements/base.in
     #   pilkit
 posthog==3.5.0
     # via -r requirements/base.in
+proto-plus==1.23.0
+    # via google-api-core
 protobuf==4.25.3
     # via
     #   google-api-core
     #   googleapis-common-protos
+    #   proto-plus
 psycopg2==2.9.9
     # via -r requirements/base.in
-pyasn1==0.5.1
+pyasn1==0.6.0
     # via
     #   pyasn1-modules
     #   rsa
-pyasn1-modules==0.3.0
+pyasn1-modules==0.4.0
     # via google-auth
-pycparser==2.21
+pycparser==2.22
     # via cffi
 pydantic==2.6.4
     # via django-ninja
@@ -195,7 +198,7 @@ requests==2.31.0
     #   google-api-core
     #   posthog
     #   requests-oauthlib
-requests-oauthlib==1.4.0
+requests-oauthlib==2.0.0
     # via
     #   django-allauth
     #   google-auth-oauthlib
@@ -203,7 +206,7 @@ rsa==4.9
     # via google-auth
 s3transfer==0.10.1
     # via boto3
-sentry-sdk[django]==1.42.0
+sentry-sdk[django]==1.44.1
     # via -r requirements/base.in
 six==1.16.0
     # via
@@ -213,7 +216,7 @@ sniffio==1.3.1
     # via anyio
 sqlparse==0.4.4
     # via django
-typing-extensions==4.10.0
+typing-extensions==4.11.0
     # via
     #   pydantic
     #   pydantic-core
@@ -226,7 +229,7 @@ urllib3==2.2.1
     #   django-anymail
     #   requests
     #   sentry-sdk
-uvicorn[standard]==0.28.0
+uvicorn[standard]==0.28.1
     # via -r requirements/base.in
 uvloop==0.19.0
     # via uvicorn
