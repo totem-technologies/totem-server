@@ -51,6 +51,8 @@ class ActionBase(Generic[T], ABC):
             raise cls.ActionDoesNotExist()
         if not action_token.is_valid():
             raise cls.ActionExpired()
+        action_token.user.verified = True
+        action_token.user.save()
         return action_token.user, action_token.parameters
 
     def get_url(self) -> str:

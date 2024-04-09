@@ -13,6 +13,7 @@ class TestActions:
     def test_join_circle_action(self, db):
         event_slug = "slug"
         user = UserFactory()
+        assert user.verified is False
         action = actions.JoinCircleAction(user, parameters={"event_slug": event_slug})
         assert action.action_id == "circles:join"
         url = action.build_url()
@@ -22,6 +23,7 @@ class TestActions:
         token = url.split("?token=")[1]
         action = actions.JoinCircleAction(user, parameters={"event_slug": event_slug})
         user, parameters = action.resolve(token)
+        assert user.verified is True
         assert user == user
         assert parameters["event_slug"] == event_slug
 
