@@ -6,7 +6,8 @@
         "type": "startup",
         "name": "web check",
         "path": "/dev/healthcheck/",
-        "contents": "ITSALLOK"
+        "contents": "ITSALLOK",
+        "attempts": 5
       }
     ]
   },
