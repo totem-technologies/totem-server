@@ -139,7 +139,7 @@ packaging==24.0
     # via gunicorn
 pilkit==3.0
     # via django-imagekit
-pillow==10.2.0
+pillow==10.3.0
     # via
     #   -r requirements/base.in
     #   pilkit
