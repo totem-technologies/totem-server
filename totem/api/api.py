@@ -5,7 +5,6 @@ from ninja import ModelSchema, NinjaAPI, Schema
 from ninja.security import APIKeyHeader
 
 from totem.users.models import User
-from totem.users.views import login as user_login
 
 api = NinjaAPI(title="Totem API", version="1.0.0")
 
@@ -44,7 +43,7 @@ class LoginOut(Schema):
 
 @api.post("/auth/login", response={200: LoginOut})
 def login(request, email: str):
-    user_login(email, request, mobile=True)
+    # user_login(email, request, mobile=True)
     return {"login": True}
 
 

@@ -3,6 +3,7 @@
 minversion = "6.0"
 addopts = "--ds=config.settings.test --reuse-db"
 python_files = ["tests.py", "test_*.py"]
+filterwarnings = ["ignore::pydantic.warnings.PydanticDeprecatedSince20"]
 
 # ==== Coverage ====
 [tool.coverage.run]

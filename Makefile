@@ -5,7 +5,7 @@ build:
 	docker-compose -f local.yml build
 
 test:
-	docker-compose -f local.yml run --rm django coverage run -m pytest --cov=totem -n auto
+	docker-compose -f local.yml run --rm django coverage run -m pytest -n auto
 
 tasks:
 	docker-compose -f local.yml run --rm django python manage.py totem_tasks

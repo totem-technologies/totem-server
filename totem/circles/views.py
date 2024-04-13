@@ -6,6 +6,7 @@ from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpRequest
 from django.shortcuts import redirect, render
 
+from totem.users import analytics
 from totem.users.models import User
 from totem.utils.hash import basic_hash
 
@@ -191,6 +192,7 @@ def join(request, event_slug):
     event = _get_circle_event(event_slug)
     if event.can_join(user):
         event.joined.add(user)
+        analytics.event_joined(user, event)
         return redirect(event.meeting_url, permanent=False)
 
     if event.started():
