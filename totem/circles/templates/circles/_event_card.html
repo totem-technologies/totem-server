@@ -2,8 +2,7 @@
 <div class="w-full">
   <div
     class="relative overflow-clip rounded-3xl border border-gray-200 bg-white shadow transition-shadow hover:shadow-xl">
-    <a href="{% url "circles:event_detail" event_slug=event.slug %}">
-      <!-- prettier-ignore-start -->
+    <!-- prettier-ignore-start -->
       {% if event.circle.image %}
         <style>
           .circle-bg-image-{{ event.slug }} {
@@ -20,22 +19,16 @@
         </style>
       {% endif %}
       <!-- prettier-ignore-end -->
+    <a href="{% url "circles:event_detail" event_slug=event.slug %}">
       <div
         class="{% if event.circle.image %}circle-bg-image-{{ event.slug }}{% else %}no-image{% endif %} relative flex flex-col rounded-t-3xl p-5">
         <div class="flex min-h-[100px] justify-between">
           <div>
             <h1 class="h3 pb-3 text-white">{{ event.circle.title }}</h1>
-            <div class="text-white">
-              with
-              <a href="{{ event.circle.author.get_keeper_url }}"
-                >{{ event.circle.author.name }}</a
-              >
-            </div>
+            <div class="text-white">with {{ event.circle.author.name }}</div>
           </div>
           <div class="min-w-[50px] self-end">
-            <a href="{{ event.circle.author.get_keeper_url }}">
-              {% avatar event.circle.author size=100 classes="m-auto" %}
-            </a>
+            {% avatar event.circle.author size=100 classes="m-auto" %}
           </div>
         </div>
       </div>
