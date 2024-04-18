@@ -46,6 +46,40 @@ class TestCircleDetailView:
         assert response.status_code == 200
 
 
+class TestCircleEventView:
+    def test_event_loggedin(self, client, db):
+        user = UserFactory()
+        user.save()
+        client.force_login(user)
+        event = CircleEventFactory()
+        event.add_attendee(user)
+        url = reverse("circles:event_detail", kwargs={"event_slug": event.slug})
+        response = client.get(url)
+        assert response.status_code == 200
+        expect_words = ["Attend", "spots left", "Subscribe"]
+        content = response.content.decode()
+        for word in expect_words:
+            assert word in content
+
+    def test_event(self, client, db):
+        event = CircleEventFactory()
+        url = reverse("circles:event_detail", kwargs={"event_slug": event.slug})
+        response = client.get(url)
+        assert response.status_code == 200
+
+    def test_event_no_attendee(self, client, db):
+        event = CircleEventFactory()
+        url = reverse("circles:event_detail", kwargs={"event_slug": event.slug})
+        response = client.get(url)
+        assert response.status_code == 200
+
+    def test_event_no_attendee_unauth(self, client, db):
+        event = CircleEventFactory()
+        url = reverse("circles:event_detail", kwargs={"event_slug": event.slug})
+        response = client.get(url)
+        assert response.status_code == 200
+
+
 class TestJoinView:
     def test_join_unauth(self, client, db):
         event = CircleEventFactory()
