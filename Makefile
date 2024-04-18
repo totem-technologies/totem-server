@@ -38,7 +38,7 @@ assets:
 	python3 -m venv .venv
 
 install_local: .venv
-	source .venv/bin/activate && uv pip install -Ur requirements/local.txt
+	source .venv/bin/activate && pip install -Ur requirements/local.txt
 	npm install
 
 fixtures:
