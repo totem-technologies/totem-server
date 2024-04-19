@@ -196,6 +196,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         return CircleEventState.CLOSED
 
     def add_attendee(self, user):
+        # checks if the user can attend and adds them to the attendees list, throws an exception if they can't
         if self.can_attend(user=user):
             self.attendees.add(user)
             send_notify_circle_signup(self, user)
