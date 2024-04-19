@@ -165,9 +165,11 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         return ", ".join([str(attendee) for attendee in self.attendees.all()])
 
     def can_attend(self, user: "User | None" = None, silent=False):
-        if user and user.is_staff:
-            return True
         try:
+            if user and user in self.attendees.all():
+                raise CircleEventException("You are already attending this session")
+            if user and user.is_staff:
+                return True
             if not self.open:
                 raise CircleEventException("Circle is not available for signup")
             if self.cancelled:
@@ -176,8 +178,6 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
                 raise CircleEventException("Circle has already started")
             if self.seats_left() <= 0:
                 raise CircleEventException("There are no spots left")
-            if user and user in self.attendees.all():
-                raise CircleEventException("You are already attending this session")
             return True
         except CircleEventException as e:
             if silent:
