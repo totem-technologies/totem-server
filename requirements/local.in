@@ -19,7 +19,7 @@ coverage<8.0.0  # https://github.com/nedbat/coveragepy
 pip-tools<8
 pre-commit<4  # https://github.com/pre-commit/pre-commit
 pylint-django<3.0.0  # https://github.com/PyCQA/pylint-django
-ruff<0.4.0 # https://github.com/astral-sh/ruff
+ruff<0.5.0 # https://github.com/astral-sh/ruff
 
 # Django
 # ------------------------------------------------------------------------------
