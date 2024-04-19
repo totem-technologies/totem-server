@@ -11,8 +11,8 @@ if TYPE_CHECKING:
     from totem.circles.models import CircleEvent
     from totem.users.models import User
 
+import mrml
 from django.template.loader import render_to_string
-from mjml import mjml2html
 from pydantic import AnyHttpUrl, BaseModel
 
 from totem.utils.pool import global_pool
@@ -31,7 +31,7 @@ class Email(BaseModel):
 
     def render_html(self) -> str:
         s = render_to_string(f"email/emails/{self.template}.mjml", context=self.model_dump())
-        return mjml2html(s)
+        return mrml.to_html(s)  # type: ignore
 
     def render_text(self) -> str:
         return render_to_string(f"email/emails/{self.template}.txt", context=self.model_dump())

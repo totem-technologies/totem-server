@@ -1,37 +1,41 @@
-# import pytest
-# from django.contrib.auth import get_user_model
-# from django.core import mail
-# from django.core.exceptions import ValidationError
-# from django.test import TestCase
+from django.test import Client, override_settings
+from django.urls import reverse
 
-# from totem.email.models import SubscribedModel
-# from totem.users.tests.factories import UserFactory
+from totem.users.tests.factories import UserFactory
 
-# from .utils import validate_email_blocked
-
-# User = get_user_model()
+from .views import get_templates
 
 
-# # class SubscribeTestCase(TestCase):
-# #     def test_subscribe(self):
-# #         user = UserFactory()
-# #         subscribed = SubscribedModel.objects.create(user=user)
-# #         assert subscribed.subscribed is False
-# #         subscribed.subscribe()
-# #         assert subscribed.subscribed is True
-# #         subscribed.unsubscribe()
-# #         assert subscribed.subscribed is False
+class TestTemplateDevEmail:
+    def test_template_view_public(self, client: Client):
+        self._test_templates(client, status_code=404)
 
-# #     def test_subscribe_email(self):
-# #         user = UserFactory()
-# #         subscribed = SubscribedModel.objects.create(user=user)
-# #         subscribed.send_subscribe_email()
-# #         assert len(mail.outbox) == 1
+    @override_settings(DEBUG=True)
+    def test_template_view_debug(self, client: Client):
+        self._test_templates(client)
 
+    def test_template_view_staff(self, client: Client, db):
+        user = UserFactory(is_staff=True)
+        client.force_login(user)
+        self._test_templates(client)
 
-# # def test_validate_email_blocked():
-# #     assert validate_email_blocked("example@domain.com") is None
-# #     assert validate_email_blocked("test@domain.com") is None
-# #     assert validate_email_blocked("user@domain.com") is None
-# #     with pytest.raises(ValidationError):
-# #         validate_email_blocked("test@data-backup-store.com")
+    def _test_templates(self, _client: Client, status_code=200):
+        templ_names = get_templates().keys()
+        for templ_name in templ_names:
+            response = _client.get(reverse("email:template", kwargs={"name": templ_name}))
+            assert response.status_code == status_code
+
+    def test_template_list_public(self, client: Client):
+        response = client.get(reverse("email:template"))
+        assert response.status_code == 404
+
+    @override_settings(DEBUG=True)
+    def test_template_list_debug(self, client: Client):
+        response = client.get(reverse("email:template"))
+        assert response.status_code == 200
+
+    def test_template_list_staff(self, client: Client, db):
+        user = UserFactory(is_staff=True)
+        client.force_login(user)
+        response = client.get(reverse("email:template"))
+        assert response.status_code == 200
