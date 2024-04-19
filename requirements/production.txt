@@ -5,6 +5,7 @@ annotated-types==0.6.0
 anyio==4.3.0
     # via watchfiles
 argon2-cffi==23.1.0
+    # via -r requirements/base.in
 argon2-cffi-bindings==21.2.0
     # via argon2-cffi
 asgiref==3.8.1
@@ -37,10 +38,12 @@ click==8.1.7
 cryptography==42.0.5
     # via pyjwt
 cssselect==1.2.0
+    # via -r requirements/base.in
 defusedxml==0.7.1
     # via python3-openid
 django==5.0.4
     # via
+    #   -r requirements/base.in
     #   django-allauth
     #   django-anymail
     #   django-appconf
@@ -55,24 +58,39 @@ django==5.0.4
     #   django-timezone-field
     #   sentry-sdk
 django-allauth==0.61.1
+    # via -r requirements/base.in
 django-anymail==10.3
+    # via -r requirements/base.in
 django-appconf==1.0.6
     # via django-imagekit
 django-auditlog==3.0b4
+    # via -r requirements/base.in
 django-cors-headers==4.3.1
+    # via -r requirements/base.in
 django-environ==0.11.2
+    # via -r requirements/base.in
 django-htmx==1.17.3
+    # via -r requirements/base.in
 django-imagekit==5.0.0
+    # via -r requirements/base.in
 django-impersonate==1.9.2
+    # via -r requirements/base.in
 django-ninja==1.1.0
+    # via -r requirements/base.in
 django-redis==5.4.0
+    # via -r requirements/base.in
 django-sesame==3.2.2
-django-storages==1.14.2
+    # via -r requirements/base.in
+django-storages[s3]==1.14.2
+    # via -r requirements/base.in
 django-taggit==5.0.1
+    # via -r requirements/base.in
 django-timezone-field==6.1.0
+    # via -r requirements/base.in
 google-api-core==2.18.0
     # via google-api-python-client
 google-api-python-client==2.126.0
+    # via -r requirements/base.in
 google-auth==2.29.0
     # via
     #   google-api-core
@@ -82,9 +100,11 @@ google-auth==2.29.0
 google-auth-httplib2==0.2.0
     # via google-api-python-client
 google-auth-oauthlib==1.2.0
+    # via -r requirements/base.in
 googleapis-common-protos==1.63.0
     # via google-api-core
-gunicorn==21.2.0
+gunicorn==22.0.0
+    # via -r requirements/base.in
 h11==0.14.0
     # via uvicorn
 httplib2==0.22.0
@@ -102,10 +122,13 @@ jmespath==1.0.1
     #   boto3
     #   botocore
 lxml==5.2.1
+    # via -r requirements/base.in
 markdown==3.5.2
+    # via -r requirements/base.in
 monotonic==1.6
     # via posthog
 mrml==0.1.12
+    # via -r requirements/base.in
 oauthlib==3.2.2
     # via requests-oauthlib
 packaging==24.0
@@ -113,8 +136,11 @@ packaging==24.0
 pilkit==3.0
     # via django-imagekit
 pillow==10.3.0
-    # via pilkit
+    # via
+    #   -r requirements/base.in
+    #   pilkit
 posthog==3.5.0
+    # via -r requirements/base.in
 proto-plus==1.23.0
     # via google-api-core
 protobuf==4.25.3
@@ -123,6 +149,7 @@ protobuf==4.25.3
     #   googleapis-common-protos
     #   proto-plus
 psycopg2==2.9.9
+    # via -r requirements/base.in
 pyasn1==0.6.0
     # via
     #   pyasn1-modules
@@ -135,7 +162,7 @@ pydantic==2.7.0
     # via django-ninja
 pydantic-core==2.18.1
     # via pydantic
-pyjwt==2.8.0
+pyjwt[crypto]==2.8.0
     # via django-allauth
 pyparsing==3.1.2
     # via httplib2
@@ -143,6 +170,7 @@ pypng==0.20220715.0
     # via qrcode
 python-dateutil==2.9.0.post0
     # via
+    #   -r requirements/base.in
     #   botocore
     #   django-auditlog
     #   posthog
@@ -151,13 +179,16 @@ python-dotenv==1.0.1
 python3-openid==3.2.0
     # via django-allauth
 pytz==2024.1
+    # via -r requirements/base.in
 pyyaml==6.0.1
     # via uvicorn
 qrcode==7.4.2
+    # via -r requirements/base.in
 redis==5.0.3
     # via django-redis
 requests==2.31.0
     # via
+    #   -r requirements/base.in
     #   django-allauth
     #   django-anymail
     #   google-api-core
@@ -171,7 +202,8 @@ rsa==4.9
     # via google-auth
 s3transfer==0.10.1
     # via boto3
-sentry-sdk==1.45.0
+sentry-sdk[django]==1.45.0
+    # via -r requirements/base.in
 six==1.16.0
     # via
     #   posthog
@@ -193,7 +225,8 @@ urllib3==2.2.1
     #   django-anymail
     #   requests
     #   sentry-sdk
-uvicorn==0.29.0
+uvicorn[standard]==0.29.0
+    # via -r requirements/base.in
 uvloop==0.19.0
     # via uvicorn
 watchfiles==0.21.0
@@ -201,3 +234,4 @@ watchfiles==0.21.0
 websockets==12.0
     # via uvicorn
 whitenoise==6.6.0
+    # via -r requirements/base.in
