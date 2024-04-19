@@ -27,7 +27,7 @@ from totem.utils.models import AdminURLMixin, SluggedModel
 from totem.utils.slack import notify_slack
 from totem.utils.utils import full_url
 
-from .actions import JoinCircleAction, SubscribeAction
+from .actions import AttendCircleAction, JoinCircleAction, SubscribeAction
 from .calendar import calendar
 
 if TYPE_CHECKING:
@@ -169,13 +169,15 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
             return True
         try:
             if not self.open:
-                raise CircleEventException("Circle is not open")
+                raise CircleEventException("Circle is not available for signup")
             if self.cancelled:
-                raise CircleEventException("Circle is cancelled")
+                raise CircleEventException("Circle was cancelled")
             if self.started():
                 raise CircleEventException("Circle has already started")
             if self.seats_left() <= 0:
-                raise CircleEventException("No seats left")
+                raise CircleEventException("There are no spots left")
+            if user and user in self.attendees.all():
+                raise CircleEventException("You are already attending this session")
             return True
         except CircleEventException as e:
             if silent:
@@ -283,6 +285,9 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
 
     def join_url(self, user):
         return JoinCircleAction(user=user, parameters={"event_slug": self.slug}).build_url()
+
+    def attend_url(self, user):
+        return AttendCircleAction(user=user, parameters={"event_slug": self.slug}).build_url()
 
     def __str__(self):
         return f"CircleEvent: {self.start}"

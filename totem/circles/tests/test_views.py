@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from totem.users.tests.factories import UserFactory
 
-from ..actions import JoinCircleAction
+from ..actions import AttendCircleAction, JoinCircleAction
 from ..views import AUTO_RSVP_SESSION_KEY
 from .factories import CircleCategoryFactory, CircleEventFactory, CircleFactory
 
@@ -78,6 +78,52 @@ class TestCircleEventView:
         url = reverse("circles:event_detail", kwargs={"event_slug": event.slug})
         response = client.get(url)
         assert response.status_code == 200
+
+    def test_event_with_token(self, client, db):
+        event = CircleEventFactory()
+        user = UserFactory()
+        user.save()
+        url = AttendCircleAction(user=user, parameters={"event_slug": event.slug}).build_url()
+        response = client.get(url)
+        assert response.status_code == 200
+        assert user in event.attendees.all()
+        assert "successfully reserved" in list(get_messages(response.wsgi_request))[0].message
+
+    def test_event_with_token_wrong_user(self, client, db):
+        event = CircleEventFactory()
+        user = UserFactory()
+        user.save()
+        client.force_login(user)
+        user2 = UserFactory()
+        user2.save()
+        url = AttendCircleAction(user=user2, parameters={"event_slug": event.slug}).build_url()
+        response = client.get(url)
+        assert response.status_code == 200
+        assert user not in event.attendees.all()
+        assert user2 not in event.attendees.all()
+
+    def test_event_with_token_user_already_attending(self, client, db):
+        event = CircleEventFactory()
+        user = UserFactory()
+        user.save()
+        event.add_attendee(user)
+        url = AttendCircleAction(user=user, parameters={"event_slug": event.slug}).build_url()
+        response = client.get(url)
+        assert response.status_code == 200
+        assert user in event.attendees.all()
+        assert list(get_messages(response.wsgi_request))[0].message == "You are already attending this session"
+
+    def test_event_with_token_wrong_event(self, client, db):
+        event = CircleEventFactory()
+        user = UserFactory()
+        user.save()
+        url = AttendCircleAction(user=user, parameters={"event_slug": "wrong"}).build_url()
+        token = url.split("=")[-1]
+        bad_url = event.get_absolute_url() + f"?token={token}"
+        response = client.get(bad_url)
+        assert response.status_code == 200
+        assert user not in event.attendees.all()
+        assert "Invalid or expired link" in list(get_messages(response.wsgi_request))[0].message
 
 
 class TestJoinView:

@@ -5,12 +5,13 @@ from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpRequest
 from django.shortcuts import redirect, render
+from sentry_sdk import capture_exception
 
 from totem.users import analytics
 from totem.users.models import User
 from totem.utils.hash import basic_hash
 
-from .actions import JoinCircleAction, SubscribeAction
+from .actions import AttendCircleAction, JoinCircleAction, SubscribeAction
 from .filters import (
     all_upcoming_recommended_circles,
     all_upcoming_recommended_events,
@@ -60,6 +61,10 @@ def _circle_detail(request: HttpRequest, user: User, circle: Circle, event: Circ
             _add_or_remove_attendee(user, event, True)
             messages.success(request, "Your spot in this Circle has been reserved.")
 
+    token = request.GET.get("token")
+    if token and event:
+        _resolve_event_action(request, user, event, token)
+
     attending = False
     joinable = False
     subscribed = False
@@ -88,6 +93,28 @@ def _circle_detail(request: HttpRequest, user: User, circle: Circle, event: Circ
             "other_circles": other_circles,
         },
     )
+
+
+def _resolve_event_action(request: HttpRequest, user: User, event: CircleEvent, token: str):
+    try:
+        token_user, params = AttendCircleAction.resolve(token)
+        if user.is_authenticated and user != token_user:
+            return
+        token_event_slug = params["event_slug"]
+        if token_event_slug != event.slug:
+            print("Invalid event slug")
+            raise PermissionDenied
+        try:
+            event.add_attendee(token_user)
+        except CircleEventException as e:
+            messages.error(request, f"{str(e)}")
+            return
+        messages.success(request, "You have successfully reserved a spot to this session.")
+    except Exception as e:
+        capture_exception(e)
+        messages.error(
+            request, "Invalid or expired link. If you think this is an error, please contact us: help@totem.org."
+        )
 
 
 def ics_hash(slug, user_ics_key):
@@ -215,7 +242,8 @@ def subscribe(request: HttpRequest, slug: str):
             user, params = SubscribeAction.resolve(token)
             sub = params["subscribe"]
             slug = params["circle_slug"]
-        except Exception:
+        except Exception as e:
+            capture_exception(e)
             messages.error(request, "Invalid or expired link. If you think this is an error, please contact us.")
             return redirect("circles:detail", slug=slug)
     else:
