@@ -39,7 +39,9 @@ function PromptSearch(props: any) {
   })
 
   // eslint-disable-next-line no-undef
-  const uf = new uFuzzy({ outOfOrder: false })
+  const uf: any = new (globalThis as any & { uFuzzy: any }).uFuzzy({
+    outOfOrder: false,
+  })
   const tags = () => {
     return [
       ...new Set(
