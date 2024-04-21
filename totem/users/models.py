@@ -196,7 +196,7 @@ class Feedback(models.Model):
 
 
 def default_expires_at() -> datetime:
-    return timezone.now() + timedelta(days=7)
+    return timezone.now() + timedelta(days=14)
 
 
 class ActionToken(models.Model):
