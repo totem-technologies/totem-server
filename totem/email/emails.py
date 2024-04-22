@@ -18,7 +18,7 @@ from pydantic import AnyHttpUrl, BaseModel
 from totem.utils.pool import global_pool
 
 from .models import EmailLog
-from .utils import send_mail
+from .utils import send_brevo_email, send_mail
 
 
 class Email(BaseModel):
@@ -58,6 +58,23 @@ class Email(BaseModel):
             context=self.model_dump(mode="json"),
             recipient=self.recipient,
         )
+
+
+class BrevoEmail(BaseModel):
+    template_id: int
+    recipient: str
+    show_env_banner: bool = settings.EMAIL_SHOW_ENV_BANNER
+    environment: str = settings.ENVIRONMENT_NAME
+
+    def send(self):
+        send_brevo_email(
+            template_id=self.template_id,
+            recipient=self.recipient,
+        )
+
+
+class WelcomeEmail(BrevoEmail):
+    template_id: int = 3
 
 
 class ButtonEmail(Email):
@@ -124,6 +141,14 @@ class CircleSignupEmail(Email):
     button_text: str = "Add to calendar"
     subject: str = "Your spot is saved"
     title: str = "Spot Saved"
+
+
+def send_welcome_email(user: User):
+    WelcomeEmail(recipient=user.email).send()
+    if settings.DEBUG:
+        print("------------------------------------------")
+        print(f"Sending welcome email to {user.email}")
+        print("------------------------------------------")
 
 
 def send_returning_login_email(email: str, url: str):

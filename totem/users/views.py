@@ -135,8 +135,7 @@ def login(
 
     if created:
         django_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
-        # TODO make new welcome email. This one expires after 30min and doesn't make sense for a new user.
-        # emails.send_new_login_email(user.email, url)
+        emails.send_welcome_email(user)
         analytics.user_signed_up(user)
     else:
         emails.send_returning_login_email(user.email, url)
