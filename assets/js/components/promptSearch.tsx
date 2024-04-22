@@ -108,6 +108,7 @@ function PromptSearch(props: any) {
         <div>
           <button
             onClick={() => setSearch("")}
+            style={{ visibility: search() === "" ? "hidden" : "visible" }}
             type="button"
             class="mt-2 rounded-full bg-gray-200 px-3 py-1 text-xs font-medium leading-4 text-gray-700 hover:opacity-70">
             X Clear search

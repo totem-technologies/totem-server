@@ -145,18 +145,25 @@ def rsvp(request: HttpRequest, event_slug):
     return redirect("circles:event_detail", event_slug=event.slug)
 
 
-class CircleEventListItem:
-    def __init__(self, event, joinable):
-        self.event: CircleEvent = event
-        self.joinable: bool = joinable
-
-
 def list(request):
     category = request.GET.get("category")
     limit = int(request.GET.get("limit", 9))
     if limit > 100:
         raise ValueError
-    events = all_upcoming_recommended_events(request.user, category=category, limit=limit + 1).all()
+    events = all_upcoming_recommended_events(request.user, category=category, limit=100).all()
+
+    # _events_by_date = {}
+    # for event in events:
+    #     date = event.start.date()
+    #     if date not in _events_by_date:
+    #         _events_by_date[date] = []
+    #     _events_by_date[date].append(event)
+
+    # events_by_date = []
+    # for date, events in _events_by_date.items():
+    #     events_by_date.append({"date": date, "events": events})
+
+    # context["events_by_date"] = events_by_date
     context: dict[str, Any] = {"events": events[:limit]}
     context["selected_category"] = category or ""
     categories = [
@@ -168,7 +175,7 @@ def list(request):
             {"value": category[1], "label": category[0]},
         )
     context["categories"] = categories
-    context["show_load_more"] = len(events) > limit
+    context["show_load_more"] = events.count() > limit
     return render(request, "circles/list.html", context=context)
 
 

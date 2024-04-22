@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% load static %}
+{% load avatar %}
+{# djlint:off #}
+{% block title %}Circles{% endblock title %}
+{# djlint:on #}
+{% block content %}
+  <div class="mx-auto text-center">
+    <div class="py-16">
+      <h1 class="h1">Circles</h1>
+      <p class="mx-auto mt-4 max-w-3xl">Thoughtful spaces, designed for you.</p>
+    </div>
+    <t-circles />
+  </div>
+  <div class="">
+    <section class="m-auto max-w-7xl pb-20">
+      <div class="h-10"></div>
+      <div id="search-results">
+        <div>
+          {% for date in events_by_date %}
+            <div class="divider">{{ date.date|date:"l, F nS" }}</div>
+
+            {% for event in date.events %}
+              <a
+                href="{% url "circles:event_detail" event_slug=event.slug %}"
+                class="mb-2 block bg-gray-300 py-[2px] transition-all hover:shadow-lg md:hidden">
+                <div
+                  class="flex items-center justify-center gap-5 bg-white bg-opacity-90 p-2 transition-colors">
+                  <div>{% avatar event.circle.author size=50 %}</div>
+                  <div class="flex-grow">
+                    <p class="font-bold">{{ event.circle.title }}</p>
+                    <p class="text-xs">with {{ event.circle.author.name }}</p>
+                    <p class="text-sm">{{ event.start|date:"g:i a T" }}</p>
+                  </div>
+                  <div class="text-2xl">→</div>
+                </div>
+              </a>
+
+              <a
+                href="{% url "circles:event_detail" event_slug=event.slug %}"
+                class="mx-5 mb-2 hidden rounded-2xl bg-gray-300 p-[2px] transition-all hover:shadow-lg md:block">
+                <div
+                  class="flex items-center justify-center gap-2 rounded-2xl bg-white bg-opacity-90 p-5 transition-colors">
+                  <div class="flex items-center justify-center gap-5">
+                    <div>{% avatar event.circle.author size=50 %}</div>
+                    <div class="text-lg">{{ event.circle.author.name }}</div>
+                  </div>
+
+                  <div class="divider divider-horizontal self-stretch"></div>
+                  <div class="flex-grow text-center">
+                    <p class="text-[2vw] font-bold">{{ event.circle.title }}</p>
+                  </div>
+                  <div class="divider divider-horizontal self-stretch"></div>
+                  <div>
+                    <div class="whitespace-nowrap text-lg font-bold">
+                      {{ event.start|date:"g:i a T" }}
+                    </div>
+                  </div>
+                </div>
+              </a>
+            {% endfor %}
+          {% endfor %}
+          {% for event in events %}
+            <a
+              href="{% url "circles:event_detail" event_slug=event.slug %}"
+              class="flex items-center justify-center gap-5 rounded-2xl p-5 hover:bg-white">
+              <div>{% avatar event.circle.author size=50 %}</div>
+              <div class="flex-grow">
+                <p class="font-bold">{{ event.circle.title }}</p>
+                <p class="text-sm">with {{ event.circle.author.name }}</p>
+                <p class="text-sm">{{ event.start|date:"g:i a T" }}</p>
+              </div>
+              <div class="text-2xl">→</div>
+            </a>
+          {% endfor %}
+        </div>
+        {% if show_load_more %}
+          <div class="text-center">
+            <button
+              class="btn btn-ghost mt-10"
+              hx-get="{% url 'circles:list' %}"
+              hx-target="#search-results"
+              hx-select="#search-results"
+              value="51"
+              name="limit"
+              hx-include="#search-form"
+              hx-swap="outerHTML"
+              hx-push-url="true"
+              aria-label="More Circles">
+              More Circles
+            </button>
+          </div>
+        {% else %}
+          <p class="mt-10 text-center">
+            There are no more upcoming Circles you can join at this time. If you
+            have suggestions for new Circles, please
+            <a class="link" href="{% url 'users:feedback' %}">submit them</a>!
+          </p>
+        {% endif %}
+      </div>
+    </section>
+  </div>
+{% endblock content %}

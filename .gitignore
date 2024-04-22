@@ -275,6 +275,7 @@ dump.rdb
 
 ### Project template
 totem/media/
+openapi.json
 
 .pytest_cache/
 .ipython/

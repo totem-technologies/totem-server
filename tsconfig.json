@@ -10,6 +10,11 @@
     "jsxImportSource": "solid-js",
     "types": [],
     "noEmit": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "plugins": [
+      {
+        "name": "typescript-plugin-css-modules"
+      }
+    ]
   }
 }

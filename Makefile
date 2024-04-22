@@ -57,6 +57,10 @@ migrations: ## Create DB migrations in the container
 migrate: ## Run DB migrations in the container
 	@docker-compose -f local.yml run django python manage.py migrate
 
+generate_api_models:
+	@docker-compose -f local.yml run django python manage.py export_openapi_schema --api totem.api.api.api > openapi.json
+	@npm run openapi-ts
+
 adddep: pipcompile pipsync build
 
 .PHONY: run test shell migrate deploy assets

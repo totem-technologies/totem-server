@@ -1,4 +1,4 @@
 # Ignore all HTML files:
-*.css
+totem/**/*.css
 *.min.*
 *.mjml

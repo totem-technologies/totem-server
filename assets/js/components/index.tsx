@@ -1,7 +1,7 @@
 import { customElement, noShadowDOM } from "solid-element"
-import DatePickerComponent from "./datePicker"
+import Circles from "./circles"
 import PromptSearch from "./promptSearch"
-var components = [PromptSearch, DatePickerComponent]
+var components = [PromptSearch, Circles]
 
 export default function () {
   components.forEach((c) => {
@@ -9,18 +9,18 @@ export default function () {
   })
 }
 
-function customElementWC(name, propDefaults, Component) {
-  customElement(name, propDefaults, (props, { element }) => {
+function customElementWC(name: string, propDefaults: any, Component: any) {
+  customElement(name, propDefaults, (props: any, { element }) => {
+    // Add type annotation for props
     noShadowDOM()
     const slots = element.querySelectorAll("[slot]")
-    slots.forEach((slot) => {
+    slots.forEach((slot: any) => {
       // eslint-disable-next-line solid/no-innerhtml
       props[slot.attributes["slot"].value] = <div innerHTML={slot.innerHTML} />
       slot.remove()
     })
     const children = element.innerHTML
     element.innerHTML = ""
-    console.log("customElementWC", props, element)
     return <Component {...props}>{children}</Component>
   })
 }

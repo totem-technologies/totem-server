@@ -4,9 +4,11 @@ from django.http import HttpRequest
 from ninja import ModelSchema, NinjaAPI, Schema
 from ninja.security import APIKeyHeader
 
+from totem.circles.api import router as circles_router
 from totem.users.models import User
 
 api = NinjaAPI(title="Totem API", version="1.0.0")
+api.add_router("/circles/", circles_router)
 
 
 class InvalidToken(Exception):
@@ -68,13 +70,7 @@ def token(request, token: str):
 class UserSchema(ModelSchema):
     class Meta:
         model = User
-        fields = [
-            "email",
-            "name",
-            "is_staff",
-            "is_active",
-            "is_superuser",
-        ]
+        fields = ["email", "name", "is_staff", "is_active", "is_superuser"]
 
 
 @api.get("/auth/currentuser", response={200: UserSchema, 404: Message})
