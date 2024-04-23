@@ -6,7 +6,6 @@ export type LoginOut = {
 
 export type TokenOut = {
   key: string
-  is_banaan: boolean
 }
 
 export type UserSchema = {
@@ -30,6 +29,11 @@ export type Message = {
   message: string
 }
 
+export type Input = {
+  limit?: number
+  offset?: number
+}
+
 export type CircleEventSchema = {
   circle: CircleSchema
   start?: string
@@ -43,6 +47,11 @@ export type CircleSchema = {
   slug?: string
   date_created: string
   date_modified: string
+}
+
+export type PagedCircleEventSchema = {
+  items: Array<CircleEventSchema>
+  count: number
 }
 
 export type $OpenApiTs = {
@@ -98,11 +107,16 @@ export type $OpenApiTs = {
   }
   "/api/v1/circles/": {
     get: {
+      req: {
+        category?: string | null
+        limit?: number
+        offset?: number
+      }
       res: {
         /**
          * OK
          */
-        200: Array<CircleEventSchema>
+        200: PagedCircleEventSchema
       }
     }
   }

@@ -18,6 +18,7 @@ app_name = "circles"
 
 urlpatterns = [
     path("", views.list, name="list"),
+    path("list2/", views.list2, name="list2"),
     path("rsvp/<str:event_slug>/", views.rsvp, name="rsvp"),
     path("join/<str:event_slug>/", views.join, name="join"),
     path("event/<str:event_slug>/", views.event_detail, name="event_detail"),

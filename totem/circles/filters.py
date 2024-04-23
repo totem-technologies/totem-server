@@ -20,7 +20,7 @@ def other_events_in_circle(user: User | None, event: CircleEvent, limit: int = 1
     return events[:limit]
 
 
-def all_upcoming_recommended_events(user: User | None, category: str | None = None, limit: int = 10):
+def all_upcoming_recommended_events(user: User | None, category: str | None = None):
     events = CircleEvent.objects.filter(start__gte=timezone.now(), cancelled=False, open=True, listed=True)
     events = events.order_by("start")
     if not user or not user.is_staff:
@@ -31,7 +31,7 @@ def all_upcoming_recommended_events(user: User | None, category: str | None = No
     if category:
         events = events.filter(circle__categories__slug=category) | events.filter(circle__categories__name=category)
     events = events.prefetch_related("circle__author")
-    return events[:limit]
+    return events
 
 
 def all_upcoming_recommended_circles(user: User | None, category: str | None = None):

@@ -18,12 +18,8 @@ export const $TokenOut = {
       title: "Key",
       type: "string",
     },
-    is_banaan: {
-      title: "Is Banaan",
-      type: "boolean",
-    },
   },
-  required: ["key", "is_banaan"],
+  required: ["key"],
   title: "TokenOut",
   type: "object",
 } as const
@@ -85,6 +81,25 @@ export const $Message = {
   type: "object",
 } as const
 
+export const $Input = {
+  properties: {
+    limit: {
+      default: 100,
+      minimum: 1,
+      title: "Limit",
+      type: "integer",
+    },
+    offset: {
+      default: 0,
+      minimum: 0,
+      title: "Offset",
+      type: "integer",
+    },
+  },
+  title: "Input",
+  type: "object",
+} as const
+
 export const $CircleEventSchema = {
   properties: {
     circle: {
@@ -139,5 +154,24 @@ export const $CircleSchema = {
   },
   required: ["title", "date_created", "date_modified"],
   title: "CircleSchema",
+  type: "object",
+} as const
+
+export const $PagedCircleEventSchema = {
+  properties: {
+    items: {
+      items: {
+        $ref: "#/components/schemas/CircleEventSchema",
+      },
+      title: "Items",
+      type: "array",
+    },
+    count: {
+      title: "Count",
+      type: "integer",
+    },
+  },
+  required: ["items", "count"],
+  title: "PagedCircleEventSchema",
   type: "object",
 } as const
