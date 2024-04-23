@@ -58,8 +58,11 @@ def _circle_detail(request: HttpRequest, user: User, circle: Circle, event: Circ
         event_slug = request.session[AUTO_RSVP_SESSION_KEY]
         del request.session[AUTO_RSVP_SESSION_KEY]
         if event_slug == event.slug:
-            _add_or_remove_attendee(user, event, True)
-            messages.success(request, "Your spot in this Circle has been reserved.")
+            try:
+                _add_or_remove_attendee(user, event, True)
+                messages.info(request, "Your spot in this Circle has been reserved.")
+            except CircleEventException as e:
+                messages.error(request, str(e))
 
     token = request.GET.get("token")
     if token and event:
