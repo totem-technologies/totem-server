@@ -152,7 +152,8 @@ def user_index_view(request):
 def user_dashboard_view(request):
     user: User = request.user
     attending_events = upcoming_attending_events(user, limit=10)
-    recommended_events = all_upcoming_recommended_events(user, limit=4)
+    recommended_events = all_upcoming_recommended_events(user)[:4]
+
     return render(
         request,
         "users/dashboard.html",

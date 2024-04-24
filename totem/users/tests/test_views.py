@@ -173,3 +173,11 @@ class UserFeedbackViewTest(TestCase):
         self.assertEqual(Feedback.objects.count(), 0)
         messages = [str(m) for m in get_messages(response.wsgi_request)]
         self.assertNotIn(FEEDBACK_SUCCESS_MESSAGE, messages)
+
+
+class TestDashboard:
+    def test_dashboard_200(self, client):
+        user = UserFactory()
+        client.force_login(user)
+        response = client.get(reverse("users:dashboard"))
+        assert response.status_code == 200
