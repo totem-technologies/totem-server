@@ -10,6 +10,7 @@ def notify_circle_ready():
         start__gte=timezone.now(),
         start__lte=timezone.now() + timedelta(minutes=20),
         notified=False,
+        cancelled=False,
     )
     for event in upcoming_circles:
         event.notify()
@@ -20,6 +21,7 @@ def notify_circle_tomorrow():
         start__gte=timezone.now() + timedelta(hours=20),
         start__lte=timezone.now() + timedelta(days=1),
         notified_tomorrow=False,
+        cancelled=False,
     )
     for event in upcoming_circles:
         event.notify_tomorrow()
@@ -30,6 +32,7 @@ def advertise_circle():
         start__gte=timezone.now() + timedelta(days=1),
         start__lte=timezone.now() + timedelta(days=7),
         advertised=False,
+        cancelled=False,
     )
     for event in upcoming_circles:
         event.advertise()
