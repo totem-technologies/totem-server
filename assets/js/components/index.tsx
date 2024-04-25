@@ -1,7 +1,8 @@
 import { customElement, noShadowDOM } from "solid-element"
+import Avatar from "./avatar"
 import Circles from "./circles"
 import PromptSearch from "./promptSearch"
-var components = [PromptSearch, Circles]
+var components = [PromptSearch, Circles, Avatar]
 
 export default function () {
   components.forEach((c) => {

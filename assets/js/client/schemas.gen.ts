@@ -24,12 +24,16 @@ export const $TokenOut = {
   type: "object",
 } as const
 
+export const $ProfileAvatarTypeEnum = {
+  enum: ["TD", "IM"],
+  title: "ProfileAvatarTypeEnum",
+  type: "string",
+} as const
+
 export const $UserSchema = {
   properties: {
-    email: {
-      maxLength: 254,
-      title: "Email Address",
-      type: "string",
+    profile_avatar_type: {
+      $ref: "#/components/schemas/ProfileAvatarTypeEnum",
     },
     name: {
       anyOf: [
@@ -43,28 +47,26 @@ export const $UserSchema = {
       ],
       title: "Name",
     },
-    is_staff: {
-      default: false,
-      description: "Designates whether the user can log into this admin site.",
-      title: "Staff Status",
-      type: "boolean",
+    profile_avatar_seed: {
+      format: "uuid",
+      title: "Profile Avatar Seed",
+      type: "string",
     },
-    is_active: {
-      default: true,
+    profile_image: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
       description:
-        "Designates whether this user should be treated as active. Unselect this instead of deleting accounts.",
-      title: "Active",
-      type: "boolean",
-    },
-    is_superuser: {
-      default: false,
-      description:
-        "Designates that this user has all permissions without explicitly assigning them.",
-      title: "Superuser Status",
-      type: "boolean",
+        "Profile image, must be under 5mb. Will be cropped to a square.",
+      title: "Profile Image",
     },
   },
-  required: ["email"],
+  required: ["profile_avatar_type"],
   title: "UserSchema",
   type: "object",
 } as const
@@ -105,6 +107,10 @@ export const $CircleEventSchema = {
     circle: {
       $ref: "#/components/schemas/CircleSchema",
     },
+    url: {
+      title: "Url",
+      type: "string",
+    },
     start: {
       format: "date-time",
       title: "Start",
@@ -125,13 +131,16 @@ export const $CircleEventSchema = {
       type: "string",
     },
   },
-  required: ["circle", "date_created", "date_modified"],
+  required: ["circle", "url", "date_created", "date_modified"],
   title: "CircleEventSchema",
   type: "object",
 } as const
 
 export const $CircleSchema = {
   properties: {
+    author: {
+      $ref: "#/components/schemas/UserSchema",
+    },
     title: {
       maxLength: 255,
       title: "Title",
@@ -152,7 +161,7 @@ export const $CircleSchema = {
       type: "string",
     },
   },
-  required: ["title", "date_created", "date_modified"],
+  required: ["author", "title", "date_created", "date_modified"],
   title: "CircleSchema",
   type: "object",
 } as const

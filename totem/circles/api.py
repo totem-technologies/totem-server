@@ -3,7 +3,8 @@ from typing import List
 from django.utils.timezone import localtime
 from ninja import ModelSchema, Router
 from ninja.pagination import paginate
-from pydantic import field_validator
+
+from totem.users.schemas import UserSchema
 
 from .filters import all_upcoming_recommended_events
 from .models import Circle, CircleEvent
@@ -12,6 +13,8 @@ router = Router()
 
 
 class CircleSchema(ModelSchema):
+    author: UserSchema
+
     class Meta:
         model = Circle
         fields = ["title", "slug", "date_created", "date_modified"]
@@ -19,10 +22,15 @@ class CircleSchema(ModelSchema):
 
 class CircleEventSchema(ModelSchema):
     circle: CircleSchema
+    url: str
 
-    @field_validator("start", check_fields=False)
-    def convert_to_localtime(cls, value):
-        return localtime(value)
+    @staticmethod
+    def resolve_start(obj: CircleEvent):
+        return localtime(obj.start)
+
+    @staticmethod
+    def resolve_url(obj: CircleEvent):
+        return obj.get_absolute_url()
 
     class Meta:
         model = CircleEvent

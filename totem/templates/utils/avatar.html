@@ -1,9 +1,8 @@
 {% load static %}
-<img
-  width="{{ size }}"
-  height="{{ size }}"
-  src="{{ src }}"
-  alt=""
-  title="{{ name }}"
-  style="padding: {{ padding }}"
-  class="{{ classes }} rounded-full bg-white" />
+<t-avatar
+  url="{{ src }}"
+  name="{{ name }}"
+  size="{{ size }}"
+  seed="{{ seed }}"
+  type="{{ type }}">
+</t-avatar>

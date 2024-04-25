@@ -8,21 +8,16 @@ export type TokenOut = {
   key: string
 }
 
+export type ProfileAvatarTypeEnum = "TD" | "IM"
+
 export type UserSchema = {
-  email: string
+  profile_avatar_type: ProfileAvatarTypeEnum
   name?: string | null
+  profile_avatar_seed?: string
   /**
-   * Designates whether the user can log into this admin site.
+   * Profile image, must be under 5mb. Will be cropped to a square.
    */
-  is_staff?: boolean
-  /**
-   * Designates whether this user should be treated as active. Unselect this instead of deleting accounts.
-   */
-  is_active?: boolean
-  /**
-   * Designates that this user has all permissions without explicitly assigning them.
-   */
-  is_superuser?: boolean
+  profile_image?: string | null
 }
 
 export type Message = {
@@ -36,6 +31,7 @@ export type Input = {
 
 export type CircleEventSchema = {
   circle: CircleSchema
+  url: string
   start?: string
   slug?: string
   date_created: string
@@ -43,6 +39,7 @@ export type CircleEventSchema = {
 }
 
 export type CircleSchema = {
+  author: UserSchema
   title: string
   slug?: string
   date_created: string

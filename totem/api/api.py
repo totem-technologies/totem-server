@@ -1,11 +1,12 @@
 from django.contrib.auth import authenticate
 from django.contrib.auth import login as auth_login
 from django.http import HttpRequest
-from ninja import ModelSchema, NinjaAPI, Schema
+from ninja import NinjaAPI, Schema
 from ninja.security import APIKeyHeader
 
 from totem.circles.api import router as circles_router
 from totem.users.models import User
+from totem.users.schemas import UserSchema
 
 api = NinjaAPI(title="Totem API", version="1.0.0")
 api.add_router("/circles/", circles_router)
@@ -65,12 +66,6 @@ def token(request, token: str):
         raise InvalidToken
     auth_login(request, user)  # updates the last login date
     return {"key": str(user.api_key)}  # type: ignore
-
-
-class UserSchema(ModelSchema):
-    class Meta:
-        model = User
-        fields = ["email", "name", "is_staff", "is_active", "is_superuser"]
 
 
 @api.get("/auth/currentuser", response={200: UserSchema, 404: Message})
