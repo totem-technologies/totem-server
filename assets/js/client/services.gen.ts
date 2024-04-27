@@ -80,7 +80,6 @@ export class CirclesService {
   /**
    * List Circles
    * @param data The data for the request.
-   * @param data.category
    * @param data.limit
    * @param data.offset
    * @returns PagedCircleEventSchema OK
@@ -93,7 +92,6 @@ export class CirclesService {
       method: "GET",
       url: "/api/v1/circles/",
       query: {
-        category: data.category,
         limit: data.limit,
         offset: data.offset,
       },

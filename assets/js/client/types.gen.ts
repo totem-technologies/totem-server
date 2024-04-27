@@ -105,7 +105,6 @@ export type $OpenApiTs = {
   "/api/v1/circles/": {
     get: {
       req: {
-        category?: string | null
         limit?: number
         offset?: number
       }

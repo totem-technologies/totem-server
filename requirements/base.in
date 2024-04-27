@@ -2,9 +2,9 @@ argon2-cffi==23.1.0
 cssselect<2
 google-api-python-client<3
 google-auth-oauthlib<2
-gunicorn<22
+gunicorn<23
 lxml<6
-markdown<3.6.0
+markdown<3.7.0
 mrml<0.2.0
 Pillow<11
 posthog<4.0.0
@@ -13,7 +13,7 @@ python-dateutil < 3
 pytz
 qrcode==7.4.2
 requests<3
-sentry-sdk[django]<2
+sentry-sdk[django]<3
 uvicorn[standard]<0.30.0
 whitenoise==6.6.0
 
@@ -21,14 +21,13 @@ whitenoise==6.6.0
 # ------------------------------------------------------------------------------
 django-allauth<0.62.0
 django-anymail==10.3
-django-auditlog==3.0b4
+django-auditlog<4
 django-cors-headers<5
 django-environ==0.11.2
 django-htmx<2
 django-imagekit<6.0.0
 django-impersonate<2
 django-ninja<2
-django-redis==5.4.0
 django-sesame==3.2.2
 django-storages[s3]==1.14.2
 django-taggit<6

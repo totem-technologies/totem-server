@@ -18,9 +18,9 @@ asttokens==2.4.1
     # via stack-data
 backoff==2.2.1
     # via posthog
-boto3==1.34.87
+boto3==1.34.93
     # via django-storages
-botocore==1.34.87
+botocore==1.34.93
     # via
     #   boto3
     #   s3transfer
@@ -47,7 +47,7 @@ click==8.1.7
     #   uvicorn
 colorama==0.4.6
     # via djlint
-coverage==7.4.4
+coverage==7.5.0
     # via pytest-cov
 cryptography==42.0.5
     # via pyjwt
@@ -75,7 +75,6 @@ django==5.0.4
     #   django-extensions
     #   django-htmx
     #   django-ninja
-    #   django-redis
     #   django-sesame
     #   django-storages
     #   django-stubs
@@ -87,7 +86,7 @@ django-allauth==0.61.1
 django-anymail==10.3
 django-appconf==1.0.6
     # via django-imagekit
-django-auditlog==3.0b4
+django-auditlog==3.0.0
 django-cors-headers==4.3.1
 django-debug-toolbar==4.3.0
 django-environ==0.11.2
@@ -96,7 +95,6 @@ django-htmx==1.17.3
 django-imagekit==5.0.0
 django-impersonate==1.9.2
 django-ninja==1.1.0
-django-redis==5.4.0
 django-sesame==3.2.2
 django-storages==1.14.2
 django-stubs==1.9.0
@@ -114,13 +112,13 @@ execnet==2.1.1
 executing==2.0.1
     # via stack-data
 factory-boy==3.3.0
-faker==24.11.0
+faker==24.14.0
     # via factory-boy
 filelock==3.13.4
     # via virtualenv
 google-api-core==2.18.0
     # via google-api-python-client
-google-api-python-client==2.126.0
+google-api-python-client==2.127.0
 google-auth==2.29.0
     # via
     #   google-api-core
@@ -132,7 +130,7 @@ google-auth-httplib2==0.2.0
 google-auth-oauthlib==1.2.0
 googleapis-common-protos==1.63.0
     # via google-api-core
-gunicorn==21.2.0
+gunicorn==22.0.0
 h11==0.14.0
     # via uvicorn
 html-tag-names==0.1.2
@@ -145,7 +143,7 @@ httplib2==0.22.0
     #   google-auth-httplib2
 httptools==0.6.1
     # via uvicorn
-identify==2.5.35
+identify==2.5.36
     # via pre-commit
 idna==3.7
     # via
@@ -154,7 +152,7 @@ idna==3.7
 iniconfig==2.0.0
     # via pytest
 ipdb==0.13.13
-ipython==8.23.0
+ipython==8.24.0
     # via ipdb
 isort==5.13.2
     # via pylint
@@ -171,7 +169,7 @@ jsbeautifier==1.15.1
 json5==0.9.25
     # via djlint
 lxml==5.2.1
-markdown==3.5.2
+markdown==3.6
 markupsafe==2.1.5
     # via werkzeug
 matplotlib-inline==0.1.7
@@ -180,8 +178,8 @@ mccabe==0.7.0
     # via pylint
 monotonic==1.6
     # via posthog
-mrml==0.1.12
-mypy==1.9.0
+mrml==0.1.13
+mypy==1.10.0
     # via django-stubs
 mypy-extensions==1.0.0
     # via mypy
@@ -208,11 +206,11 @@ pillow==10.3.0
 pip==24.0
     # via pip-tools
 pip-tools==7.4.1
-platformdirs==4.2.0
+platformdirs==4.2.1
     # via
     #   pylint
     #   virtualenv
-pluggy==1.4.0
+pluggy==1.5.0
     # via pytest
 posthog==3.5.0
 pre-commit==3.7.0
@@ -238,9 +236,9 @@ pyasn1-modules==0.4.0
     # via google-auth
 pycparser==2.22
     # via cffi
-pydantic==2.7.0
+pydantic==2.7.1
     # via django-ninja
-pydantic-core==2.18.1
+pydantic-core==2.18.2
     # via pydantic
 pygments==2.17.2
     # via ipython
@@ -261,14 +259,14 @@ pyproject-hooks==1.0.0
     # via
     #   build
     #   pip-tools
-pytest==8.1.1
+pytest==8.1.2
     # via
     #   pytest-cov
     #   pytest-django
     #   pytest-socket
     #   pytest-sugar
     #   pytest-xdist
-pytest-cov==4.1.0
+pytest-cov==5.0.0
 pytest-django==4.8.0
 pytest-socket==0.7.0
 pytest-sugar==1.0.0
@@ -290,8 +288,6 @@ pyyaml==6.0.1
     #   pre-commit
     #   uvicorn
 qrcode==7.4.2
-redis==5.0.3
-    # via django-redis
 regex==2023.12.25
     # via djlint
 requests==2.31.0
@@ -307,10 +303,10 @@ requests-oauthlib==2.0.0
     #   google-auth-oauthlib
 rsa==4.9
     # via google-auth
-ruff==0.3.7
+ruff==0.4.2
 s3transfer==0.10.1
     # via boto3
-sentry-sdk==1.45.0
+sentry-sdk==2.0.1
 setuptools==69.5.1
     # via
     #   nodeenv
@@ -362,11 +358,11 @@ urllib3==2.2.1
     #   django-anymail
     #   requests
     #   sentry-sdk
-uv==0.1.34
+uv==0.1.39
 uvicorn==0.29.0
 uvloop==0.19.0
     # via uvicorn
-virtualenv==20.25.3
+virtualenv==20.26.0
     # via pre-commit
 watchdog==4.0.0
     # via werkzeug
