@@ -1,12 +1,18 @@
+import { createViewportObserver } from "@solid-primitives/intersection-observer"
 import { createMediaQuery } from "@solid-primitives/media"
+import { Refs } from "@solid-primitives/refs"
 import {
+  Accessor,
   For,
   Match,
+  Resource,
   Show,
   Switch,
+  createContext,
   createEffect,
   createResource,
   createSignal,
+  useContext,
 } from "solid-js"
 import {
   CircleEventSchema,
@@ -22,8 +28,22 @@ type QueryParams = {
 
 type DateChunk = {
   date: string
+  day: number
+  month: string
   events: CircleEventSchema[]
   dateId: string
+}
+
+type CircleListContextType = {
+  params: Accessor<QueryParams>
+  setParams: (params: QueryParams) => void
+  reset: () => void
+  refetch: () => void
+  events: Resource<PagedCircleEventSchema>
+  chunkedEvents: () => DateChunk[]
+  getMore: () => void
+  activeID: Accessor<string>
+  setActiveID: (id: string) => void
 }
 
 const defaultParams: QueryParams = {
@@ -31,7 +51,66 @@ const defaultParams: QueryParams = {
   category: "",
 }
 
-// const CircleListContext = createContext<QueryParams>(defaultParams)
+const CircleListContext = createContext<CircleListContextType>()
+
+function CircleListProvider(props: { children: any }) {
+  const [params, setParams] = createSignal<QueryParams>(getQueryParams())
+  const [activeID, setActiveID] = createSignal<string>("")
+  createEffect(() => {
+    const urlParams = new URLSearchParams(params() as any)
+    window.history.replaceState(null, "", "?" + urlParams.toString())
+    refetch()
+  })
+  const [events, { refetch }] = createResource(async () => {
+    return CirclesService.totemCirclesApiListCircles(params())
+  })
+  const chunkedEvents = () => {
+    if (!events()) return []
+    return chunkEventsByDate(events()!)
+  }
+  const reset = () => setParams(defaultParams)
+  const getMore = () => {
+    setParams({
+      ...params(),
+      limit: params().limit + 10,
+    })
+  }
+  return (
+    <CircleListContext.Provider
+      value={{
+        params,
+        setParams,
+        reset,
+        refetch,
+        events: events,
+        chunkedEvents,
+        getMore,
+        activeID,
+        setActiveID,
+      }}>
+      {props.children}
+    </CircleListContext.Provider>
+  )
+}
+
+function chunkEventsByDate(events: PagedCircleEventSchema) {
+  const dateChunks: DateChunk[] = []
+  for (const event of events.items) {
+    const date = timestampToDateString(event.start!)
+    const chunk = dateChunks.find((chunk) => chunk.date === date)
+    const day = new Date(event.start!).getDate()
+    const month = new Date(event.start!).toLocaleDateString("en-US", {
+      month: "short",
+    })
+    const dateId = `${month}-${day}`
+    if (chunk) {
+      chunk.events.push(event)
+    } else {
+      dateChunks.push({ date, events: [event], dateId, day, month })
+    }
+  }
+  return dateChunks
+}
 
 function getQueryParams(): QueryParams {
   var urlParams = new URLSearchParams(window.location.search)
@@ -75,64 +154,61 @@ function timestampToTimeString(timestamp: string) {
 }
 
 function Circles() {
-  const [params, setParams] = createSignal<QueryParams>(getQueryParams())
-  createEffect(() => {
-    const urlParams = new URLSearchParams(params() as any)
-    window.history.replaceState(null, "", "?" + urlParams.toString())
-    refetch()
-  })
-  const reset = () => setParams(defaultParams)
-  const [events, { mutate, refetch }] = createResource(async () => {
-    return CirclesService.totemCirclesApiListCircles(params())
-  })
+  return (
+    <CircleListProvider>
+      <CirclesInner />
+    </CircleListProvider>
+  )
+}
+
+function CirclesInner() {
+  const context = useContext(CircleListContext)
+  if (!context) return <div>Loading...</div>
   return (
     <div class="m-auto max-w-7xl">
-      <FilterBar events={events()!} onRefetch={refetch} onReset={reset} />
-      <Show when={events()} fallback={<div>Loading...</div>}>
+      <Show when={context.events()} fallback={<div>Loading...</div>}>
+        <FilterBar />
         <Switch fallback={<div>No Circles</div>}>
-          <Match when={events()}>
-            <EventsChunkedByDate events={events()!} />
+          <Match when={context.events()}>
+            <EventsChunkedByDate />
           </Match>
-          <Match when={events.error}>
-            <div>Error: {events.error.message}</div>
+          <Match when={context.events.error}>
+            <div>Error: {context.events.error.message}</div>
           </Match>
         </Switch>
       </Show>
-      <button
-        onClick={() => setParams({ ...params(), limit: params().limit + 10 })}>
-        More
-      </button>
+      <button onClick={context!.getMore}>More</button>
     </div>
   )
 }
 
-function chunkEventsByDate(events: PagedCircleEventSchema) {
-  const dateChunks: DateChunk[] = []
-  for (const event of events.items) {
-    const date = timestampToDateString(event.start!)
-    const dateId = date.replace(/[^A-Za-z0-9]/g, "").toLowerCase()
-    const chunk = dateChunks.find((chunk) => chunk.date === date)
-    if (chunk) {
-      chunk.events.push(event)
-    } else {
-      dateChunks.push({ date, events: [event], dateId })
-    }
+function EventsChunkedByDate() {
+  const context = useContext(CircleListContext)
+  function handleIntersection() {
+    // go through elements with chunk.dateIDs and find the one that is closest to the top, absolute value of boundingClientRect.top
+    const chunks = context!.chunkedEvents()
+    const closest = chunks.reduce((prev, curr) => {
+      const currTop = document
+        .getElementById(curr.dateId)!
+        .getBoundingClientRect().top
+      const prevTop = document
+        .getElementById(prev.dateId)!
+        .getBoundingClientRect().top
+      return Math.abs(currTop) < Math.abs(prevTop) ? curr : prev
+    })
+    context!.setActiveID(closest.dateId)
   }
-  return dateChunks
-}
-
-function EventsChunkedByDate(props: { events: PagedCircleEventSchema }) {
-  const eventsByDate = () => {
-    return chunkEventsByDate(props.events)
-  }
+  const [intersectionObserver] = createViewportObserver([], handleIntersection)
   return (
     <ul>
-      <For each={eventsByDate()}>
+      <For each={context!.chunkedEvents()}>
         {(chunk) => (
           <li>
-            <h2 id={chunk.dateId} class="h3 p-5 text-left">
-              {chunk.date}
-            </h2>
+            <a
+              use:intersectionObserver={(e) => handleIntersection()}
+              class="invisible relative -top-52 block"
+              id={chunk.dateId}></a>
+            <h2 class="h3 p-5 text-left">{chunk.date}</h2>
             <ul>
               <For each={chunk.events}>
                 {(event) => <Event event={event} />}
@@ -214,23 +290,78 @@ function getAvatar(event: CircleEventSchema) {
   )
 }
 
-function FilterBar(props: {
-  events: PagedCircleEventSchema
-  onRefetch: () => void
-  onReset: () => void
-}) {
+function FilterBar() {
+  const context = useContext(CircleListContext)
   return (
-    <div class="sticky top-0 flex h-20 items-center justify-between border-b-2 bg-tcreme">
+    <div class="sticky top-0 w-full border-b-2 bg-tcreme px-5 pt-2">
       <div>
-        <button>Filter</button>
+        <DateRibbon
+          chunks={context!.chunkedEvents()}
+          activeID={context!.activeID()}
+        />
       </div>
-      <div>
-        <button>Sort</button>
+      <div class="flex w-full items-baseline justify-between p-2">
+        <div>
+          <button>Filter</button>
+        </div>
+        <div>
+          <button>Sort</button>
+        </div>
+        <div>
+          <button onClick={context!.reset}>Reset</button>
+        </div>
       </div>
-      <div>
-        <button onClick={props.onRefetch}>Refresh</button>
-        <button onClick={props.onReset}>Reset</button>
+    </div>
+  )
+}
+
+function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
+  const [refs, setRefs] = createSignal<HTMLAnchorElement[]>([])
+  let scrollableRef: HTMLDivElement
+  let containerRef: HTMLDivElement
+  createEffect(() => {
+    // scroll active date into view, dont use scrollIntoView
+    const active = refs().find((ref) => ref.dataset.dateid === props.activeID)
+    if (active) {
+      // avoid scrollIntoView, try to keep the active date in the center
+      const centerActive =
+        active.getBoundingClientRect().left +
+        active.getBoundingClientRect().width / 2
+      const containerCenter = containerRef.getBoundingClientRect().width / 2
+      scrollableRef.scrollTo({
+        left:
+          Math.abs(containerRef.getBoundingClientRect().left) +
+          centerActive -
+          containerCenter,
+        behavior: "smooth",
+      })
+    }
+  })
+
+  return (
+    <div class="flex justify-center">
+      <div class="divider divider-horizontal m-0 ml-1 "></div>
+      <div ref={scrollableRef!} class="overflow-y-hidden overflow-x-scroll">
+        <div ref={containerRef!} class="flex gap-x-5 px-5">
+          <Refs ref={setRefs}>
+            <For each={props.chunks}>
+              {(chunk) => (
+                <a data-dateid={chunk.dateId} href={`#${chunk.dateId}`}>
+                  <h2
+                    class="text-center text-lg font-semibold"
+                    style={{
+                      color: chunk.dateId === props.activeID ? "blue" : "black",
+                    }}>
+                    {chunk.month} <br />
+                    {chunk.day}
+                  </h2>
+                </a>
+              )}
+            </For>
+          </Refs>
+        </div>
       </div>
+      <div class="divider divider-horizontal m-0 mr-1 "></div>
     </div>
   )
 }
