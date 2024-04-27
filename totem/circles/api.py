@@ -37,11 +37,34 @@ class CircleEventSchema(ModelSchema):
         fields = ["start", "slug", "date_created", "date_modified", "circle"]
 
 
+# class EventsFilterSchema(FilterSchema):
+#     category: str | None = None
+#     author: str | None = None
+
+
+# class FilterOptionsSchema(Schema):
+#     categories: List[str]
+#     authors: List[str]
+
+
 @router.get(
     "/",
     response={200: List[CircleEventSchema]},
     tags=["circles"],
 )
 @paginate
-def list_circles(request, category: str | None = None):
-    return all_upcoming_recommended_events(request.user, category=category)
+def list_circles(request):
+    return all_upcoming_recommended_events(request.user)
+    # return filters.filter(all_upcoming_recommended_events(request.user))
+
+
+# @router.get(
+#     "/filter-options",
+#     response={200: FilterOptionsSchema},
+#     tags=["circles"],
+# )
+# def filter_options(request):
+#     return {
+#         "categories": Circle.objects.values_list("categories__slug", flat=True).distinct(),
+#         "authors": Circle.objects.values_list("author__username", flat=True).distinct(),
+#     }

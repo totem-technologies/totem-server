@@ -30,6 +30,7 @@ type DateChunk = {
   date: string
   day: number
   month: string
+  weekdayShort: string
   events: CircleEventSchema[]
   dateId: string
 }
@@ -58,6 +59,10 @@ function CircleListProvider(props: { children: any }) {
   const [activeID, setActiveID] = createSignal<string>("")
   createEffect(() => {
     const urlParams = new URLSearchParams(params() as any)
+    // remove empty params
+    for (const key in params()) {
+      if (!params()[key as keyof QueryParams]) urlParams.delete(key)
+    }
     window.history.replaceState(null, "", "?" + urlParams.toString())
     refetch()
   })
@@ -102,11 +107,21 @@ function chunkEventsByDate(events: PagedCircleEventSchema) {
     const month = new Date(event.start!).toLocaleDateString("en-US", {
       month: "short",
     })
+    const weekdayShort = new Date(event.start!).toLocaleDateString("en-US", {
+      weekday: "short",
+    })
     const dateId = `${month}-${day}`
     if (chunk) {
       chunk.events.push(event)
     } else {
-      dateChunks.push({ date, events: [event], dateId, day, month })
+      dateChunks.push({
+        date,
+        events: [event],
+        dateId,
+        day,
+        month,
+        weekdayShort,
+      })
     }
   }
   return dateChunks
@@ -177,7 +192,9 @@ function CirclesInner() {
           </Match>
         </Switch>
       </Show>
-      <button onClick={context!.getMore}>More</button>
+      <button class="btn btn-ghost btn-sm mt-5" onClick={context!.getMore}>
+        More
+      </button>
     </div>
   )
 }
@@ -188,13 +205,14 @@ function EventsChunkedByDate() {
     // go through elements with chunk.dateIDs and find the one that is closest to the top, absolute value of boundingClientRect.top
     const chunks = context!.chunkedEvents()
     const closest = chunks.reduce((prev, curr) => {
-      const currTop = document
+      let currTop = document
         .getElementById(curr.dateId)!
         .getBoundingClientRect().top
-      const prevTop = document
+      let prevTop = document
         .getElementById(prev.dateId)!
         .getBoundingClientRect().top
-      return Math.abs(currTop) < Math.abs(prevTop) ? curr : prev
+      currTop = currTop < 0 ? currTop - 100 : currTop
+      return Math.abs(currTop) <= Math.abs(prevTop) ? curr : prev
     })
     context!.setActiveID(closest.dateId)
   }
@@ -302,13 +320,12 @@ function FilterBar() {
       </div>
       <div class="flex w-full items-baseline justify-between p-2">
         <div>
-          <button>Filter</button>
+          <FilterModal />
         </div>
         <div>
-          <button>Sort</button>
-        </div>
-        <div>
-          <button onClick={context!.reset}>Reset</button>
+          <button class="btn btn-ghost btn-sm" onClick={context!.reset}>
+            Reset
+          </button>
         </div>
       </div>
     </div>
@@ -337,23 +354,26 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
       })
     }
   })
+  const isActive = (chunk: DateChunk) => chunk.dateId === props.activeID
+  const activeClasses =
+    "bg-white rounded border-t-4 border-tmauve pt-0 font-semibold shadow-md"
+  const inactiveClasses = "text-gray-500 pt-1 hover:bg-white rounded"
+  const classes = (chunk: DateChunk) =>
+    isActive(chunk) ? activeClasses : inactiveClasses
 
   return (
     <div class="flex justify-center">
       <div class="divider divider-horizontal m-0 ml-1 "></div>
-      <div ref={scrollableRef!} class="overflow-y-hidden overflow-x-scroll">
-        <div ref={containerRef!} class="flex gap-x-5 px-5">
+      <div ref={scrollableRef!} class="overflow-x-auto overflow-y-hidden">
+        <div ref={containerRef!} class="flex gap-x-2 px-5 pb-3">
           <Refs ref={setRefs}>
             <For each={props.chunks}>
               {(chunk) => (
                 <a data-dateid={chunk.dateId} href={`#${chunk.dateId}`}>
                   <h2
-                    class="text-center text-lg font-semibold"
-                    style={{
-                      color: chunk.dateId === props.activeID ? "blue" : "black",
-                    }}>
-                    {chunk.month} <br />
-                    {chunk.day}
+                    class={`px-2 text-center transition-all ${classes(chunk)}`}>
+                    <div class="text-xs">{chunk.weekdayShort}</div>
+                    <div class="text-lg">{chunk.day}</div>
                   </h2>
                 </a>
               )}
@@ -363,6 +383,29 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
       </div>
       <div class="divider divider-horizontal m-0 mr-1 "></div>
     </div>
+  )
+}
+
+function FilterModal() {
+  let modalRef: HTMLDialogElement
+  return (
+    <>
+      <button class="btn btn-ghost btn-sm" onClick={() => modalRef.showModal()}>
+        Filter
+      </button>
+      <dialog ref={modalRef!} id="my_modal_1" class="modal">
+        <div class="modal-box">
+          <h3 class="text-lg font-bold">Hello!</h3>
+          <p class="py-4">Press ESC key or click the button below to close</p>
+          <div class="modal-action">
+            <form method="dialog">
+              {/* if there is a button in form, it will close the modal */}
+              <button class="btn">Close</button>
+            </form>
+          </div>
+        </div>
+      </dialog>
+    </>
   )
 }
 
