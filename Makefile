@@ -4,6 +4,9 @@ run:
 build:
 	docker-compose -f local.yml build
 
+build-prod:
+	docker build -t totem-prod -f compose/production/django/Dockerfile .
+
 test:
 	docker-compose -f local.yml run --rm django coverage run -m pytest -n auto
 
