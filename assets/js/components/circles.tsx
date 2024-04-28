@@ -17,6 +17,7 @@ import {
 import {
   CircleEventSchema,
   CirclesService,
+  FilterOptionsSchema,
   PagedCircleEventSchema,
 } from "../client/index"
 import Avatar from "./avatar"
@@ -25,6 +26,7 @@ import ErrorBoundary from "./errors"
 type QueryParams = {
   limit: number
   category: string
+  author: string
 }
 
 type DateChunk = {
@@ -46,11 +48,13 @@ type CircleListContextType = {
   getMore: () => void
   activeID: Accessor<string>
   setActiveID: (id: string) => void
+  filters: Resource<FilterOptionsSchema>
 }
 
 const defaultParams: QueryParams = {
   limit: 20,
   category: "",
+  author: "",
 }
 
 const CircleListContext = createContext<CircleListContextType>()
@@ -70,6 +74,14 @@ function CircleListProvider(props: { children: any }) {
   const [events, { refetch }] = createResource(async () => {
     return CirclesService.totemCirclesApiListCircles(params())
   })
+  const [filters, { refetch: filterRefetch }] = createResource(
+    async () => {
+      return CirclesService.totemCirclesApiFilterOptions()
+    },
+    {
+      initialValue: { categories: [], authors: [] },
+    }
+  )
   const chunkedEvents = () => {
     if (!events()) return []
     return chunkEventsByDate(events()!)
@@ -93,6 +105,7 @@ function CircleListProvider(props: { children: any }) {
         getMore,
         activeID,
         setActiveID,
+        filters,
       }}>
       {props.children}
     </CircleListContext.Provider>
@@ -133,6 +146,7 @@ function getQueryParams(): QueryParams {
   return {
     limit: parseInt(urlParams.get("limit") || defaultParams.limit.toString()),
     category: urlParams.get("category") || defaultParams.category,
+    author: urlParams.get("author") || defaultParams.author,
   }
 }
 
@@ -194,6 +208,9 @@ function CirclesInner() {
         </Match>
         <Match when={context.events.error}>
           <div>Error: {context.events.error.message}</div>
+        </Match>
+        <Match when={context.events.loading}>
+          <div>Loading...</div>
         </Match>
       </Switch>
     </div>
@@ -390,7 +407,7 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
 }
 
 function FilterModal() {
-  let drawerRef: HTMLDialogElement
+  const context = useContext(CircleListContext)
   return (
     <div class="drawer drawer-end">
       <input id="filter-drawer" type="checkbox" class="drawer-toggle" />
@@ -404,15 +421,49 @@ function FilterModal() {
           for="filter-drawer"
           aria-label="close sidebar"
           class="drawer-overlay"></label>
-        <ul class="menu min-h-full w-80 bg-base-200 p-4 text-base-content">
-          {/* Sidebar content here */}
-          <li>
-            <a>Sidebar Item 1</a>
-          </li>
-          <li>
-            <a>Sidebar Item 2</a>
-          </li>
-        </ul>
+        <div class="flex min-h-full w-80 flex-col gap-5 bg-tcreme p-4 text-left">
+          <h3 class="text-lg font-bold">Filter Circles</h3>
+          <div>
+            <label class="form-label" for="category">
+              Category
+            </label>
+            <select
+              class="form-select"
+              id="category"
+              onChange={(e) =>
+                context!.setParams({
+                  ...context!.params(),
+                  category: e.currentTarget.value,
+                })
+              }>
+              <option value="">All</option>
+              <For each={context!.filters()!.categories}>
+                {(category) => (
+                  <option value={category.slug}>{category.name}</option>
+                )}
+              </For>
+            </select>
+          </div>
+          <div>
+            <label class="form-label" for="author">
+              Keeper
+            </label>
+            <select
+              class="form-select"
+              id="author"
+              onChange={(e) =>
+                context!.setParams({
+                  ...context!.params(),
+                  author: e.currentTarget.value,
+                })
+              }>
+              <option value="">All</option>
+              <For each={context!.filters()!.authors}>
+                {(author) => <option value={author.slug}>{author.name}</option>}
+              </For>
+            </select>
+          </div>
+        </div>
       </div>
     </div>
   )

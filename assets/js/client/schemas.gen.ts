@@ -83,6 +83,36 @@ export const $Message = {
   type: "object",
 } as const
 
+export const $EventsFilterSchema = {
+  properties: {
+    category: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Category",
+    },
+    author: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Author",
+    },
+  },
+  required: ["category", "author"],
+  title: "EventsFilterSchema",
+  type: "object",
+} as const
+
 export const $Input = {
   properties: {
     limit: {
@@ -182,5 +212,59 @@ export const $PagedCircleEventSchema = {
   },
   required: ["items", "count"],
   title: "PagedCircleEventSchema",
+  type: "object",
+} as const
+
+export const $AuthorFilterSchema = {
+  properties: {
+    name: {
+      title: "Name",
+      type: "string",
+    },
+    slug: {
+      title: "Slug",
+      type: "string",
+    },
+  },
+  required: ["name", "slug"],
+  title: "AuthorFilterSchema",
+  type: "object",
+} as const
+
+export const $CategoryFilterSchema = {
+  properties: {
+    name: {
+      title: "Name",
+      type: "string",
+    },
+    slug: {
+      title: "Slug",
+      type: "string",
+    },
+  },
+  required: ["name", "slug"],
+  title: "CategoryFilterSchema",
+  type: "object",
+} as const
+
+export const $FilterOptionsSchema = {
+  properties: {
+    categories: {
+      items: {
+        $ref: "#/components/schemas/CategoryFilterSchema",
+      },
+      title: "Categories",
+      type: "array",
+    },
+    authors: {
+      items: {
+        $ref: "#/components/schemas/AuthorFilterSchema",
+      },
+      title: "Authors",
+      type: "array",
+    },
+  },
+  required: ["categories", "authors"],
+  title: "FilterOptionsSchema",
   type: "object",
 } as const

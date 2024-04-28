@@ -24,6 +24,11 @@ export type Message = {
   message: string
 }
 
+export type EventsFilterSchema = {
+  category: string | null
+  author: string | null
+}
+
 export type Input = {
   limit?: number
   offset?: number
@@ -49,6 +54,21 @@ export type CircleSchema = {
 export type PagedCircleEventSchema = {
   items: Array<CircleEventSchema>
   count: number
+}
+
+export type AuthorFilterSchema = {
+  name: string
+  slug: string
+}
+
+export type CategoryFilterSchema = {
+  name: string
+  slug: string
+}
+
+export type FilterOptionsSchema = {
+  categories: Array<CategoryFilterSchema>
+  authors: Array<AuthorFilterSchema>
 }
 
 export type $OpenApiTs = {
@@ -105,6 +125,8 @@ export type $OpenApiTs = {
   "/api/v1/circles/": {
     get: {
       req: {
+        author: string | null
+        category: string | null
         limit?: number
         offset?: number
       }
@@ -113,6 +135,16 @@ export type $OpenApiTs = {
          * OK
          */
         200: PagedCircleEventSchema
+      }
+    }
+  }
+  "/api/v1/circles/filter-options": {
+    get: {
+      res: {
+        /**
+         * OK
+         */
+        200: FilterOptionsSchema
       }
     }
   }

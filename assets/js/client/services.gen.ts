@@ -80,21 +80,39 @@ export class CirclesService {
   /**
    * List Circles
    * @param data The data for the request.
+   * @param data.category
+   * @param data.author
    * @param data.limit
    * @param data.offset
    * @returns PagedCircleEventSchema OK
    * @throws ApiError
    */
   public static totemCirclesApiListCircles(
-    data: $OpenApiTs["/api/v1/circles/"]["get"]["req"] = {}
+    data: $OpenApiTs["/api/v1/circles/"]["get"]["req"]
   ): CancelablePromise<$OpenApiTs["/api/v1/circles/"]["get"]["res"][200]> {
     return __request(OpenAPI, {
       method: "GET",
       url: "/api/v1/circles/",
       query: {
+        category: data.category,
+        author: data.author,
         limit: data.limit,
         offset: data.offset,
       },
+    })
+  }
+
+  /**
+   * Filter Options
+   * @returns FilterOptionsSchema OK
+   * @throws ApiError
+   */
+  public static totemCirclesApiFilterOptions(): CancelablePromise<
+    $OpenApiTs["/api/v1/circles/filter-options"]["get"]["res"][200]
+  > {
+    return __request(OpenAPI, {
+      method: "GET",
+      url: "/api/v1/circles/filter-options",
     })
   }
 }
