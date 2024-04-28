@@ -20,6 +20,7 @@ import {
   PagedCircleEventSchema,
 } from "../client/index"
 import Avatar from "./avatar"
+import ErrorBoundary from "./errors"
 
 type QueryParams = {
   limit: number
@@ -170,9 +171,11 @@ function timestampToTimeString(timestamp: string) {
 
 function Circles() {
   return (
-    <CircleListProvider>
-      <CirclesInner />
-    </CircleListProvider>
+    <ErrorBoundary>
+      <CircleListProvider>
+        <CirclesInner />
+      </CircleListProvider>
+    </ErrorBoundary>
   )
 }
 
@@ -181,20 +184,18 @@ function CirclesInner() {
   if (!context) return <div>Loading...</div>
   return (
     <div class="m-auto max-w-7xl">
-      <Show when={context.events()} fallback={<div>Loading...</div>}>
-        <FilterBar />
-        <Switch fallback={<div>No Circles</div>}>
-          <Match when={context.events()}>
-            <EventsChunkedByDate />
-          </Match>
-          <Match when={context.events.error}>
-            <div>Error: {context.events.error.message}</div>
-          </Match>
-        </Switch>
-      </Show>
-      <button class="btn btn-ghost btn-sm mt-5" onClick={context!.getMore}>
-        More
-      </button>
+      <Switch fallback={<div>No Circles yet.</div>}>
+        <Match when={context.events()}>
+          <FilterBar />
+          <EventsChunkedByDate />
+          <button class="btn btn-ghost btn-sm mt-5" onClick={context!.getMore}>
+            More
+          </button>
+        </Match>
+        <Match when={context.events.error}>
+          <div>Error: {context.events.error.message}</div>
+        </Match>
+      </Switch>
     </div>
   )
 }
@@ -323,7 +324,9 @@ function FilterBar() {
           <FilterModal />
         </div>
         <div>
-          <button class="btn btn-ghost btn-sm" onClick={context!.reset}>
+          <button
+            class="btn btn-ghost btn-sm font-normal"
+            onClick={context!.reset}>
             Reset
           </button>
         </div>
@@ -387,25 +390,31 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
 }
 
 function FilterModal() {
-  let modalRef: HTMLDialogElement
+  let drawerRef: HTMLDialogElement
   return (
-    <>
-      <button class="btn btn-ghost btn-sm" onClick={() => modalRef.showModal()}>
-        Filter
-      </button>
-      <dialog ref={modalRef!} id="my_modal_1" class="modal">
-        <div class="modal-box">
-          <h3 class="text-lg font-bold">Hello!</h3>
-          <p class="py-4">Press ESC key or click the button below to close</p>
-          <div class="modal-action">
-            <form method="dialog">
-              {/* if there is a button in form, it will close the modal */}
-              <button class="btn">Close</button>
-            </form>
-          </div>
-        </div>
-      </dialog>
-    </>
+    <div class="drawer drawer-end">
+      <input id="filter-drawer" type="checkbox" class="drawer-toggle" />
+      <div class="drawer-content">
+        <label for="filter-drawer" class="btn btn-ghost btn-sm font-bold">
+          Filter
+        </label>
+      </div>
+      <div class="drawer-side">
+        <label
+          for="filter-drawer"
+          aria-label="close sidebar"
+          class="drawer-overlay"></label>
+        <ul class="menu min-h-full w-80 bg-base-200 p-4 text-base-content">
+          {/* Sidebar content here */}
+          <li>
+            <a>Sidebar Item 1</a>
+          </li>
+          <li>
+            <a>Sidebar Item 2</a>
+          </li>
+        </ul>
+      </div>
+    </div>
   )
 }
 
