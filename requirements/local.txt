@@ -5,6 +5,7 @@ annotated-types==0.6.0
 anyio==4.3.0
     # via watchfiles
 argon2-cffi==23.1.0
+    # via -r requirements/base.in
 argon2-cffi-bindings==21.2.0
     # via argon2-cffi
 asgiref==3.8.1
@@ -47,13 +48,16 @@ click==8.1.7
     #   uvicorn
 colorama==0.4.6
     # via djlint
-coverage==7.5.0
-    # via pytest-cov
+coverage[toml]==7.5.0
+    # via
+    #   -r requirements/local.in
+    #   pytest-cov
 cryptography==42.0.5
     # via pyjwt
 cssbeautifier==1.15.1
     # via djlint
 cssselect==1.2.0
+    # via -r requirements/base.in
 decorator==5.1.1
     # via
     #   ipdb
@@ -66,6 +70,7 @@ distlib==0.3.8
     # via virtualenv
 django==5.0.4
     # via
+    #   -r requirements/base.in
     #   django-allauth
     #   django-anymail
     #   django-appconf
@@ -83,26 +88,43 @@ django==5.0.4
     #   django-timezone-field
     #   sentry-sdk
 django-allauth==0.61.1
+    # via -r requirements/base.in
 django-anymail==10.3
+    # via -r requirements/base.in
 django-appconf==1.0.6
     # via django-imagekit
 django-auditlog==3.0.0
+    # via -r requirements/base.in
 django-cors-headers==4.3.1
+    # via -r requirements/base.in
 django-debug-toolbar==4.3.0
+    # via -r requirements/local.in
 django-environ==0.11.2
+    # via -r requirements/base.in
 django-extensions==3.2.3
+    # via -r requirements/local.in
 django-htmx==1.17.3
+    # via -r requirements/base.in
 django-imagekit==5.0.0
+    # via -r requirements/base.in
 django-impersonate==1.9.2
+    # via -r requirements/base.in
 django-ninja==1.1.0
+    # via -r requirements/base.in
 django-sesame==3.2.2
-django-storages==1.14.2
-django-stubs==1.9.0
+    # via -r requirements/base.in
+django-storages[s3]==1.14.2
+    # via -r requirements/base.in
+django-stubs[compatible-mypy]==1.9.0
+    # via -r requirements/local.in
 django-stubs-ext==4.2.7
     # via django-stubs
 django-taggit==5.0.1
+    # via -r requirements/base.in
 django-timezone-field==6.1.0
+    # via -r requirements/base.in
 djlint==1.34.1
+    # via -r requirements/local.in
 editorconfig==0.12.4
     # via
     #   cssbeautifier
@@ -112,6 +134,7 @@ execnet==2.1.1
 executing==2.0.1
     # via stack-data
 factory-boy==3.3.0
+    # via -r requirements/local.in
 faker==24.14.0
     # via factory-boy
 filelock==3.13.4
@@ -119,6 +142,7 @@ filelock==3.13.4
 google-api-core==2.18.0
     # via google-api-python-client
 google-api-python-client==2.127.0
+    # via -r requirements/base.in
 google-auth==2.29.0
     # via
     #   google-api-core
@@ -128,9 +152,11 @@ google-auth==2.29.0
 google-auth-httplib2==0.2.0
     # via google-api-python-client
 google-auth-oauthlib==1.2.0
+    # via -r requirements/base.in
 googleapis-common-protos==1.63.0
     # via google-api-core
 gunicorn==22.0.0
+    # via -r requirements/base.in
 h11==0.14.0
     # via uvicorn
 html-tag-names==0.1.2
@@ -152,6 +178,7 @@ idna==3.7
 iniconfig==2.0.0
     # via pytest
 ipdb==0.13.13
+    # via -r requirements/local.in
 ipython==8.24.0
     # via ipdb
 isort==5.13.2
@@ -169,7 +196,9 @@ jsbeautifier==1.15.1
 json5==0.9.25
     # via djlint
 lxml==5.2.1
+    # via -r requirements/base.in
 markdown==3.6
+    # via -r requirements/base.in
 markupsafe==2.1.5
     # via werkzeug
 matplotlib-inline==0.1.7
@@ -179,8 +208,11 @@ mccabe==0.7.0
 monotonic==1.6
     # via posthog
 mrml==0.1.13
+    # via -r requirements/base.in
 mypy==1.10.0
-    # via django-stubs
+    # via
+    #   -r requirements/local.in
+    #   django-stubs
 mypy-extensions==1.0.0
     # via mypy
 nodeenv==1.8.0
@@ -202,10 +234,11 @@ pexpect==4.9.0
 pilkit==3.0
     # via django-imagekit
 pillow==10.3.0
-    # via pilkit
-pip==24.0
-    # via pip-tools
+    # via
+    #   -r requirements/base.in
+    #   pilkit
 pip-tools==7.4.1
+    # via -r requirements/local.in
 platformdirs==4.2.1
     # via
     #   pylint
@@ -213,7 +246,9 @@ platformdirs==4.2.1
 pluggy==1.5.0
     # via pytest
 posthog==3.5.0
+    # via -r requirements/base.in
 pre-commit==3.7.0
+    # via -r requirements/local.in
 prompt-toolkit==3.0.43
     # via ipython
 proto-plus==1.23.0
@@ -224,6 +259,7 @@ protobuf==4.25.3
     #   googleapis-common-protos
     #   proto-plus
 psycopg2==2.9.9
+    # via -r requirements/base.in
 ptyprocess==0.7.0
     # via pexpect
 pure-eval==0.2.2
@@ -242,13 +278,14 @@ pydantic-core==2.18.2
     # via pydantic
 pygments==2.17.2
     # via ipython
-pyjwt==2.8.0
+pyjwt[crypto]==2.8.0
     # via django-allauth
 pylint==3.1.0
     # via
     #   pylint-django
     #   pylint-plugin-utils
 pylint-django==2.5.5
+    # via -r requirements/local.in
 pylint-plugin-utils==0.8.2
     # via pylint-django
 pyparsing==3.1.2
@@ -261,18 +298,25 @@ pyproject-hooks==1.0.0
     #   pip-tools
 pytest==8.1.2
     # via
+    #   -r requirements/local.in
     #   pytest-cov
     #   pytest-django
     #   pytest-socket
     #   pytest-sugar
     #   pytest-xdist
 pytest-cov==5.0.0
+    # via -r requirements/local.in
 pytest-django==4.8.0
+    # via -r requirements/local.in
 pytest-socket==0.7.0
+    # via -r requirements/local.in
 pytest-sugar==1.0.0
-pytest-xdist==3.5.0
+    # via -r requirements/local.in
+pytest-xdist==3.6.1
+    # via -r requirements/local.in
 python-dateutil==2.9.0.post0
     # via
+    #   -r requirements/base.in
     #   botocore
     #   django-auditlog
     #   faker
@@ -282,16 +326,19 @@ python-dotenv==1.0.1
 python3-openid==3.2.0
     # via django-allauth
 pytz==2024.1
+    # via -r requirements/base.in
 pyyaml==6.0.1
     # via
     #   djlint
     #   pre-commit
     #   uvicorn
 qrcode==7.4.2
+    # via -r requirements/base.in
 regex==2023.12.25
     # via djlint
 requests==2.31.0
     # via
+    #   -r requirements/base.in
     #   django-allauth
     #   django-anymail
     #   google-api-core
@@ -304,13 +351,11 @@ requests-oauthlib==2.0.0
 rsa==4.9
     # via google-auth
 ruff==0.4.2
+    # via -r requirements/local.in
 s3transfer==0.10.1
     # via boto3
-sentry-sdk==2.0.1
-setuptools==69.5.1
-    # via
-    #   nodeenv
-    #   pip-tools
+sentry-sdk[django]==2.0.1
+    # via -r requirements/base.in
 six==1.16.0
     # via
     #   asttokens
@@ -359,7 +404,9 @@ urllib3==2.2.1
     #   requests
     #   sentry-sdk
 uv==0.1.39
-uvicorn==0.29.0
+    # via -r requirements/local.in
+uvicorn[standard]==0.29.0
+    # via -r requirements/base.in
 uvloop==0.19.0
     # via uvicorn
 virtualenv==20.26.0
@@ -367,12 +414,18 @@ virtualenv==20.26.0
 watchdog==4.0.0
     # via werkzeug
 watchfiles==0.21.0
-    # via uvicorn
+    # via
+    #   -r requirements/local.in
+    #   uvicorn
 wcwidth==0.2.13
     # via prompt-toolkit
 websockets==12.0
     # via uvicorn
-werkzeug==3.0.2
+werkzeug[watchdog]==3.0.2
+    # via
+    #   -r requirements/local.in
+    #   werkzeug
 wheel==0.43.0
     # via pip-tools
 whitenoise==6.6.0
+    # via -r requirements/base.in
