@@ -26,9 +26,8 @@ function Avatar(props: {
         <img
           style={{
             width: props.size + "px",
-            height: props.size + "px",
           }}
-          class="rounded-full"
+          class="h-auto max-w-full rounded-full"
           src={props.url}
           alt={props.name}
         />
