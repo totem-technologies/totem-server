@@ -19,7 +19,7 @@ whitenoise==6.6.0
 
 # Django
 # ------------------------------------------------------------------------------
-django-allauth<0.62.0
+django-allauth<0.63.0
 django-anymail==10.3
 django-auditlog<4
 django-cors-headers<5
