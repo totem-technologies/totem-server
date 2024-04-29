@@ -18,6 +18,9 @@
   "keywords": [],
   "author": "",
   "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
   "devDependencies": {
     "@hey-api/openapi-ts": "^0.42.1",
     "@tailwindcss/aspect-ratio": "^0.4.2",

@@ -146,6 +146,10 @@ function chunkEventsByDate(events: PagedCircleEventSchema) {
   return dateChunks
 }
 
+function getFirstName(name: string) {
+  return name.split(" ")[0]
+}
+
 function getQueryParams(): QueryParams {
   var urlParams = new URLSearchParams(window.location.search)
   return {
@@ -289,7 +293,9 @@ function MobileEvent(props: { event: CircleEventSchema }) {
 
       <div class="flex-grow">
         <p class="font-bold">{props.event.circle.title}</p>
-        <p class="text-sm">with {props.event.circle.author.name}</p>
+        <p class="text-sm">
+          with {getFirstName(props.event.circle.author.name!)}
+        </p>
         <p class="text-sm">{timestampToTimeString(props.event.start!)}</p>
       </div>
       <div class="text-2xl">→</div>
@@ -310,7 +316,9 @@ function DesktopEvent(props: { event: CircleEventSchema }) {
       <div class="divider divider-horizontal self-stretch"></div>
       <div class="flex items-center justify-center gap-5">
         <div>{getAvatar(props.event)}</div>
-        <div class="text-lg">{props.event.circle.author.name}</div>
+        <div class="text-lg">
+          {getFirstName(props.event.circle.author.name!)}
+        </div>
       </div>
       <div class="divider divider-horizontal self-stretch"></div>
       <div class="flex-grow text-center">
