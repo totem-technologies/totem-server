@@ -399,11 +399,14 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
   const classes = (chunk: DateChunk) =>
     isActive(chunk) ? activeClasses : inactiveClasses
 
-  const scrollTo = () => {
+  const scrollTo = (chunkID: string) => {
     setTimeout(() => {
       context!.setScrolling(false)
-    }, 1000)
+    }, 500)
     context!.setScrolling(true)
+    document.getElementById(chunkID)!.scrollIntoView({
+      behavior: "smooth",
+    })
   }
 
   return (
@@ -415,9 +418,9 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
             <For each={props.chunks}>
               {(chunk) => (
                 <a
+                  class="cursor-pointer"
                   data-dateid={chunk.dateId}
-                  onClick={scrollTo}
-                  href={`#${chunk.dateId}`}>
+                  onClick={() => scrollTo(chunk.dateId)}>
                   <h2
                     class={`px-2 text-center transition-all ${classes(chunk)}`}>
                     <div class="text-xs">{chunk.weekdayShort}</div>
