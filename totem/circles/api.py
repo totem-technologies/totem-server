@@ -1,8 +1,9 @@
 from typing import List
 
 from django.utils.timezone import localtime
-from ninja import FilterSchema, ModelSchema, Query, Router, Schema
+from ninja import FilterSchema, ModelSchema, Router, Schema
 from ninja.pagination import paginate
+from ninja.params.functions import Query
 
 from totem.users.schemas import UserSchema
 
@@ -76,8 +77,8 @@ def filter_options(request):
     events = all_upcoming_recommended_events(request.user)
     # get distinct categories that have events
     categories = set(events.values_list("circle__categories__name", "circle__categories__slug").distinct())
-    categories = [{"name": name, "slug": slug} for name, slug in categories]
+    categories = [{"name": name, "slug": slug} for name, slug in categories if name]
     # get distinct authors that have events
     authors = set(events.values_list("circle__author__name", "circle__author__slug").distinct())
-    authors = [{"name": name, "slug": slug} for name, slug in authors]
+    authors = [{"name": name, "slug": slug} for name, slug in authors if name]
     return {"categories": categories, "authors": authors}
