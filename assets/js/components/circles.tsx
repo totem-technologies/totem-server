@@ -48,6 +48,8 @@ type CircleListContextType = {
   getMore: () => void
   activeID: Accessor<string>
   setActiveID: (id: string) => void
+  scrolling: Accessor<boolean>
+  setScrolling: (scrolling: boolean) => void
   filters: Resource<FilterOptionsSchema>
 }
 
@@ -61,6 +63,7 @@ const CircleListContext = createContext<CircleListContextType>()
 
 function CircleListProvider(props: { children: any }) {
   const [params, setParams] = createSignal<QueryParams>(getQueryParams())
+  const [scrolling, setScrolling] = createSignal<boolean>(false)
   const [activeID, setActiveID] = createSignal<string>("")
   createEffect(() => {
     const urlParams = new URLSearchParams(params() as any)
@@ -105,6 +108,8 @@ function CircleListProvider(props: { children: any }) {
         getMore,
         activeID,
         setActiveID,
+        scrolling,
+        setScrolling,
         filters,
       }}>
       {props.children}
@@ -279,10 +284,8 @@ function MobileEvent(props: { event: CircleEventSchema }) {
   return (
     <a
       href={props.event.url}
-      class="flex items-center justify-center gap-5 border-t-2 p-5 text-left hover:bg-white">
-      <div class="rounded-full bg-white p-[0.2rem]">
-        {getAvatar(props.event)}
-      </div>
+      class="flex items-center justify-center gap-2 border-t-2 p-5 text-left hover:bg-white">
+      <div class="rounded-full pr-2">{getAvatar(props.event)}</div>
 
       <div class="flex-grow">
         <p class="font-bold">{props.event.circle.title}</p>
@@ -358,10 +361,12 @@ function FilterBar() {
 }
 
 function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
+  const context = useContext(CircleListContext)
   const [refs, setRefs] = createSignal<HTMLAnchorElement[]>([])
   let scrollableRef: HTMLDivElement
   let containerRef: HTMLDivElement
   createEffect(() => {
+    if (context!.scrolling()) return
     // scroll active date into view, dont use scrollIntoView
     const active = refs().find((ref) => ref.dataset.dateid === props.activeID)
     if (active) {
@@ -386,6 +391,13 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
   const classes = (chunk: DateChunk) =>
     isActive(chunk) ? activeClasses : inactiveClasses
 
+  const scrollTo = () => {
+    setTimeout(() => {
+      context!.setScrolling(false)
+    }, 1000)
+    context!.setScrolling(true)
+  }
+
   return (
     <div class="flex justify-center">
       <div class="divider divider-horizontal m-0 ml-1 "></div>
@@ -394,7 +406,10 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
           <Refs ref={setRefs}>
             <For each={props.chunks}>
               {(chunk) => (
-                <a data-dateid={chunk.dateId} href={`#${chunk.dateId}`}>
+                <a
+                  data-dateid={chunk.dateId}
+                  onClick={scrollTo}
+                  href={`#${chunk.dateId}`}>
                   <h2
                     class={`px-2 text-center transition-all ${classes(chunk)}`}>
                     <div class="text-xs">{chunk.weekdayShort}</div>
