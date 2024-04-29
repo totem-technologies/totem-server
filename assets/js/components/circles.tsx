@@ -202,9 +202,13 @@ function CirclesInner() {
         <Match when={context.events()}>
           <FilterBar />
           <EventsChunkedByDate />
-          <button class="btn btn-ghost btn-sm mt-5" onClick={context!.getMore}>
-            More
-          </button>
+          <Show when={context.events()!.items.length == context.params().limit}>
+            <button
+              class="btn btn-ghost btn-sm mt-5"
+              onClick={context!.getMore}>
+              More
+            </button>
+          </Show>
         </Match>
         <Match when={context.events.error}>
           <div>Error: {context.events.error.message}</div>
