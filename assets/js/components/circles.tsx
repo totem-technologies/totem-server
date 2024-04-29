@@ -100,7 +100,7 @@ function CircleListProvider(props: { children: any }) {
         setParams,
         reset,
         refetch,
-        events: events,
+        events,
         chunkedEvents,
         getMore,
         activeID,
@@ -321,6 +321,7 @@ function getAvatar(event: CircleEventSchema) {
       size={70}
       name={event.circle.author.name || ""}
       seed={event.circle.author.profile_avatar_seed || ""}
+      url={event.circle.author.profile_image || undefined}
       type={event.circle.author.profile_avatar_type}
     />
   )

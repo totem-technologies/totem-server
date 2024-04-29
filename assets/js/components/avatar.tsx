@@ -18,7 +18,7 @@ function Avatar(props: {
         fallback={
           <_Avatar
             size={props.size}
-            title={props.name}
+            // title={props.name}
             name={props.seed}
             variant="marble"
           />
