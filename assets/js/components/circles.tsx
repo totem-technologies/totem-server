@@ -451,6 +451,8 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
 function FilterModal() {
   const context = useContext(CircleListContext)
   const drawerID = "filter-drawer"
+  const selectedCategory = () => context!.params().category
+  const selectedAuthor = () => context!.params().author
   return (
     <div class="drawer drawer-end">
       <input id={drawerID} type="checkbox" class="drawer-toggle" />
@@ -479,10 +481,16 @@ function FilterModal() {
                   category: e.currentTarget.value,
                 })
               }>
-              <option value="">All</option>
+              <option selected={selectedCategory() == ""} value="">
+                All
+              </option>
               <For each={context!.filters()!.categories}>
                 {(category) => (
-                  <option value={category.slug}>{category.name}</option>
+                  <option
+                    selected={selectedCategory() == category.slug}
+                    value={category.slug}>
+                    {category.name}
+                  </option>
                 )}
               </For>
             </select>
@@ -500,9 +508,17 @@ function FilterModal() {
                   author: e.currentTarget.value,
                 })
               }>
-              <option value="">All</option>
+              <option selected={selectedAuthor() == ""} value="">
+                All
+              </option>
               <For each={context!.filters()!.authors}>
-                {(author) => <option value={author.slug}>{author.name}</option>}
+                {(author) => (
+                  <option
+                    selected={selectedAuthor() == author.slug}
+                    value={author.slug}>
+                    {author.name}
+                  </option>
+                )}
               </For>
             </select>
           </div>
