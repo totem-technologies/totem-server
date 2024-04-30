@@ -2,7 +2,8 @@ import { customElement, noShadowDOM } from "solid-element"
 import Avatar from "./avatar"
 import Circles from "./circles"
 import PromptSearch from "./promptSearch"
-var components = [PromptSearch, Circles, Avatar]
+import Tooltip from "./tooltip"
+var components = [PromptSearch, Circles, Avatar, Tooltip]
 
 export default function () {
   components.forEach((c) => {

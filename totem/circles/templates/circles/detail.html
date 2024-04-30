@@ -44,46 +44,46 @@
         class="z-20 mt-5 rounded-2xl border border-gray-200 bg-white p-5 md:top-20 md:w-80">
         <div class="flex flex-wrap justify-between gap-x-4 gap-y-2 pb-2">
           {% if object.subscribed.count %}
-            <div
-              class="tooltip flex"
-              data-tip="How many people are getting updates about this Circle.">
+            <t-tooltip
+              class="flex"
+              text="How many people are getting updates about this Circle.">
               <div class="pr-1">{% icons 'star' %}</div>
               <div>
                 {{ object.subscribed.count }}
                 {{ object.subscribed.count|pluralize:"person,people" }}
                 subscribed
               </div>
-            </div>
+            </t-tooltip>
           {% endif %}
-          <div
-            class="tooltip flex"
-            data-tip="The cost of this Circle per session, if any.">
+          <t-tooltip
+            class="flex"
+            text="The cost of this Circle per session, if any.">
             <div class="pr-1">{% icons 'price' %}</div>
             {% if object.is_free %}
               No Cost
             {% else %}
               ${{ object.price }}
             {% endif %}
-          </div>
+          </t-tooltip>
           {% if event %}
-            <div class="tooltip flex" data-tip="How long this Circle is.">
+            <t-tooltip class="flex" text="How long this Circle is.">
               <div class="pr-1">{% icons 'clock' %}</div>
               {{ event.duration_minutes }} min
-            </div>
-            <div
-              class="tooltip flex text-left"
-              data-tip="How often this Circle generally runs. There may be changes in the schedule due to holidays or other events.">
+            </t-tooltip>
+            <t-tooltip
+              class="flex text-left"
+              text="How often this Circle generally runs. There may be changes in the schedule due to holidays or other events.">
               <div class="pr-1">{% icons 'recur' %}</div>
               <div>{{ object.recurring|capfirst }}</div>
-            </div>
-            <div
-              class="tooltip flex"
-              data-tip="How many people are getting updates about this Circle.">
+            </t-tooltip>
+            <t-tooltip
+              class="flex"
+              text="How many people are getting updates about this Circle.">
               <div class="pr-1">{% icons 'reserve' size=20 %}</div>
               <div class="pl-1">
                 {{ event.seats_left }} spot{{ event.seats_left|pluralize }} left
               </div>
-            </div>
+            </t-tooltip>
           {% endif %}
         </div>
         {% if event %}
