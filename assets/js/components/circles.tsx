@@ -208,7 +208,18 @@ function CirclesInner() {
   return (
     <div class="m-auto max-w-7xl">
       <Switch fallback={<div>No Circles yet.</div>}>
-        <Match when={context.events()}>
+        <Match when={context.events()?.count! == 0}>
+          <div>
+            <div>
+              No Circles found. Try resetting the filters, or reloading the
+              page.
+            </div>
+            <button class="btn btn-ghost btn-sm mt-5" onClick={context!.reset}>
+              Reset
+            </button>
+          </div>
+        </Match>
+        <Match when={context.events()?.count! > 1}>
           <FilterBar />
           <EventsChunkedByDate />
           <Show when={context.events()!.items.length == context.params().limit}>
@@ -439,20 +450,21 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
 
 function FilterModal() {
   const context = useContext(CircleListContext)
+  const drawerID = "filter-drawer"
   return (
     <div class="drawer drawer-end">
-      <input id="filter-drawer" type="checkbox" class="drawer-toggle" />
+      <input id={drawerID} type="checkbox" class="drawer-toggle" />
       <div class="drawer-content">
-        <label for="filter-drawer" class="btn btn-ghost btn-sm font-bold">
+        <label for={drawerID} class="btn btn-ghost btn-sm font-bold">
           Filter
         </label>
       </div>
       <div class="drawer-side">
         <label
-          for="filter-drawer"
+          for={drawerID}
           aria-label="close sidebar"
           class="drawer-overlay"></label>
-        <div class="flex min-h-full w-80 flex-col gap-5 bg-tcreme p-4 text-left">
+        <div class="flex min-h-full w-[90vw] max-w-80 flex-col gap-5 bg-tcreme p-4 text-left">
           <h3 class="text-lg font-bold">Filter Circles</h3>
           <div>
             <label class="form-label" for="category">
@@ -493,6 +505,17 @@ function FilterModal() {
                 {(author) => <option value={author.slug}>{author.name}</option>}
               </For>
             </select>
+          </div>
+          <div class="flex justify-between">
+            <button class="btn btn-ghost btn-sm" onClick={context?.reset}>
+              Reset
+            </button>
+            <label
+              for={drawerID}
+              aria-label="close sidebar"
+              class="btn btn-ghost btn-sm">
+              Close
+            </label>
           </div>
         </div>
       </div>
