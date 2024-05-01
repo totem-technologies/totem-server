@@ -32,6 +32,7 @@ webflow_pages = [
     "topics/mothers",
     "topics/lgbtq",
     "topics/creatives",
+    "topics/self-improvement",
 ]
 
 webflow_patterns = [re_path(rf"^{page}/", views.webflow_proxy, name=page) for page in webflow_pages]
