@@ -210,7 +210,7 @@
           <div class="flex flex-wrap justify-center">
             {% for attendee in event.attendees.all %}
               <div class="w-1/4 py-3">
-                {% avatar attendee size=50 classes="m-auto" %}
+                {% avatar attendee size=50 classes="m-auto" tooltip="true" %}
               </div>
             {% endfor %}
           </div>

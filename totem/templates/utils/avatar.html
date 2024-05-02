@@ -4,5 +4,8 @@
   name="{{ name }}"
   size="{{ size }}"
   seed="{{ seed }}"
-  type="{{ type }}">
+  type="{{ type }}"
+  {% if tooltip %}
+    tooltip="true"
+  {% endif %}>
 </t-avatar>

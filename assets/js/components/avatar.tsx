@@ -1,17 +1,24 @@
 import _Avatar from "@totem.org/solid-boring-avatars"
 import { Show } from "solid-js"
-import { ProfileAvatarTypeEnum } from "../client"
+import { useTotemTip } from "./tooltip"
 
+import { ProfileAvatarTypeEnum } from "../client"
 function Avatar(props: {
   size: number
   name: string
   seed: string
+  tooltip?: boolean
   url?: string
   type?: ProfileAvatarTypeEnum
 }) {
+  let setAnchor = () => {}
+  if (props.tooltip) {
+    setAnchor = useTotemTip({ content: props.name })
+  }
   return (
     <div
-      class=" max-h-full overflow-hidden rounded-full bg-white [&>svg]:h-auto [&>svg]:max-w-full"
+      ref={setAnchor}
+      class="max-h-full rounded-full bg-white [&>svg]:h-auto [&>svg]:max-w-full"
       style={{ padding: `${props.size / 1000}rem` }}>
       <Show
         when={props.type === "IM" && props.url}
@@ -43,6 +50,7 @@ Avatar.propsDefault = {
   seed: "",
   url: "",
   type: "TD",
+  tooltip: false,
 }
 
 export default Avatar

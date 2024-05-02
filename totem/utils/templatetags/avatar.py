@@ -6,7 +6,7 @@ register = template.Library()
 
 
 @register.inclusion_tag("utils/avatar.html")
-def avatar(user: User, size=120, blank_ok=False, classes=""):
+def avatar(user: User, size=120, blank_ok=False, classes="", tooltip=False):
     size = int(size)
     ctx = {
         "size": size,
@@ -16,6 +16,8 @@ def avatar(user: User, size=120, blank_ok=False, classes=""):
         "seed": user.profile_avatar_seed,
         "type": user.profile_avatar_type,
     }
+    if tooltip:
+        ctx["tooltip"] = True
     # if user.profile_avatar_type == User.ProfileChoices.IMAGE:
     if user.profile_image:
         ctx["src"] = user.profile_image.url
