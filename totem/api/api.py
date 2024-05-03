@@ -8,7 +8,7 @@ from totem.circles.api import router as circles_router
 from totem.users.models import User
 from totem.users.schemas import UserSchema
 
-api = NinjaAPI(title="Totem API", version="1.0.0")
+api = NinjaAPI(title="Totem API", version="1")
 api.add_router("/circles/", circles_router)
 
 

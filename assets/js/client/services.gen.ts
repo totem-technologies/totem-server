@@ -3,7 +3,17 @@
 import type { CancelablePromise } from "./core/CancelablePromise"
 import { OpenAPI } from "./core/OpenAPI"
 import { request as __request } from "./core/request"
-import type { $OpenApiTs } from "./types.gen"
+import type {
+  TotemApiApiSecretResponse,
+  TotemApiApiLoginData,
+  TotemApiApiLoginResponse,
+  TotemApiApiTokenData,
+  TotemApiApiTokenResponse,
+  TotemApiApiCurrentUserResponse,
+  TotemCirclesApiListCirclesData,
+  TotemCirclesApiListCirclesResponse,
+  TotemCirclesApiFilterOptionsResponse,
+} from "./types.gen"
 
 export class DefaultService {
   /**
@@ -11,9 +21,7 @@ export class DefaultService {
    * @returns unknown OK
    * @throws ApiError
    */
-  public static totemApiApiSecret(): CancelablePromise<
-    $OpenApiTs["/api/v1/protected"]["get"]["res"][200]
-  > {
+  public static totemApiApiSecret(): CancelablePromise<TotemApiApiSecretResponse> {
     return __request(OpenAPI, {
       method: "GET",
       url: "/api/v1/protected",
@@ -28,8 +36,8 @@ export class DefaultService {
    * @throws ApiError
    */
   public static totemApiApiLogin(
-    data: $OpenApiTs["/api/v1/auth/login"]["post"]["req"]
-  ): CancelablePromise<$OpenApiTs["/api/v1/auth/login"]["post"]["res"][200]> {
+    data: TotemApiApiLoginData
+  ): CancelablePromise<TotemApiApiLoginResponse> {
     return __request(OpenAPI, {
       method: "POST",
       url: "/api/v1/auth/login",
@@ -47,8 +55,8 @@ export class DefaultService {
    * @throws ApiError
    */
   public static totemApiApiToken(
-    data: $OpenApiTs["/api/v1/auth/token"]["post"]["req"]
-  ): CancelablePromise<$OpenApiTs["/api/v1/auth/token"]["post"]["res"][200]> {
+    data: TotemApiApiTokenData
+  ): CancelablePromise<TotemApiApiTokenResponse> {
     return __request(OpenAPI, {
       method: "POST",
       url: "/api/v1/auth/token",
@@ -63,9 +71,7 @@ export class DefaultService {
    * @returns UserSchema OK
    * @throws ApiError
    */
-  public static totemApiApiCurrentUser(): CancelablePromise<
-    $OpenApiTs["/api/v1/auth/currentuser"]["get"]["res"][200]
-  > {
+  public static totemApiApiCurrentUser(): CancelablePromise<TotemApiApiCurrentUserResponse> {
     return __request(OpenAPI, {
       method: "GET",
       url: "/api/v1/auth/currentuser",
@@ -88,8 +94,8 @@ export class CirclesService {
    * @throws ApiError
    */
   public static totemCirclesApiListCircles(
-    data: $OpenApiTs["/api/v1/circles/"]["get"]["req"]
-  ): CancelablePromise<$OpenApiTs["/api/v1/circles/"]["get"]["res"][200]> {
+    data: TotemCirclesApiListCirclesData
+  ): CancelablePromise<TotemCirclesApiListCirclesResponse> {
     return __request(OpenAPI, {
       method: "GET",
       url: "/api/v1/circles/",
@@ -107,9 +113,7 @@ export class CirclesService {
    * @returns FilterOptionsSchema OK
    * @throws ApiError
    */
-  public static totemCirclesApiFilterOptions(): CancelablePromise<
-    $OpenApiTs["/api/v1/circles/filter-options"]["get"]["res"][200]
-  > {
+  public static totemCirclesApiFilterOptions(): CancelablePromise<TotemCirclesApiFilterOptionsResponse> {
     return __request(OpenAPI, {
       method: "GET",
       url: "/api/v1/circles/filter-options",

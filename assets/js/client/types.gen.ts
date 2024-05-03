@@ -71,6 +71,33 @@ export type FilterOptionsSchema = {
   authors: Array<AuthorFilterSchema>
 }
 
+export type TotemApiApiSecretResponse = unknown
+
+export type TotemApiApiLoginData = {
+  email: string
+}
+
+export type TotemApiApiLoginResponse = LoginOut
+
+export type TotemApiApiTokenData = {
+  token: string
+}
+
+export type TotemApiApiTokenResponse = TokenOut
+
+export type TotemApiApiCurrentUserResponse = UserSchema
+
+export type TotemCirclesApiListCirclesData = {
+  author: string | null
+  category: string | null
+  limit?: number
+  offset?: number
+}
+
+export type TotemCirclesApiListCirclesResponse = PagedCircleEventSchema
+
+export type TotemCirclesApiFilterOptionsResponse = FilterOptionsSchema
+
 export type $OpenApiTs = {
   "/api/v1/protected": {
     get: {

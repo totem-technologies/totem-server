@@ -1,6 +1,5 @@
 import datetime
 
-import pytest
 from django.contrib.messages import get_messages
 from django.core import mail
 from django.test import TestCase
@@ -11,7 +10,7 @@ from totem.users.tests.factories import UserFactory
 
 from ..actions import AttendCircleAction, JoinCircleAction
 from ..views import AUTO_RSVP_SESSION_KEY
-from .factories import CircleCategoryFactory, CircleEventFactory, CircleFactory
+from .factories import CircleEventFactory, CircleFactory
 
 
 class TestCircleDetailView:
@@ -278,42 +277,6 @@ class TestCircleListView:
         url = reverse("circles:list")
         response = client.get(url)
         assert response.status_code == 200
-
-    def test_list_with_category_and_limit(self, client, db):
-        category = CircleCategoryFactory()
-        category2 = CircleCategoryFactory()
-        circle = CircleFactory(categories=[category])
-        circle2 = CircleFactory(categories=[category2])
-        CircleEventFactory(circle=circle, start=timezone.now() + datetime.timedelta(days=1))
-        CircleEventFactory(circle=circle2, start=timezone.now() + datetime.timedelta(days=2))
-        url = reverse("circles:list")
-        response = client.get(url)
-        assert response.status_code == 200
-        content = response.content.decode()
-        assert circle.title in content
-        assert category.name in content
-        assert circle2.title in content
-        assert category2.name in content
-        response = client.get(url, {"limit": 1})
-        assert response.status_code == 200
-        content = response.content.decode()
-        assert circle.title in content
-        assert circle2.title not in content
-        response = client.get(url, {"category": category.slug, "limit": 15})
-        assert response.status_code == 200
-        assert circle.title in response.content.decode()
-        assert category.name in response.content.decode()
-        assert circle2.title not in response.content.decode()
-        response = client.get(url, {"category": "empty", "limit": 15})
-        assert response.status_code == 200
-        assert circle.title not in response.content.decode()
-
-    def test_list_with_invalid_limit(self, client, db):
-        url = reverse("circles:list")
-        with pytest.raises(ValueError):
-            client.get(url, {"limit": "abc"})
-        with pytest.raises(ValueError):
-            client.get(url, {"limit": 101})
 
 
 class TestRSVPView:

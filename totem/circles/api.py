@@ -58,11 +58,7 @@ class FilterOptionsSchema(Schema):
     authors: List[AuthorFilterSchema]
 
 
-@router.get(
-    "/",
-    response={200: List[CircleEventSchema]},
-    tags=["circles"],
-)
+@router.get("/", response={200: List[CircleEventSchema]}, tags=["circles"], url_name="circles_list")
 @paginate
 def list_circles(request, filters: EventsFilterSchema = Query()):
     return all_upcoming_recommended_events(request.user, category=filters.category, author=filters.author)
@@ -72,6 +68,7 @@ def list_circles(request, filters: EventsFilterSchema = Query()):
     "/filter-options",
     response={200: FilterOptionsSchema},
     tags=["circles"],
+    url_name="circle_filter_options",
 )
 def filter_options(request):
     events = all_upcoming_recommended_events(request.user)
