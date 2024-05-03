@@ -2,6 +2,7 @@ import datetime
 
 import pytest
 from django.contrib.messages import get_messages
+from django.core import mail
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
@@ -47,7 +48,7 @@ class TestCircleDetailView:
 
 
 class TestCircleEventView:
-    def test_event_loggedin(self, client, db):
+    def test_event_logged_in(self, client, db):
         user = UserFactory()
         user.save()
         client.force_login(user)
@@ -375,3 +376,26 @@ class TestRSVPView:
         message = list(get_messages(response.wsgi_request))
         assert "spot" in message[0].message.lower()
         assert client.session.get(AUTO_RSVP_SESSION_KEY) is None
+
+    def test_attending_email_sent(self, client, db):
+        # test that send_notify_circle_signup is called when user RSVPs
+        event = CircleEventFactory()
+        event.save()
+        user = UserFactory()
+        user.save()
+        client.force_login(user)
+        client.post(reverse("circles:rsvp", kwargs={"event_slug": event.slug}), data={"action": "yes"})
+        assert mail.outbox[0].to == [user.email]
+        assert "Spot Saved" in mail.outbox[0].body
+
+    def test_attending_and_can_join_email_sent(self, client, db):
+        # test that send_notify_circle_starting is called when user RSVPs and the event is starting soon
+        event = CircleEventFactory(notified=True, start=timezone.now() + datetime.timedelta(minutes=10))
+        event.save()
+        user = UserFactory()
+        user.save()
+        client.force_login(user)
+        client.post(reverse("circles:rsvp", kwargs={"event_slug": event.slug}), data={"action": "yes"})
+        assert mail.outbox[0].to == [user.email]
+        assert "Spot Saved" not in mail.outbox[0].body
+        assert "Get Ready" in mail.outbox[0].body

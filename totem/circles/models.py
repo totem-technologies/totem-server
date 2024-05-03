@@ -199,7 +199,12 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         # checks if the user can attend and adds them to the attendees list, throws an exception if they can't
         if self.can_attend(user=user):
             self.attendees.add(user)
-            send_notify_circle_signup(self, user)
+            if self.notified and self.can_join(user):
+                # Send the user the join email if they are attending and the event is about to start
+                send_notify_circle_starting(self, user)
+            else:
+                # Otherwise, send the user the signed up email
+                send_notify_circle_signup(self, user)
             if not self.circle.author == user:
                 notify_slack(
                     f"New Circle attendee: <{full_url(user.get_admin_url())}|{user.name}> for <{full_url(self.get_admin_url())}|{self.circle.title}> by {self.circle.author.name}"
