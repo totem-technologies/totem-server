@@ -15,6 +15,7 @@ import {
   useContext,
 } from "solid-js"
 import {
+  CategoryFilterSchema,
   CircleEventSchema,
   CirclesService,
   FilterOptionsSchema,
@@ -50,6 +51,7 @@ type CircleListContextType = {
   setActiveID: (id: string) => void
   scrolling: Accessor<boolean>
   setScrolling: (scrolling: boolean) => void
+  setCategory: (category: string) => void
   filters: Resource<FilterOptionsSchema>
 }
 
@@ -96,6 +98,12 @@ function CircleListProvider(props: { children: any }) {
       limit: params().limit + 10,
     })
   }
+  const setCategory = (category: string) => {
+    setParams({
+      ...params(),
+      category: category,
+    })
+  }
   return (
     <CircleListContext.Provider
       value={{
@@ -110,6 +118,7 @@ function CircleListProvider(props: { children: any }) {
         setActiveID,
         scrolling,
         setScrolling,
+        setCategory,
         filters,
       }}>
       {props.children}
@@ -220,6 +229,7 @@ function CirclesInner() {
           </div>
         </Match>
         <Match when={context.events()?.count! > 1}>
+          <QuickFilters />
           <FilterBar />
           <EventsChunkedByDate />
           <Show when={context.events()!.items.length == context.params().limit}>
@@ -458,7 +468,7 @@ function FilterModal() {
       <input id={drawerID} type="checkbox" class="drawer-toggle" />
       <div class="drawer-content">
         <label for={drawerID} class="btn btn-ghost btn-sm font-bold">
-          Filter
+          Filters
         </label>
       </div>
       <div class="drawer-side">
@@ -475,12 +485,7 @@ function FilterModal() {
             <select
               class="form-select"
               id="category"
-              onChange={(e) =>
-                context!.setParams({
-                  ...context!.params(),
-                  category: e.currentTarget.value,
-                })
-              }>
+              onChange={(e) => context!.setCategory(e.currentTarget.value)}>
               <option selected={selectedCategory() == ""} value="">
                 All
               </option>
@@ -535,6 +540,30 @@ function FilterModal() {
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function QuickFilters() {
+  const context = useContext(CircleListContext)
+  const isActive = (category: string) => context!.params().category === category
+  const QuickFilterButton = (props: { category: CategoryFilterSchema }) => (
+    <button
+      class="badge"
+      classList={{
+        "badge-outline": !isActive(props.category.slug),
+        "badge-primary": isActive(props.category.slug),
+      }}
+      onClick={() => context!.setCategory(props.category.slug)}>
+      {props.category.name}
+    </button>
+  )
+  return (
+    <div class="m-auto flex max-w-xl flex-wrap items-center justify-center gap-2 px-10 pb-10">
+      <QuickFilterButton category={{ name: "All", slug: "" }} />
+      <For each={context!.filters()!.categories}>
+        {(category) => <QuickFilterButton category={category} />}
+      </For>
     </div>
   )
 }

@@ -22,7 +22,7 @@
     "node": ">=20"
   },
   "devDependencies": {
-    "@hey-api/openapi-ts": "^0.42.1",
+    "@hey-api/openapi-ts": "^0.43.0",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/line-clamp": "^0.4.2",
     "@tailwindcss/typography": "^0.5.2",
