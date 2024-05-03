@@ -228,7 +228,7 @@ function CirclesInner() {
             </button>
           </div>
         </Match>
-        <Match when={context.events()?.count! > 1}>
+        <Match when={context.events()?.count! > 0}>
           <QuickFilters />
           <FilterBar />
           <EventsChunkedByDate />
