@@ -12,7 +12,6 @@ class TestCircleListAPI:
         response = client.get(
             reverse("api-1:circles_list"), EventsFilterSchema(category="empty", author=""), format="json"
         )
-        # print(response.json())
         assert response.status_code == 200
         assert response.json() == {"count": 0, "items": []}
 
