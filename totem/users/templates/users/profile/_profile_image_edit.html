@@ -93,8 +93,7 @@
             type="submit"
             name="profile_avatar_type"
             value="{{ choice.0 }}"
-            class="{% if choice.0 == user.profile_avatar_type %}tab-active{% endif %}
-                                   tab">
+            class="{% if choice.0 == user.profile_avatar_type %}tab-active{% endif %} tab">
             {{ choice.1 }}
           </button>
         {% endfor %}

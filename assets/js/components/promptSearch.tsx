@@ -100,7 +100,7 @@ function PromptSearch(props: any) {
             type="search"
             value={search()}
             onInput={(e) => setSearch(e.target.value)}
-            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-4 pl-10 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 "
+            class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-4 pl-10 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500"
             placeholder="Search prompts..."
             required
           />
