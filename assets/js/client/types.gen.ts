@@ -41,6 +41,7 @@ export type CircleEventSchema = {
   slug?: string
   date_created: string
   date_modified: string
+  title?: string | null
 }
 
 export type CircleSchema = {
@@ -111,9 +112,7 @@ export type $OpenApiTs = {
   }
   "/api/v1/auth/login": {
     post: {
-      req: {
-        email: string
-      }
+      req: TotemApiApiLoginData
       res: {
         /**
          * OK
@@ -124,9 +123,7 @@ export type $OpenApiTs = {
   }
   "/api/v1/auth/token": {
     post: {
-      req: {
-        token: string
-      }
+      req: TotemApiApiTokenData
       res: {
         /**
          * OK
@@ -151,12 +148,7 @@ export type $OpenApiTs = {
   }
   "/api/v1/circles/": {
     get: {
-      req: {
-        author: string | null
-        category: string | null
-        limit?: number
-        offset?: number
-      }
+      req: TotemCirclesApiListCirclesData
       res: {
         /**
          * OK

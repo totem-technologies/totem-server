@@ -17,9 +17,10 @@ import {
 import {
   CategoryFilterSchema,
   CircleEventSchema,
-  CirclesService,
   FilterOptionsSchema,
   PagedCircleEventSchema,
+  totemCirclesApiFilterOptions,
+  totemCirclesApiListCircles,
 } from "../client/index"
 import Avatar from "./avatar"
 import ErrorBoundary from "./errors"
@@ -77,11 +78,11 @@ function CircleListProvider(props: { children: any }) {
     refetch()
   })
   const [events, { refetch }] = createResource(async () => {
-    return CirclesService.totemCirclesApiListCircles(params())
+    return totemCirclesApiListCircles(params())
   })
   const [filters, { refetch: filterRefetch }] = createResource(
     async () => {
-      return CirclesService.totemCirclesApiFilterOptions()
+      return totemCirclesApiFilterOptions()
     },
     {
       initialValue: { categories: [], authors: [] },
@@ -432,7 +433,7 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
 
   return (
     <div class="flex justify-center">
-      <div class="divider divider-horizontal m-0 ml-1 "></div>
+      <div class="divider divider-horizontal m-0 ml-1"></div>
       <div ref={scrollableRef!} class="overflow-x-auto overflow-y-hidden">
         <div ref={containerRef!} class="flex gap-x-2 px-5 pb-3">
           <Refs ref={setRefs}>
@@ -453,7 +454,7 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
           </Refs>
         </div>
       </div>
-      <div class="divider divider-horizontal m-0 mr-1 "></div>
+      <div class="divider divider-horizontal m-0 mr-1"></div>
     </div>
   )
 }

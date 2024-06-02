@@ -15,63 +15,64 @@ import type {
   TotemCirclesApiFilterOptionsResponse,
 } from "./types.gen"
 
-export class DefaultService {
-  /**
-   * Secret
-   * @returns unknown OK
-   * @throws ApiError
-   */
-  public static totemApiApiSecret(): CancelablePromise<TotemApiApiSecretResponse> {
+/**
+ * Secret
+ * @returns unknown OK
+ * @throws ApiError
+ */
+export const totemApiApiSecret =
+  (): CancelablePromise<TotemApiApiSecretResponse> => {
     return __request(OpenAPI, {
       method: "GET",
       url: "/api/v1/protected",
     })
   }
 
-  /**
-   * Login
-   * @param data The data for the request.
-   * @param data.email
-   * @returns LoginOut OK
-   * @throws ApiError
-   */
-  public static totemApiApiLogin(
-    data: TotemApiApiLoginData
-  ): CancelablePromise<TotemApiApiLoginResponse> {
-    return __request(OpenAPI, {
-      method: "POST",
-      url: "/api/v1/auth/login",
-      query: {
-        email: data.email,
-      },
-    })
-  }
+/**
+ * Login
+ * @param data The data for the request.
+ * @param data.email
+ * @returns LoginOut OK
+ * @throws ApiError
+ */
+export const totemApiApiLogin = (
+  data: TotemApiApiLoginData
+): CancelablePromise<TotemApiApiLoginResponse> => {
+  return __request(OpenAPI, {
+    method: "POST",
+    url: "/api/v1/auth/login",
+    query: {
+      email: data.email,
+    },
+  })
+}
 
-  /**
-   * Token
-   * @param data The data for the request.
-   * @param data.token
-   * @returns TokenOut OK
-   * @throws ApiError
-   */
-  public static totemApiApiToken(
-    data: TotemApiApiTokenData
-  ): CancelablePromise<TotemApiApiTokenResponse> {
-    return __request(OpenAPI, {
-      method: "POST",
-      url: "/api/v1/auth/token",
-      query: {
-        token: data.token,
-      },
-    })
-  }
+/**
+ * Token
+ * @param data The data for the request.
+ * @param data.token
+ * @returns TokenOut OK
+ * @throws ApiError
+ */
+export const totemApiApiToken = (
+  data: TotemApiApiTokenData
+): CancelablePromise<TotemApiApiTokenResponse> => {
+  return __request(OpenAPI, {
+    method: "POST",
+    url: "/api/v1/auth/token",
+    query: {
+      token: data.token,
+    },
+  })
+}
 
-  /**
-   * Current User
-   * @returns UserSchema OK
-   * @throws ApiError
-   */
-  public static totemApiApiCurrentUser(): CancelablePromise<TotemApiApiCurrentUserResponse> {
+/**
+ * Current User
+ * @returns UserSchema OK
+ * @throws ApiError
+ */
+export const totemApiApiCurrentUser =
+  (): CancelablePromise<TotemApiApiCurrentUserResponse> => {
     return __request(OpenAPI, {
       method: "GET",
       url: "/api/v1/auth/currentuser",
@@ -80,43 +81,41 @@ export class DefaultService {
       },
     })
   }
+
+/**
+ * List Circles
+ * @param data The data for the request.
+ * @param data.category
+ * @param data.author
+ * @param data.limit
+ * @param data.offset
+ * @returns PagedCircleEventSchema OK
+ * @throws ApiError
+ */
+export const totemCirclesApiListCircles = (
+  data: TotemCirclesApiListCirclesData
+): CancelablePromise<TotemCirclesApiListCirclesResponse> => {
+  return __request(OpenAPI, {
+    method: "GET",
+    url: "/api/v1/circles/",
+    query: {
+      category: data.category,
+      author: data.author,
+      limit: data.limit,
+      offset: data.offset,
+    },
+  })
 }
 
-export class CirclesService {
-  /**
-   * List Circles
-   * @param data The data for the request.
-   * @param data.category
-   * @param data.author
-   * @param data.limit
-   * @param data.offset
-   * @returns PagedCircleEventSchema OK
-   * @throws ApiError
-   */
-  public static totemCirclesApiListCircles(
-    data: TotemCirclesApiListCirclesData
-  ): CancelablePromise<TotemCirclesApiListCirclesResponse> {
-    return __request(OpenAPI, {
-      method: "GET",
-      url: "/api/v1/circles/",
-      query: {
-        category: data.category,
-        author: data.author,
-        limit: data.limit,
-        offset: data.offset,
-      },
-    })
-  }
-
-  /**
-   * Filter Options
-   * @returns FilterOptionsSchema OK
-   * @throws ApiError
-   */
-  public static totemCirclesApiFilterOptions(): CancelablePromise<TotemCirclesApiFilterOptionsResponse> {
+/**
+ * Filter Options
+ * @returns FilterOptionsSchema OK
+ * @throws ApiError
+ */
+export const totemCirclesApiFilterOptions =
+  (): CancelablePromise<TotemCirclesApiFilterOptionsResponse> => {
     return __request(OpenAPI, {
       method: "GET",
       url: "/api/v1/circles/filter-options",
     })
   }
-}

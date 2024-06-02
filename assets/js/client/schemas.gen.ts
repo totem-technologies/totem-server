@@ -160,6 +160,18 @@ export const $CircleEventSchema = {
       title: "Date Modified",
       type: "string",
     },
+    title: {
+      anyOf: [
+        {
+          maxLength: 255,
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Title",
+    },
   },
   required: ["circle", "url", "date_created", "date_modified"],
   title: "CircleEventSchema",
