@@ -1,5 +1,3 @@
-version: "3"
-
 volumes:
   totem_local_postgres_data: {}
   totem_local_postgres_data_backups: {}

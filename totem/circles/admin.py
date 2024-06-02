@@ -35,6 +35,7 @@ class CircleEventInline(admin.StackedInline):
             None,
             {
                 "fields": [
+                    "title",
                     "start",
                     "open",
                     "listed",
@@ -90,7 +91,7 @@ class CircleAdmin(admin.ModelAdmin):
 
 @admin.register(CircleEvent)
 class CircleEventAdmin(admin.ModelAdmin):
-    list_display = ("start", "circle", "slug")
+    list_display = ("start", "title", "circle", "slug")
     list_filter = ["start", DropdownFilter]
     autocomplete_fields = ["attendees", "joined"]
     readonly_fields = ("date_created", "date_modified")

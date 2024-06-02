@@ -181,3 +181,14 @@ class TestDashboard:
         client.force_login(user)
         response = client.get(reverse("users:dashboard"))
         assert response.status_code == 200
+
+
+class TestDeleteUser:
+    def test_delete_user(self, client):
+        user = UserFactory()
+        client.force_login(user)
+        response = client.post(reverse("users:profile-delete"))
+        assert response.status_code == 302
+        assert response.url == reverse("pages:home")
+        with pytest.raises(User.DoesNotExist):
+            user.refresh_from_db()

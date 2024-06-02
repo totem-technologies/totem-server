@@ -1,3 +1,5 @@
+from auditlog.context import disable_auditlog
+from auditlog.models import LogEntry
 from django import forms
 from django.contrib import messages
 from django.contrib.auth import login as django_login
@@ -238,7 +240,10 @@ def user_profile_image_view(request):
 def user_profile_delete_view(request):
     if request.method == "POST":
         user = request.user
-        user.delete()
+        # make a log entry for the deletion
+        LogEntry.objects.log_create(user, force_log=True, action=LogEntry.Action.DELETE).save()  # type: ignore
+        with disable_auditlog():
+            user.delete()
         messages.success(request, "Account successfully deleted.")
         return redirect("pages:home")
     return HttpResponseForbidden()

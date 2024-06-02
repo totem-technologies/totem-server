@@ -137,6 +137,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         default=True,
         help_text="Is this Circle discoverable? False means events are only accessible via direct link, or to people attending.",
     )
+    title = models.CharField(max_length=255, blank=True)
     advertised = models.BooleanField(default=False)
     attendees = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="events_attending")
     cancelled = models.BooleanField(default=False, help_text="Is this Circle cancelled?")

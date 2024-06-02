@@ -35,7 +35,7 @@ class CircleEventSchema(ModelSchema):
 
     class Meta:
         model = CircleEvent
-        fields = ["start", "slug", "date_created", "date_modified", "circle"]
+        fields = ["start", "slug", "date_created", "date_modified", "circle", "title"]
 
 
 class EventsFilterSchema(FilterSchema):
