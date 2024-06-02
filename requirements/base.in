@@ -14,12 +14,12 @@ pytz
 qrcode==7.4.2
 requests<3
 sentry-sdk[django]<3
-uvicorn[standard]<0.30.0
+uvicorn[standard]<0.31.0
 whitenoise==6.6.0
 
 # Django
 # ------------------------------------------------------------------------------
-django-allauth<0.62.0
+django-allauth<0.64.0
 django-anymail==10.3
 django-auditlog<4
 django-cors-headers<5
@@ -29,7 +29,7 @@ django-imagekit<6.0.0
 django-impersonate<2
 django-ninja<2
 django-sesame==3.2.2
-django-storages[s3]==1.14.2
+django-storages[s3]<2
 django-taggit<6
 django-timezone-field<7
 django<5.1
