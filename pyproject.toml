@@ -81,9 +81,3 @@ line-length = 120
 [tool.ruff.lint.mccabe]
 # Unlike Flake8, default to a complexity level of 10.
 max-complexity = 10
-
-# ==== djlint ====
-[tool.djlint]
-ignore = "H006"
-profile = "django"
-use_gitignore = true

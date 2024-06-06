@@ -31,6 +31,7 @@ webflow_pages = [
     "guidelines",
     "topics/mothers",
     "topics/lgbtq",
+    "topics/lgbtqia-topic-details",
     "topics/creatives",
     "topics/self-improvement",
     "docs/crisis-resources",
