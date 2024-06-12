@@ -138,12 +138,6 @@ def redirect_qr(request, slug):
     return render(request, "pages/qr.html", {"img": img_str.decode("utf-8"), "obj": redirect})
 
 
-@login_required
-def training(request):
-    enroll_url = "https://secure.totem.org/b/7sI03l8LD1zl5eU9AJ"
-    return render(request, "pages/training.html", {"enroll_url": enroll_url})
-
-
 def webflow_page(request, page: str | None = None):
     def _get() -> str:
         return get_webflow_page(page)
