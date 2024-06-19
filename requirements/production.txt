@@ -72,7 +72,7 @@ django-ninja==1.1.0
     # via -r requirements/base.in
 django-sesame==3.2.2
     # via -r requirements/base.in
-django-storages==1.14.3
+django-storages[s3]==1.14.3
     # via -r requirements/base.in
 django-taggit==5.0.1
     # via -r requirements/base.in
@@ -80,7 +80,7 @@ django-timezone-field==6.1.0
     # via -r requirements/base.in
 google-api-core==2.19.0
     # via google-api-python-client
-google-api-python-client==2.131.0
+google-api-python-client==2.134.0
     # via -r requirements/base.in
 google-auth==2.29.0
     # via
@@ -184,7 +184,7 @@ rsa==4.9
     # via google-auth
 s3transfer==0.10.1
     # via boto3
-sentry-sdk==2.3.1
+sentry-sdk[django]==2.3.1
     # via -r requirements/base.in
 six==1.16.0
     # via
@@ -207,7 +207,7 @@ urllib3==2.2.1
     #   django-anymail
     #   requests
     #   sentry-sdk
-uvicorn==0.30.0
+uvicorn[standard]==0.30.0
     # via -r requirements/base.in
 uvloop==0.19.0
     # via uvicorn
