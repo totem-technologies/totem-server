@@ -106,8 +106,8 @@ class CircleStartingEmail(Email):
     event_title: str
     event_link: AnyHttpUrl
     link: AnyHttpUrl
-    button_text: str = "Join Circle"
-    subject: str = "Your Circle is starting soon"
+    button_text: str = "Join Session"
+    subject: str = "Your Space is starting soon"
     title: str = "Get Ready"
 
 
@@ -118,8 +118,8 @@ class CircleAdvertisementEmail(Email):
     unsubscribe_url: AnyHttpUrl
     link: AnyHttpUrl
     button_text: str = "Reserve a spot"
-    subject: str = "Join an upcoming Circle"
-    title: str = "New Circle"
+    subject: str = "Join an upcoming session"
+    title: str = "New Session"
 
 
 class CircleTomorrowReminderEmail(Email):
@@ -128,8 +128,8 @@ class CircleTomorrowReminderEmail(Email):
     event_title: str
     link: AnyHttpUrl
     button_text: str = "Add to calendar"
-    subject: str = "You have a Circle coming up tomorrow"
-    title: str = "Circle Tomorrow"
+    subject: str = "You have a session coming up tomorrow"
+    title: str = "Space Tomorrow"
 
 
 class CircleSignupEmail(Email):

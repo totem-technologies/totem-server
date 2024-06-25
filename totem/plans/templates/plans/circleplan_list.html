@@ -5,7 +5,7 @@
 {% block content %}
   <section class="body-font mx-auto max-w-5xl overflow-hidden text-gray-600">
     <div class="section-prose pt-5">
-      <h1>Circle Plans</h1>
+      <h1>Self-Guided Plans</h1>
     </div>
     <div class="container px-5 py-10">
       {% for plan in object_list %}
@@ -19,7 +19,7 @@
               <a
                 class="mt-4 inline-flex items-center text-blue-500"
                 href="{% url 'plans:detail' plan.id %}"
-                >Run Circle
+                >Get Plan
                 <svg
                   class="ml-2 h-4 w-4"
                   viewBox="0 0 24 24"

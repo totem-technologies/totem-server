@@ -1,5 +1,5 @@
 {% extends 'email/emails/button.txt' %}
 {% block message %}
-Your Circle, {{event_title}}, is starting tomorrow at {{start}}.
+{{event_title}}, is starting tomorrow at {{start}}.
 Click the link below to find the Add to Calendar button. Remember, if you are more than 5 minutes late, you may not be allowed to participate.
 {% endblock message %}

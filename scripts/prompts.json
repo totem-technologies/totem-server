@@ -12,11 +12,11 @@
     "tags": ["checkin", "reflection"]
   },
   {
-    "prompt": "What feeling are you bringing to the circle today?",
+    "prompt": "What feeling are you bringing to the space today?",
     "tags": ["checkin", "reflection"]
   },
   {
-    "prompt": "What are you bringing with you to the circle today?",
+    "prompt": "What are you bringing with you to the space today?",
     "tags": ["checkin", "reflection"]
   },
   {
@@ -95,7 +95,7 @@
     "tags": ["connection", "community", "in-depth"]
   },
   {
-    "prompt": "What do you notice/are you aware of in regard to how you are showing up in this circle? (is there anything that you want to change or anything that is getting in your way?)",
+    "prompt": "What do you notice/are you aware of in regard to how you are showing up in this space? (is there anything that you want to change or anything that is getting in your way?)",
     "tags": ["reflection", "mindfulness", "in-depth"]
   },
   {
@@ -119,7 +119,7 @@
     "tags": ["in-depth", "mindfulness", "self-care"]
   },
   {
-    "prompt": "What needs to be released into the circle today? What would you like to release into the circle today?",
+    "prompt": "What needs to be released into the space today? What would you like to release into the space today?",
     "tags": ["lettinggo", "in-depth"]
   },
   {
@@ -191,7 +191,7 @@
     "tags": ["in-depth", "support", "community", "courage"]
   },
   {
-    "prompt": "Who have you hurt that you could tell the Circle about? Who harmed you?",
+    "prompt": "Who have you hurt that you could tell us about? Who harmed you?",
     "tags": ["reflection", "lettinggo", "courage", "in-depth"]
   },
   {
@@ -235,7 +235,7 @@
     "tags": ["authenticity", "values", "support"]
   },
   {
-    "prompt": "How do we want your values to be present in our circles?",
+    "prompt": "How do we want your values to be present here?",
     "tags": ["values", "support", "mindfulness"]
   },
   {
@@ -306,7 +306,7 @@
     "tags": ["positiveendings", "resilience"]
   },
   {
-    "prompt": "What story is on your heart right now that you would like witnessed in the safety of this circle?",
+    "prompt": "What story is on your heart right now that you would like witnessed in the safety of this space?",
     "tags": ["positiveendings", "support", "community", "courage"]
   },
   {
@@ -318,11 +318,11 @@
     "tags": ["change", "positiveendings", "hope"]
   },
   {
-    "prompt": "Is there anything you need to say before the Circle closes?",
+    "prompt": "Is there anything you need to say before the space closes?",
     "tags": ["closing", "needs"]
   },
   {
-    "prompt": "What will you be taking away from this circle tonight?",
+    "prompt": "What will you be taking away from this space tonight?",
     "tags": ["closing", "change", "discovery"]
   },
   {
@@ -330,11 +330,11 @@
     "tags": ["closing", "discovery"]
   },
   {
-    "prompt": "Is there anything you came to the circle with tonight that you would like to leave behind?",
+    "prompt": "Is there anything you came to the space with tonight that you would like to leave behind?",
     "tags": ["closing", "lettinggo", "healing"]
   },
   {
-    "prompt": "What feelings are you leaving the circle with tonight?",
+    "prompt": "What feelings are you leaving the space with tonight?",
     "tags": ["closing", "lettinggo", "healing"]
   },
   {

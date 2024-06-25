@@ -1,6 +1,6 @@
 {% extends 'email/emails/button.mjml' %}
 {% block message %}
 <mj-text mj-class="p">
-  A session for a Circle you are subscribed to, {{event_title}}, is coming up at <strong>{{start}}</strong>. Click the button below to reserve a spot before this one fills up. If you no longer wish to get notifications about this Circle, you can <a class="link-nostyle" href="{{unsubscribe_url}}">unsubscribe here</a>.
+  A session for {{event_title}}, is coming up at <strong>{{start}}</strong>. Click the button below to reserve a spot. If you no longer wish to get notifications about this Space, you can <a class="link-nostyle" href="{{unsubscribe_url}}">unsubscribe here</a>.
 </mj-text>
 {% endblock message %}

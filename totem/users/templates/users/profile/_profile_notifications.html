@@ -1,8 +1,8 @@
 <div class="pb-10">
-  <h3 class="h3">Subscribed Circles</h3>
+  <h3 class="h3">Subscribed Spaces</h3>
   <div class="divider"></div>
   <p class="py-5">
-    These are the Circles you will get notifications for when new sessions are
+    These are the Spaces you will get notifications for when new sessions are
     coming up.
   </p>
   {% if subscribed_circles %}
@@ -11,7 +11,7 @@
         <table class="table">
           <thead>
             <tr>
-              <th>Circle</th>
+              <th>Space Name</th>
               <th class="text-right">Unsubscribe</th>
             </tr>
           </thead>
@@ -42,7 +42,7 @@
     </div>
   {% else %}
     <p>
-      You are not subscribed to any Circles.
+      You are not subscribed to any Spaces.
       <a class="link" href="{% url 'circles:list' %}">Go sign up for some!</a>
     </p>
   {% endif %}

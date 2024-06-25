@@ -1,7 +1,7 @@
 {% extends 'email/emails/button.mjml' %}
 {% block message %}
 <mj-text mj-class="p">
-  Your Circle, {{event_title}}, is starting tomorrow at <strong>{{start}}</strong>.
+  {{event_title}}, is starting tomorrow at <strong>{{start}}</strong>.
   Click the button below to find the Add to Calendar button. Remember, if you are more than 5 minutes late, you may not be allowed to participate.
 </mj-text>
 {% endblock message %}

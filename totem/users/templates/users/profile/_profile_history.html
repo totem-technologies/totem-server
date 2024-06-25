@@ -1,13 +1,13 @@
 <div class="pb-10">
-  <h3 class="h3">Circle History</h3>
+  <h3 class="h3">Session History</h3>
   <div class="divider"></div>
-  <p class="py-5">Here are the recent Circle Sessions you have be a part of.</p>
+  <p class="py-5">Here are the recent sessions you have be a part of.</p>
   {% if circle_history %}
     <div class="relative mb-10 overflow-x-auto rounded-3xl">
       <table class="table">
         <thead>
           <tr>
-            <th>Circle Session</th>
+            <th>Session</th>
             <th class="text-right">Date</th>
           </tr>
         </thead>
@@ -25,7 +25,7 @@
     </div>
   {% else %}
     <p>
-      You have not joined any Circles yet.
+      You have not joined any Spaces yet.
       <a class="link" href="{% url 'circles:list' %}">Go sign up for some!</a>
     </p>
   {% endif %}

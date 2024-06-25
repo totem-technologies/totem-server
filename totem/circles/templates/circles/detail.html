@@ -4,7 +4,7 @@
 {% load markdown %}
 {% load icons %}
 {# djlint:off #}
-{% block title %}Circles - {{ object.title }}{% endblock title %}
+{% block title %}{{ object.title }} - Totem Spaces{% endblock title %}
 {% block description %}{{ object.content_html|striptags|truncatewords:30 }}{% endblock description %}
 {# djlint:on #}
 {% block javascript %}
@@ -16,7 +16,7 @@
   <div class="h-2"></div>
   <div class="m-auto flex max-w-5xl px-5 pb-2">
     <a class="hover:text-tblue" href="{% url 'circles:list' %}">
-      <h2 class="font-semibold">← All Circles</h2>
+      <h2 class="font-semibold">← All Spaces</h2>
     </a>
   </div>
   <div class="m-auto max-w-5xl px-5">
@@ -46,7 +46,7 @@
           {% if object.subscribed.count %}
             <t-tooltip
               class="flex"
-              text="How many people are getting updates about this Circle.">
+              text="How many people are getting updates about this Space.">
               <div class="pr-1">{% icons 'star' %}</div>
               <div>
                 {{ object.subscribed.count }}
@@ -55,9 +55,7 @@
               </div>
             </t-tooltip>
           {% endif %}
-          <t-tooltip
-            class="flex"
-            text="The cost of this Circle per session, if any.">
+          <t-tooltip class="flex" text="The cost of each session, if any.">
             <div class="pr-1">{% icons 'price' %}</div>
             {% if object.is_free %}
               No Cost
@@ -66,19 +64,19 @@
             {% endif %}
           </t-tooltip>
           {% if event %}
-            <t-tooltip class="flex" text="How long this Circle is.">
+            <t-tooltip class="flex" text="How long this session is.">
               <div class="pr-1">{% icons 'clock' %}</div>
               {{ event.duration_minutes }} min
             </t-tooltip>
             <t-tooltip
               class="flex text-left"
-              text="How often this Circle generally runs. There may be changes in the schedule due to holidays or other events.">
+              text="How often this Space generally runs. There may be changes in the schedule due to holidays or other events.">
               <div class="pr-1">{% icons 'recur' %}</div>
               <div>{{ object.recurring|capfirst }}</div>
             </t-tooltip>
             <t-tooltip
               class="flex"
-              text="How many people are getting updates about this Circle.">
+              text="How many people are getting updates about this Space.">
               <div class="pr-1">{% icons 'reserve' size=20 %}</div>
               <div class="pl-1">
                 {{ event.seats_left }} spot{{ event.seats_left|pluralize }} left
@@ -97,21 +95,21 @@
           </div>
           <div class="pt-3 text-center">
             {% if event.cancelled %}
-              <p>This Circle session has been cancelled.</p>
+              <p>This session has been cancelled.</p>
             {% elif joinable %}
-              <p class="pb-4">The Circle is starting now!</p>
+              <p class="pb-4">The session is starting now!</p>
               <a
                 class="btn btn-primary w-full"
                 target="_blank"
                 href="{% url 'circles:join' event_slug=event.slug %}"
-                >Join Circle</a
+                >Enter Space</a
               >
             {% elif event.ended %}
-              <p>This Circle session has ended.</p>
+              <p>This session has ended.</p>
             {% elif event.started %}
-              <p>This Circle session has already started.</p>
+              <p>This session has already started.</p>
             {% elif not event.open and not attending %}
-              <p>This Circle is not open to new participants.</p>
+              <p>This session is not open to new participants.</p>
             {% else %}
               {% if attending %}
                 <add-to-calendar-button
@@ -160,7 +158,7 @@
           </div>
         {% else %}
           <div class="text-center">
-            <p>This Circle has no upcoming scheduled sessions.</p>
+            <p>This Space has no upcoming scheduled sessions.</p>
           </div>
         {% endif %}
       </div>
@@ -174,7 +172,7 @@
             {% csrf_token %}
             {% if subscribed %}
               <div>
-                You are currently <strong>subscribed</strong> to this Circle.
+                You are currently <strong>subscribed</strong> to this Space.
                 You'll get updates when new sessions are added.
               </div>
               <input type="hidden" name="action" value="unsubscribe" />
@@ -189,13 +187,13 @@
             {% else %}
               <input type="hidden" name="action" value="subscribe" />
               <div class="pb-2">
-                Subscribe to this Circle to receive future updates.
+                Subscribe to this Space to notified about upcoming sessions.
               </div>
               <button
                 class="btn btn-outline w-full p-2 px-6"
                 type="submit"
                 value="Submit">
-                Subscribe for updates
+                Subscribe
               </button>
             {% endif %}
           </form>
@@ -239,7 +237,7 @@
     <div class="mt-5 flex-grow pr-4">
       <div>
         {% if not object.published %}
-          <div class="text-red-500">This circle is not published yet.</div>
+          <div class="text-red-500">This Space is not published yet.</div>
         {% endif %}
       </div>
       <div class="h-5"></div>
@@ -255,7 +253,7 @@
         <div class="tprose">{{ event.content_html }}</div>
       {% endif %}
       <h3 class="font-semibold">
-        About this Circle
+        About this Space
         {% if request.user.is_staff %}
           (<a class="link" target="_blank" href="{{ object.get_admin_url }}"
             >Edit</a

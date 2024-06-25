@@ -221,8 +221,7 @@ function CirclesInner() {
         <Match when={context.events()?.count! == 0}>
           <div>
             <div>
-              No Circles found. Try resetting the filters, or reloading the
-              page.
+              No Spaces found. Try resetting the filters, or reloading the page.
             </div>
             <button class="btn btn-ghost btn-sm mt-5" onClick={context!.reset}>
               Reset

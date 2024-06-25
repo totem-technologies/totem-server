@@ -14,7 +14,6 @@ from totem.utils.hash import basic_hash
 from .actions import AttendCircleAction, JoinCircleAction, SubscribeAction
 from .filters import (
     all_upcoming_recommended_circles,
-    all_upcoming_recommended_events,
     other_events_in_circle,
     upcoming_events_by_author,
 )
@@ -149,28 +148,7 @@ def rsvp(request: HttpRequest, event_slug):
 
 
 def list(request):
-    category = request.GET.get("category")
-    limit = int(request.GET.get("limit", 9))
-    if limit > 100:
-        raise ValueError
-    events = all_upcoming_recommended_events(request.user, category=category).all()
-    context: dict[str, Any] = {"events": events[:limit]}
-    context["selected_category"] = category or ""
-    categories = [
-        {"value": "", "label": "All"},
-    ]
-    categories_values = CircleCategory.objects.values_list("name", "slug").distinct()
-    for category in categories_values:
-        categories.append(
-            {"value": category[1], "label": category[0]},
-        )
-    context["categories"] = categories
-    context["show_load_more"] = events.count() > limit
-    return render(request, "circles/list.html", context=context)
-
-
-def list2(request):
-    return render(request, "circles/list2.html")
+    return render(request, "circles/list.html")
 
 
 def topic(request, slug):
@@ -253,10 +231,10 @@ def subscribe(request: HttpRequest, slug: str):
     circle = _get_circle(slug)
     if sub:
         circle.subscribe(user)
-        message = "You are now subscribed to this Circle."
+        message = "You are now subscribed to this Space."
     else:
         circle.unsubscribe(user)
-        message = "You are now unsubscribed from this Circle."
+        message = "You are now unsubscribed from this Space."
 
     messages.add_message(request, messages.SUCCESS, message)
     return redirect("circles:detail", slug=slug)

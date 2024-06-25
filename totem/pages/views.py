@@ -96,19 +96,6 @@ class HowItWorksView(TemplateView):
         return context
 
 
-# def home(request):
-#     if request.user.is_authenticated:
-#         # Redirect to the dashboard if the user is logged in and they aren't going to the home page from the site.
-#         if settings.EMAIL_BASE_URL not in request.META.get("HTTP_REFERER", ""):
-#             return django_redirect(to=reverse("users:redirect"))
-#     context = {
-#         "faqs": data.faqs,
-#         "quotes": data.quotes,
-#         "signup_form": LoginForm(),
-#     }
-#     return render(request, "pages/home.html", context=context)
-
-
 def keepers(request, name):
     try:
         user = User.objects.get(email=f"{name}@totem.org")

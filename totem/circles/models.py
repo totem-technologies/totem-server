@@ -67,7 +67,7 @@ class CircleCategory(models.Model):
         return self.name
 
     class Meta:
-        verbose_name_plural = "circle categories"
+        verbose_name_plural = "categories"
 
 
 class Circle(AdminURLMixin, MarkdownMixin, SluggedModel):
@@ -79,7 +79,7 @@ class Circle(AdminURLMixin, MarkdownMixin, SluggedModel):
         null=True,
         upload_to=upload_to_id_image,
         spec=CircleImageSpec,  # type: ignore
-        help_text="Image for the Circle, must be under 5mb",
+        help_text="Image for the Space header, must be under 5mb",
     )
     tags = TaggableManager(blank=True)
     content = MarkdownField(default="")
@@ -89,11 +89,11 @@ class Circle(AdminURLMixin, MarkdownMixin, SluggedModel):
         limit_choices_to={"is_staff": True},
         related_name="created_circles",
     )
-    published = models.BooleanField(default=False, help_text="Is this Circle visible?")
-    open = models.BooleanField(default=True, help_text="Is this Circle for more attendees?")
+    published = models.BooleanField(default=False, help_text="Is this listing visible?")
+    open = models.BooleanField(default=True, help_text="Is this listing open for more attendees?")
     price = models.IntegerField(
         default=0,
-        help_text="Price in USD dollars. If you want to offer this Circle for free, enter 0.",
+        help_text="Price in USD dollars. If you want to offer this listing for free, enter 0.",
         verbose_name="Price (USD)",
         validators=[
             MinValueValidator(0, message="Price must be greater than or equal to 0"),
@@ -135,15 +135,15 @@ class Circle(AdminURLMixin, MarkdownMixin, SluggedModel):
 class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
     listed = models.BooleanField(
         default=True,
-        help_text="Is this Circle discoverable? False means events are only accessible via direct link, or to people attending.",
+        help_text="Is this session discoverable? False means events are only accessible via direct link, or to people attending.",
     )
     title = models.CharField(max_length=255, blank=True)
     advertised = models.BooleanField(default=False)
     attendees = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="events_attending")
-    cancelled = models.BooleanField(default=False, help_text="Is this Circle cancelled?")
+    cancelled = models.BooleanField(default=False, help_text="Is this session cancelled?")
     circle = models.ForeignKey(Circle, on_delete=models.CASCADE, related_name="events")
     content = MarkdownField(
-        help_text="Optional description for this specific Circle session. Markdown is supported.",
+        help_text="Optional description for this specific session. Markdown is supported.",
         null=True,
         blank=True,
     )
@@ -152,7 +152,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
     meeting_url = models.CharField(max_length=255, blank=True)
     notified = models.BooleanField(default=False)
     notified_tomorrow = models.BooleanField(default=False)
-    open = models.BooleanField(default=True, help_text="Is this Circle for more attendees?")
+    open = models.BooleanField(default=True, help_text="Is this session open for more attendees?")
     seats = models.IntegerField(default=8)
     start = models.DateTimeField(default=timezone.now)
 
@@ -172,11 +172,11 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
             if user and user.is_staff:
                 return True
             if not self.open:
-                raise CircleEventException("Circle is not available for signup")
+                raise CircleEventException("Session is not available for signup")
             if self.cancelled:
-                raise CircleEventException("Circle was cancelled")
+                raise CircleEventException("Session was cancelled")
             if self.started():
-                raise CircleEventException("Circle has already started")
+                raise CircleEventException("Session has already started")
             if self.seats_left() <= 0:
                 raise CircleEventException("There are no spots left")
             return True
@@ -208,7 +208,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
                 send_notify_circle_signup(self, user)
             if not self.circle.author == user:
                 notify_slack(
-                    f"New Circle attendee: <{full_url(user.get_admin_url())}|{user.name}> for <{full_url(self.get_admin_url())}|{self.circle.title}> by {self.circle.author.name}"
+                    f"New session attendee: <{full_url(user.get_admin_url())}|{user.name}> for <{full_url(self.get_admin_url())}|{self.circle.title}> by {self.circle.author.name}"
                 )
 
     def started(self):
@@ -236,9 +236,9 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         if user not in self.attendees.all():
             return
         if self.cancelled:
-            raise CircleEventException("Circle is cancelled")
+            raise CircleEventException("Session is cancelled")
         if self.started():
-            raise CircleEventException("Circle has already started")
+            raise CircleEventException("Session has already started")
         self.attendees.remove(user)
 
     def notify(self, force=False):

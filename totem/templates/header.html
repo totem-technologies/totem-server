@@ -11,7 +11,7 @@
       <img
         class="hidden sm:block"
         src="{% static 'images/totem-logo.png' %}"
-        width="100"
+        width="80"
         alt="" />
       <img
         class="sm:hidden"
@@ -36,7 +36,7 @@
     <div class="drawer-content flex items-center">
       {% if request.user.is_authenticated %}
         <a class="pr-5 text-sm hover:text-tblue" href="{% url "circles:list" %}"
-          >Circles</a
+          >Spaces</a
         >
         <label
           for="nav-bar-drawer"
@@ -51,7 +51,7 @@
           >Login</a
         >
         <a class="btn btn-primary btn-sm" href="{% url "circles:list" %}"
-          >Circles</a
+          >Spaces</a
         >
         <span class="drawer-content md:hidden">
           <label
@@ -117,7 +117,7 @@
             </li>
             <li>
               <a class="pr-5 hover:text-tblue" href="{% url "circles:list" %}"
-                >Circles</a
+                >Spaces</a
               >
             </li>
             {% if request.user.is_staff %}

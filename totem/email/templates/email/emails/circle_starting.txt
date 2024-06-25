@@ -1,4 +1,4 @@
 {% extends 'email/emails/button.txt' %}
 {% block message %}
-Your Circle is starting soon. Click the button below to join the Circle. If you are more than 5 minutes late, you may not be allowed to participate.
+Your session is starting soon. Click the button below to join. If you are more than 5 minutes late, you may not be allowed to participate.
 {% endblock message %}
