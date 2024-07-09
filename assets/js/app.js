@@ -13,6 +13,10 @@ window.dismiss_alert = function (e) {
   e.closest(".alert-dismissible").remove()
 }
 
+// Fix for instagram browser errors in sentry
+window._AutofillCallbackHandler =
+  window._AutofillCallbackHandler || function () {}
+
 components()
 timezoneDetect()
 htmxLoader()
