@@ -43,4 +43,8 @@ def user_onboarded(user: "User"):
 
 def event_joined(user: "User", event: "CircleEvent"):
     if p := _get_posthog():
-        p.capture(user.analytics_id(), "event_joined", {"event_id": event.slug, "circle_id": event.circle.slug})
+        p.capture(
+            user.analytics_id(),
+            "event_joined",
+            {"event_id": event.slug, "circle_id": event.circle.slug, "keeper_id": event.circle.author.analytics_id()},
+        )
