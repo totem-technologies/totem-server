@@ -20,7 +20,7 @@ whitenoise==6.7.0
 # Django
 # ------------------------------------------------------------------------------
 django-allauth<0.64.0
-django-anymail==10.3
+django-anymail<12
 django-auditlog<4
 django-cors-headers<5
 django-environ==0.11.2
@@ -31,5 +31,5 @@ django-ninja<2
 django-sesame==3.2.2
 django-storages[s3]<2
 django-taggit<6
-django-timezone-field<7
+django-timezone-field<8
 django<5.1

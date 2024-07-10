@@ -365,6 +365,7 @@ SOCIALACCOUNT_FORMS = {"signup": "totem.users.forms.UserSocialSignupForm"}
 # Custom
 # ------------------------------------------------------------------------------
 TOTEM_RUN_TASKS_TOKEN = env("TOTEM_RUN_TASKS_TOKEN")
+TOTEM_ASYNC_WORKER_QUEUE_ENABLED = env.bool("TOTEM_ASYNC_WORKER_QUEUE_ENABLED", default=True)  # type: ignore
 
 # django-sesame
 # ------------------------------------------------------------------------------

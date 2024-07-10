@@ -1,6 +1,7 @@
 import threading
 from queue import Queue
 
+from django.conf import settings
 from sentry_sdk import capture_exception
 
 
@@ -60,6 +61,8 @@ class ThreadPool:
 
     def add_task(self, fn, *args, **kwargs):
         self.queue.put(Item(fn, *args, **kwargs))
+        if settings.TOTEM_ASYNC_WORKER_QUEUE_ENABLED is False:
+            self.queue.join()
 
     def wait_completion(self):
         self.queue.join()

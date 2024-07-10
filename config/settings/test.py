@@ -32,6 +32,8 @@ SITE_BASE_URL = "http://testserver"
 # ------------------------------------------------------------------------------
 TEMPLATES[0]["OPTIONS"]["debug"] = True  # type: ignore # noqa: F405
 
+TOTEM_ASYNC_WORKER_QUEUE_ENABLED = False
+
 # Make sure we don't talk to any real APIs
 # ------------------------------------------------------------------------------
 POSTHOG_API_KEY = "test"
