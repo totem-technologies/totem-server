@@ -34,7 +34,7 @@ TEMPLATES[0]["OPTIONS"]["debug"] = True  # type: ignore # noqa: F405
 
 # Make sure we don't talk to any real APIs
 # ------------------------------------------------------------------------------
-POSTHOG_API_KEY = None
+POSTHOG_API_KEY = "test"
 SAVE_TO_GOOGLE_CALENDAR = False
 MAILERLITE_API_KEY = None
 SLACK_WEBHOOK_URL = None
