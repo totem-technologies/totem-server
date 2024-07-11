@@ -22,13 +22,13 @@
     "node": ">=20"
   },
   "devDependencies": {
-    "@hey-api/openapi-ts": "^0.46.0",
+    "@hey-api/openapi-ts": "^0.48.0",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/line-clamp": "^0.4.2",
     "@tailwindcss/typography": "^0.5.2",
     "concurrently": "^8.2.0",
     "daisyui": "^4.0.2",
-    "esbuild": "^0.21.0",
+    "esbuild": "^0.23.0",
     "esbuild-plugin-solid": "^0.6.0",
     "eslint": "^8.56.0",
     "eslint-plugin-solid": "^0.14.0",

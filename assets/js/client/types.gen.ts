@@ -38,7 +38,7 @@ export type CircleEventSchema = {
   circle: CircleSchema
   url: string
   start?: string
-  slug?: string
+  slug?: string | null
   date_created: string
   date_modified: string
   title?: string | null
@@ -47,7 +47,7 @@ export type CircleEventSchema = {
 export type CircleSchema = {
   author: UserSchema
   title: string
-  slug?: string
+  slug?: string | null
   date_created: string
   date_modified: string
 }

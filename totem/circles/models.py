@@ -33,6 +33,8 @@ from .calendar import calendar
 if TYPE_CHECKING:
     from totem.users.models import User
 
+_default_grace_period = datetime.timedelta(minutes=10)
+
 
 class CircleEventState(Enum):
     OPEN = "OPEN"
@@ -117,7 +119,7 @@ class Circle(AdminURLMixin, MarkdownMixin, SluggedModel):
         return ", ".join([str(attendee.email) for attendee in self.subscribed.all()])
 
     def next_event(self):
-        return self.events.filter(start__gte=timezone.now()).order_by("start").first()
+        return self.events.filter(start__gte=timezone.now() - _default_grace_period).order_by("start").first()
 
     def is_free(self):
         return self.price == 0
@@ -220,7 +222,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
     def can_join(self, user):
         now = timezone.now()
         grace_before = datetime.timedelta(minutes=15)
-        grace_after = datetime.timedelta(minutes=10)
+        grace_after = _default_grace_period
         if user.is_staff or user in self.joined.all():
             # Come back any time if already joined.
             grace_before = datetime.timedelta(minutes=60)

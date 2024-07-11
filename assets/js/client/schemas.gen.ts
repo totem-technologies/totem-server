@@ -147,8 +147,15 @@ export const $CircleEventSchema = {
       type: "string",
     },
     slug: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
       title: "Slug",
-      type: "string",
     },
     date_created: {
       format: "date-time",
@@ -189,8 +196,15 @@ export const $CircleSchema = {
       type: "string",
     },
     slug: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
       title: "Slug",
-      type: "string",
     },
     date_created: {
       format: "date-time",

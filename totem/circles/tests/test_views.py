@@ -31,10 +31,18 @@ class TestCircleDetailView:
         assert response.status_code == 200
 
     def test_detail_circle(self, client, db):
-        circle = CircleEventFactory()
-        url = reverse("circles:detail", kwargs={"slug": circle.circle.slug})
+        event = CircleEventFactory()
+        url = reverse("circles:detail", kwargs={"slug": event.circle.slug})
         response = client.get(url)
         assert response.status_code == 200
+
+    def test_detail_next_event_circle(self, client, db):
+        # Make sure the details page still shows an event while it's in the grace period
+        event_now = CircleEventFactory(start=timezone.now() - datetime.timedelta(minutes=5))
+        url = reverse("circles:detail", kwargs={"slug": event_now.circle.slug})
+        response = client.get(url)
+        assert response.status_code == 200
+        assert "This Space has no upcoming" not in response.content.decode()
 
     def test_detail_circle_no_event(self, client, db):
         user = UserFactory()
