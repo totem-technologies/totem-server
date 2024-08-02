@@ -22,6 +22,7 @@ import {
   totemCirclesApiFilterOptions,
   totemCirclesApiListCircles,
 } from "../client/index"
+import { timestampToDateString, timestampToTimeString } from "@/time"
 import Avatar from "./avatar"
 import ErrorBoundary from "./errors"
 
@@ -41,19 +42,19 @@ type DateChunk = {
 }
 
 type CircleListContextType = {
-  params: Accessor<QueryParams>
+  params: Accessor
   setParams: (params: QueryParams) => void
   reset: () => void
   refetch: () => void
-  events: Resource<PagedCircleEventSchema>
+  events: Resource
   chunkedEvents: () => DateChunk[]
   getMore: () => void
-  activeID: Accessor<string>
+  activeID: Accessor
   setActiveID: (id: string) => void
-  scrolling: Accessor<boolean>
+  scrolling: Accessor
   setScrolling: (scrolling: boolean) => void
   setCategory: (category: string) => void
-  filters: Resource<FilterOptionsSchema>
+  filters: Resource
 }
 
 const defaultParams: QueryParams = {
@@ -167,39 +168,6 @@ function getQueryParams(): QueryParams {
     category: urlParams.get("category") || defaultParams.category,
     author: urlParams.get("author") || defaultParams.author,
   }
-}
-
-const nthNumber = (number: number) => {
-  if (number > 3 && number < 21) return "th"
-  switch (number % 10) {
-    case 1:
-      return "st"
-    case 2:
-      return "nd"
-    case 3:
-      return "rd"
-    default:
-      return "th"
-  }
-}
-
-function timestampToDateString(timestamp: string) {
-  // Date in the form of "Tuesday, May 1st"
-  const date = new Date(timestamp).toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  })
-  return date + nthNumber(new Date(timestamp).getDate())
-}
-
-function timestampToTimeString(timestamp: string) {
-  // Convert timestamp to HH:MM AM/PM Timezone
-  return new Date(timestamp).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "numeric",
-    timeZoneName: "short",
-  })
 }
 
 function Circles() {

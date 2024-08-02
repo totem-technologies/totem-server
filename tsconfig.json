@@ -3,6 +3,7 @@
     "strict": true,
     "target": "ESNext",
     "module": "ESNext",
+    "allowJs": true,
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
@@ -10,6 +11,9 @@
     "jsxImportSource": "solid-js",
     "types": [],
     "noEmit": true,
+    "paths": {
+      "@/*": ["./assets/js/*"]
+    },
     "isolatedModules": true,
     "plugins": [
       {

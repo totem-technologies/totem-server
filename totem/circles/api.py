@@ -1,6 +1,8 @@
+from datetime import datetime
 from typing import List
 
-from django.utils.timezone import localtime
+from django.shortcuts import get_object_or_404
+from django.urls import reverse
 from ninja import FilterSchema, ModelSchema, Router, Schema
 from ninja.pagination import paginate
 from ninja.params.functions import Query
@@ -24,10 +26,6 @@ class CircleSchema(ModelSchema):
 class CircleEventSchema(ModelSchema):
     circle: CircleSchema
     url: str
-
-    @staticmethod
-    def resolve_start(obj: CircleEvent):
-        return localtime(obj.start)
 
     @staticmethod
     def resolve_url(obj: CircleEvent):
@@ -79,3 +77,71 @@ def filter_options(request):
     authors = set(events.values_list("circle__author__name", "circle__author__slug").distinct())
     authors = [{"name": name, "slug": slug} for name, slug in authors if name]
     return {"categories": categories, "authors": authors}
+
+
+class EventDetailSchema(Schema):
+    slug: str
+    title: str
+    description: str
+    price: int
+    seats_left: int
+    duration: int
+    recurring: str
+    subscribers: int
+    start: datetime
+    attending: bool
+    open: bool
+    started: bool
+    cancelled: bool
+    joinable: bool
+    ended: bool
+    rsvp_url: str
+    join_url: str | None
+    subscribe_url: str
+    calLink: str
+    attendees: list[UserSchema]
+    subscribed: bool | None
+    user_timezone: str | None
+
+
+@router.get(
+    "/event/{event_slug}",
+    response={200: EventDetailSchema},
+    tags=["circles"],
+    url_name="event_detail",
+)
+def event_detail(request, event_slug):
+    event = get_object_or_404(CircleEvent, slug=event_slug)
+    space = event.circle
+    attending = event.attendees.filter(pk=request.user.pk).exists()
+    start = event.start
+    join_url = event.join_url(request.user) if attending else None
+    subscribed = space.subscribed.contains(request.user) if request.user.is_authenticated else None
+    if not attending:
+        attendees = []
+    else:
+        attendees = [a for a in event.attendees.all()]
+    return EventDetailSchema(
+        slug=event.slug,
+        title=space.title,
+        description=space.content_html,
+        price=space.price,
+        seats_left=event.seats_left(),
+        duration=event.duration_minutes,
+        recurring=space.recurring,
+        subscribers=space.subscribed.count(),
+        start=start,
+        attending=event.attendees.filter(pk=request.user.pk).exists(),
+        attendees=attendees,
+        open=event.open,
+        started=event.started(),
+        cancelled=event.cancelled,
+        joinable=event.can_join(request.user),
+        ended=event.ended(),
+        rsvp_url=reverse("circles:rsvp", kwargs={"event_slug": event.slug}),
+        join_url=join_url,
+        calLink=event.cal_link(),
+        subscribe_url=reverse("circles:subscribe", kwargs={"slug": space.slug}),
+        subscribed=subscribed,
+        user_timezone="UTC",
+    )

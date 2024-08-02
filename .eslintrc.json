@@ -5,5 +5,9 @@
     "sourceType": "module"
   },
   "plugins": ["solid"],
-  "extends": ["eslint:recommended", "plugin:solid/recommended"]
+  "extends": [
+    "eslint:recommended",
+    "plugin:solid/recommended",
+    "plugin:@tanstack/eslint-plugin-query/recommended"
+  ]
 }

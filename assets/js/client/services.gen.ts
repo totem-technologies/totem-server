@@ -13,6 +13,8 @@ import type {
   TotemCirclesApiListCirclesData,
   TotemCirclesApiListCirclesResponse,
   TotemCirclesApiFilterOptionsResponse,
+  TotemCirclesApiEventDetailData,
+  TotemCirclesApiEventDetailResponse,
 } from "./types.gen"
 
 /**
@@ -20,13 +22,12 @@ import type {
  * @returns unknown OK
  * @throws ApiError
  */
-export const totemApiApiSecret =
-  (): CancelablePromise<TotemApiApiSecretResponse> => {
-    return __request(OpenAPI, {
-      method: "GET",
-      url: "/api/v1/protected",
-    })
-  }
+export const totemApiApiSecret = (): CancelablePromise => {
+  return __request(OpenAPI, {
+    method: "GET",
+    url: "/api/v1/protected",
+  })
+}
 
 /**
  * Login
@@ -37,7 +38,7 @@ export const totemApiApiSecret =
  */
 export const totemApiApiLogin = (
   data: TotemApiApiLoginData
-): CancelablePromise<TotemApiApiLoginResponse> => {
+): CancelablePromise => {
   return __request(OpenAPI, {
     method: "POST",
     url: "/api/v1/auth/login",
@@ -56,7 +57,7 @@ export const totemApiApiLogin = (
  */
 export const totemApiApiToken = (
   data: TotemApiApiTokenData
-): CancelablePromise<TotemApiApiTokenResponse> => {
+): CancelablePromise => {
   return __request(OpenAPI, {
     method: "POST",
     url: "/api/v1/auth/token",
@@ -71,16 +72,15 @@ export const totemApiApiToken = (
  * @returns UserSchema OK
  * @throws ApiError
  */
-export const totemApiApiCurrentUser =
-  (): CancelablePromise<TotemApiApiCurrentUserResponse> => {
-    return __request(OpenAPI, {
-      method: "GET",
-      url: "/api/v1/auth/currentuser",
-      errors: {
-        404: "Not Found",
-      },
-    })
-  }
+export const totemApiApiCurrentUser = (): CancelablePromise => {
+  return __request(OpenAPI, {
+    method: "GET",
+    url: "/api/v1/auth/currentuser",
+    errors: {
+      404: "Not Found",
+    },
+  })
+}
 
 /**
  * List Circles
@@ -94,7 +94,7 @@ export const totemApiApiCurrentUser =
  */
 export const totemCirclesApiListCircles = (
   data: TotemCirclesApiListCirclesData
-): CancelablePromise<TotemCirclesApiListCirclesResponse> => {
+): CancelablePromise => {
   return __request(OpenAPI, {
     method: "GET",
     url: "/api/v1/circles/",
@@ -112,10 +112,28 @@ export const totemCirclesApiListCircles = (
  * @returns FilterOptionsSchema OK
  * @throws ApiError
  */
-export const totemCirclesApiFilterOptions =
-  (): CancelablePromise<TotemCirclesApiFilterOptionsResponse> => {
-    return __request(OpenAPI, {
-      method: "GET",
-      url: "/api/v1/circles/filter-options",
-    })
-  }
+export const totemCirclesApiFilterOptions = (): CancelablePromise => {
+  return __request(OpenAPI, {
+    method: "GET",
+    url: "/api/v1/circles/filter-options",
+  })
+}
+
+/**
+ * Event Detail
+ * @param data The data for the request.
+ * @param data.eventSlug
+ * @returns EventDetailSchema OK
+ * @throws ApiError
+ */
+export const totemCirclesApiEventDetail = (
+  data: TotemCirclesApiEventDetailData
+): CancelablePromise => {
+  return __request(OpenAPI, {
+    method: "GET",
+    url: "/api/v1/circles/event/{event_slug}",
+    path: {
+      event_slug: data.eventSlug,
+    },
+  })
+}

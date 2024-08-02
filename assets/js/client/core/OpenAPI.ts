@@ -1,24 +1,24 @@
 import type { ApiRequestOptions } from "./ApiRequestOptions"
 
-type Headers = Record<string, string>
-type Middleware<T> = (value: T) => T | Promise<T>
-type Resolver<T> = (options: ApiRequestOptions<T>) => Promise<T>
+type Headers = Record
+type Middleware<T> = (value: T) => T | Promise
+type Resolver<T> = (options: ApiRequestOptions) => Promise
 
 export class Interceptors<T> {
-  _fns: Middleware<T>[]
+  _fns: Middleware[]
 
   constructor() {
     this._fns = []
   }
 
-  eject(fn: Middleware<T>): void {
+  eject(fn: Middleware): void {
     const index = this._fns.indexOf(fn)
     if (index !== -1) {
       this._fns = [...this._fns.slice(0, index), ...this._fns.slice(index + 1)]
     }
   }
 
-  use(fn: Middleware<T>): void {
+  use(fn: Middleware): void {
     this._fns = [...this._fns, fn]
   }
 }
@@ -27,15 +27,15 @@ export type OpenAPIConfig = {
   BASE: string
   CREDENTIALS: "include" | "omit" | "same-origin"
   ENCODE_PATH?: ((path: string) => string) | undefined
-  HEADERS?: Headers | Resolver<Headers> | undefined
-  PASSWORD?: string | Resolver<string> | undefined
-  TOKEN?: string | Resolver<string> | undefined
-  USERNAME?: string | Resolver<string> | undefined
+  HEADERS?: Headers | Resolver | undefined
+  PASSWORD?: string | Resolver | undefined
+  TOKEN?: string | Resolver | undefined
+  USERNAME?: string | Resolver | undefined
   VERSION: string
   WITH_CREDENTIALS: boolean
   interceptors: {
-    request: Interceptors<RequestInit>
-    response: Interceptors<Response>
+    request: Interceptors
+    response: Interceptors
   }
 }
 

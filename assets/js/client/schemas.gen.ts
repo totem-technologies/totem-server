@@ -47,6 +47,12 @@ export const $UserSchema = {
       ],
       title: "Name",
     },
+    is_staff: {
+      default: false,
+      description: "Designates whether the user can log into this admin site.",
+      title: "Staff Status",
+      type: "boolean",
+    },
     profile_avatar_seed: {
       format: "uuid",
       title: "Profile Avatar Seed",
@@ -292,5 +298,149 @@ export const $FilterOptionsSchema = {
   },
   required: ["categories", "authors"],
   title: "FilterOptionsSchema",
+  type: "object",
+} as const
+
+export const $EventDetailSchema = {
+  properties: {
+    slug: {
+      title: "Slug",
+      type: "string",
+    },
+    title: {
+      title: "Title",
+      type: "string",
+    },
+    description: {
+      title: "Description",
+      type: "string",
+    },
+    price: {
+      title: "Price",
+      type: "integer",
+    },
+    seats_left: {
+      title: "Seats Left",
+      type: "integer",
+    },
+    duration: {
+      title: "Duration",
+      type: "integer",
+    },
+    recurring: {
+      title: "Recurring",
+      type: "string",
+    },
+    subscribers: {
+      title: "Subscribers",
+      type: "integer",
+    },
+    start: {
+      format: "date-time",
+      title: "Start",
+      type: "string",
+    },
+    attending: {
+      title: "Attending",
+      type: "boolean",
+    },
+    open: {
+      title: "Open",
+      type: "boolean",
+    },
+    started: {
+      title: "Started",
+      type: "boolean",
+    },
+    cancelled: {
+      title: "Cancelled",
+      type: "boolean",
+    },
+    joinable: {
+      title: "Joinable",
+      type: "boolean",
+    },
+    ended: {
+      title: "Ended",
+      type: "boolean",
+    },
+    rsvp_url: {
+      title: "Rsvp Url",
+      type: "string",
+    },
+    join_url: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Join Url",
+    },
+    subscribe_url: {
+      title: "Subscribe Url",
+      type: "string",
+    },
+    calLink: {
+      title: "Callink",
+      type: "string",
+    },
+    attendees: {
+      items: {
+        $ref: "#/components/schemas/UserSchema",
+      },
+      title: "Attendees",
+      type: "array",
+    },
+    subscribed: {
+      anyOf: [
+        {
+          type: "boolean",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "Subscribed",
+    },
+    user_timezone: {
+      anyOf: [
+        {
+          type: "string",
+        },
+        {
+          type: "null",
+        },
+      ],
+      title: "User Timezone",
+    },
+  },
+  required: [
+    "slug",
+    "title",
+    "description",
+    "price",
+    "seats_left",
+    "duration",
+    "recurring",
+    "subscribers",
+    "start",
+    "attending",
+    "open",
+    "started",
+    "cancelled",
+    "joinable",
+    "ended",
+    "rsvp_url",
+    "join_url",
+    "subscribe_url",
+    "calLink",
+    "attendees",
+    "subscribed",
+    "user_timezone",
+  ],
+  title: "EventDetailSchema",
   type: "object",
 } as const

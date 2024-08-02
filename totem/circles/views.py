@@ -3,13 +3,14 @@ from typing import Any
 from django.contrib import messages
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
-from django.http import Http404, HttpRequest
+from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from sentry_sdk import capture_exception
 
 from totem.users import analytics
 from totem.users.models import User
 from totem.utils.hash import basic_hash
+from totem.utils.utils import is_ajax
 
 from .actions import AttendCircleAction, JoinCircleAction, SubscribeAction
 from .filters import (
@@ -137,14 +138,21 @@ def rsvp(request: HttpRequest, event_slug):
     if not request.user.is_authenticated:
         request.session[AUTO_RSVP_SESSION_KEY] = event_slug
         return redirect_to_login(request.get_full_path())
-
     event = _get_circle_event(event_slug)
+    error = ""
     if request.POST:
         try:
             _add_or_remove_attendee(request.user, event, request.POST.get("action") != "remove")
         except CircleEventException as e:
-            messages.error(request, str(e))
-    return redirect("circles:event_detail", event_slug=event.slug)
+            error = str(e)
+    if is_ajax(request):
+        if error:
+            return JsonResponse({"error": error}, status=400)
+        return JsonResponse({"ok": True})
+    else:
+        if error:
+            messages.error(request, error)
+        return redirect("circles:event_detail", event_slug=event.slug)
 
 
 def list(request):
@@ -235,6 +243,9 @@ def subscribe(request: HttpRequest, slug: str):
     else:
         circle.unsubscribe(user)
         message = "You are now unsubscribed from this Space."
+
+    if is_ajax(request):
+        return HttpResponse("ok")
 
     messages.add_message(request, messages.SUCCESS, message)
     return redirect("circles:detail", slug=slug)

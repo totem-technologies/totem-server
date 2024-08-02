@@ -30,7 +30,7 @@ export const base64 = (str: string): string => {
   }
 }
 
-export const getQueryString = (params: Record<string, unknown>): string => {
+export const getQueryString = (params: Record): string => {
   const qs: string[] = []
 
   const append = (key: string, value: unknown) => {
@@ -103,22 +103,22 @@ export const getFormData = (
   return undefined
 }
 
-type Resolver<T> = (options: ApiRequestOptions<T>) => Promise<T>
+type Resolver<T> = (options: ApiRequestOptions) => Promise
 
 export const resolve = async <T>(
-  options: ApiRequestOptions<T>,
-  resolver?: T | Resolver<T>
-): Promise<T | undefined> => {
+  options: ApiRequestOptions,
+  resolver?: T | Resolver
+): Promise => {
   if (typeof resolver === "function") {
-    return (resolver as Resolver<T>)(options)
+    return (resolver as Resolver)(options)
   }
   return resolver
 }
 
 export const getHeaders = async <T>(
   config: OpenAPIConfig,
-  options: ApiRequestOptions<T>
-): Promise<Headers> => {
+  options: ApiRequestOptions
+): Promise => {
   const [token, username, password, additionalHeaders] = await Promise.all([
     // @ts-ignore
     resolve(options, config.TOKEN),
@@ -141,7 +141,7 @@ export const getHeaders = async <T>(
         ...headers,
         [key]: String(value),
       }),
-      {} as Record<string, string>
+      {} as Record
     )
 
   if (isStringWithValue(token)) {
@@ -196,7 +196,7 @@ export const sendRequest = async (
   formData: FormData | undefined,
   headers: Headers,
   onCancel: OnCancel
-): Promise<Response> => {
+): Promise => {
   const controller = new AbortController()
 
   let request: RequestInit = {
@@ -232,7 +232,7 @@ export const getResponseHeader = (
   return undefined
 }
 
-export const getResponseBody = async (response: Response): Promise<unknown> => {
+export const getResponseBody = async (response: Response): Promise => {
   if (response.status !== 204) {
     try {
       const contentType = response.headers.get("Content-Type")
@@ -269,7 +269,7 @@ export const catchErrorCodes = (
   options: ApiRequestOptions,
   result: ApiResult
 ): void => {
-  const errors: Record<number, string> = {
+  const errors: Record = {
     400: "Bad Request",
     401: "Unauthorized",
     402: "Payment Required",
@@ -346,8 +346,8 @@ export const catchErrorCodes = (
  */
 export const request = <T>(
   config: OpenAPIConfig,
-  options: ApiRequestOptions<T>
-): CancelablePromise<T> => {
+  options: ApiRequestOptions
+): CancelablePromise => {
   return new CancelablePromise(async (resolve, reject, onCancel) => {
     try {
       const url = getUrl(config, options)

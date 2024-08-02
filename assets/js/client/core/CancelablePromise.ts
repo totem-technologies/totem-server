@@ -17,18 +17,18 @@ export interface OnCancel {
   (cancelHandler: () => void): void
 }
 
-export class CancelablePromise<T> implements Promise<T> {
+export class CancelablePromise<T> implements Promise {
   private _isResolved: boolean
   private _isRejected: boolean
   private _isCancelled: boolean
   readonly cancelHandlers: (() => void)[]
-  readonly promise: Promise<T>
-  private _resolve?: (value: T | PromiseLike<T>) => void
+  readonly promise: Promise
+  private _resolve?: (value: T | PromiseLike) => void
   private _reject?: (reason?: unknown) => void
 
   constructor(
     executor: (
-      resolve: (value: T | PromiseLike<T>) => void,
+      resolve: (value: T | PromiseLike) => void,
       reject: (reason?: unknown) => void,
       onCancel: OnCancel
     ) => void
@@ -41,7 +41,7 @@ export class CancelablePromise<T> implements Promise<T> {
       this._resolve = resolve
       this._reject = reject
 
-      const onResolve = (value: T | PromiseLike<T>): void => {
+      const onResolve = (value: T | PromiseLike): void => {
         if (this._isResolved || this._isRejected || this._isCancelled) {
           return
         }
@@ -85,19 +85,19 @@ export class CancelablePromise<T> implements Promise<T> {
   }
 
   public then<TResult1 = T, TResult2 = never>(
-    onFulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | null,
-    onRejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
-  ): Promise<TResult1 | TResult2> {
+    onFulfilled?: ((value: T) => TResult1 | PromiseLike) | null,
+    onRejected?: ((reason: unknown) => TResult2 | PromiseLike) | null
+  ): Promise {
     return this.promise.then(onFulfilled, onRejected)
   }
 
   public catch<TResult = never>(
-    onRejected?: ((reason: unknown) => TResult | PromiseLike<TResult>) | null
-  ): Promise<T | TResult> {
+    onRejected?: ((reason: unknown) => TResult | PromiseLike) | null
+  ): Promise {
     return this.promise.catch(onRejected)
   }
 
-  public finally(onFinally?: (() => void) | null): Promise<T> {
+  public finally(onFinally?: (() => void) | null): Promise {
     return this.promise.finally(onFinally)
   }
 

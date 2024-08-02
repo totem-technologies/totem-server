@@ -5,6 +5,7 @@ from django.utils import timezone
 
 from totem.circles.api import EventsFilterSchema
 from totem.circles.tests.factories import CircleCategoryFactory, CircleEventFactory, CircleFactory
+from totem.users.tests.factories import UserFactory
 
 
 class TestCircleListAPI:
@@ -96,3 +97,28 @@ class TestFilterOptions:
         names = [response.json()["authors"][0]["name"], response.json()["authors"][1]["name"]]
         assert circle.author.name in names
         assert event2.circle.author.name in names
+
+
+class TestEventDetail:
+    def test_event_detail(self, client, db):
+        event = CircleEventFactory()
+        url = reverse("api-1:event_detail", kwargs={"event_slug": event.slug})
+        response = client.get(url)
+        assert response.status_code == 200
+        assert response.json()["slug"] == event.slug
+
+    def test_event_detail_not_found(self, client, db):
+        url = reverse("api-1:event_detail", kwargs={"event_slug": "not-found"})
+        response = client.get(url)
+        assert response.status_code == 404
+
+    def test_event_detail_authenticated(self, client, db):
+        user = UserFactory()
+        user.save()
+        client.force_login(user)
+        event = CircleEventFactory()
+        url = reverse("api-1:event_detail", kwargs={"event_slug": event.slug})
+        response = client.get(url)
+        assert response.status_code == 200
+        assert response.json()["slug"] == event.slug
+        assert response.json()["attending"] is False

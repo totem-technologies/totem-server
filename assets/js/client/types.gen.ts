@@ -13,6 +13,10 @@ export type ProfileAvatarTypeEnum = "TD" | "IM"
 export type UserSchema = {
   profile_avatar_type: ProfileAvatarTypeEnum
   name?: string | null
+  /**
+   * Designates whether the user can log into this admin site.
+   */
+  is_staff?: boolean
   profile_avatar_seed?: string
   /**
    * Profile image, must be under 5mb. Will be cropped to a square.
@@ -53,7 +57,7 @@ export type CircleSchema = {
 }
 
 export type PagedCircleEventSchema = {
-  items: Array<CircleEventSchema>
+  items: Array
   count: number
 }
 
@@ -68,8 +72,33 @@ export type CategoryFilterSchema = {
 }
 
 export type FilterOptionsSchema = {
-  categories: Array<CategoryFilterSchema>
-  authors: Array<AuthorFilterSchema>
+  categories: Array
+  authors: Array
+}
+
+export type EventDetailSchema = {
+  slug: string
+  title: string
+  description: string
+  price: number
+  seats_left: number
+  duration: number
+  recurring: string
+  subscribers: number
+  start: string
+  attending: boolean
+  open: boolean
+  started: boolean
+  cancelled: boolean
+  joinable: boolean
+  ended: boolean
+  rsvp_url: string
+  join_url: string | null
+  subscribe_url: string
+  calLink: string
+  attendees: Array
+  subscribed: boolean | null
+  user_timezone: string | null
 }
 
 export type TotemApiApiSecretResponse = unknown
@@ -98,6 +127,12 @@ export type TotemCirclesApiListCirclesData = {
 export type TotemCirclesApiListCirclesResponse = PagedCircleEventSchema
 
 export type TotemCirclesApiFilterOptionsResponse = FilterOptionsSchema
+
+export type TotemCirclesApiEventDetailData = {
+  eventSlug: string
+}
+
+export type TotemCirclesApiEventDetailResponse = EventDetailSchema
 
 export type $OpenApiTs = {
   "/api/v1/protected": {
@@ -164,6 +199,17 @@ export type $OpenApiTs = {
          * OK
          */
         200: FilterOptionsSchema
+      }
+    }
+  }
+  "/api/v1/circles/event/{event_slug}": {
+    get: {
+      req: TotemCirclesApiEventDetailData
+      res: {
+        /**
+         * OK
+         */
+        200: EventDetailSchema
       }
     }
   }
