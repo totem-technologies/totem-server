@@ -3,13 +3,13 @@ from typing import List
 
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
-from ninja import FilterSchema, ModelSchema, Router, Schema
+from ninja import Field, FilterSchema, ModelSchema, Router, Schema
 from ninja.pagination import paginate
 from ninja.params.functions import Query
 
 from totem.users.schemas import UserSchema
 
-from .filters import all_upcoming_recommended_events
+from .filters import all_upcoming_recommended_events, events_by_month
 from .models import Circle, CircleEvent
 
 router = Router()
@@ -117,10 +117,11 @@ def event_detail(request, event_slug):
     start = event.start
     join_url = event.join_url(request.user) if attending else None
     subscribed = space.subscribed.contains(request.user) if request.user.is_authenticated else None
-    if not attending:
-        attendees = []
-    else:
+    ended = event.ended()
+    if not attending and not ended:
         attendees = [a for a in event.attendees.all()]
+    else:
+        attendees = []
     return EventDetailSchema(
         slug=event.slug,
         title=space.title,
@@ -137,7 +138,7 @@ def event_detail(request, event_slug):
         started=event.started(),
         cancelled=event.cancelled,
         joinable=event.can_join(request.user),
-        ended=event.ended(),
+        ended=ended,
         rsvp_url=reverse("circles:rsvp", kwargs={"event_slug": event.slug}),
         join_url=join_url,
         calLink=event.cal_link(),
@@ -145,3 +146,28 @@ def event_detail(request, event_slug):
         subscribed=subscribed,
         user_timezone="UTC",
     )
+
+
+class EventCalendarSchema(Schema):
+    title: str
+    start: str
+    slug: str
+    url: str
+
+
+class EventCalendarFilterSchema(FilterSchema):
+    space_slug: str = Field(default=None, description="Space slug")
+    month: int = Field(default=datetime.now().month, description="Month of the year, 1-12", gt=0, lt=13)
+    year: int = Field(default=datetime.now().year, description="Year of the month, e.g. 2024", gt=1000, lt=3000)
+
+
+@router.get("/calendar", response={200: List[EventCalendarSchema]}, tags=["circles"], url_name="event_calendar")
+def upcoming_events(request, filters: EventCalendarFilterSchema = Query()):
+    print(filters)
+    events = events_by_month(request.user, filters.space_slug, filters.month, filters.year)
+    return [
+        EventCalendarSchema(
+            title=event.title, start=event.start.isoformat(), url=event.get_absolute_url(), slug=event.slug
+        )
+        for event in events
+    ]

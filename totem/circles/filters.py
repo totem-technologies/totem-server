@@ -1,3 +1,5 @@
+import datetime
+
 from django.db.models import Count, F, OuterRef, Q, Subquery
 from django.utils import timezone
 
@@ -18,6 +20,18 @@ def other_events_in_circle(user: User | None, event: CircleEvent, limit: int = 1
     if not user or not user.is_staff:
         events = events.filter(circle__published=True)
     return events[:limit]
+
+
+def events_by_month(user: User | None, circle_slug: str, month: int, year: int):
+    startDate = datetime.datetime(year, month, 1, tzinfo=datetime.timezone.utc)
+    endDate = startDate + datetime.timedelta(days=32)
+    events = CircleEvent.objects.filter(
+        start__gte=startDate, start__lte=endDate, cancelled=False, open=True, listed=True, circle__slug=circle_slug
+    )
+    events = events.order_by("start")
+    if not user or not user.is_staff:
+        events = events.filter(circle__published=True)
+    return events
 
 
 def all_upcoming_recommended_events(user: User | None, category: str | None = None, author: str | None = None):

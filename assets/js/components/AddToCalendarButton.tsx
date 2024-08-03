@@ -7,16 +7,20 @@ function AddToCalendarButton(props: {
   durationMinutes: number
 }) {
   // let debug = "true"
-  let startDate = getDateFromISOString(props.start)
-  let startTime = convertISOToHHMM(props.start)
+  let startDate = () => getDateFromISOString(props.start)
+  let startTime = () => convertISOToHHMM(props.start)
 
   // Add duration to end date
-  let endDateObj = new Date(props.start)
-  endDateObj.setMinutes(endDateObj.getMinutes() + props.durationMinutes)
-  let endDate = getDateFromISOString(endDateObj.toISOString())
-  let endTime = convertISOToHHMM(endDateObj.toISOString())
+  let endDateObj = () => new Date(props.start)
+  endDateObj().setMinutes(endDateObj().getMinutes() + props.durationMinutes)
+  let endDate = () => getDateFromISOString(endDateObj().toISOString())
+  let endTime = () => convertISOToHHMM(endDateObj().toISOString())
 
-  console.log(props)
+  // Sanitize strings
+  let name = () => `${props.name}`.replaceAll('"', "")
+  let calLink = () => `${props.calLink}?r=cal_link`.replaceAll('"', "")
+
+  // console.log(props)
   let debug = window.TOTEM_DATA.debug ? "true" : "false"
   let el = `<add-to-calendar-button
       styleLight="--btn-shadow:none; --btn-shadow-hover:none"
@@ -25,13 +29,13 @@ function AddToCalendarButton(props: {
       buttonStyle="round"
       debug="${debug}"
       listStyle="overlay"
-      name="Totem - ${props.name}"
+      name="Totem - ${name()}"
       options="'Apple','Google','Outlook.com'"
-      location="${props.calLink}?r=cal_link"
-      startDate="${startDate}"
-      endDate="${endDate}"
-      startTime="${startTime}"
-      endTime="${endTime}"
+      location="${calLink()}?r=cal_link"
+      startDate="${startDate()}"
+      endDate="${endDate()}"
+      startTime="${startTime()}"
+      endTime="${endTime()}"
       timeZone="UTC"></add-to-calendar-button>`
   // eslint-disable-next-line solid/no-innerhtml
   return <div innerHTML={el} />

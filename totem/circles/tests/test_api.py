@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.urls import reverse
 from django.utils import timezone
 
-from totem.circles.api import EventsFilterSchema
+from totem.circles.api import EventCalendarFilterSchema, EventsFilterSchema
 from totem.circles.tests.factories import CircleCategoryFactory, CircleEventFactory, CircleFactory
 from totem.users.tests.factories import UserFactory
 
@@ -122,3 +122,45 @@ class TestEventDetail:
         assert response.status_code == 200
         assert response.json()["slug"] == event.slug
         assert response.json()["attending"] is False
+
+    def test_event_detail_ended(self, client, db):
+        user = UserFactory()
+        user.save()
+        client.force_login(user)
+        now_minus_one = timezone.now() - timedelta(days=1)
+        event = CircleEventFactory(start=now_minus_one)
+        event.attendees.add(user)
+        url = reverse("api-1:event_detail", kwargs={"event_slug": event.slug})
+        response = client.get(url)
+        assert response.status_code == 200
+        assert response.json()["ended"] is True
+        assert response.json()["attending"] is True
+        assert len(response.json()["attendees"]) == 0
+
+
+class TestEventCalendar:
+    def test_event_calendar_future(self, client, db):
+        now_plus_week = timezone.now() + timedelta(days=7)
+        event = CircleEventFactory(start=now_plus_week)
+        url = reverse("api-1:event_calendar")
+        response = client.get(
+            url,
+            EventCalendarFilterSchema(
+                space_slug=event.circle.slug, month=now_plus_week.month, year=now_plus_week.year
+            ).model_dump(),
+        )
+        assert response.status_code == 200
+        assert response.json()[0]["title"] == event.title
+
+    def test_event_calendar_now(self, client, db):
+        now = timezone.now()
+        event = CircleEventFactory(start=now)
+        CircleEventFactory(start=now, cancelled=True)
+        url = reverse("api-1:event_calendar")
+        response = client.get(
+            url,
+            EventCalendarFilterSchema(space_slug=event.circle.slug, month=now.month, year=now.year).model_dump(),
+        )
+        assert response.status_code == 200
+        assert response.json()[0]["title"] == event.title
+        assert len(response.json()) == 1

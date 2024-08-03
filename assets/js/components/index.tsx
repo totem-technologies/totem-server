@@ -5,9 +5,18 @@ import Avatar from "./avatar"
 import Circles from "./circles"
 import DetailSidebar from "./detailSidebar"
 import ErrorBoundary from "./errors"
+import EventCalendar from "./eventCalendar"
 import PromptSearch from "./promptSearch"
 import Tooltip from "./tooltip"
-var components = [PromptSearch, Circles, Avatar, Tooltip, DetailSidebar]
+
+var components = [
+  PromptSearch,
+  Circles,
+  Avatar,
+  Tooltip,
+  DetailSidebar,
+  EventCalendar,
+]
 
 export default function () {
   components.forEach((c) => {

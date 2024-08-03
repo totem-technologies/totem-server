@@ -30,33 +30,11 @@
     {% include "circles/_event_detail_card.html" %}
   </div>
   <div class="m-auto max-w-5xl flex-row-reverse px-5 md:flex">
-    <div
-      hx-select=".hx-circle-sidebar"
-      hx-swap="outerHTML"
-      hx-target="this"
-      class="hx-circle-sidebar">
+    <div>
       <t-detail-sidebar eventID="{{ event.slug }}"></t-detail-sidebar>
-      {% if other_events %}
-        <div
-          class="collapse mt-5 w-80 rounded-2xl border border-gray-200 bg-white max-md:collapse-plus md:collapse-open max-md:w-full">
-          <input type="checkbox" />
-          <div class="collapse-title flex items-center font-semibold">
-            Other sessions
-          </div>
-          <div class="collapse-content">
-            {% for other_event in other_events %}
-              <div class="pb-1">
-                <a
-                  class="btn btn-ghost btn-sm"
-                  href="{{ other_event.get_absolute_url }}"
-                  >{{ other_event.start|date:'M jS' }} @
-                  {{ other_event.start|date:'P T' }}</a
-                >
-              </div>
-            {% endfor %}
-          </div>
-        </div>
-      {% endif %}
+      <t-eventcalendar
+        spaceID="{{ object.slug }}"
+        eventID="{{ event.slug }}"></t-eventcalendar>
     </div>
     <div class="mt-5 flex-grow pr-4">
       <div>

@@ -147,25 +147,27 @@ function EventInfo(props: {
 
 function Attendees(props: { event: EventDetailSchema }) {
   return (
-    <DetailBox>
-      <div class="pb-3">
-        <strong>Going</strong>
-      </div>
-      <div class="flex flex-wrap justify-center gap-2">
-        <For each={props.event.attendees}>
-          {(attendee) => (
-            <Avatar
-              tooltip={true}
-              size={50}
-              name={attendee.name || ""}
-              seed={attendee.profile_avatar_seed!}
-              url={attendee.profile_image!}
-              type={attendee.profile_avatar_type}
-            />
-          )}
-        </For>
-      </div>
-    </DetailBox>
+    <Show when={!props.event.ended}>
+      <DetailBox>
+        <div class="pb-3">
+          <strong>Going</strong>
+        </div>
+        <div class="flex flex-wrap justify-center gap-2">
+          <For each={props.event.attendees}>
+            {(attendee) => (
+              <Avatar
+                tooltip={true}
+                size={50}
+                name={attendee.name || ""}
+                seed={attendee.profile_avatar_seed!}
+                url={attendee.profile_image!}
+                type={attendee.profile_avatar_type}
+              />
+            )}
+          </For>
+        </div>
+      </DetailBox>
+    </Show>
   )
 }
 
