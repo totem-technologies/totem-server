@@ -26,7 +26,7 @@ export function timestampToTimeString(timestamp: string) {
   // Convert timestamp to HH:MM AM/PM Timezone
   return new Date(timestamp).toLocaleTimeString(undefined, {
     hour: "numeric",
-    minute: "numeric",
+    minute: "2-digit",
     timeZoneName: "short",
   })
 }

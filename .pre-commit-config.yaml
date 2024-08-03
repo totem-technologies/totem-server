@@ -4,9 +4,9 @@ default_stages: [pre-commit]
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.6.0
-    exclude: ".min."
     hooks:
       - id: trailing-whitespace
+        exclude: ".min."
       - id: check-json
       - id: check-toml
       - id: check-xml

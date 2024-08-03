@@ -7,6 +7,7 @@ import DetailSidebar from "./detailSidebar"
 import ErrorBoundary from "./errors"
 import EventCalendar from "./eventCalendar"
 import PromptSearch from "./promptSearch"
+import Time from "./time"
 import Tooltip from "./tooltip"
 
 var components = [
@@ -16,6 +17,7 @@ var components = [
   Tooltip,
   DetailSidebar,
   EventCalendar,
+  Time,
 ]
 
 export default function () {

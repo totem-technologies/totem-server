@@ -36,8 +36,7 @@
     <div class="p-5">
       <div class="flex items-center justify-between gap-2">
         <p class="font-normal text-gray-700">
-          {{ event.start|date:'M jS' }} @
-          <span>{{ event.start|date:'P T' }}</span>
+          <t-time time="{{ event.start|date:'c' }}" format="at"></t-time>
         </p>
         <a
           href="{% url "circles:event_detail" event_slug=event.slug %}"
