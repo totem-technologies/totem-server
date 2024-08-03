@@ -15,7 +15,6 @@ from totem.utils.utils import is_ajax
 from .actions import AttendCircleAction, JoinCircleAction, SubscribeAction
 from .filters import (
     all_upcoming_recommended_circles,
-    other_events_in_circle,
     upcoming_events_by_author,
 )
 from .models import Circle, CircleCategory, CircleEvent, CircleEventException
@@ -77,10 +76,6 @@ def _circle_detail(request: HttpRequest, user: User, circle: Circle, event: Circ
             attending = event.attendees.contains(user)
             joinable = event.can_join(user)
 
-    other_events = []
-    if event:
-        other_events = other_events_in_circle(user=user, event=event)
-
     other_circles = upcoming_events_by_author(user, circle.author, exclude_circle=circle)[:6]
 
     return render(
@@ -92,7 +87,6 @@ def _circle_detail(request: HttpRequest, user: User, circle: Circle, event: Circ
             "joinable": joinable,
             "subscribed": subscribed,
             "event": event,
-            "other_events": other_events,
             "other_circles": other_circles,
         },
     )
