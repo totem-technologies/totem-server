@@ -1,3 +1,4 @@
+import { timestampToDateString, timestampToTimeString } from "@/time"
 import { createViewportObserver } from "@solid-primitives/intersection-observer"
 import { createMediaQuery } from "@solid-primitives/media"
 import { Refs } from "@solid-primitives/refs"
@@ -22,7 +23,6 @@ import {
   totemCirclesApiFilterOptions,
   totemCirclesApiListCircles,
 } from "../client/index"
-import { timestampToDateString, timestampToTimeString } from "@/time"
 import Avatar from "./avatar"
 import ErrorBoundary from "./errors"
 
@@ -42,19 +42,19 @@ type DateChunk = {
 }
 
 type CircleListContextType = {
-  params: Accessor
+  params: Accessor<QueryParams>
   setParams: (params: QueryParams) => void
   reset: () => void
   refetch: () => void
-  events: Resource
+  events: Resource<PagedCircleEventSchema>
   chunkedEvents: () => DateChunk[]
   getMore: () => void
-  activeID: Accessor
+  activeID: Accessor<string>
   setActiveID: (id: string) => void
-  scrolling: Accessor
+  scrolling: Accessor<boolean>
   setScrolling: (scrolling: boolean) => void
   setCategory: (category: string) => void
-  filters: Resource
+  filters: Resource<FilterOptionsSchema>
 }
 
 const defaultParams: QueryParams = {
