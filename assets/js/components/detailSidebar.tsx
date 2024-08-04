@@ -1,7 +1,16 @@
 import { postData } from "@/libs/postData"
 import { timestampToDateString, timestampToTimeString } from "@/time"
 import { createQuery } from "@tanstack/solid-query"
-import { createSignal, For, JSX, Match, Show, Suspense, Switch } from "solid-js"
+import {
+  createEffect,
+  createSignal,
+  For,
+  JSX,
+  Match,
+  Show,
+  Suspense,
+  Switch,
+} from "solid-js"
 import { EventDetailSchema, totemCirclesApiEventDetail } from "../client"
 import AddToCalendarButton from "./AddToCalendarButton"
 import Avatar from "./avatar"
@@ -11,6 +20,99 @@ import { useTotemTip } from "./tooltip"
 
 function capitalize(str: string) {
   return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
+const [showAttendingPopup, setShowAttendingPopup] = createSignal<boolean>(false)
+
+function CopyToClipboard() {
+  const [copied, setCopied] = createSignal(false)
+  const path =
+    location.protocol + "//" + location.host + location.pathname + "?ref=modal"
+  async function copyTextToClipboard() {
+    await navigator.clipboard.writeText(path)
+    setCopied(true)
+    setTimeout(() => {
+      setCopied(false)
+    }, 1000)
+  }
+  return (
+    <>
+      <Show when={!copied()}>
+        <button onClick={copyTextToClipboard} class="btn btn-primary btn-sm">
+          Copy Link
+        </button>
+      </Show>
+      <Show when={copied()}>
+        <button class="btn btn-primary btn-sm" onClick={copyTextToClipboard}>
+          Copied!
+        </button>
+      </Show>
+    </>
+  )
+}
+
+function AttendingPopup(props: { event: EventDetailSchema }) {
+  createEffect(() => {
+    const modal = document.getElementById(
+      "attending_modal"
+    ) as HTMLDialogElement
+    if (showAttendingPopup()) {
+      if (modal) {
+        modal.showModal()
+      }
+    } else {
+      if (modal) {
+        modal.close()
+      }
+    }
+  })
+  return (
+    <dialog id="attending_modal" class="modal">
+      <div class="modal-box">
+        <Show when={showAttendingPopup()}>
+          <video
+            class="m-auto max-w-[200px]"
+            src="/static/video/success.webm"
+            muted
+            playsinline
+            autoplay></video>
+          <h3 class="m-auto text-center text-xl font-bold">You're going!</h3>
+          <p class="py-2">
+            We'll send you a notification before the session starts with a link
+            to join.
+          </p>
+          <p class="py-2">
+            <strong>Totem is better with friends!</strong> Share this link with
+            your friends and they'll be able to join as well.
+          </p>
+          <p class="py-2">
+            In the meantime, review our{" "}
+            <a
+              class="link"
+              target="_blank"
+              href="https://www.totem.org/guidelines">
+              Community Guidelines
+            </a>{" "}
+            to learn more about how to participate.
+          </p>
+          <div class="flex justify-between">
+            <div class="modal-action">
+              <CopyToClipboard></CopyToClipboard>
+            </div>
+            <div class="modal-action">
+              <form method="dialog">
+                <button
+                  class="btn btn-ghost btn-sm"
+                  onClick={() => setShowAttendingPopup(false)}>
+                  Close
+                </button>
+              </form>
+            </div>
+          </div>
+        </Show>
+      </div>
+    </dialog>
+  )
 }
 
 function DetailBox(props: { children: JSX.Element }) {
@@ -49,6 +151,7 @@ function EventInfo(props: {
     let response = await postData(props.eventStore.rsvp_url)
     if (response.ok) {
       props.refetchEvent()
+      setShowAttendingPopup(true)
       setError("")
     }
     if (response.status >= 400) {
@@ -59,6 +162,7 @@ function EventInfo(props: {
     }
   }
   async function handleGiveUp(e: Event) {
+    setShowAttendingPopup(false)
     if (!props.eventStore.rsvp_url) return
     e.preventDefault()
     await postData(props.eventStore.rsvp_url, { action: "remove" })
@@ -257,6 +361,7 @@ function DetailSidebar(props: DetailSidebarProps) {
   return (
     <ErrorBoundary>
       <Suspense fallback={<Loading />}>
+        <AttendingPopup event={query.data!}></AttendingPopup>
         <Switch fallback={<Loading />}>
           <Match when={query.isFetching}>
             <Loading />

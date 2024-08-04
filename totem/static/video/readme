@@ -1,0 +1,4 @@
+To remove the audio from the video, run the following command:
+ffmpeg -i $input_file -c copy -an $output_file
+
+This make autoplay work in firefox.
