@@ -149,6 +149,10 @@ function EventInfo(props: {
     if (!props.eventStore.rsvp_url) return
     e.preventDefault()
     let response = await postData(props.eventStore.rsvp_url)
+    if (response.redirected) {
+      window.location.href = response.url
+      return
+    }
     if (response.ok) {
       props.refetchEvent()
       setShowAttendingPopup(true)
@@ -156,9 +160,6 @@ function EventInfo(props: {
     }
     if (response.status >= 400) {
       setError((await response.json())["error"])
-    }
-    if (response.redirected) {
-      window.location.href = response.url
     }
   }
   async function handleGiveUp(e: Event) {
