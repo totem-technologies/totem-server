@@ -32,8 +32,13 @@
   {% comment %}End share button{% endcomment %}
   <div class="flex min-h-[400px] flex-col justify-between gap-y-5 p-5">
     <div>
-      <h1 class="h1 pb-3 text-white">{{ object.title }}</h1>
-      <div class="h3 text-white">{{ object.subtitle }}</div>
+      {% if event and event.title %}
+        <h1 class="h1 pb-3 text-white">{{ event.title }}</h1>
+        <div class="h3 text-white">{{ object.title }}</div>
+      {% else %}
+        <h1 class="h1 pb-3 text-white">{{ object.title }}</h1>
+        <div class="h3 text-white">{{ object.subtitle }}</div>
+      {% endif %}
       <div class="text-white">
         with
         <a href="{{ object.author.get_keeper_url }}"
