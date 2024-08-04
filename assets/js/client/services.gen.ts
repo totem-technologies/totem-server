@@ -3,7 +3,7 @@
 import type { CancelablePromise } from './core/CancelablePromise';
 import { OpenAPI } from './core/OpenAPI';
 import { request as __request } from './core/request';
-import type { TotemApiApiSecretResponse, TotemApiApiLoginData, TotemApiApiLoginResponse, TotemApiApiTokenData, TotemApiApiTokenResponse, TotemApiApiCurrentUserResponse, TotemCirclesApiListCirclesData, TotemCirclesApiListCirclesResponse, TotemCirclesApiFilterOptionsResponse, TotemCirclesApiEventDetailData, TotemCirclesApiEventDetailResponse, TotemCirclesApiUpcomingEventsData, TotemCirclesApiUpcomingEventsResponse } from './types.gen';
+import type { TotemApiApiSecretResponse, TotemApiApiLoginData, TotemApiApiLoginResponse, TotemApiApiTokenData, TotemApiApiTokenResponse, TotemApiApiCurrentUserResponse, TotemCirclesApiListEventsData, TotemCirclesApiListEventsResponse, TotemCirclesApiFilterOptionsResponse, TotemCirclesApiEventDetailData, TotemCirclesApiEventDetailResponse, TotemCirclesApiUpcomingEventsData, TotemCirclesApiUpcomingEventsResponse } from './types.gen';
 
 /**
  * Secret
@@ -59,18 +59,18 @@ export const totemApiApiCurrentUser = (): CancelablePromise<TotemApiApiCurrentUs
 }); };
 
 /**
- * List Circles
+ * List Events
  * @param data The data for the request.
  * @param data.category
  * @param data.author
  * @param data.limit
  * @param data.offset
- * @returns PagedCircleEventSchema OK
+ * @returns PagedEventListSchema OK
  * @throws ApiError
  */
-export const totemCirclesApiListCircles = (data: TotemCirclesApiListCirclesData): CancelablePromise<TotemCirclesApiListCirclesResponse> => { return __request(OpenAPI, {
+export const totemCirclesApiListEvents = (data: TotemCirclesApiListEventsData): CancelablePromise<TotemCirclesApiListEventsResponse> => { return __request(OpenAPI, {
     method: 'GET',
-    url: '/api/v1/circles/',
+    url: '/api/v1/spaces/',
     query: {
         category: data.category,
         author: data.author,
@@ -86,7 +86,7 @@ export const totemCirclesApiListCircles = (data: TotemCirclesApiListCirclesData)
  */
 export const totemCirclesApiFilterOptions = (): CancelablePromise<TotemCirclesApiFilterOptionsResponse> => { return __request(OpenAPI, {
     method: 'GET',
-    url: '/api/v1/circles/filter-options'
+    url: '/api/v1/spaces/filter-options'
 }); };
 
 /**
@@ -98,7 +98,7 @@ export const totemCirclesApiFilterOptions = (): CancelablePromise<TotemCirclesAp
  */
 export const totemCirclesApiEventDetail = (data: TotemCirclesApiEventDetailData): CancelablePromise<TotemCirclesApiEventDetailResponse> => { return __request(OpenAPI, {
     method: 'GET',
-    url: '/api/v1/circles/event/{event_slug}',
+    url: '/api/v1/spaces/event/{event_slug}',
     path: {
         event_slug: data.eventSlug
     }
@@ -115,7 +115,7 @@ export const totemCirclesApiEventDetail = (data: TotemCirclesApiEventDetailData)
  */
 export const totemCirclesApiUpcomingEvents = (data: TotemCirclesApiUpcomingEventsData = {}): CancelablePromise<TotemCirclesApiUpcomingEventsResponse> => { return __request(OpenAPI, {
     method: 'GET',
-    url: '/api/v1/circles/calendar',
+    url: '/api/v1/spaces/calendar',
     query: {
         space_slug: data.spaceSlug,
         month: data.month,

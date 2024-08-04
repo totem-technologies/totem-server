@@ -17,11 +17,11 @@ import {
 } from "solid-js"
 import {
   CategoryFilterSchema,
-  CircleEventSchema,
+  EventListSchema,
   FilterOptionsSchema,
-  PagedCircleEventSchema,
+  PagedEventListSchema,
   totemCirclesApiFilterOptions,
-  totemCirclesApiListCircles,
+  totemCirclesApiListEvents,
 } from "../client/index"
 import Avatar from "./avatar"
 import ErrorBoundary from "./errors"
@@ -37,7 +37,7 @@ type DateChunk = {
   day: number
   month: string
   weekdayShort: string
-  events: CircleEventSchema[]
+  events: EventListSchema[]
   dateId: string
 }
 
@@ -46,7 +46,7 @@ type CircleListContextType = {
   setParams: (params: QueryParams) => void
   reset: () => void
   refetch: () => void
-  events: Resource<PagedCircleEventSchema>
+  events: Resource<PagedEventListSchema>
   chunkedEvents: () => DateChunk[]
   getMore: () => void
   activeID: Accessor<string>
@@ -79,7 +79,7 @@ function CircleListProvider(props: { children: any }) {
     refetch()
   })
   const [events, { refetch }] = createResource(async () => {
-    return totemCirclesApiListCircles(params())
+    return totemCirclesApiListEvents(params())
   })
   const [filters, { refetch: filterRefetch }] = createResource(
     async () => {
@@ -128,7 +128,7 @@ function CircleListProvider(props: { children: any }) {
   )
 }
 
-function chunkEventsByDate(events: PagedCircleEventSchema) {
+function chunkEventsByDate(events: PagedEventListSchema) {
   const dateChunks: DateChunk[] = []
   for (const event of events.items) {
     const date = timestampToDateString(event.start!)
@@ -259,7 +259,7 @@ function EventsChunkedByDate() {
   )
 }
 
-function Event(props: { event: CircleEventSchema }) {
+function Event(props: { event: EventListSchema }) {
   const isSmall = createMediaQuery("(max-width: 767px)")
   return (
     <>
@@ -273,26 +273,33 @@ function Event(props: { event: CircleEventSchema }) {
   )
 }
 
-function MobileEvent(props: { event: CircleEventSchema }) {
+function MobileEvent(props: { event: EventListSchema }) {
   return (
     <a
       href={props.event.url}
-      class="flex items-center justify-center gap-2 border-t-2 p-5 text-left hover:bg-white">
+      class="flex items-center justify-center gap-2 border-t-2 p-5 text-left last:border-b-2 hover:bg-white">
       <div class="rounded-full pr-2">{getAvatar(props.event)}</div>
-
       <div class="flex-grow">
-        <p class="font-bold">{props.event.circle.title}</p>
+        <Switch>
+          <Match when={props.event.title}>
+            <p class="font-bold">{props.event.title}</p>
+            <p class="text-sm italic">{props.event.space.title}</p>
+          </Match>
+          <Match when={!props.event.title}>
+            <p class="font-bold">{props.event.space.title}</p>
+          </Match>
+        </Switch>
         <p class="text-sm">
-          with {getFirstName(props.event.circle.author.name!)}
+          with {getFirstName(props.event.space.author.name!)} @{" "}
+          {timestampToTimeString(props.event.start!)}
         </p>
-        <p class="text-sm">{timestampToTimeString(props.event.start!)}</p>
       </div>
       <div class="text-2xl">→</div>
     </a>
   )
 }
 
-function DesktopEvent(props: { event: CircleEventSchema }) {
+function DesktopEvent(props: { event: EventListSchema }) {
   return (
     <a
       href={props.event.url}
@@ -306,27 +313,35 @@ function DesktopEvent(props: { event: CircleEventSchema }) {
       <div class="flex items-center justify-center gap-5">
         <div>{getAvatar(props.event)}</div>
         <div class="text-lg">
-          {getFirstName(props.event.circle.author.name!)}
+          {getFirstName(props.event.space.author.name!)}
         </div>
       </div>
       <div class="divider divider-horizontal self-stretch"></div>
       <div class="flex-grow text-center">
-        <p class="text-[2vw] font-bold xl:text-2xl">
-          {props.event.circle.title}
-        </p>
+        <Switch>
+          <Match when={props.event.title}>
+            <p class="text-[2vw] font-bold xl:text-2xl">{props.event.title}</p>
+            <p class="italic">{props.event.space.title}</p>
+          </Match>
+          <Match when={!props.event.title}>
+            <p class="text-[2vw] font-bold xl:text-2xl">
+              {props.event.space.title}
+            </p>
+          </Match>
+        </Switch>
       </div>
     </a>
   )
 }
 
-function getAvatar(event: CircleEventSchema) {
+function getAvatar(event: EventListSchema) {
   return (
     <Avatar
       size={70}
-      name={event.circle.author.name || ""}
-      seed={event.circle.author.profile_avatar_seed || ""}
-      url={event.circle.author.profile_image || undefined}
-      type={event.circle.author.profile_avatar_type}
+      name={event.space.author.name || ""}
+      seed={event.space.author.profile_avatar_seed || ""}
+      url={event.space.author.profile_image || undefined}
+      type={event.space.author.profile_avatar_type}
     />
   )
 }
@@ -536,6 +551,6 @@ function QuickFilters() {
   )
 }
 
-Circles.tagName = "t-circles"
+Circles.tagName = "t-events-list"
 Circles.propsDefault = {}
 export default Circles

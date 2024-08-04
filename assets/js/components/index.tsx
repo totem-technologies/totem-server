@@ -1,6 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/solid-query"
 import { customElement, noShadowDOM } from "solid-element"
-import { Suspense } from "solid-js"
 import Avatar from "./avatar"
 import Circles from "./circles"
 import DetailSidebar from "./detailSidebar"
@@ -43,9 +42,7 @@ function customElementWC(name: string, propDefaults: any, Component: any) {
     return (
       <QueryClientProvider client={queryClient}>
         <ErrorBoundary>
-          <Suspense fallback={"Loading..."}>
-            <Component {...props}>{children}</Component>
-          </Suspense>
+          <Component {...props}>{children}</Component>
         </ErrorBoundary>
       </QueryClientProvider>
     )

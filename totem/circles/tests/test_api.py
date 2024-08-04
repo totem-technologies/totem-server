@@ -11,7 +11,7 @@ from totem.users.tests.factories import UserFactory
 class TestCircleListAPI:
     def test_get_circle_list_bad_category(self, client, db):
         response = client.get(
-            reverse("api-1:circles_list"), EventsFilterSchema(category="empty", author=""), format="json"
+            reverse("api-1:events_list"), EventsFilterSchema(category="empty", author=""), format="json"
         )
         assert response.status_code == 200
         assert response.json() == {"count": 0, "items": []}
@@ -19,7 +19,7 @@ class TestCircleListAPI:
     def test_get_circle_list(self, client, db):
         event = CircleEventFactory()
         event.save()
-        response = client.get(reverse("api-1:circles_list"), EventsFilterSchema(category="", author=""), format="json")
+        response = client.get(reverse("api-1:events_list"), EventsFilterSchema(category="", author=""), format="json")
         assert response.status_code == 200
         assert len(response.json()["items"]) == 1
 
@@ -31,7 +31,7 @@ class TestCircleListAPI:
         event2 = CircleEventFactory()
         event2.save()
         response = client.get(
-            reverse("api-1:circles_list"),
+            reverse("api-1:events_list"),
             EventsFilterSchema(category=category.slug, author=""),
             format="json",
         )
@@ -45,7 +45,7 @@ class TestCircleListAPI:
         event2 = CircleEventFactory()
         event2.save()
         response = client.get(
-            reverse("api-1:circles_list"),
+            reverse("api-1:events_list"),
             EventsFilterSchema(category="", author=circle.author.slug),
             format="json",
         )
@@ -58,14 +58,14 @@ class TestCircleListAPI:
         event2 = CircleEventFactory()
         event2.save()
         response = client.get(
-            reverse("api-1:circles_list"),
+            reverse("api-1:events_list"),
             EventsFilterSchema(category="", author=""),
             format="json",
         )
         assert response.status_code == 200
         assert len(response.json()["items"]) == 2
         response = client.get(
-            reverse("api-1:circles_list"),
+            reverse("api-1:events_list"),
             EventsFilterSchema(category="", author="").model_dump() | {"limit": 1},
             format="json",
         )
@@ -85,7 +85,7 @@ class TestFilterOptions:
         event.save()
         event2 = CircleEventFactory()
         event2.save()
-        response = client.get(reverse("api-1:circle_filter_options"), format="json")
+        response = client.get(reverse("api-1:events_filter_options"), format="json")
         assert response.status_code == 200
         assert len(response.json()["categories"]) == 1
         assert len(response.json()["authors"]) == 2
@@ -122,6 +122,19 @@ class TestEventDetail:
         assert response.status_code == 200
         assert response.json()["slug"] == event.slug
         assert response.json()["attending"] is False
+
+    def test_event_detail_authenticated_attending(self, client, db):
+        user = UserFactory()
+        user.save()
+        client.force_login(user)
+        event = CircleEventFactory()
+        event.attendees.add(user)
+        url = reverse("api-1:event_detail", kwargs={"event_slug": event.slug})
+        response = client.get(url)
+        assert response.status_code == 200
+        assert response.json()["slug"] == event.slug
+        assert response.json()["attending"] is True
+        assert len(response.json()["attendees"]) == 1
 
     def test_event_detail_ended(self, client, db):
         user = UserFactory()

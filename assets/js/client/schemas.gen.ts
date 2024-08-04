@@ -137,10 +137,10 @@ export const $Input = {
     type: 'object'
 } as const;
 
-export const $CircleEventSchema = {
+export const $EventListSchema = {
     properties: {
-        circle: {
-            '$ref': '#/components/schemas/CircleSchema'
+        space: {
+            '$ref': '#/components/schemas/SpaceSchema'
         },
         url: {
             title: 'Url',
@@ -185,12 +185,31 @@ export const $CircleEventSchema = {
             title: 'Title'
         }
     },
-    required: ['circle', 'url', 'date_created', 'date_modified'],
-    title: 'CircleEventSchema',
+    required: ['space', 'url', 'date_created', 'date_modified'],
+    title: 'EventListSchema',
     type: 'object'
 } as const;
 
-export const $CircleSchema = {
+export const $PagedEventListSchema = {
+    properties: {
+        items: {
+            items: {
+                '$ref': '#/components/schemas/EventListSchema'
+            },
+            title: 'Items',
+            type: 'array'
+        },
+        count: {
+            title: 'Count',
+            type: 'integer'
+        }
+    },
+    required: ['items', 'count'],
+    title: 'PagedEventListSchema',
+    type: 'object'
+} as const;
+
+export const $SpaceSchema = {
     properties: {
         author: {
             '$ref': '#/components/schemas/UserSchema'
@@ -223,26 +242,7 @@ export const $CircleSchema = {
         }
     },
     required: ['author', 'title', 'date_created', 'date_modified'],
-    title: 'CircleSchema',
-    type: 'object'
-} as const;
-
-export const $PagedCircleEventSchema = {
-    properties: {
-        items: {
-            items: {
-                '$ref': '#/components/schemas/CircleEventSchema'
-            },
-            title: 'Items',
-            type: 'array'
-        },
-        count: {
-            title: 'Count',
-            type: 'integer'
-        }
-    },
-    required: ['items', 'count'],
-    title: 'PagedCircleEventSchema',
+    title: 'SpaceSchema',
     type: 'object'
 } as const;
 

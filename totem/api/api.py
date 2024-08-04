@@ -9,7 +9,7 @@ from totem.users.models import User
 from totem.users.schemas import UserSchema
 
 api = NinjaAPI(title="Totem API", version="1")
-api.add_router("/circles/", circles_router)
+api.add_router("/spaces/", circles_router)
 
 
 class InvalidToken(Exception):

@@ -38,8 +38,8 @@ export type Input = {
     offset?: number;
 };
 
-export type CircleEventSchema = {
-    circle: CircleSchema;
+export type EventListSchema = {
+    space: SpaceSchema;
     url: string;
     start?: string;
     slug?: string | null;
@@ -48,17 +48,17 @@ export type CircleEventSchema = {
     title?: string | null;
 };
 
-export type CircleSchema = {
+export type PagedEventListSchema = {
+    items: Array<EventListSchema>;
+    count: number;
+};
+
+export type SpaceSchema = {
     author: UserSchema;
     title: string;
     slug?: string | null;
     date_created: string;
     date_modified: string;
-};
-
-export type PagedCircleEventSchema = {
-    items: Array<CircleEventSchema>;
-    count: number;
 };
 
 export type AuthorFilterSchema = {
@@ -139,14 +139,14 @@ export type TotemApiApiTokenResponse = TokenOut;
 
 export type TotemApiApiCurrentUserResponse = UserSchema;
 
-export type TotemCirclesApiListCirclesData = {
+export type TotemCirclesApiListEventsData = {
     author: string | null;
     category: string | null;
     limit?: number;
     offset?: number;
 };
 
-export type TotemCirclesApiListCirclesResponse = PagedCircleEventSchema;
+export type TotemCirclesApiListEventsResponse = PagedEventListSchema;
 
 export type TotemCirclesApiFilterOptionsResponse = FilterOptionsSchema;
 
@@ -220,18 +220,18 @@ export type $OpenApiTs = {
             };
         };
     };
-    '/api/v1/circles/': {
+    '/api/v1/spaces/': {
         get: {
-            req: TotemCirclesApiListCirclesData;
+            req: TotemCirclesApiListEventsData;
             res: {
                 /**
                  * OK
                  */
-                200: PagedCircleEventSchema;
+                200: PagedEventListSchema;
             };
         };
     };
-    '/api/v1/circles/filter-options': {
+    '/api/v1/spaces/filter-options': {
         get: {
             res: {
                 /**
@@ -241,7 +241,7 @@ export type $OpenApiTs = {
             };
         };
     };
-    '/api/v1/circles/event/{event_slug}': {
+    '/api/v1/spaces/event/{event_slug}': {
         get: {
             req: TotemCirclesApiEventDetailData;
             res: {
@@ -252,7 +252,7 @@ export type $OpenApiTs = {
             };
         };
     };
-    '/api/v1/circles/calendar': {
+    '/api/v1/spaces/calendar': {
         get: {
             req: TotemCirclesApiUpcomingEventsData;
             res: {

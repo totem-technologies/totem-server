@@ -1,7 +1,7 @@
 import { postData } from "@/libs/postData"
 import { timestampToDateString, timestampToTimeString } from "@/time"
 import { createQuery } from "@tanstack/solid-query"
-import { createSignal, For, JSX, Match, Show, Switch } from "solid-js"
+import { createSignal, For, JSX, Match, Show, Suspense, Switch } from "solid-js"
 import { EventDetailSchema, totemCirclesApiEventDetail } from "../client"
 import AddToCalendarButton from "./AddToCalendarButton"
 import Avatar from "./avatar"
@@ -252,24 +252,26 @@ function DetailSidebar(props: DetailSidebarProps) {
   }))
   return (
     <ErrorBoundary>
-      <Switch fallback={<Loading />}>
-        <Match when={query.isFetching}>
-          <Loading />
-        </Match>
-        <Match when={query.data}>
-          <EventInfo
-            eventStore={query.data!}
-            refetchEvent={query.refetch}></EventInfo>
-          <Show when={query.data?.attending}>
-            <Attendees event={query.data!}></Attendees>
-          </Show>
-          <Show when={query.data?.subscribed !== null}>
-            <Subscribe
-              event={query.data!}
-              refetchEvent={query.refetch}></Subscribe>
-          </Show>
-        </Match>
-      </Switch>
+      <Suspense fallback={<Loading />}>
+        <Switch fallback={<Loading />}>
+          <Match when={query.isFetching}>
+            <Loading />
+          </Match>
+          <Match when={query.data}>
+            <EventInfo
+              eventStore={query.data!}
+              refetchEvent={query.refetch}></EventInfo>
+            <Show when={query.data?.attending}>
+              <Attendees event={query.data!}></Attendees>
+            </Show>
+            <Show when={query.data?.subscribed !== null}>
+              <Subscribe
+                event={query.data!}
+                refetchEvent={query.refetch}></Subscribe>
+            </Show>
+          </Match>
+        </Switch>
+      </Suspense>
     </ErrorBoundary>
   )
 }

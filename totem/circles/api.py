@@ -15,7 +15,7 @@ from .models import Circle, CircleEvent
 router = Router()
 
 
-class CircleSchema(ModelSchema):
+class SpaceSchema(ModelSchema):
     author: UserSchema
 
     class Meta:
@@ -23,17 +23,21 @@ class CircleSchema(ModelSchema):
         fields = ["title", "slug", "date_created", "date_modified"]
 
 
-class CircleEventSchema(ModelSchema):
-    circle: CircleSchema
+class EventListSchema(ModelSchema):
+    space: SpaceSchema
     url: str
 
     @staticmethod
     def resolve_url(obj: CircleEvent):
         return obj.get_absolute_url()
 
+    @staticmethod
+    def resolve_space(obj: CircleEvent):
+        return obj.circle
+
     class Meta:
         model = CircleEvent
-        fields = ["start", "slug", "date_created", "date_modified", "circle", "title"]
+        fields = ["start", "slug", "date_created", "date_modified", "title"]
 
 
 class EventsFilterSchema(FilterSchema):
@@ -56,17 +60,17 @@ class FilterOptionsSchema(Schema):
     authors: List[AuthorFilterSchema]
 
 
-@router.get("/", response={200: List[CircleEventSchema]}, tags=["circles"], url_name="circles_list")
+@router.get("/", response={200: List[EventListSchema]}, tags=["events"], url_name="events_list")
 @paginate
-def list_circles(request, filters: EventsFilterSchema = Query()):
+def list_events(request, filters: EventsFilterSchema = Query()):
     return all_upcoming_recommended_events(request.user, category=filters.category, author=filters.author)
 
 
 @router.get(
     "/filter-options",
     response={200: FilterOptionsSchema},
-    tags=["circles"],
-    url_name="circle_filter_options",
+    tags=["events"],
+    url_name="events_filter_options",
 )
 def filter_options(request):
     events = all_upcoming_recommended_events(request.user)
@@ -107,7 +111,7 @@ class EventDetailSchema(Schema):
 @router.get(
     "/event/{event_slug}",
     response={200: EventDetailSchema},
-    tags=["circles"],
+    tags=["events"],
     url_name="event_detail",
 )
 def event_detail(request, event_slug):
@@ -118,7 +122,7 @@ def event_detail(request, event_slug):
     join_url = event.join_url(request.user) if attending else None
     subscribed = space.subscribed.contains(request.user) if request.user.is_authenticated else None
     ended = event.ended()
-    if not attending and not ended:
+    if attending and not ended:
         attendees = [a for a in event.attendees.all()]
     else:
         attendees = []
@@ -161,7 +165,7 @@ class EventCalendarFilterSchema(FilterSchema):
     year: int = Field(default=datetime.now().year, description="Year of the month, e.g. 2024", gt=1000, lt=3000)
 
 
-@router.get("/calendar", response={200: List[EventCalendarSchema]}, tags=["circles"], url_name="event_calendar")
+@router.get("/calendar", response={200: List[EventCalendarSchema]}, tags=["events"], url_name="event_calendar")
 def upcoming_events(request, filters: EventCalendarFilterSchema = Query()):
     print(filters)
     events = events_by_month(request.user, filters.space_slug, filters.month, filters.year)
