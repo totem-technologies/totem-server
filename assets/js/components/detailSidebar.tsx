@@ -9,6 +9,10 @@ import ErrorBoundary from "./errors"
 import Icon, { IconName } from "./icons"
 import { useTotemTip } from "./tooltip"
 
+function capitalize(str: string) {
+  return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
 function DetailBox(props: { children: JSX.Element }) {
   return (
     <div class="z-20 mt-5 rounded-2xl border border-gray-200 bg-white p-5 md:top-20 md:w-80">
@@ -81,7 +85,7 @@ function EventInfo(props: {
         <IconLine
           icon="recur"
           tip="How often this Space generally runs. There may be changes in the schedule due to holidays or other events.">
-          {props.eventStore.recurring}
+          {capitalize(props.eventStore.recurring)}
         </IconLine>
         <IconLine
           icon="chair"
