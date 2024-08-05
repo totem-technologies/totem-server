@@ -239,9 +239,14 @@ export const $SpaceSchema = {
             format: 'date-time',
             title: 'Date Modified',
             type: 'string'
+        },
+        subtitle: {
+            maxLength: 2000,
+            title: 'Subtitle',
+            type: 'string'
         }
     },
-    required: ['author', 'title', 'date_created', 'date_modified'],
+    required: ['author', 'title', 'date_created', 'date_modified', 'subtitle'],
     title: 'SpaceSchema',
     type: 'object'
 } as const;

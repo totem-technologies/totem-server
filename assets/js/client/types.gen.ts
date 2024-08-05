@@ -59,6 +59,7 @@ export type SpaceSchema = {
     slug?: string | null;
     date_created: string;
     date_modified: string;
+    subtitle: string;
 };
 
 export type AuthorFilterSchema = {

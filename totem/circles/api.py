@@ -20,7 +20,7 @@ class SpaceSchema(ModelSchema):
 
     class Meta:
         model = Circle
-        fields = ["title", "slug", "date_created", "date_modified"]
+        fields = ["title", "slug", "date_created", "date_modified", "subtitle"]
 
 
 class EventListSchema(ModelSchema):

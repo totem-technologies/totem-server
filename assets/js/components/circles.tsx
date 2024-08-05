@@ -287,6 +287,9 @@ function MobileEvent(props: { event: EventListSchema }) {
           </Match>
           <Match when={!props.event.title}>
             <p class="font-bold">{props.event.space.title}</p>
+            <Show when={props.event.space.subtitle}>
+              <p class="text-sm italic">{props.event.space.subtitle}</p>
+            </Show>
           </Match>
         </Switch>
         <p class="text-sm">
@@ -327,6 +330,9 @@ function DesktopEvent(props: { event: EventListSchema }) {
             <p class="text-[2vw] font-bold xl:text-2xl">
               {props.event.space.title}
             </p>
+            <Show when={props.event.space.subtitle}>
+              <p class="italic">{props.event.space.subtitle}</p>
+            </Show>
           </Match>
         </Switch>
       </div>
