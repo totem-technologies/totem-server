@@ -28,12 +28,12 @@ class JoinCircleAction(ActionBase[JoinCircleParameters]):
         return reverse("circles:join", kwargs={"event_slug": self.parameters["event_slug"]})
 
 
-class AttendCircleParameters(TypedDict):
-    event_slug: str
+# class AttendCircleParameters(TypedDict):
+#     event_slug: str
 
 
-class AttendCircleAction(ActionBase[AttendCircleParameters]):
-    action_id = "circles:event_detail"
+# class AttendCircleAction(ActionBase[AttendCircleParameters]):
+#     action_id = "circles:event_detail"
 
-    def get_url(self) -> str:
-        return reverse("circles:event_detail", kwargs={"event_slug": self.parameters["event_slug"]})
+#     def get_url(self) -> str:
+#         return reverse("circles:event_detail", kwargs={"event_slug": self.parameters["event_slug"]})

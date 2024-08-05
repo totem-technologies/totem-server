@@ -196,7 +196,7 @@ def send_notify_circle_advertisement(event: CircleEvent, user: User):
     start = to_human_time(user, event.start)
     CircleAdvertisementEmail(
         recipient=user.email,
-        link=event.attend_url(user),  # type: ignore
+        link=make_email_url(event.get_absolute_url()),  # type: ignore
         start=start,
         event_title=event.circle.title,
         unsubscribe_url=event.circle.subscribe_url(user, subscribe=False),  # type: ignore

@@ -1,6 +1,9 @@
+from django.core import mail
 from django.test import Client, override_settings
 from django.urls import reverse
 
+from totem.circles.tests.factories import CircleEventFactory
+from totem.email.emails import send_notify_circle_advertisement
 from totem.users.tests.factories import UserFactory
 
 from .views import get_templates
@@ -39,3 +42,20 @@ class TestTemplateDevEmail:
         client.force_login(user)
         response = client.get(reverse("email:template"))
         assert response.status_code == 200
+
+
+class TestAdvertEmail:
+    def test_advert_email(self, client, db):
+        user = UserFactory()
+        user.save()
+        event = CircleEventFactory()
+        event.save()
+        send_notify_circle_advertisement(event, user)
+        assert len(mail.outbox) == 1
+        email = mail.outbox[0]
+        assert email.to == [user.email]
+        message = str(email.message())
+        assert "http://testserver/circles/event" in message
+        assert event.circle.title in message
+        assert "http://testserver/circles/subscribe" in message
+        assert event.circle.slug in message

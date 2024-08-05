@@ -8,8 +8,7 @@ from django.utils import timezone
 
 from totem.users.tests.factories import UserFactory
 
-from ..actions import AttendCircleAction, JoinCircleAction
-from ..views import AUTO_RSVP_SESSION_KEY
+from ..actions import JoinCircleAction
 from .factories import CircleEventFactory, CircleFactory
 
 
@@ -64,10 +63,6 @@ class TestCircleEventView:
         url = reverse("circles:event_detail", kwargs={"event_slug": event.slug})
         response = client.get(url)
         assert response.status_code == 200
-        # expect_words = ["Attend", "spots left", "Subscribe"]
-        # content = response.content.decode()
-        # for word in expect_words:
-        #     assert word in content
 
     def test_event(self, client, db):
         event = CircleEventFactory()
@@ -87,66 +82,66 @@ class TestCircleEventView:
         response = client.get(url)
         assert response.status_code == 200
 
-    def test_event_with_token(self, client, db):
-        event = CircleEventFactory()
-        user = UserFactory()
-        user.save()
-        url = AttendCircleAction(user=user, parameters={"event_slug": event.slug}).build_url()
-        response = client.get(url)
-        assert response.status_code == 200
-        assert user in event.attendees.all()
-        assert "successfully reserved" in list(get_messages(response.wsgi_request))[0].message
+    # def test_event_with_token(self, client, db):
+    #     event = CircleEventFactory()
+    #     user = UserFactory()
+    #     user.save()
+    #     url = AttendCircleAction(user=user, parameters={"event_slug": event.slug}).build_url()
+    #     response = client.get(url)
+    #     assert response.status_code == 200
+    #     assert user in event.attendees.all()
+    #     assert "successfully reserved" in list(get_messages(response.wsgi_request))[0].message
 
-    def test_event_with_token_wrong_user(self, client, db):
-        event = CircleEventFactory()
-        user = UserFactory()
-        user.save()
-        client.force_login(user)
-        user2 = UserFactory()
-        user2.save()
-        url = AttendCircleAction(user=user2, parameters={"event_slug": event.slug}).build_url()
-        response = client.get(url)
-        assert response.status_code == 200
-        assert user not in event.attendees.all()
-        assert user2 not in event.attendees.all()
+    # def test_event_with_token_wrong_user(self, client, db):
+    #     event = CircleEventFactory()
+    #     user = UserFactory()
+    #     user.save()
+    #     client.force_login(user)
+    #     user2 = UserFactory()
+    #     user2.save()
+    #     url = AttendCircleAction(user=user2, parameters={"event_slug": event.slug}).build_url()
+    #     response = client.get(url)
+    #     assert response.status_code == 200
+    #     assert user not in event.attendees.all()
+    #     assert user2 not in event.attendees.all()
 
-    def test_event_with_token_user_already_attending(self, client, db):
-        event = CircleEventFactory()
-        user = UserFactory()
-        user.save()
-        event.add_attendee(user)
-        url = AttendCircleAction(user=user, parameters={"event_slug": event.slug}).build_url()
-        response = client.get(url)
-        assert response.status_code == 200
-        assert user in event.attendees.all()
-        assert list(get_messages(response.wsgi_request))[0].message == "You are already attending this session"
+    # def test_event_with_token_user_already_attending(self, client, db):
+    #     event = CircleEventFactory()
+    #     user = UserFactory()
+    #     user.save()
+    #     event.add_attendee(user)
+    #     url = AttendCircleAction(user=user, parameters={"event_slug": event.slug}).build_url()
+    #     response = client.get(url)
+    #     assert response.status_code == 200
+    #     assert user in event.attendees.all()
+    #     assert list(get_messages(response.wsgi_request))[0].message == "You are already attending this session"
 
-    def test_event_with_token_wrong_event(self, client, db):
-        event = CircleEventFactory()
-        user = UserFactory()
-        user.save()
-        url = AttendCircleAction(user=user, parameters={"event_slug": "wrong"}).build_url()
-        token = url.split("=")[-1]
-        bad_url = event.get_absolute_url() + f"?token={token}"
-        response = client.get(bad_url)
-        assert response.status_code == 200
-        assert user not in event.attendees.all()
-        assert "Invalid or expired link" in list(get_messages(response.wsgi_request))[0].message
+    # def test_event_with_token_wrong_event(self, client, db):
+    #     event = CircleEventFactory()
+    #     user = UserFactory()
+    #     user.save()
+    #     url = AttendCircleAction(user=user, parameters={"event_slug": "wrong"}).build_url()
+    #     token = url.split("=")[-1]
+    #     bad_url = event.get_absolute_url() + f"?token={token}"
+    #     response = client.get(bad_url)
+    #     assert response.status_code == 200
+    #     assert user not in event.attendees.all()
+    #     assert "Invalid or expired link" in list(get_messages(response.wsgi_request))[0].message
 
-    def test_auto_rsvp_already_going(self, client, db):
-        event = CircleEventFactory()
-        user = UserFactory()
-        user.save()
-        event.add_attendee(user)
-        event.save()
-        client.force_login(user)
-        session = client.session
-        session[AUTO_RSVP_SESSION_KEY] = event.slug
-        session.save()
-        response = client.get(reverse("circles:event_detail", kwargs={"event_slug": event.slug}))
-        assert response.status_code == 200
-        assert user in event.attendees.all()
-        assert list(get_messages(response.wsgi_request))[0].message == "You are already attending this session"
+    # def test_auto_rsvp_already_going(self, client, db):
+    #     event = CircleEventFactory()
+    #     user = UserFactory()
+    #     user.save()
+    #     event.add_attendee(user)
+    #     event.save()
+    #     client.force_login(user)
+    #     session = client.session
+    #     session[AUTO_RSVP_SESSION_KEY] = event.slug
+    #     session.save()
+    #     response = client.get(reverse("circles:event_detail", kwargs={"event_slug": event.slug}))
+    #     assert response.status_code == 200
+    #     assert user in event.attendees.all()
+    #     assert list(get_messages(response.wsgi_request))[0].message == "You are already attending this session"
 
 
 class TestJoinView:
@@ -329,24 +324,24 @@ class TestRSVPView:
         assert user not in event.joined.all()
         assert user not in event.attendees.all()
 
-    def test_rsvp_auto_rsvp(self, client, db):
-        """Test auto rsvp when user is not logged in, but then makes an account and goes back to the event page."""
-        event = CircleEventFactory()
-        response = client.post(reverse("circles:rsvp", kwargs={"event_slug": event.slug}), data={"action": "yes"})
-        assert response.status_code == 302
-        assert "signup" in response.url
-        assert event.slug in response.url
-        session = client.session
-        assert session[AUTO_RSVP_SESSION_KEY] == event.slug
-        user = UserFactory()
-        user.save()
-        client.force_login(user)
-        response = client.get(reverse("circles:event_detail", kwargs={"event_slug": event.slug}))
-        assert response.status_code == 200
-        assert user in event.attendees.all()
-        message = list(get_messages(response.wsgi_request))
-        assert "spot" in message[0].message.lower()
-        assert client.session.get(AUTO_RSVP_SESSION_KEY) is None
+    # def test_rsvp_auto_rsvp(self, client, db):
+    #     """Test auto rsvp when user is not logged in, but then makes an account and goes back to the event page."""
+    #     event = CircleEventFactory()
+    #     response = client.post(reverse("circles:rsvp", kwargs={"event_slug": event.slug}), data={"action": "yes"})
+    #     assert response.status_code == 302
+    #     assert "signup" in response.url
+    #     assert event.slug in response.url
+    #     session = client.session
+    #     assert session[AUTO_RSVP_SESSION_KEY] == event.slug
+    #     user = UserFactory()
+    #     user.save()
+    #     client.force_login(user)
+    #     response = client.get(reverse("circles:event_detail", kwargs={"event_slug": event.slug}))
+    #     assert response.status_code == 200
+    #     assert user in event.attendees.all()
+    #     message = list(get_messages(response.wsgi_request))
+    #     assert "spot" in message[0].message.lower()
+    #     assert client.session.get(AUTO_RSVP_SESSION_KEY) is None
 
     def test_attending_email_sent(self, client, db):
         # test that send_notify_circle_signup is called when user RSVPs
