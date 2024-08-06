@@ -21,7 +21,7 @@
     {% if show_env_banner %}
     <mj-section background-color="#f02323" border-radius="24px">
       <mj-column>
-        <mj-text align="center" color="#000" font-size="40px" font-weight="bold" line-height="16px" padding="10px 25px">
+        <mj-text align="center" color="#000" font-size="20px" font-weight="bold" line-height="16px" padding="10px 25px">
           Test Email
         </mj-text>
         <mj-text align="center" color="#000" font-size="12px" font-weight="bold" line-height="16px" padding="10px 25px">
