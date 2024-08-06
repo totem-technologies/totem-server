@@ -15,8 +15,10 @@
       <strong>{{button_text}}</strong>
     </mj-button>
     <mj-spacer height="48px"></mj-spacer>
+    {% block submessage %}
+    {% endblock submessage %}
     <mj-text mj-class="sub">
-      If you didn't request this link, you can safely ignore this email. If the
+      Didn't request this link? You can safely ignore this email. If the
       button doesn't work, copy and paste the link below into your browser:
     </mj-text>
     <mj-spacer height="10px"></mj-spacer>
