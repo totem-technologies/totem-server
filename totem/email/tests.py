@@ -3,7 +3,7 @@ from django.test import Client, override_settings
 from django.urls import reverse
 
 from totem.circles.tests.factories import CircleEventFactory
-from totem.email.emails import send_notify_circle_advertisement
+from totem.email.emails import send_notify_circle_advertisement, send_returning_login_email
 from totem.users.tests.factories import UserFactory
 
 from .views import get_templates
@@ -59,3 +59,15 @@ class TestAdvertEmail:
         assert event.circle.title in message
         assert "http://testserver/circles/subscribe" in message
         assert event.circle.slug in message
+
+
+class TestReturningUsers:
+    def test_returning_users(self, client, db):
+        user = UserFactory()
+        user.save()
+        send_returning_login_email(user.email, reverse("pages:home"))
+        assert len(mail.outbox) == 1
+        email = mail.outbox[0]
+        assert email.to == [user.email]
+        message = str(email.message())
+        assert "http://testserver/" in message

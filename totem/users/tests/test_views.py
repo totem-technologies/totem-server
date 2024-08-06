@@ -1,8 +1,7 @@
 import pytest
-from django.contrib.auth.models import AnonymousUser
 from django.contrib.messages import get_messages
 from django.http import HttpResponseRedirect
-from django.test import RequestFactory, TestCase
+from django.test import TestCase
 from django.urls import reverse
 from sesame.utils import get_query_string
 
@@ -10,9 +9,7 @@ from totem.circles.tests.factories import CircleEventFactory, CircleFactory
 from totem.onboard.models import OnboardModel
 from totem.users.models import Feedback, User
 from totem.users.tests.factories import KeeperProfileFactory, UserFactory
-from totem.users.views import FEEDBACK_SUCCESS_MESSAGE, user_redirect_view
-
-from ..views import user_index_view
+from totem.users.views import FEEDBACK_SUCCESS_MESSAGE
 
 pytestmark = pytest.mark.django_db
 
@@ -35,17 +32,33 @@ def test_user_update_view(client):
 
 
 class TestUserRedirectView:
-    def test_get_redirect_url(self, user: User, rf: RequestFactory):
-        request = rf.get("/fake-url")
-        request.user = user
-        response = user_redirect_view(request)
+    def test_get_redirect_url(self, client, db):
+        user = UserFactory()
+        client.force_login(user)
+        url = reverse("users:redirect")
+        response = client.get(url)
         assert response.status_code == 302
         assert response.url == reverse("onboard:index")
-        OnboardModel.objects.create(user=user)
-        user.onboard.onboarded = True
-        response = user_redirect_view(request)
+        onboard = OnboardModel.objects.create(user=user)
+        onboard.onboarded = True
+        onboard.save()
+        response = client.get(url)
         assert response.status_code == 302
         assert response.url == reverse("users:dashboard")
+
+    def test_user_index_view_after_login_with_next(self, client, db):
+        url = reverse("users:profile")
+        user = UserFactory()
+        client.force_login(user)
+        onboard = OnboardModel.objects.create(user=user)
+        onboard.onboarded = True
+        onboard.save()
+        s = client.session
+        s["next"] = url
+        s.save()
+        response = client.get(reverse("users:index"))
+        assert isinstance(response, HttpResponseRedirect)
+        assert response.url == reverse("users:profile")
 
 
 class TestUserDetailView:
@@ -61,26 +74,26 @@ class TestUserDetailView:
         assert response.status_code == 200
 
 
-def test_user_index_view():
-    factory = RequestFactory()
-    request = factory.get("/someroute")
-    request.user = AnonymousUser()
-    response = user_index_view(request)
-    assert isinstance(response, HttpResponseRedirect)
-    assert response.url == reverse("users:signup") + "?next=/someroute"
+class TestUserIndexView:
+    def test_user_index_view(self, client, db):
+        url = reverse("users:profile")
+        response = client.get(url)
+        assert isinstance(response, HttpResponseRedirect)
+        assert response.url == reverse("users:signup") + "?next=" + url
 
-    user = UserFactory()
-    request.user = user
-    response = user_index_view(request)
-    assert response.status_code == 302
-    assert response.url == "/onboard/"
+        url = reverse("users:index")
+        user = UserFactory()
+        client.force_login(user)
+        response = client.get(url)
+        assert response.status_code == 302
+        assert response.url == "/onboard/"
 
-    OnboardModel.objects.create(user=user)
-    user.onboard.onboarded = True
-    user.onboard.save()
-    response = user_index_view(request)
-    assert response.status_code == 302
-    assert response.url == "/users/dashboard/"
+        OnboardModel.objects.create(user=user)
+        user.onboard.onboarded = True
+        user.onboard.save()
+        response = client.get(url)
+        assert response.status_code == 302
+        assert response.url == "/users/dashboard/"
 
 
 def test_magic_login_view_verify_email(client):

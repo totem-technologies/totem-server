@@ -70,6 +70,11 @@ def user_redirect_view(request, *args, **kwargs):
     user = request.user
     try:
         if user.onboard and user.onboard.onboarded:
+            next = request.session.get("next")
+            if next:
+                del request.session["next"]
+                assert next[0] == "/"
+                return redirect(next)
             return redirect("users:dashboard")
     except ObjectDoesNotExist:
         pass
