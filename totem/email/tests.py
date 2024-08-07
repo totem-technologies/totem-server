@@ -71,3 +71,14 @@ class TestReturningUsers:
         assert email.to == [user.email]
         message = str(email.message())
         assert "http://testserver/" in message
+
+    def test_returning_users_after_login(self, client, db):
+        user = UserFactory()
+        user.save()
+        client.force_login(user)
+        send_returning_login_email(user.email, reverse("pages:home"))
+        assert len(mail.outbox) == 1
+        email = mail.outbox[0]
+        assert email.to == [user.email]
+        message = str(email.message())
+        assert "http://testserver/" in message
