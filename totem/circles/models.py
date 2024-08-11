@@ -160,7 +160,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
 
     class Meta:
         ordering = ["start"]
-        unique_together = [["circle", "start", "open"]]
+        unique_together = [["circle", "start", "open", "title"]]
 
     def get_absolute_url(self) -> str:
         return reverse("circles:event_detail", kwargs={"event_slug": self.slug})
