@@ -1,0 +1,28 @@
+<mjml>
+  <mj-head>
+    <mj-style>
+      .top-link a {
+        color: #979797 !important;
+      }
+
+      .nav-link a {
+        color: #000 !important;
+      }
+
+      a {
+        color: #979797 !important;
+      }
+
+      .button-link a {
+        color: #000 !important;
+      }
+
+      .hero-button a {
+        color: #fff !important;
+      }
+    </mj-style>
+  </mj-head>
+  <mj-body background-color="#fff">
+    hi
+  </mj-body>
+</mjml>

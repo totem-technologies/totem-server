@@ -10,6 +10,8 @@ from .emails import (
     CircleStartingEmail,
     CircleTomorrowReminderEmail,
     LoginEmail,
+    TestEmail,
+    type_url,
 )
 from .models import SubscribedModel
 
@@ -60,35 +62,42 @@ def get_templates():
     return {
         "login_email": LoginEmail(
             recipient="bo@totem.org",
-            link="https://totem.org",  # type: ignore
+            link=type_url("https://totem.org"),
         ),
         "change_email": ChangeEmailEmail(
             recipient="bo@totem.org",
-            link="https://totem.org",  # type: ignore
+            link=type_url("https://totem.org"),
         ),
         "circle_starting": CircleStartingEmail(
             recipient="bo@totem.org",
             start="2021-01-01",
             event_title="Test Event",
-            event_link="https://totem.org/event",  # type: ignore
-            link="https://totem.org",  # type: ignore
+            event_link=type_url("https://totem.org/event"),
+            link=type_url("https://totem.org"),
         ),
         "circle_advertisement": CircleAdvertisementEmail(
             recipient="bo@totem.org",
-            link="https://totem.org",  # type: ignore
+            link=type_url("https://totem.org"),
             start="2021-01-01",
             event_title="Test Event",
-            unsubscribe_url="https://totem.org?bo=bo&cool=cool",  # type: ignore
+            unsubscribe_url=type_url("https://totem.org?bo=bo&cool=cool"),
         ),
         "circle_tomorrow_reminder": CircleTomorrowReminderEmail(
             recipient="bo@totem.org",
-            link="https://totem.org",  # type: ignore
+            link=type_url("https://totem.org"),
             start="2021-01-01",
             event_title="Test Event",
         ),
         "circle_signup": CircleSignupEmail(
             recipient="bo@totem.org",
-            link="https://totem.org",  # type: ignore
+            link=type_url("https://totem.org"),
+            start="2021-01-01",
+            iso_start="2021-01-01",
+            event_title="Test Event",
+        ),
+        "test": TestEmail(
+            recipient="bo@totem.org",
+            link=type_url("https://totem.org"),
             start="2021-01-01",
             iso_start="2021-01-01",
             event_title="Test Event",

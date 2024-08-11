@@ -13,12 +13,16 @@ if TYPE_CHECKING:
 
 import mrml
 from django.template.loader import render_to_string
-from pydantic import AnyHttpUrl, BaseModel
+from pydantic import AnyHttpUrl, BaseModel, TypeAdapter
 
 from totem.utils.pool import global_pool
 
 from .models import EmailLog
 from .utils import send_brevo_email, send_mail
+
+
+def type_url(url: str):
+    return TypeAdapter(AnyHttpUrl).validate_python(url)
 
 
 class Email(BaseModel):
@@ -143,6 +147,17 @@ class CircleSignupEmail(Email):
     title: str = "Spot Saved"
 
 
+class TestEmail(Email):
+    template: str = "test"
+    start: str
+    event_title: str
+    iso_start: str
+    link: AnyHttpUrl
+    button_text: str = "Add to calendar"
+    subject: str = "Your spot is saved"
+    title: str = "Spot Saved"
+
+
 def send_welcome_email(user: User):
     WelcomeEmail(recipient=user.email).send()
     if settings.DEBUG:
@@ -155,7 +170,7 @@ def send_returning_login_email(email: str, url: str):
     _url = make_email_url(url)
     LoginEmail(
         recipient=email,
-        link=_url,  # type: ignore
+        link=_url,
     ).send()
 
     if settings.DEBUG:
@@ -178,7 +193,7 @@ def send_notify_circle_starting(event: CircleEvent, user: User):
         start=start,
         event_title=event.circle.title,
         event_link=make_email_url(event.get_absolute_url()),
-        link=event.join_url(user),  # type: ignore
+        link=type_url(event.join_url(user)),
     ).send()
 
 
@@ -196,10 +211,10 @@ def send_notify_circle_advertisement(event: CircleEvent, user: User):
     start = to_human_time(user, event.start)
     CircleAdvertisementEmail(
         recipient=user.email,
-        link=make_email_url(event.get_absolute_url()),  # type: ignore
+        link=make_email_url(event.get_absolute_url()),
         start=start,
         event_title=event.circle.title,
-        unsubscribe_url=event.circle.subscribe_url(user, subscribe=False),  # type: ignore
+        unsubscribe_url=type_url(event.circle.subscribe_url(user, subscribe=False)),
     ).send()
 
 
@@ -207,7 +222,7 @@ def send_notify_circle_signup(event: CircleEvent, user: User):
     start = to_human_time(user, event.start)
     CircleSignupEmail(
         recipient=user.email,
-        link=make_email_url(reverse("circles:calendar", kwargs={"event_slug": event.slug})),  # type: ignore
+        link=make_email_url(reverse("circles:calendar", kwargs={"event_slug": event.slug})),
         start=start,
         iso_start=event.start.astimezone(user.timezone).isoformat(),
         event_title=event.circle.title,
@@ -220,4 +235,4 @@ def to_human_time(user: User, dt: datetime):
 
 
 def make_email_url(link) -> AnyHttpUrl:
-    return urllib.parse.urljoin(settings.SITE_BASE_URL, link)
+    return type_url(urllib.parse.urljoin(settings.SITE_BASE_URL, link))
