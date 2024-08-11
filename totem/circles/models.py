@@ -158,6 +158,10 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
     seats = models.IntegerField(default=8)
     start = models.DateTimeField(default=timezone.now)
 
+    class Meta:
+        ordering = ["start"]
+        unique_together = [["circle", "start", "open"]]
+
     def get_absolute_url(self) -> str:
         return reverse("circles:event_detail", kwargs={"event_slug": self.slug})
 
