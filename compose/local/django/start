@@ -6,4 +6,4 @@ set -o nounset
 
 
 python manage.py migrate
-exec uvicorn config.asgi:application --host 0.0.0.0 --reload
+exec gunicorn config.wsgi --workers 2 --bind 0.0.0.0:8000 --reload

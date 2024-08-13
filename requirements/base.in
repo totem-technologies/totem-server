@@ -2,7 +2,7 @@ argon2-cffi==23.1.0
 cssselect<2
 google-api-python-client<3
 google-auth-oauthlib<2
-gunicorn<23
+gunicorn<24
 lxml<6
 markdown<3.7.0
 mrml<0.2.0
@@ -14,7 +14,6 @@ pytz
 qrcode==7.4.2
 requests<3
 sentry-sdk[django]<3
-uvicorn[standard]<0.31.0
 whitenoise==6.7.0
 
 # Django

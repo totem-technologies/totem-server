@@ -5,4 +5,4 @@ set -o pipefail
 set -o nounset
 
 
-exec gunicorn config.asgi --workers 2 --bind 0.0.0.0:$PORT --worker-class uvicorn.workers.UvicornWorker
+exec gunicorn config.wsgi --workers 2 --bind 0.0.0.0:$PORT --max-requests 10000 --max_requests_jitter 100

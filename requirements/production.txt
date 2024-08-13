@@ -2,8 +2,6 @@
 #    uv pip compile --output-file requirements/production.txt requirements/production.in
 annotated-types==0.7.0
     # via pydantic
-anyio==4.4.0
-    # via watchfiles
 argon2-cffi==23.1.0
     # via -r requirements/base.in
 argon2-cffi-bindings==21.2.0
@@ -15,9 +13,9 @@ asgiref==3.8.1
     #   django-htmx
 backoff==2.2.1
     # via posthog
-boto3==1.34.155
+boto3==1.34.159
     # via django-storages
-botocore==1.34.155
+botocore==1.34.159
     # via
     #   boto3
     #   s3transfer
@@ -31,8 +29,6 @@ cffi==1.17.0
     # via argon2-cffi-bindings
 charset-normalizer==3.3.2
     # via requests
-click==8.1.7
-    # via uvicorn
 cssselect==1.2.0
     # via -r requirements/base.in
 django==5.0.8
@@ -52,7 +48,7 @@ django==5.0.8
     #   sentry-sdk
 django-allauth==0.63.6
     # via -r requirements/base.in
-django-anymail==11.0.1
+django-anymail==11.1
     # via -r requirements/base.in
 django-appconf==1.0.6
     # via django-imagekit
@@ -82,7 +78,7 @@ google-api-core==2.19.1
     # via google-api-python-client
 google-api-python-client==2.140.0
     # via -r requirements/base.in
-google-auth==2.32.0
+google-auth==2.33.0
     # via
     #   google-api-core
     #   google-api-python-client
@@ -94,25 +90,19 @@ google-auth-oauthlib==1.2.1
     # via -r requirements/base.in
 googleapis-common-protos==1.63.2
     # via google-api-core
-gunicorn==22.0.0
+gunicorn==23.0.0
     # via -r requirements/base.in
-h11==0.14.0
-    # via uvicorn
 httplib2==0.22.0
     # via
     #   google-api-python-client
     #   google-auth-httplib2
-httptools==0.6.1
-    # via uvicorn
 idna==3.7
-    # via
-    #   anyio
-    #   requests
+    # via requests
 jmespath==1.0.1
     # via
     #   boto3
     #   botocore
-lxml==5.2.2
+lxml==5.3.0
     # via -r requirements/base.in
 markdown==3.6
     # via -r requirements/base.in
@@ -163,12 +153,8 @@ python-dateutil==2.9.0.post0
     #   botocore
     #   django-auditlog
     #   posthog
-python-dotenv==1.0.1
-    # via uvicorn
 pytz==2024.1
     # via -r requirements/base.in
-pyyaml==6.0.2
-    # via uvicorn
 qrcode==7.4.2
     # via -r requirements/base.in
 requests==2.32.3
@@ -190,8 +176,6 @@ six==1.16.0
     # via
     #   posthog
     #   python-dateutil
-sniffio==1.3.1
-    # via anyio
 sqlparse==0.5.1
     # via django
 typing-extensions==4.12.2
@@ -207,13 +191,5 @@ urllib3==2.2.2
     #   django-anymail
     #   requests
     #   sentry-sdk
-uvicorn==0.30.5
-    # via -r requirements/base.in
-uvloop==0.19.0
-    # via uvicorn
-watchfiles==0.22.0
-    # via uvicorn
-websockets==12.0
-    # via uvicorn
 whitenoise==6.7.0
     # via -r requirements/base.in
