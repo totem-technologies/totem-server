@@ -1,0 +1,6 @@
+[tools]
+python = '3.12'
+node = '20'
+
+[env]
+_.python.venv = ".venv"
