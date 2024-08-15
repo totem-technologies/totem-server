@@ -28,6 +28,9 @@ jobs:
       - name: Set up Python and Node
         uses: jdx/mise-action@v2
 
+      - name: Make venv
+        run: python -m venv .venv
+
       - run: npm ci --include=dev
 
       - name: Run pre-commit
