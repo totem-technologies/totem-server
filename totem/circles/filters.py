@@ -26,8 +26,13 @@ def events_by_month(user: User | None, circle_slug: str, month: int, year: int):
     startDate = datetime.datetime(year, month, 1, tzinfo=datetime.timezone.utc)
     endDate = startDate + datetime.timedelta(days=32)
     events = CircleEvent.objects.filter(
-        start__gte=startDate, start__lte=endDate, cancelled=False, open=True, listed=True, circle__slug=circle_slug
+        start__gte=startDate, start__lte=endDate, cancelled=False, circle__slug=circle_slug
     )
+    if user and user.is_authenticated:
+        # show users events they are already attending
+        events = events.filter(Q(open=True, listed=True) | Q(attendees=user))
+    else:
+        events = events.filter(open=True, listed=True)
     events = events.order_by("start")
     if not user or not user.is_staff:
         events = events.filter(circle__published=True)

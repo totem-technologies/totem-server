@@ -3,6 +3,7 @@ from django.utils import timezone
 
 from totem.circles.filters import (
     all_upcoming_recommended_events,
+    events_by_month,
     other_events_in_circle,
 )
 from totem.circles.tests.factories import CircleEventFactory, CircleFactory
@@ -38,7 +39,7 @@ class TestFilters(TestCase):
         )
         self.cancelled_event = CircleEventFactory(
             circle=self.circle,
-            start=timezone.now() + timezone.timedelta(days=(days := days + 1)),
+            start=timezone.now() + timezone.timedelta(days=(days := days + 2)),
             cancelled=True,
             open=True,
         )
@@ -149,3 +150,22 @@ class TestFilters(TestCase):
         events = all_upcoming_recommended_events(None)
         self.assertNotIn(self.future_event, events)
         self.assertIn(self.future_event2, events)
+
+    def test_events_by_month(self):
+        events = events_by_month(None, self.circle.slug, self.future_event.start.month, self.future_event.start.year)
+        self.assertIn(self.future_event, events)
+        events = events_by_month(
+            None, self.circle.slug, self.cancelled_event.start.month, self.cancelled_event.start.year
+        )
+        self.assertNotIn(self.cancelled_event, events)
+        self.cancelled_event.attendees.add(self.user)
+        events = events_by_month(
+            self.user, self.circle.slug, self.cancelled_event.start.month, self.cancelled_event.start.year
+        )
+        self.assertNotIn(self.cancelled_event, events)
+        self.assertNotIn(self.closed_event, events)
+        self.closed_event.attendees.add(self.user)
+        events = events_by_month(
+            self.user, self.circle.slug, self.closed_event.start.month, self.closed_event.start.year
+        )
+        self.assertIn(self.closed_event, events)

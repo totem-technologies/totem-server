@@ -167,7 +167,6 @@ class EventCalendarFilterSchema(FilterSchema):
 
 @router.get("/calendar", response={200: List[EventCalendarSchema]}, tags=["events"], url_name="event_calendar")
 def upcoming_events(request, filters: EventCalendarFilterSchema = Query()):
-    print(filters)
     events = events_by_month(request.user, filters.space_slug, filters.month, filters.year)
     return [
         EventCalendarSchema(
