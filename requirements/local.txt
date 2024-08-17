@@ -20,9 +20,9 @@ asttokens==2.4.1
     # via stack-data
 backoff==2.2.1
     # via posthog
-boto3==1.34.159
+boto3==1.35.0
     # via django-storages
-botocore==1.34.159
+botocore==1.35.0
     # via
     #   boto3
     #   s3transfer
@@ -97,7 +97,7 @@ django-imagekit==5.0.0
     # via -r requirements/base.in
 django-impersonate==1.9.4
     # via -r requirements/base.in
-django-ninja==1.2.2
+django-ninja==1.3.0
     # via -r requirements/base.in
 django-sesame==3.2.2
     # via -r requirements/base.in
@@ -123,7 +123,7 @@ filelock==3.15.4
     # via virtualenv
 google-api-core==2.19.1
     # via google-api-python-client
-google-api-python-client==2.140.0
+google-api-python-client==2.141.0
     # via -r requirements/base.in
 google-auth==2.33.0
     # via
@@ -226,8 +226,10 @@ protobuf==5.27.3
     #   google-api-core
     #   googleapis-common-protos
     #   proto-plus
-psycopg2==2.9.9
+psycopg==3.2.1
     # via -r requirements/base.in
+psycopg-binary==3.2.1
+    # via psycopg
 ptyprocess==0.7.0
     # via pexpect
 pure-eval==0.2.3
@@ -304,13 +306,13 @@ requests-oauthlib==2.0.0
     # via google-auth-oauthlib
 rsa==4.9
     # via google-auth
-ruff==0.5.7
+ruff==0.6.1
     # via -r requirements/local.in
 s3transfer==0.10.2
     # via boto3
-sentry-sdk==2.12.0
+sentry-sdk==2.13.0
     # via -r requirements/base.in
-setuptools==72.1.0
+setuptools==72.2.0
     # via pip-tools
 six==1.16.0
     # via
@@ -327,7 +329,7 @@ stack-data==0.6.3
     # via ipython
 termcolor==2.4.0
     # via pytest-sugar
-tomlkit==0.13.0
+tomlkit==0.13.2
     # via pylint
 traitlets==5.14.3
     # via
@@ -340,6 +342,7 @@ typing-extensions==4.12.2
     #   django-stubs
     #   django-stubs-ext
     #   mypy
+    #   psycopg
     #   pydantic
     #   pydantic-core
     #   qrcode
@@ -351,7 +354,7 @@ urllib3==2.2.2
     #   django-anymail
     #   requests
     #   sentry-sdk
-uv==0.2.35
+uv==0.2.37
     # via -r requirements/local.in
 virtualenv==20.26.3
     # via pre-commit
