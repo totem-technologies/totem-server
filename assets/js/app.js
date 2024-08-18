@@ -9,13 +9,14 @@ import timezoneDetect from "./timezone"
 
 import logger from "./logger"
 
-window.dismiss_alert = function (e) {
+globalThis.dismiss_alert = function (e) {
   e.closest(".alert-dismissible").remove()
 }
 
 // Fix for instagram browser errors in sentry
-window._AutofillCallbackHandler =
-  window._AutofillCallbackHandler || function () {}
+globalThis._AutofillCallbackHandler =
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  globalThis._AutofillCallbackHandler || function () {}
 
 components()
 timezoneDetect()
@@ -23,17 +24,17 @@ htmxLoader()
 loginChannel()
 copyToClipboard()
 
-window.addEventListener("DOMContentLoaded", () => {
+globalThis.addEventListener("DOMContentLoaded", () => {
   emailSpellChecker()
   bot()
   shadowfill()
-  document.querySelectorAll(".no-js").forEach((el) => {
+  globalThis.document.querySelectorAll(".no-js").forEach((el) => {
     // Remove elements with the no-js class
     el.remove()
   })
 })
 
-console.log(
+globalThis.console.log(
   "Hey! Curious about how Totem works? Check out our open source code at https://github.com/totem-technologies/totem-server. Want to work with us? We'd love to talk to you, send me a message at bo@totem.org."
 )
-logger(window.TOTEM_DATA.debug)
+logger(globalThis.TOTEM_DATA.debug)

@@ -5,6 +5,7 @@ import { Refs } from "@solid-primitives/refs"
 import {
   Accessor,
   For,
+  JSXElement,
   Match,
   Resource,
   Show,
@@ -26,13 +27,13 @@ import {
 import Avatar from "./avatar"
 import ErrorBoundary from "./errors"
 
-type QueryParams = {
+interface QueryParams {
   limit: number
   category: string
   author: string
 }
 
-type DateChunk = {
+interface DateChunk {
   date: string
   day: number
   month: string
@@ -41,7 +42,7 @@ type DateChunk = {
   dateId: string
 }
 
-type CircleListContextType = {
+interface CircleListContextType {
   params: Accessor<QueryParams>
   setParams: (params: QueryParams) => void
   reset: () => void
@@ -65,24 +66,28 @@ const defaultParams: QueryParams = {
 
 const CircleListContext = createContext<CircleListContextType>()
 
-function CircleListProvider(props: { children: any }) {
+function CircleListProvider(props: { children: JSXElement }) {
   const [params, setParams] = createSignal<QueryParams>(getQueryParams())
   const [scrolling, setScrolling] = createSignal<boolean>(false)
   const [activeID, setActiveID] = createSignal<string>("")
   createEffect(() => {
-    const urlParams = new URLSearchParams(params() as any)
-    // remove empty params
-    for (const key in params()) {
-      if (!params()[key as keyof QueryParams]) urlParams.delete(key)
+    const urlParams = new URLSearchParams()
+    let key: keyof QueryParams
+    for (key in params()) {
+      if (!params()[key]) continue
+      urlParams.append(key, params()[key].toString())
     }
     window.history.replaceState(null, "", "?" + urlParams.toString())
-    refetch()
+    void refetch()
   })
   const [events, { refetch }] = createResource(async () => {
     return totemCirclesApiListEvents(params())
   })
-  const [filters, { refetch: filterRefetch }] = createResource(
-    async () => {
+  const refetch2 = () => {
+    void refetch()
+  }
+  const [filters] = createResource(
+    () => {
       return totemCirclesApiFilterOptions()
     },
     {
@@ -112,7 +117,7 @@ function CircleListProvider(props: { children: any }) {
         params,
         setParams,
         reset,
-        refetch,
+        refetch: refetch2,
         events,
         chunkedEvents,
         getMore,
@@ -162,15 +167,15 @@ function getFirstName(name: string) {
 }
 
 function getQueryParams(): QueryParams {
-  var urlParams = new URLSearchParams(window.location.search)
+  const urlParams = new URLSearchParams(window.location.search)
   return {
-    limit: parseInt(urlParams.get("limit") || defaultParams.limit.toString()),
-    category: urlParams.get("category") || defaultParams.category,
-    author: urlParams.get("author") || defaultParams.author,
+    limit: parseInt(urlParams.get("limit") ?? defaultParams.limit.toString()),
+    category: urlParams.get("category") ?? defaultParams.category,
+    author: urlParams.get("author") ?? defaultParams.author,
   }
 }
 
-function Circles() {
+function Circles(_: { children?: JSXElement }) {
   return (
     <ErrorBoundary>
       <CircleListProvider>
@@ -182,40 +187,45 @@ function Circles() {
 
 function CirclesInner() {
   const context = useContext(CircleListContext)
-  if (!context) return <div>Loading...</div>
   return (
-    <div class="m-auto max-w-7xl">
-      <Switch fallback={<div>No Circles yet.</div>}>
-        <Match when={context.events()?.count! == 0}>
-          <div>
+    <Show when={context}>
+      <div class="m-auto max-w-7xl">
+        <Switch fallback={<div>No Circles yet.</div>}>
+          <Match when={context!.events.state == "errored"}>
+            <div>Error: {context!.events.error}</div>
+          </Match>
+          <Match when={context!.events.state == "pending"}>
+            <div>Loading...</div>
+          </Match>
+          <Match when={context!.events()!.count == 0}>
             <div>
-              No Spaces found. Try resetting the filters, or reloading the page.
+              <div>
+                No Spaces found. Try resetting the filters, or reloading the
+                page.
+              </div>
+              <button
+                class="btn btn-ghost btn-sm mt-5"
+                onClick={context!.reset}>
+                Reset
+              </button>
             </div>
-            <button class="btn btn-ghost btn-sm mt-5" onClick={context!.reset}>
-              Reset
-            </button>
-          </div>
-        </Match>
-        <Match when={context.events()?.count! > 0}>
-          <QuickFilters />
-          <FilterBar />
-          <EventsChunkedByDate />
-          <Show when={context.events()!.items.length == context.params().limit}>
-            <button
-              class="btn btn-ghost btn-sm mt-5"
-              onClick={context!.getMore}>
-              More
-            </button>
-          </Show>
-        </Match>
-        <Match when={context.events.error}>
-          <div>Error: {context.events.error.message}</div>
-        </Match>
-        <Match when={context.events.loading}>
-          <div>Loading...</div>
-        </Match>
-      </Switch>
-    </div>
+          </Match>
+          <Match when={context!.events()!.count > 0}>
+            <QuickFilters />
+            <FilterBar />
+            <EventsChunkedByDate />
+            <Show
+              when={context!.events()!.items.length == context!.params().limit}>
+              <button
+                class="btn btn-ghost btn-sm mt-5"
+                onClick={context!.getMore}>
+                More
+              </button>
+            </Show>
+          </Match>
+        </Switch>
+      </div>
+    </Show>
   )
 }
 
@@ -228,7 +238,7 @@ function EventsChunkedByDate() {
       let currTop = document
         .getElementById(curr.dateId)!
         .getBoundingClientRect().top
-      let prevTop = document
+      const prevTop = document
         .getElementById(prev.dateId)!
         .getBoundingClientRect().top
       currTop = currTop < 0 ? currTop - 100 : currTop
@@ -243,9 +253,10 @@ function EventsChunkedByDate() {
         {(chunk) => (
           <li>
             <a
-              use:intersectionObserver={(e) => handleIntersection()}
+              use:intersectionObserver={() => handleIntersection()}
               class="invisible relative -top-52 block"
-              id={chunk.dateId}></a>
+              id={chunk.dateId}
+            />
             <h2 class="h3 p-5 text-left">{chunk.date}</h2>
             <ul>
               <For each={chunk.events}>
@@ -279,7 +290,7 @@ function MobileEvent(props: { event: EventListSchema }) {
       href={props.event.url}
       class="flex items-center justify-center gap-2 border-t-2 p-5 text-left last:border-b-2 hover:bg-white">
       <div class="rounded-full pr-2">{getAvatar(props.event)}</div>
-      <div class="flex-grow">
+      <div class="grow">
         <Switch>
           <Match when={props.event.title}>
             <p class="font-bold">{props.event.title}</p>
@@ -312,15 +323,15 @@ function DesktopEvent(props: { event: EventListSchema }) {
           {timestampToTimeString(props.event.start!)}
         </div>
       </div>
-      <div class="divider divider-horizontal self-stretch"></div>
+      <div class="divider divider-horizontal self-stretch" />
       <div class="flex items-center justify-center gap-5">
         <div>{getAvatar(props.event)}</div>
         <div class="text-lg">
           {getFirstName(props.event.space.author.name!)}
         </div>
       </div>
-      <div class="divider divider-horizontal self-stretch"></div>
-      <div class="flex-grow text-center">
+      <div class="divider divider-horizontal self-stretch" />
+      <div class="grow text-center">
         <Switch>
           <Match when={props.event.title}>
             <p class="text-[2vw] font-bold xl:text-2xl">{props.event.title}</p>
@@ -344,9 +355,9 @@ function getAvatar(event: EventListSchema) {
   return (
     <Avatar
       size={70}
-      name={event.space.author.name || ""}
-      seed={event.space.author.profile_avatar_seed || ""}
-      url={event.space.author.profile_image || undefined}
+      name={event.space.author.name ?? ""}
+      seed={event.space.author.profile_avatar_seed ?? ""}
+      url={event.space.author.profile_image ?? undefined}
       type={event.space.author.profile_avatar_type}
     />
   )
@@ -421,7 +432,7 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
 
   return (
     <div class="flex justify-center">
-      <div class="divider divider-horizontal m-0 ml-1"></div>
+      <div class="divider divider-horizontal m-0 ml-1" />
       <div ref={scrollableRef!} class="overflow-x-auto overflow-y-hidden">
         <div ref={containerRef!} class="flex gap-x-2 px-5 pb-3">
           <Refs ref={setRefs}>
@@ -442,7 +453,7 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
           </Refs>
         </div>
       </div>
-      <div class="divider divider-horizontal m-0 mr-1"></div>
+      <div class="divider divider-horizontal m-0 mr-1" />
     </div>
   )
 }
@@ -464,7 +475,8 @@ function FilterModal() {
         <label
           for={drawerID}
           aria-label="close sidebar"
-          class="drawer-overlay"></label>
+          class="drawer-overlay"
+        />
         <div class="flex min-h-full w-[90vw] max-w-80 flex-col gap-5 bg-tcreme p-4 text-left">
           <h3 class="text-lg font-bold">Filter Circles</h3>
           <div>

@@ -5,8 +5,8 @@ import "tippy.js/dist/tippy.css"
 import "tippy.js/themes/light.css"
 
 interface TooltipProps {
-  text: string
-  children: string
+  text?: string
+  children?: string
   class?: string
 }
 
@@ -23,9 +23,10 @@ export function useTotemTip({ content }: { content: Content }) {
 }
 
 const Tooltip = (props: TooltipProps) => {
-  const setAnchor = useTotemTip({ content: props.text })
+  const setAnchor = () => useTotemTip({ content: props.text! })
   return (
-    <div class={props.class} ref={setAnchor} innerHTML={props.children}></div>
+    // eslint-disable-next-line solid/no-innerhtml
+    <div class={props.class} ref={setAnchor()} innerHTML={props.children} />
   )
 }
 

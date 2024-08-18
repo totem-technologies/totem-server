@@ -1,25 +1,28 @@
 import _Avatar from "@totem.org/solid-boring-avatars"
-import { Show } from "solid-js"
+import { JSXElement, Show } from "solid-js"
 import { useTotemTip } from "./tooltip"
 
 import { ProfileAvatarTypeEnum } from "../client"
 function Avatar(props: {
-  size: number
-  name: string
-  seed: string
+  size?: number
+  name?: string
+  seed?: string
   tooltip?: boolean
   url?: string
   type?: ProfileAvatarTypeEnum
+  children?: JSXElement
 }) {
-  let setAnchor = () => {}
-  if (props.tooltip) {
-    setAnchor = useTotemTip({ content: props.name })
+  const setAnchor = () => {
+    if (props.tooltip) {
+      return useTotemTip({ content: props.name! })
+    }
+    return undefined
   }
   return (
     <div
-      ref={setAnchor}
+      ref={setAnchor()}
       class="max-h-full rounded-full bg-white [&>svg]:h-auto [&>svg]:max-w-full"
-      style={{ padding: `${props.size / 1000}rem` }}>
+      style={{ padding: `${props.size! / 1000}rem` }}>
       <Show
         when={props.type === "IM" && props.url}
         fallback={

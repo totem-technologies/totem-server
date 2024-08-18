@@ -2,7 +2,7 @@ import { totemCirclesApiUpcomingEvents } from "@/client"
 import Calendar from "@rnwonder/solid-date-picker/calendar"
 import "@rnwonder/solid-date-picker/dist/style.css"
 import { createQuery } from "@tanstack/solid-query"
-import { createSignal, JSX, Suspense } from "solid-js"
+import { createSignal, JSX, JSXElement, Suspense } from "solid-js"
 import "./eventCalendar.css"
 
 function DetailBox(props: { children: JSX.Element }) {
@@ -18,14 +18,18 @@ function Loading() {
     <DetailBox>
       <div class="text-center">
         <div class="spinner-border" role="status">
-          <span class="loading loading-spinner loading-lg"></span>
+          <span class="loading loading-spinner loading-lg" />
         </div>
       </div>
     </DetailBox>
   )
 }
 
-const EventCalendar = (props: { spaceid: string; eventid: string }) => {
+const EventCalendar = (props: {
+  spaceid?: string
+  eventid?: string
+  children?: JSXElement
+}) => {
   const [month, setMonth] = createSignal(new Date().getMonth() + 1)
   const [year, setYear] = createSignal(new Date().getFullYear())
   const query = createQuery(() => ({
@@ -63,11 +67,11 @@ const EventCalendar = (props: { spaceid: string; eventid: string }) => {
           customDaysClassName={events()}
           onMonthChange={(data) => {
             setMonth(data + 1)
-            query.refetch()
+            void query.refetch()
           }}
           onYearChange={(data) => {
             setYear(data)
-            query.refetch()
+            void query.refetch()
           }}
           onChange={(data) => {
             // console.log(data)

@@ -22,6 +22,7 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "@eslint/js": "^9.9.0",
     "@hey-api/openapi-ts": "^0.52.0",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/line-clamp": "^0.4.2",
@@ -31,8 +32,9 @@
     "daisyui": "^4.0.2",
     "esbuild": "^0.23.0",
     "esbuild-plugin-solid": "^0.6.0",
-    "eslint": "^8.56.0",
+    "eslint": "^9.9.0",
     "eslint-plugin-solid": "^0.14.0",
+    "eslint-plugin-tailwindcss": "^3.17.4",
     "livereload": "^0.9.3",
     "postcss": "^8.4.14",
     "postcss-import": "^16.0.0",
@@ -43,9 +45,11 @@
     "prettier-plugin-tailwindcss": "^0.6.0",
     "tailwindcss": "^3.2.7",
     "typescript": "^5.4.5",
+    "typescript-eslint": "^8.1.0",
     "typescript-plugin-css-modules": "^5.1.0"
   },
   "dependencies": {
+    "@leeoniya/ufuzzy": "^1.0.14",
     "@rnwonder/solid-date-picker": "^1.4.0",
     "@solid-primitives/intersection-observer": "^2.1.6",
     "@solid-primitives/media": "^2.2.9",

@@ -5,16 +5,17 @@ const CHANNEL_NAME = "login"
 const LOGIN_MESSAGE = "logged_in"
 
 function init() {
+  // eslint-disable-next-line no-undef
   const channel = new BroadcastChannel(CHANNEL_NAME)
   channel.onmessage = (event) => {
     if (
-      window.TOTEM_DATA.reload_on_login === true &&
+      globalThis.TOTEM_DATA.reload_on_login === true &&
       event.data === LOGIN_MESSAGE
     ) {
-      location.reload()
+      globalThis.location.reload()
     }
   }
-  if (window.TOTEM_DATA.is_authenticated === true) {
+  if (globalThis.TOTEM_DATA.is_authenticated === true) {
     channel.postMessage(LOGIN_MESSAGE)
   }
 }

@@ -1,4 +1,7 @@
-export async function postData(url: string, data: Record = {}): Promise {
+export async function postData(
+  url: string,
+  data: Record<string, unknown> = {}
+): Promise<Response> {
   return await fetch(url, {
     method: "POST",
     body: new URLSearchParams({

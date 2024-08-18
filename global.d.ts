@@ -1,11 +1,11 @@
 declare module "*.jsx" {
-  var _: () => any
+  const _: () => unknown
   export default _
 }
 
 declare namespace JSX {
   interface IntrinsicElements {
-    "add-to-calendar-button": any
+    "add-to-calendar-button": unknown
   }
 }
 

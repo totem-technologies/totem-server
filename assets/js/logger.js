@@ -5,12 +5,13 @@ var logger = (function () {
   pub.enableLogger = function enableLogger() {
     if (oldConsoleLog == null) return
 
-    window["console"]["log"] = oldConsoleLog
+    globalThis["console"]["log"] = oldConsoleLog
   }
 
   pub.disableLogger = function disableLogger() {
-    oldConsoleLog = console.log
-    window["console"]["log"] = function () {}
+    oldConsoleLog = globalThis.console.log
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    globalThis["console"]["log"] = function () {}
   }
 
   return pub

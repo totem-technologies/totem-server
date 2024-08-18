@@ -6,6 +6,7 @@ import {
   createSignal,
   For,
   JSX,
+  JSXElement,
   Match,
   Show,
   Suspense,
@@ -38,12 +39,16 @@ function CopyToClipboard() {
   return (
     <>
       <Show when={!copied()}>
-        <button onClick={copyTextToClipboard} class="btn btn-primary btn-sm">
+        <button
+          onClick={() => void copyTextToClipboard()}
+          class="btn btn-primary btn-sm">
           Copy Link
         </button>
       </Show>
       <Show when={copied()}>
-        <button class="btn btn-primary btn-sm" onClick={copyTextToClipboard}>
+        <button
+          class="btn btn-primary btn-sm"
+          onClick={() => void copyTextToClipboard()}>
           Copied!
         </button>
       </Show>
@@ -51,7 +56,7 @@ function CopyToClipboard() {
   )
 }
 
-function AttendingPopup(props: { event: EventDetailSchema }) {
+function AttendingPopup(_: { event: EventDetailSchema }) {
   createEffect(() => {
     const modal = document.getElementById(
       "attending_modal"
@@ -75,7 +80,8 @@ function AttendingPopup(props: { event: EventDetailSchema }) {
             src="/static/video/success.webm"
             muted
             playsinline
-            autoplay></video>
+            autoplay
+          />
           <h3 class="m-auto text-center text-xl font-bold">You're going!</h3>
           <p class="py-2">
             We'll send you a notification before the session starts with a link
@@ -97,7 +103,7 @@ function AttendingPopup(props: { event: EventDetailSchema }) {
           </p>
           <div class="flex justify-between">
             <div class="modal-action">
-              <CopyToClipboard></CopyToClipboard>
+              <CopyToClipboard />
             </div>
             <div class="modal-action">
               <form method="dialog">
@@ -144,11 +150,11 @@ function EventInfo(props: {
   refetchEvent: () => void
 }) {
   const [error, setError] = createSignal("")
-  let plural = props.eventStore.subscribers > 1 ? "s" : ""
+  const plural = () => (props.eventStore.subscribers > 1 ? "s" : "")
   async function handleAttend(e: Event) {
     if (!props.eventStore.rsvp_url) return
     e.preventDefault()
-    let response = await postData(props.eventStore.rsvp_url)
+    const response = await postData(props.eventStore.rsvp_url)
     if (response.redirected) {
       window.location.href = response.url
       return
@@ -159,7 +165,8 @@ function EventInfo(props: {
       setError("")
     }
     if (response.status >= 400) {
-      setError((await response.json())["error"])
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      setError((await response.json()).error)
     }
   }
   async function handleGiveUp(e: Event) {
@@ -176,7 +183,7 @@ function EventInfo(props: {
           <IconLine
             icon="star"
             tip="How many people are getting updates about this Space.">
-            {props.eventStore.subscribers} subscriber{plural}
+            {props.eventStore.subscribers} subscriber{plural()}
           </IconLine>
         </Show>
         <IconLine icon="dollar" tip="The cost of each session, if any.">
@@ -195,7 +202,7 @@ function EventInfo(props: {
         <IconLine
           icon="chair"
           tip="How many people are getting updates about this Space.">
-          {props.eventStore.seats_left} seat{plural} left
+          {props.eventStore.seats_left} seat{plural()} left
         </IconLine>
       </div>
       <div class="pb-1 pt-2">
@@ -236,14 +243,16 @@ function EventInfo(props: {
               start={props.eventStore.start}
               durationMinutes={props.eventStore.duration}
             />
-            <button class="a pt-2 text-gray-400" onClick={handleGiveUp}>
+            <button
+              class="a pt-2 text-gray-400"
+              onClick={(e) => void handleGiveUp(e)}>
               Give up spot
             </button>
           </Match>
 
           <Match when={!props.eventStore.attending}>
             <button
-              onClick={handleAttend}
+              onClick={(e) => void handleAttend(e)}
               class="btn btn-primary w-full p-2 px-6">
               Attend this session
             </button>
@@ -267,8 +276,8 @@ function Attendees(props: { event: EventDetailSchema }) {
               <Avatar
                 tooltip={true}
                 size={50}
-                name={attendee.name || ""}
-                seed={attendee.profile_avatar_seed!}
+                name={attendee.name ?? ""}
+                seed={attendee.profile_avatar_seed}
                 url={attendee.profile_image!}
                 type={attendee.profile_avatar_type}
               />
@@ -307,7 +316,9 @@ function Subscribe(props: {
         <Switch>
           <Match when={props.event.subscribed}>
             <div>You are currently subscribed to this Space.</div>
-            <button class="a pt-2 text-gray-400" onClick={handleUnubscribe}>
+            <button
+              class="a pt-2 text-gray-400"
+              onClick={(e) => void handleUnubscribe(e)}>
               Unsubscribe from updates
             </button>
           </Match>
@@ -317,7 +328,7 @@ function Subscribe(props: {
             </div>
             <button
               class="btn btn-outline w-full p-2 px-6"
-              onClick={handleSubscribe}>
+              onClick={(e) => void handleSubscribe(e)}>
               Subscribe
             </button>
           </Match>
@@ -332,15 +343,16 @@ function Loading() {
     <DetailBox>
       <div class="text-center">
         <div class="spinner-border" role="status">
-          <span class="loading loading-spinner loading-lg"></span>
+          <span class="loading loading-spinner loading-lg" />
         </div>
       </div>
     </DetailBox>
   )
 }
 
-type DetailSidebarProps = {
-  eventid: string
+interface DetailSidebarProps {
+  eventid?: string
+  children?: JSXElement
 }
 
 function DetailSidebar(props: DetailSidebarProps) {
@@ -355,29 +367,26 @@ function DetailSidebar(props: DetailSidebarProps) {
   const query = createQuery(() => ({
     queryKey: ["eventData"],
     queryFn: async () => {
-      return totemCirclesApiEventDetail({ eventSlug: props.eventid })
+      return totemCirclesApiEventDetail({ eventSlug: props.eventid! })
     },
     throwOnError: true,
   }))
+  const refetch = () => void query.refetch()
   return (
     <ErrorBoundary>
       <Suspense fallback={<Loading />}>
-        <AttendingPopup event={query.data!}></AttendingPopup>
+        <AttendingPopup event={query.data!} />
         <Switch fallback={<Loading />}>
           <Match when={query.isFetching}>
             <Loading />
           </Match>
           <Match when={query.data}>
-            <EventInfo
-              eventStore={query.data!}
-              refetchEvent={query.refetch}></EventInfo>
+            <EventInfo eventStore={query.data!} refetchEvent={refetch} />
             <Show when={query.data?.attending}>
-              <Attendees event={query.data!}></Attendees>
+              <Attendees event={query.data!} />
             </Show>
             <Show when={query.data?.subscribed !== null}>
-              <Subscribe
-                event={query.data!}
-                refetchEvent={query.refetch}></Subscribe>
+              <Subscribe event={query.data!} refetchEvent={refetch} />
             </Show>
           </Match>
         </Switch>

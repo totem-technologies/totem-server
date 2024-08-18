@@ -3,16 +3,21 @@
  */
 
 export default function () {
-  const forms = document.querySelectorAll('[data-bot="true"]') as NodeListOf
+  const forms = document.querySelectorAll('[data-bot="true"]')
+  if (!forms) {
+    return
+  }
   forms.forEach((form) => {
     form.addEventListener("submit", (event) => {
       event.preventDefault()
-      var csrfInput = document.createElement("input")
+      const csrfInput = document.createElement("input")
       csrfInput.type = "hidden"
       csrfInput.name = "csrfmiddlewaretoken"
       csrfInput.value = window.TOTEM_DATA.csrf_token
       form.appendChild(csrfInput)
-      form.submit()
+      if (form instanceof HTMLFormElement) {
+        form.submit()
+      }
     })
   })
 }

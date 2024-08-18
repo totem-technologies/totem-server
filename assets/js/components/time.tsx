@@ -1,10 +1,15 @@
-import { Match, Switch } from "solid-js"
+import { JSXElement, Match, Switch } from "solid-js"
 
 type TimeFormat = "short" | "at"
 
-function Time(props: { time: string; format: TimeFormat; className?: string }) {
+function Time(props: {
+  time?: string
+  format?: TimeFormat
+  className?: string
+  children?: JSXElement
+}) {
   const time = () => {
-    return new Date(props.time)
+    return new Date(props.time!)
   }
   return (
     <time class={props.className} dateTime={props.time}>

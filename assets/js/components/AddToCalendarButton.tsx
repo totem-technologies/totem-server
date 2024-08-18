@@ -7,22 +7,22 @@ function AddToCalendarButton(props: {
   durationMinutes: number
 }) {
   // let debug = "true"
-  let startDate = () => getDateFromISOString(props.start)
-  let startTime = () => convertISOToHHMM(props.start)
+  const startDate = () => getDateFromISOString(props.start)
+  const startTime = () => convertISOToHHMM(props.start)
 
   // Add duration to end date
-  let endDateObj = () => new Date(props.start)
+  const endDateObj = () => new Date(props.start)
   endDateObj().setMinutes(endDateObj().getMinutes() + props.durationMinutes)
-  let endDate = () => getDateFromISOString(endDateObj().toISOString())
-  let endTime = () => convertISOToHHMM(endDateObj().toISOString())
+  const endDate = () => getDateFromISOString(endDateObj().toISOString())
+  const endTime = () => convertISOToHHMM(endDateObj().toISOString())
 
   // Sanitize strings
-  let name = () => `${props.name}`.replaceAll('"', "")
-  let calLink = () => `${props.calLink}?r=cal_link`.replaceAll('"', "")
+  const name = () => `${props.name}`.replaceAll('"', "")
+  const calLink = () => `${props.calLink}?r=cal_link`.replaceAll('"', "")
 
   // console.log(props)
-  let debug = window.TOTEM_DATA.debug ? "true" : "false"
-  let el = `<add-to-calendar-button
+  const debug = window.TOTEM_DATA.debug ? "true" : "false"
+  const el = `<add-to-calendar-button
       styleLight="--btn-shadow:none; --btn-shadow-hover:none"
       inline
       hideBranding

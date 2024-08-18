@@ -1,11 +1,17 @@
-import { For, createEffect, createSignal, onMount } from "solid-js"
+import uFuzzy from "@leeoniya/ufuzzy"
+import { For, JSXElement, createEffect, createSignal, onMount } from "solid-js"
 
-type PromptItem = {
-  prompt: string
-  tags: Array<string>
+interface TagProps {
+  onClick: (tag: string) => void
+  tag: string
 }
 
-function Tag(props: any) {
+interface PromptItem {
+  prompt: string
+  tags: string[]
+}
+
+function Tag(props: TagProps) {
   return (
     <button
       onClick={() => props.onClick(props.tag)}
@@ -16,7 +22,11 @@ function Tag(props: any) {
   )
 }
 
-function Prompt(props: any) {
+function Prompt(props: {
+  prompt: string
+  tags: string[]
+  tagClick: (tag: string) => void
+}) {
   return (
     <li class="mb-2 rounded-lg border-2 bg-white px-4 py-2">
       <div class="pb-3">{props.prompt}</div>
@@ -27,21 +37,20 @@ function Prompt(props: any) {
   )
 }
 
-function PromptSearch(props: any) {
+function PromptSearch(props: { dataid?: string; children?: JSXElement }) {
   const [search, setSearch] = createSignal(
-    new URLSearchParams(window.location.search).get("search") || ""
+    new URLSearchParams(window.location.search).get("search") ?? ""
   )
-  const [data, setData] = createSignal<Array<PromptItem>>([])
+  const [data, setData] = createSignal<PromptItem[]>([])
 
   onMount(() => {
-    let data = JSON.parse(document.getElementById(props.dataid)!.textContent!)
+    const data = JSON.parse(
+      document.getElementById(props.dataid!)!.textContent!
+    ) as PromptItem[]
     setData(data)
   })
 
-  // eslint-disable-next-line no-undef
-  const uf: any = new (globalThis as any & { uFuzzy: any }).uFuzzy({
-    outOfOrder: false,
-  })
+  const uf = new uFuzzy()
   const tags = () => {
     return [
       ...new Set(
@@ -58,8 +67,7 @@ function PromptSearch(props: any) {
     if (search() === "") {
       return data()
     } else {
-      // eslint-disable-next-line no-unused-vars
-      let [idxs, _info, order] = uf.search(haystack(), search())
+      const [idxs, _info, order] = uf.search(haystack(), search(), 0)
       if (order) {
         return order.map((i: number) => idxs.map((i: number) => data()[i])[i])
       }
@@ -83,7 +91,7 @@ function PromptSearch(props: any) {
           <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
             <svg
               aria-hidden="true"
-              class="h-5 w-5 text-gray-500"
+              class="size-5 text-gray-500"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
