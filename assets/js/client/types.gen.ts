@@ -12,7 +12,7 @@ export type ProfileAvatarTypeEnum = 'TD' | 'IM';
 
 export type UserSchema = {
     profile_avatar_type: ProfileAvatarTypeEnum;
-    name?: string | null;
+    name?: (string | null);
     /**
      * Designates whether the user can log into this admin site.
      */
@@ -21,7 +21,7 @@ export type UserSchema = {
     /**
      * Profile image, must be under 5mb. Will be cropped to a square.
      */
-    profile_image?: string | null;
+    profile_image?: (string | null);
 };
 
 export type Message = {
@@ -29,8 +29,8 @@ export type Message = {
 };
 
 export type EventsFilterSchema = {
-    category: string | null;
-    author: string | null;
+    category: (string | null);
+    author: (string | null);
 };
 
 export type Input = {
@@ -42,10 +42,10 @@ export type EventListSchema = {
     space: SpaceSchema;
     url: string;
     start?: string;
-    slug?: string | null;
+    slug?: (string | null);
     date_created: string;
     date_modified: string;
-    title?: string | null;
+    title?: (string | null);
 };
 
 export type PagedEventListSchema = {
@@ -56,7 +56,7 @@ export type PagedEventListSchema = {
 export type SpaceSchema = {
     author: UserSchema;
     title: string;
-    slug?: string | null;
+    slug?: (string | null);
     date_created: string;
     date_modified: string;
     subtitle: string;
@@ -94,12 +94,12 @@ export type EventDetailSchema = {
     joinable: boolean;
     ended: boolean;
     rsvp_url: string;
-    join_url: string | null;
+    join_url: (string | null);
     subscribe_url: string;
     calLink: string;
     attendees: Array<UserSchema>;
-    subscribed: boolean | null;
-    user_timezone: string | null;
+    subscribed: (boolean | null);
+    user_timezone: (string | null);
 };
 
 export type EventCalendarFilterSchema = {
@@ -124,38 +124,38 @@ export type EventCalendarSchema = {
     url: string;
 };
 
-export type TotemApiApiSecretResponse = unknown;
+export type TotemApiApiSecretResponse = (unknown);
 
 export type TotemApiApiLoginData = {
     email: string;
 };
 
-export type TotemApiApiLoginResponse = LoginOut;
+export type TotemApiApiLoginResponse = (LoginOut);
 
 export type TotemApiApiTokenData = {
     token: string;
 };
 
-export type TotemApiApiTokenResponse = TokenOut;
+export type TotemApiApiTokenResponse = (TokenOut);
 
-export type TotemApiApiCurrentUserResponse = UserSchema;
+export type TotemApiApiCurrentUserResponse = (UserSchema);
 
 export type TotemCirclesApiListEventsData = {
-    author: string | null;
-    category: string | null;
+    author: (string | null);
+    category: (string | null);
     limit?: number;
     offset?: number;
 };
 
-export type TotemCirclesApiListEventsResponse = PagedEventListSchema;
+export type TotemCirclesApiListEventsResponse = (PagedEventListSchema);
 
-export type TotemCirclesApiFilterOptionsResponse = FilterOptionsSchema;
+export type TotemCirclesApiFilterOptionsResponse = (FilterOptionsSchema);
 
 export type TotemCirclesApiEventDetailData = {
     eventSlug: string;
 };
 
-export type TotemCirclesApiEventDetailResponse = EventDetailSchema;
+export type TotemCirclesApiEventDetailResponse = (EventDetailSchema);
 
 export type TotemCirclesApiUpcomingEventsData = {
     /**
@@ -172,96 +172,4 @@ export type TotemCirclesApiUpcomingEventsData = {
     year?: number;
 };
 
-export type TotemCirclesApiUpcomingEventsResponse = Array<EventCalendarSchema>;
-
-export type $OpenApiTs = {
-    '/api/v1/protected': {
-        get: {
-            res: {
-                /**
-                 * OK
-                 */
-                200: unknown;
-            };
-        };
-    };
-    '/api/v1/auth/login': {
-        post: {
-            req: TotemApiApiLoginData;
-            res: {
-                /**
-                 * OK
-                 */
-                200: LoginOut;
-            };
-        };
-    };
-    '/api/v1/auth/token': {
-        post: {
-            req: TotemApiApiTokenData;
-            res: {
-                /**
-                 * OK
-                 */
-                200: TokenOut;
-            };
-        };
-    };
-    '/api/v1/auth/currentuser': {
-        get: {
-            res: {
-                /**
-                 * OK
-                 */
-                200: UserSchema;
-                /**
-                 * Not Found
-                 */
-                404: Message;
-            };
-        };
-    };
-    '/api/v1/spaces/': {
-        get: {
-            req: TotemCirclesApiListEventsData;
-            res: {
-                /**
-                 * OK
-                 */
-                200: PagedEventListSchema;
-            };
-        };
-    };
-    '/api/v1/spaces/filter-options': {
-        get: {
-            res: {
-                /**
-                 * OK
-                 */
-                200: FilterOptionsSchema;
-            };
-        };
-    };
-    '/api/v1/spaces/event/{event_slug}': {
-        get: {
-            req: TotemCirclesApiEventDetailData;
-            res: {
-                /**
-                 * OK
-                 */
-                200: EventDetailSchema;
-            };
-        };
-    };
-    '/api/v1/spaces/calendar': {
-        get: {
-            req: TotemCirclesApiUpcomingEventsData;
-            res: {
-                /**
-                 * OK
-                 */
-                200: Array<EventCalendarSchema>;
-            };
-        };
-    };
-};
+export type TotemCirclesApiUpcomingEventsResponse = (Array<EventCalendarSchema>);
