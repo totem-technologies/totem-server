@@ -214,7 +214,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
                 send_notify_circle_signup(self, user)
             if not self.circle.author == user:
                 notify_slack(
-                    f"New session attendee: <{full_url(user.get_admin_url())}|{user.name}> for <{full_url(self.get_admin_url())}|{self.circle.title}> by {self.circle.author.name}"
+                    f"✅ New session attendee: <{full_url(user.get_admin_url())}|{user.name}> for <{full_url(self.get_admin_url())}|{self.circle.title}> by {self.circle.author.name}"
                 )
 
     def started(self):
@@ -246,6 +246,9 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         if self.started():
             raise CircleEventException("Session has already started")
         self.attendees.remove(user)
+        notify_slack(
+            f"🛑 Session attendee left: <{full_url(user.get_admin_url())}|{user.name}> for <{full_url(self.get_admin_url())}|{self.circle.title}> by {self.circle.author.name}"
+        )
 
     def notify(self, force=False):
         # Notify users who are attending that the circle is about to start

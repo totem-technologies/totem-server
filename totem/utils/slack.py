@@ -8,7 +8,7 @@ from .pool import global_pool
 requests_session = requests.Session()
 
 
-def notify_slack(message):
+def notify_slack(message: str):
     if settings.SLACK_WEBHOOK_URL is None:
         print("SLACK MESSAGE:", message)
         return
