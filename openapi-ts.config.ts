@@ -1,7 +1,7 @@
 import { defineConfig } from "@hey-api/openapi-ts"
 
 export default defineConfig({
-  client: "fetch",
+  client: "@hey-api/client-fetch",
   input: "openapi.json",
   output: "assets/js/client",
 })

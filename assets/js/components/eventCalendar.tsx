@@ -35,11 +35,17 @@ const EventCalendar = (props: {
   const query = createQuery(() => ({
     queryKey: ["eventUpcoming"],
     queryFn: async () => {
-      return totemCirclesApiUpcomingEvents({
-        spaceSlug: props.spaceid,
-        month: month(),
-        year: year(),
+      const response = await totemCirclesApiUpcomingEvents({
+        query: {
+          space_slug: props.spaceid!,
+          month: month(),
+          year: year(),
+        },
       })
+      if (response.error) {
+        throw new Error(response.error as string)
+      }
+      return response.data!
     },
     throwOnError: true,
   }))

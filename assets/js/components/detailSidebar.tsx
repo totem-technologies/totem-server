@@ -134,10 +134,10 @@ function IconLine(props: {
   tip: string
   icon: IconName
 }) {
-  const setAnchor = useTotemTip({ content: props.tip })
+  const setAnchor = () => useTotemTip({ content: props.tip })
   return (
     <div
-      ref={setAnchor}
+      ref={setAnchor()}
       class="flex cursor-help flex-wrap items-center justify-between gap-x-2 underline decoration-dotted">
       <Icon name={props.icon} />
       {props.children}
@@ -300,7 +300,7 @@ function Subscribe(props: {
     props.refetchEvent()
   }
 
-  async function handleUnubscribe(e: Event) {
+  async function handleUnsubscribe(e: Event) {
     if (!props.event.subscribe_url) return
     e.preventDefault()
     await postData(props.event.subscribe_url, { action: "unsubscribe" })
@@ -318,7 +318,7 @@ function Subscribe(props: {
             <div>You are currently subscribed to this Space.</div>
             <button
               class="a pt-2 text-gray-400"
-              onClick={(e) => void handleUnubscribe(e)}>
+              onClick={(e) => void handleUnsubscribe(e)}>
               Unsubscribe from updates
             </button>
           </Match>
@@ -367,7 +367,13 @@ function DetailSidebar(props: DetailSidebarProps) {
   const query = createQuery(() => ({
     queryKey: ["eventData"],
     queryFn: async () => {
-      return totemCirclesApiEventDetail({ eventSlug: props.eventid! })
+      const response = await totemCirclesApiEventDetail({
+        path: { event_slug: props.eventid! },
+      })
+      if (response.error) {
+        throw new Error(response.error as string)
+      }
+      return response.data!
     },
     throwOnError: true,
   }))

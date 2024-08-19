@@ -126,50 +126,76 @@ export type EventCalendarSchema = {
 
 export type TotemApiApiSecretResponse = (unknown);
 
+export type TotemApiApiSecretError = unknown;
+
 export type TotemApiApiLoginData = {
-    email: string;
+    query: {
+        email: string;
+    };
 };
 
 export type TotemApiApiLoginResponse = (LoginOut);
 
+export type TotemApiApiLoginError = unknown;
+
 export type TotemApiApiTokenData = {
-    token: string;
+    query: {
+        token: string;
+    };
 };
 
 export type TotemApiApiTokenResponse = (TokenOut);
 
+export type TotemApiApiTokenError = unknown;
+
 export type TotemApiApiCurrentUserResponse = (UserSchema);
 
+export type TotemApiApiCurrentUserError = (Message);
+
 export type TotemCirclesApiListEventsData = {
-    author: (string | null);
-    category: (string | null);
-    limit?: number;
-    offset?: number;
+    query: {
+        author: (string | null);
+        category: (string | null);
+        limit?: number;
+        offset?: number;
+    };
 };
 
 export type TotemCirclesApiListEventsResponse = (PagedEventListSchema);
 
+export type TotemCirclesApiListEventsError = unknown;
+
 export type TotemCirclesApiFilterOptionsResponse = (FilterOptionsSchema);
 
+export type TotemCirclesApiFilterOptionsError = unknown;
+
 export type TotemCirclesApiEventDetailData = {
-    eventSlug: string;
+    path: {
+        event_slug: string;
+    };
 };
 
 export type TotemCirclesApiEventDetailResponse = (EventDetailSchema);
 
+export type TotemCirclesApiEventDetailError = unknown;
+
 export type TotemCirclesApiUpcomingEventsData = {
-    /**
-     * Month of the year, 1-12
-     */
-    month?: number;
-    /**
-     * Space slug
-     */
-    spaceSlug?: string;
-    /**
-     * Year of the month, e.g. 2024
-     */
-    year?: number;
+    query?: {
+        /**
+         * Month of the year, 1-12
+         */
+        month?: number;
+        /**
+         * Space slug
+         */
+        space_slug?: string;
+        /**
+         * Year of the month, e.g. 2024
+         */
+        year?: number;
+    };
 };
 
 export type TotemCirclesApiUpcomingEventsResponse = (Array<EventCalendarSchema>);
+
+export type TotemCirclesApiUpcomingEventsError = unknown;

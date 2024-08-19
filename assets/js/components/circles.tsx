@@ -27,7 +27,7 @@ import {
 import Avatar from "./avatar"
 import ErrorBoundary from "./errors"
 
-interface QueryParams {
+interface QueryParams extends Record<string, string | number> {
   limit: number
   category: string
   author: string
@@ -81,14 +81,14 @@ function CircleListProvider(props: { children: JSXElement }) {
     void refetch()
   })
   const [events, { refetch }] = createResource(async () => {
-    return totemCirclesApiListEvents(params())
+    return (await totemCirclesApiListEvents({ query: params() })).data!
   })
   const refetch2 = () => {
     void refetch()
   }
   const [filters] = createResource(
-    () => {
-      return totemCirclesApiFilterOptions()
+    async () => {
+      return (await totemCirclesApiFilterOptions({})).data!
     },
     {
       initialValue: { categories: [], authors: [] },

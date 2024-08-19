@@ -49,6 +49,7 @@
     "typescript-plugin-css-modules": "^5.1.0"
   },
   "dependencies": {
+    "@hey-api/client-fetch": "^0.2.4",
     "@leeoniya/ufuzzy": "^1.0.14",
     "@rnwonder/solid-date-picker": "^1.4.0",
     "@solid-primitives/intersection-observer": "^2.1.6",
