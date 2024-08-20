@@ -3,7 +3,7 @@ from django.test import Client, override_settings
 from django.urls import reverse
 
 from totem.circles.tests.factories import CircleEventFactory
-from totem.email.emails import send_notify_circle_advertisement, send_returning_login_email
+from totem.email.emails import send_missed_event_email, send_notify_circle_advertisement, send_returning_login_email
 from totem.users.tests.factories import UserFactory
 
 from .views import get_templates
@@ -82,3 +82,22 @@ class TestReturningUsers:
         assert email.to == [user.email]
         message = str(email.message())
         assert "http://testserver/" in message
+
+
+class TestMissedEventEmail:
+    def test_missed_event_email(self, client, db):
+        user = UserFactory()
+        user.save()
+        event = CircleEventFactory(title="Test Event")
+        event.save()
+        event.attendees.add(user)
+        assert len(mail.outbox) == 0
+        send_missed_event_email(event, user)
+        assert len(mail.outbox) == 1
+        email = mail.outbox[0]
+        assert email.to == [user.email]
+        message = str(email.message())
+        assert "http://testserver/circles/event" in message
+        assert event.title in message
+        assert "missed you" in message
+        assert "forms.gle" in message

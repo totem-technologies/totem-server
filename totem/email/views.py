@@ -10,6 +10,7 @@ from .emails import (
     CircleStartingEmail,
     CircleTomorrowReminderEmail,
     LoginEmail,
+    MissedEventEmail,
     TestEmail,
     type_url,
 )
@@ -92,14 +93,18 @@ def get_templates():
             recipient="bo@totem.org",
             link=type_url("https://totem.org"),
             start="2021-01-01",
-            iso_start="2021-01-01",
             event_title="Test Event",
         ),
         "test": TestEmail(
             recipient="bo@totem.org",
             link=type_url("https://totem.org"),
             start="2021-01-01",
-            iso_start="2021-01-01",
             event_title="Test Event",
+        ),
+        "missed_event": MissedEventEmail(
+            recipient="bo@totem.org",
+            start="2021-01-01",
+            event_title="Test Event",
+            event_link=type_url("https://totem.org"),
         ),
     }

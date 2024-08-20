@@ -38,4 +38,17 @@ def advertise_circle():
         event.advertise()
 
 
+def notify_missed_event():
+    recently_ended_events = CircleEvent.objects.filter(
+        start__gte=timezone.now() - timedelta(hours=2),
+        start__lte=timezone.now() - timedelta(hours=1),
+        cancelled=False,
+        notified_missed=False,
+    )
+    print(f"Notifying {len(recently_ended_events)} missed events")
+    for event in recently_ended_events:
+        event.notify_missed()
+    return len(recently_ended_events)
+
+
 tasks = [notify_circle_ready, advertise_circle, notify_circle_tomorrow]

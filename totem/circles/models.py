@@ -16,6 +16,7 @@ from imagekit.processors import ResizeToFit
 from taggit.managers import TaggableManager
 
 from totem.email.emails import (
+    send_missed_event_email,
     send_notify_circle_advertisement,
     send_notify_circle_signup,
     send_notify_circle_starting,
@@ -154,6 +155,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
     meeting_url = models.CharField(max_length=255, blank=True)
     notified = models.BooleanField(default=False)
     notified_tomorrow = models.BooleanField(default=False)
+    notified_missed = models.BooleanField(default=False)
     open = models.BooleanField(default=True, help_text="Is this session open for more attendees?")
     seats = models.IntegerField(default=8)
     start = models.DateTimeField(default=timezone.now)
@@ -267,6 +269,20 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         self.save()
         for user in self.attendees.all():
             send_notify_circle_tomorrow(self, user)
+
+    def notify_missed(self, force=False):
+        # Notify users who signed up but didn't join
+        if force is False and self.notified_missed:
+            return
+        assert not self.cancelled
+        assert self.ended()
+        self.notified_missed = True
+        self.save()
+        for user in self.attendees.all():
+            if user == self.circle.author:
+                continue
+            if user not in self.joined.all():
+                send_missed_event_email(self, user)
 
     def advertise(self, force=False):
         # Notify users who are subscribed that a new event is available, if they aren't already attending.

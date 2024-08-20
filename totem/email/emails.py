@@ -25,6 +25,15 @@ def type_url(url: str):
     return TypeAdapter(AnyHttpUrl).validate_python(url)
 
 
+def _make_email_url(link) -> AnyHttpUrl:
+    return type_url(urllib.parse.urljoin(settings.SITE_BASE_URL, link))
+
+
+def _to_human_time(user: User, dt: datetime):
+    # 06:56 PM EDT on Friday, August 25
+    return dt.astimezone(user.timezone).strftime("%I:%M %p %Z on %A, %B %d")
+
+
 class Email(BaseModel):
     template: str
     subject: str
@@ -140,7 +149,6 @@ class CircleSignupEmail(Email):
     template: str = "circle_signup"
     start: str
     event_title: str
-    iso_start: str
     link: AnyHttpUrl
     button_text: str = "Add to calendar"
     subject: str = "Your spot is saved"
@@ -151,11 +159,21 @@ class TestEmail(Email):
     template: str = "test"
     start: str
     event_title: str
-    iso_start: str
     link: AnyHttpUrl
     button_text: str = "Add to calendar"
     subject: str = "Your spot is saved"
     title: str = "Spot Saved"
+
+
+class MissedEventEmail(Email):
+    template: str = "missed_event"
+    start: str
+    event_title: str
+    link: AnyHttpUrl = type_url("https://forms.gle/qnEKej6Pt4JAZTH79")
+    event_link: AnyHttpUrl
+    button_text: str = "Let us know how we can help"
+    subject: str = "We missed you!"
+    title: str = "We missed you!"
 
 
 def send_welcome_email(user: User):
@@ -167,7 +185,7 @@ def send_welcome_email(user: User):
 
 
 def send_returning_login_email(email: str, url: str):
-    _url = make_email_url(url)
+    _url = _make_email_url(url)
     LoginEmail(
         recipient=email,
         link=_url,
@@ -182,36 +200,36 @@ def send_returning_login_email(email: str, url: str):
 def send_change_email(old_email: str, new_email: str, login_url: str):
     ChangeEmailEmail(
         recipient=new_email,
-        link=make_email_url(login_url),
+        link=_make_email_url(login_url),
     ).send()
 
 
 def send_notify_circle_starting(event: CircleEvent, user: User):
-    start = to_human_time(user, event.start)
+    start = _to_human_time(user, event.start)
     CircleStartingEmail(
         recipient=user.email,
         start=start,
         event_title=event.circle.title,
-        event_link=make_email_url(event.get_absolute_url()),
+        event_link=_make_email_url(event.get_absolute_url()),
         link=type_url(event.join_url(user)),
     ).send()
 
 
 def send_notify_circle_tomorrow(event: CircleEvent, user: User):
-    start = to_human_time(user, event.start)
+    start = _to_human_time(user, event.start)
     CircleTomorrowReminderEmail(
         recipient=user.email,
         start=start,
         event_title=event.circle.title,
-        link=make_email_url(event.get_absolute_url()),
+        link=_make_email_url(event.get_absolute_url()),
     ).send()
 
 
 def send_notify_circle_advertisement(event: CircleEvent, user: User):
-    start = to_human_time(user, event.start)
+    start = _to_human_time(user, event.start)
     CircleAdvertisementEmail(
         recipient=user.email,
-        link=make_email_url(event.get_absolute_url()),
+        link=_make_email_url(event.get_absolute_url()),
         start=start,
         event_title=event.circle.title,
         unsubscribe_url=type_url(event.circle.subscribe_url(user, subscribe=False)),
@@ -219,20 +237,21 @@ def send_notify_circle_advertisement(event: CircleEvent, user: User):
 
 
 def send_notify_circle_signup(event: CircleEvent, user: User):
-    start = to_human_time(user, event.start)
+    start = _to_human_time(user, event.start)
     CircleSignupEmail(
         recipient=user.email,
-        link=make_email_url(reverse("circles:calendar", kwargs={"event_slug": event.slug})),
+        link=_make_email_url(reverse("circles:calendar", kwargs={"event_slug": event.slug})),
         start=start,
-        iso_start=event.start.astimezone(user.timezone).isoformat(),
         event_title=event.circle.title,
     ).send(blocking=False)
 
 
-def to_human_time(user: User, dt: datetime):
-    # 06:56 PM EDT on Friday, August 25
-    return dt.astimezone(user.timezone).strftime("%I:%M %p %Z on %A, %B %d")
-
-
-def make_email_url(link) -> AnyHttpUrl:
-    return type_url(urllib.parse.urljoin(settings.SITE_BASE_URL, link))
+def send_missed_event_email(event: CircleEvent, user: User):
+    start = _to_human_time(user, event.start)
+    title = event.title or event.circle.title
+    MissedEventEmail(
+        recipient=user.email,
+        start=start,
+        event_title=title,
+        event_link=_make_email_url(event.get_absolute_url()),
+    ).send(blocking=False)

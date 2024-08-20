@@ -1,0 +1,10 @@
+{% extends 'email/emails/button.mjml' %}
+{% block message %}
+<mj-text mj-class="p">
+  Our records show you didn't attend a session you signed up for: <a href="{{event_link}}" target="_blank"><strong>{{event_title}}</strong></a>. We understand things come up, but to protect our spaces people who are regular no-shows will be removed from Totem.
+</mj-text>
+<mj-spacer height="10px" />
+<mj-text mj-class="p">
+  However, if there's something we can be doing better, please let us know by clicking the button below.
+</mj-text>
+{% endblock message %}

@@ -1,0 +1,8 @@
+{% extends 'email/emails/button.txt' %}
+{% block message %}
+You missed a session you signed up for: {{event_title}}.
+
+We understand things come up, but to protect our spaces people who are regular no-shows will be removed from Totem.
+
+However, if there's something we can be doing better, please let us know by clicking here: {{link}}
+{% endblock message %}
