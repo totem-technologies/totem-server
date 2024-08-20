@@ -49,7 +49,10 @@ class CircleEventInline(admin.StackedInline):
         ("Content", {"fields": ["content"], "classes": ["collapse"]}),
         (
             "Advanced",
-            {"fields": ["meeting_url", "notified", "notified_tomorrow", "advertised"], "classes": ["collapse"]},
+            {
+                "fields": ["meeting_url", "notified", "notified_missed", "notified_tomorrow", "advertised"],
+                "classes": ["collapse"],
+            },
         ),
     ]
 
