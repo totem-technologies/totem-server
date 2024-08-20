@@ -51,4 +51,4 @@ def notify_missed_event():
     return len(recently_ended_events)
 
 
-tasks = [notify_circle_ready, advertise_circle, notify_circle_tomorrow]
+tasks = [notify_circle_ready, advertise_circle, notify_circle_tomorrow, notify_missed_event]
