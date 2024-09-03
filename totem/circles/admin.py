@@ -23,7 +23,7 @@ class DropdownFilter(admin.SimpleListFilter):
 @admin.register(CircleCategory)
 class CircleCategoryAdmin(admin.ModelAdmin):
     list_display = ("name", "slug")
-    search_fields = ("name",)
+    search_fields = ("name", "description")
 
 
 class CircleEventInline(admin.StackedInline):
