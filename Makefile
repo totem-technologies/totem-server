@@ -2,28 +2,28 @@ run:
 	./node_modules/.bin/concurrently "docker compose -f local.yml up --remove-orphans" "npm run dev"
 
 build:
-	docker-compose -f local.yml build
+	docker compose -f local.yml build
 
 build-prod:
 	docker build -t totem-prod -f compose/production/django/Dockerfile .
 
 test:
-	docker-compose -f local.yml run --rm django coverage run -m pytest -n auto
+	docker compose -f local.yml run --rm django coverage run -m pytest -n auto
 
 tasks:
-	docker-compose -f local.yml run --rm django python manage.py totem_tasks
+	docker compose -f local.yml run --rm django python manage.py totem_tasks
 
 shell:
-	docker-compose -f local.yml run --rm django bash
+	docker compose -f local.yml run --rm django bash
 
 dbshell:
-	docker-compose -f local.yml exec postgres bash
+	docker compose -f local.yml exec postgres bash
 
 sqlshell:
-	docker-compose -f local.yml exec postgres psql -U debug -d totem
+	docker compose -f local.yml exec postgres psql -U debug -d totem
 
 pyshell:
-	docker-compose -f local.yml run --rm django ./manage.py shell_plus
+	docker compose -f local.yml run --rm django ./manage.py shell_plus
 
 deploy:
 	git push dokku
@@ -45,7 +45,7 @@ install_local: .venv
 	npm install
 
 fixtures:
-	docker-compose -f local.yml run --rm django python manage.py load_dev_data
+	docker compose -f local.yml run --rm django python manage.py load_dev_data
 
 pipcompile:
 	uv pip compile --upgrade --output-file requirements/local.txt requirements/local.in
@@ -55,13 +55,13 @@ pipsync:
 	uv pip sync requirements/local.txt
 
 migrations: ## Create DB migrations in the container
-	@docker-compose -f local.yml run django python manage.py makemigrations
+	@docker compose -f local.yml run django python manage.py makemigrations
 
 migrate: ## Run DB migrations in the container
-	@docker-compose -f local.yml run django python manage.py migrate
+	@docker compose -f local.yml run django python manage.py migrate
 
 generate_api_models:
-	@docker-compose -f local.yml run django python manage.py export_openapi_schema --api totem.api.api.api > openapi.json
+	@docker compose -f local.yml run django python manage.py export_openapi_schema --api totem.api.api.api > openapi.json
 	@npm run openapi-ts
 
 adddep: pipcompile pipsync build
