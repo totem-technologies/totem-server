@@ -1,5 +1,5 @@
 run:
-	./node_modules/.bin/concurrently "docker compose -f local.yml up" "npm run dev"
+	./node_modules/.bin/concurrently "docker compose -f local.yml up --remove-orphans" "npm run dev"
 
 build:
 	docker-compose -f local.yml build
