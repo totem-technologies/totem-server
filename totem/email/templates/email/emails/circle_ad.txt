@@ -1,4 +1,4 @@
 {% extends 'email/emails/button.txt' %}
 {% block message %}
-A session for {{event_title}}, is coming up at {{start}}. Click the button below to reserve a spot. If you no longer wish to get notifications about this Space, you can unsubscribe here: {{unsubscribe_url}}
+A session for {{title}}, is coming up at {{start}}. Click the button below to reserve a spot. If you no longer wish to get notifications about this Space, you can unsubscribe here: {{unsubscribe_url}}
 {% endblock message %}

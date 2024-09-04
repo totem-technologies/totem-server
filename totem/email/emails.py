@@ -128,11 +128,18 @@ class CircleAdvertisementEmail(Email):
     template: str = "circle_ad"
     start: str
     event_title: str
+    space_title: str
+    space_subtitle: str
+    author: str
     unsubscribe_url: AnyHttpUrl
     link: AnyHttpUrl
     button_text: str = "Reserve a spot"
-    subject: str = "Join an upcoming session"
-    title: str = "New Session"
+    subject: str = "New Session"
+    event_details: str | None
+    title: str
+    subtitle: str
+    image_url: str | None
+    author_image_url: str | None
 
 
 class CircleTomorrowReminderEmail(Email):
@@ -227,11 +234,29 @@ def send_notify_circle_tomorrow(event: CircleEvent, user: User):
 
 def send_notify_circle_advertisement(event: CircleEvent, user: User):
     start = _to_human_time(user, event.start)
+    title = event.title or event.circle.subtitle
+    subtitle = event.circle.title
+    details = None
+    if event.content:
+        details = event.content_html
+    elif event.circle.content:
+        details = event.circle.content_html
+    image_url = event.circle.image.url if event.circle.image else None
+    author_image_url = event.circle.author.profile_image.url if event.circle.author.profile_image else None
+
     CircleAdvertisementEmail(
         recipient=user.email,
         link=_make_email_url(event.get_absolute_url()),
         start=start,
-        event_title=event.circle.title,
+        event_title=event.title,
+        space_title=event.circle.title,
+        space_subtitle=event.circle.subtitle,
+        event_details=details,
+        title=title,
+        subtitle=subtitle,
+        author=event.circle.author.name,
+        image_url=image_url,
+        author_image_url=author_image_url,
         unsubscribe_url=type_url(event.circle.subscribe_url(user, subscribe=False)),
     ).send()
 

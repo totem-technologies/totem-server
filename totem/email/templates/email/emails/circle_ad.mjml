@@ -1,12 +1,49 @@
-{% extends 'email/emails/button.mjml' %}
-{% block message %}
-<mj-text mj-class="p">
-  A session for {{event_title}}, is coming up at <strong>{{start}}</strong>. Click the button below to reserve a spot.
-</mj-text>
-{% endblock message %}
-{% block submessage %}
-<mj-text mj-class="p">
-  If you no longer wish to get notifications about this Space, you can <a class="link-nostyle" href="{{unsubscribe_url}}">unsubscribe here</a>.
-</mj-text>
-<mj-spacer height="20px"></mj-spacer>
-{% endblock submessage %}
+{% extends 'email/emails/_base.mjml' %} {% load static %} {% block content %}
+<mj-section mj-class="section">
+  <mj-column padding="0">
+    {% if image_url %}
+    <mj-image border-radius="20px" padding="0" href="{{link}}" src="{{image_url}}" />
+    {% endif %}
+    <mj-spacer height="20px"></mj-spacer>
+    <mj-text mj-class="h1">
+      <strong>{{title}}</strong>
+    </mj-text>
+    <mj-text mj-class="p" font-style="italic">
+      {{subtitle}}, by {{author}}
+    </mj-text>
+    <mj-spacer height="10px"></mj-spacer>
+    <mj-text mj-class="p">
+      This session is starts at <strong>{{start}}</strong>.
+    </mj-text>
+    <mj-spacer height="30px"></mj-spacer>
+    {% if author_image_url %}
+    <mj-image border-radius="50px" width="100px" padding="0" href="{{link}}" src="{{author_image_url}}" />
+    <mj-spacer height="30px"></mj-spacer>
+    {% endif %}
+    {% if event_details %}
+    <mj-text mj-class="p">
+      {{event_details|safe}}
+    </mj-text>
+    <mj-text mj-class="p">
+      Hope you can make it!
+    </mj-text>
+    {% else %}
+    <mj-text mj-class="p">
+      A new session has been added to {{space_title}} by {{author}}. Hope you can make it!
+    </mj-text>
+    {% endif %}
+    <mj-spacer height="48px"></mj-spacer>
+    <mj-button href="{{link}}" align="center">
+      <strong>{{button_text}}</strong>
+    </mj-button>
+    <mj-spacer height="48px"></mj-spacer>
+    <mj-text mj-class="sub">
+      If the button doesn't work, copy and paste the link below into your browser: <a class="link-nostyle" href="{{link}}">{{link}}</a>
+    </mj-text>
+    <mj-spacer height="20px"></mj-spacer>
+    <mj-text mj-class="sub">
+      No longer wish to get notifications about {{space_title}} sessions? You can <a class="link-nostyle" href="{{unsubscribe_url}}">unsubscribe here</a>.
+    </mj-text>
+  </mj-column>
+</mj-section>
+{% endblock %}

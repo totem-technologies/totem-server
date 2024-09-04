@@ -15,8 +15,6 @@
       <strong>{{button_text}}</strong>
     </mj-button>
     <mj-spacer height="48px"></mj-spacer>
-    {% block submessage %}
-    {% endblock submessage %}
     <mj-text mj-class="sub">
       Didn't request this link? You can safely ignore this email. If the
       button doesn't work, copy and paste the link below into your browser:
@@ -25,6 +23,8 @@
     <mj-text mj-class="sub" align="center">
       <a class="link-nostyle" href="{{link}}">{{link}}</a>
     </mj-text>
+    {% block unsubscribe_message %}
+    {% endblock unsubscribe_message %}
   </mj-column>
 </mj-section>
 {% endblock %}

@@ -1,8 +1,8 @@
 {% extends 'email/emails/button.txt' %}
 {% block message %}
-You missed a session you signed up for: {{event_title}}.
+We missed you in <a href="{{event_link}}">{{event_title}}</a>. Due to the limited reserved spots in each Space, your absence is noticed if you do not attend.
 
-We understand things come up, but to protect our spaces people who are regular no-shows will be removed from Totem.
+Did you know that you can choose to cancel online at any time <a href="{{event_link}}">here</a>? Just select "Give up spot" on the side bar. We encourage you to do this at least 12 hours before your Space, so your spot can be offered to someone else.
 
-However, if there's something we can be doing better, please let us know by clicking here: {{link}}
+Your story and presence are truly valued, so if there's something pressing in your life or if there's anything we can do better on our end, <a href="{{link}}">please let us know</a>.
 {% endblock message %}

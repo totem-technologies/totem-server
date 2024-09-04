@@ -1,10 +1,14 @@
 {% extends 'email/emails/button.mjml' %}
 {% block message %}
 <mj-text mj-class="p">
-  Our records show you didn't attend a session you signed up for: <a href="{{event_link}}" target="_blank"><strong>{{event_title}}</strong></a>. We understand things come up, but to protect our spaces people who are regular no-shows will be removed from Totem.
+  We missed you in <a href="{{event_link}}">{{event_title}}</a>. Due to the limited reserved spots in each Space, your absence is noticed if you do not attend.
 </mj-text>
 <mj-spacer height="10px" />
 <mj-text mj-class="p">
-  However, if there's something we can be doing better, please let us know by clicking the button below.
+  Did you know that you can cancel at any time <a href="{{event_link}}">here</a>? Select "Give up spot" on the side bar. We encourage you do this at least 12 hours before, so your spot can be offered to someone else.
+</mj-text>
+<mj-spacer height="10px" />
+<mj-text mj-class="p">
+  Your story and presence are truly valued, so if there's anything we can do better on our end, please let us know:
 </mj-text>
 {% endblock message %}

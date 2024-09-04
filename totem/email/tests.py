@@ -60,6 +60,32 @@ class TestAdvertEmail:
         assert "http://testserver/circles/subscribe" in message
         assert event.circle.slug in message
 
+    def test_advert_email_with_content(self, client, db):
+        user = UserFactory()
+        user.save()
+        event = CircleEventFactory(content="This is a test content")
+        event.save()
+        send_notify_circle_advertisement(event, user)
+        assert len(mail.outbox) == 1
+        email = mail.outbox[0]
+        assert email.to == [user.email]
+        message = str(email.message())
+        assert "This is a test" in message
+
+    def test_advert_email_with_circle_content(self, client, db):
+        user = UserFactory()
+        user.save()
+        event = CircleEventFactory()
+        event.save()
+        event.circle.content = "This is a circle test"
+        event.circle.save()
+        send_notify_circle_advertisement(event, user)
+        assert len(mail.outbox) == 1
+        email = mail.outbox[0]
+        assert email.to == [user.email]
+        message = str(email.message())
+        assert "This is a circle" in message
+
 
 class TestReturningUsers:
     def test_returning_users(self, client, db):
