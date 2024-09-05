@@ -25,7 +25,7 @@
       {{event_details|safe}}
     </mj-text>
     <mj-text mj-class="p">
-      Hope you can make it!
+      <strong>What do you have to say?</strong>
     </mj-text>
     {% else %}
     <mj-text mj-class="p">
