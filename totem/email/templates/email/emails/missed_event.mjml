@@ -4,11 +4,11 @@
   We missed you in <a href="{{event_link}}">{{event_title}}</a>. Due to the limited reserved spots in each Space, your absence is noticed if you do not attend.
 </mj-text>
 <mj-spacer height="10px" />
-<mj-text mj-class="p">
+<mj-text mj-class="p" font-style="italic" font-size="14px">
   Did you know that you can cancel at any time <a href="{{event_link}}">here</a>? Select "Give up spot" on the side bar. We encourage you do this at least 12 hours before, so your spot can be offered to someone else.
 </mj-text>
 <mj-spacer height="10px" />
 <mj-text mj-class="p">
-  Your story and presence are truly valued, so if there's anything we can do better on our end, please let us know:
+  <strong>Your story and presence are truly valued</strong>, so if there's anything we can do better on our end, please let us know:
 </mj-text>
 {% endblock message %}
