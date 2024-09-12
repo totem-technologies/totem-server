@@ -27,7 +27,7 @@ FROM node:20-bullseye AS node-build-stage
 
 WORKDIR /app
 
-COPY *.mjs *.js *.json *.ts ./
+COPY . .
 RUN npm install
 
 COPY assets ./assets
