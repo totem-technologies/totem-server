@@ -11,3 +11,4 @@ venv
 .venv
 .git
 node_modules
+staticfiles
