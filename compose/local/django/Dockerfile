@@ -23,11 +23,11 @@ COPY ./requirements .
 # Create Python Dependency and Sub-Dependency Wheels.
 RUN uv pip install -r ${BUILD_ENVIRONMENT}.txt
 
-FROM node:20-bullseye AS node-build-stage
+FROM node:22 AS node-build-stage
 
 WORKDIR /app
 
-COPY *.mjs *.js *.json *.ts ./
+COPY . .
 RUN npm install
 
 COPY assets ./assets
