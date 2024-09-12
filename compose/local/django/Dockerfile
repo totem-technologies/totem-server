@@ -23,6 +23,16 @@ COPY ./requirements .
 # Create Python Dependency and Sub-Dependency Wheels.
 RUN uv pip install -r ${BUILD_ENVIRONMENT}.txt
 
+FROM node:20-bullseye AS node-build-stage
+
+WORKDIR /app
+
+COPY *.mjs *.js *.json *.ts ./
+RUN npm install
+
+COPY assets ./assets
+RUN npm run build
+
 # Python 'run' stage
 FROM python AS python-run-stage
 
@@ -59,6 +69,7 @@ RUN chmod +x /start
 
 # copy application code to WORKDIR
 COPY . ${APP_HOME}
+COPY --from=node-build-stage /app/totem/static/js/bundles /app/totem/static/js/bundles
 
 # Define the default command.
 CMD ["/start"]

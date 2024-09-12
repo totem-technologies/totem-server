@@ -5,7 +5,14 @@ import ts from "typescript-eslint"
 
 /* @type {import("eslint").Linter.FlatConfig[]} */
 export default [
-  { ignores: ["assets/js/client/**/*.ts", "assets/js/models/**/*.ts", "**/*.min.*"] },
+  {
+    ignores: [
+      "assets/js/client/**/*.ts",
+      "assets/js/models/**/*.ts",
+      "**/*.min.*",
+      "totem/static/js/bundles/*",
+    ],
+  },
   // JavaScript
   js.configs.recommended,
 

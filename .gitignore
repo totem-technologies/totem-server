@@ -24,6 +24,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+totem/static/js/bundles/*
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

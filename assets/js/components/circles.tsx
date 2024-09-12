@@ -1,4 +1,4 @@
-import { timestampToDateString, timestampToTimeString } from "@/time"
+import { timestampToDateString, timestampToTimeString } from "@/libs/time"
 import { createViewportObserver } from "@solid-primitives/intersection-observer"
 import { createMediaQuery } from "@solid-primitives/media"
 import { Refs } from "@solid-primitives/refs"

@@ -1,13 +1,13 @@
-import bot from "./bot"
 import components from "./components"
-import copyToClipboard from "./copyToClipboard"
-import emailSpellChecker from "./emailSpellCheck"
-import htmxLoader from "./htmx-loader"
-import loginChannel from "./loginChannel"
-import shadowfill from "./shadowfill"
-import timezoneDetect from "./timezone"
+import bot from "./libs/bot"
+import copyToClipboard from "./libs/copyToClipboard"
+import emailSpellChecker from "./libs/emailSpellCheck"
+import htmxLoader from "./libs/htmx-loader"
+import loginChannel from "./libs/loginChannel"
+import shadowfill from "./libs/shadowfill"
+import timezoneDetect from "./libs/timezone"
 
-import logger from "./logger"
+import logger from "./libs/logger"
 
 globalThis.dismiss_alert = function (e) {
   e.closest(".alert-dismissible").remove()

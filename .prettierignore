@@ -2,3 +2,4 @@
 totem/**/*.css
 *.min.*
 *.mjml
+totem/static/js/bundles/*

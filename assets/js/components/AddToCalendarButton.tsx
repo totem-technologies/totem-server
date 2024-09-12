@@ -1,4 +1,4 @@
-import { convertISOToHHMM, getDateFromISOString } from "@/time"
+import { convertISOToHHMM, getDateFromISOString } from "@/libs/time"
 
 function AddToCalendarButton(props: {
   name: string

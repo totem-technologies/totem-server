@@ -1,5 +1,5 @@
 import { postData } from "@/libs/postData"
-import { timestampToDateString, timestampToTimeString } from "@/time"
+import { timestampToDateString, timestampToTimeString } from "@/libs/time"
 import { createQuery } from "@tanstack/solid-query"
 import {
   createEffect,

@@ -7,7 +7,7 @@ import process from "process"
 var arg = process.argv[2]
 
 var options = {
-  entryPoints: ["assets/js/app.js"],
+  entryPoints: ["assets/js/app.js", "assets/js/split.ts"],
   bundle: true,
   minify: true,
   metafile: true,
@@ -17,8 +17,11 @@ var options = {
   },
   logLevel: "info",
   sourcemap: true,
-  outfile: "totem/static/js/app.min.js",
+  // outfile: "totem/static/js/app.min.js",
+  splitting: true,
+  outdir: "totem/static/js/bundles",
   legalComments: "none",
+  format: "esm",
   plugins: [solidPlugin()],
   define: {
     "process.env.NODE_ENV": '"production"',
