@@ -11,7 +11,7 @@
     "livereload": "livereload ./totem/ -e 'html,css,js,py,mjml' --wait 200",
     "openapi-ts": "openapi-ts",
     "start": "npm run dev",
-    "tw": "tailwindcss --postcss -i ./assets/css/styles.css -o ./totem/static/css/styles.css --minify",
+    "tw": "tailwindcss --postcss -i ./assets/css/styles.css -o ./totem/static/js/bundles/styles.css --minify",
     "watch:js": "./build.mjs watch",
     "watch:tailwind": "NODE_ENV=development npm run tw -- --watch"
   },
