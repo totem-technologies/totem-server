@@ -388,9 +388,9 @@ function DetailSidebar(props: DetailSidebarProps) {
           </Match>
           <Match when={query.data}>
             <EventInfo eventStore={query.data!} refetchEvent={refetch} />
-            <Show when={query.data?.attending}>
+            {/* <Show when={query.data?.attending}>
               <Attendees event={query.data!} />
-            </Show>
+            </Show> */}
             <Show when={query.data?.subscribed !== null}>
               <Subscribe event={query.data!} refetchEvent={refetch} />
             </Show>
