@@ -2,7 +2,7 @@
 
 Werkzeug[watchdog]<4 # https://github.com/pallets/werkzeug
 ipdb==0.13.13  # https://github.com/gotcha/ipdb
-watchfiles<0.23.0  # https://github.com/samuelcolvin/watchfiles
+watchfiles<0.25.0  # https://github.com/samuelcolvin/watchfiles
 uv
 
 # Testing

@@ -13,9 +13,9 @@ asgiref==3.8.1
     #   django-htmx
 backoff==2.2.1
     # via posthog
-boto3==1.35.11
+boto3==1.35.31
     # via django-storages
-botocore==1.35.11
+botocore==1.35.31
     # via
     #   boto3
     #   s3transfer
@@ -25,7 +25,7 @@ certifi==2024.8.30
     # via
     #   requests
     #   sentry-sdk
-cffi==1.17.0
+cffi==1.17.1
     # via argon2-cffi-bindings
 charset-normalizer==3.3.2
     # via requests
@@ -48,7 +48,7 @@ django==5.1.1
     #   sentry-sdk
 django-allauth==0.63.6
     # via -r requirements/base.in
-django-anymail==11.1
+django-anymail==12.0
     # via -r requirements/base.in
 django-appconf==1.0.6
     # via django-imagekit
@@ -74,11 +74,11 @@ django-taggit==5.0.1
     # via -r requirements/base.in
 django-timezone-field==7.0
     # via -r requirements/base.in
-google-api-core==2.19.2
+google-api-core==2.20.0
     # via google-api-python-client
-google-api-python-client==2.143.0
+google-api-python-client==2.147.0
     # via -r requirements/base.in
-google-auth==2.34.0
+google-auth==2.35.0
     # via
     #   google-api-core
     #   google-api-python-client
@@ -96,7 +96,7 @@ httplib2==0.22.0
     # via
     #   google-api-python-client
     #   google-auth-httplib2
-idna==3.8
+idna==3.10
     # via requests
 jmespath==1.0.1
     # via
@@ -120,44 +120,42 @@ pillow==10.4.0
     # via
     #   -r requirements/base.in
     #   pilkit
-posthog==3.6.3
+posthog==3.6.6
     # via -r requirements/base.in
 proto-plus==1.24.0
     # via google-api-core
-protobuf==5.28.0
+protobuf==5.28.2
     # via
     #   google-api-core
     #   googleapis-common-protos
     #   proto-plus
-psycopg==3.2.1
+psycopg==3.2.3
     # via -r requirements/base.in
-psycopg-binary==3.2.1
+psycopg-binary==3.2.3
     # via psycopg
-pyasn1==0.6.0
+pyasn1==0.6.1
     # via
     #   pyasn1-modules
     #   rsa
-pyasn1-modules==0.4.0
+pyasn1-modules==0.4.1
     # via google-auth
 pycparser==2.22
     # via cffi
-pydantic==2.8.2
+pydantic==2.9.2
     # via django-ninja
-pydantic-core==2.20.1
+pydantic-core==2.23.4
     # via pydantic
 pyparsing==3.1.4
     # via httplib2
-pypng==0.20220715.0
-    # via qrcode
 python-dateutil==2.9.0.post0
     # via
     #   -r requirements/base.in
     #   botocore
     #   django-auditlog
     #   posthog
-pytz==2024.1
+pytz==2024.2
     # via -r requirements/base.in
-qrcode==7.4.2
+qrcode==8.0
     # via -r requirements/base.in
 requests==2.32.3
     # via
@@ -172,7 +170,7 @@ rsa==4.9
     # via google-auth
 s3transfer==0.10.2
     # via boto3
-sentry-sdk==2.13.0
+sentry-sdk==2.15.0
     # via -r requirements/base.in
 six==1.16.0
     # via
@@ -185,10 +183,9 @@ typing-extensions==4.12.2
     #   psycopg
     #   pydantic
     #   pydantic-core
-    #   qrcode
 uritemplate==4.1.1
     # via google-api-python-client
-urllib3==2.2.2
+urllib3==2.2.3
     # via
     #   botocore
     #   django-anymail

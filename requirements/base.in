@@ -11,7 +11,7 @@ posthog<4.0.0
 psycopg[binary]<4
 python-dateutil < 3
 pytz
-qrcode==7.4.2
+qrcode<9
 requests<3
 sentry-sdk[django]<3
 whitenoise==6.7.0
@@ -19,7 +19,7 @@ whitenoise==6.7.0
 # Django
 # ------------------------------------------------------------------------------
 django-allauth<0.64.0
-django-anymail<12
+django-anymail<13
 django-auditlog<4
 django-cors-headers<5
 django-environ==0.11.2
