@@ -66,7 +66,7 @@ class CircleEventInline(admin.StackedInline):
 
     def get_formset(self, request, obj=None, **kwargs):
         formset = super().get_formset(request, obj, **kwargs)
-        formset.form.base_fields["attendees"].initial = [request.user]
+        formset.form.base_fields["attendees"].initial = [request.user]  # type: ignore
         return formset
 
 
@@ -82,8 +82,8 @@ class CircleAdmin(admin.ModelAdmin):
 
     def get_form(self, request, obj=None, **kwargs):
         form = super().get_form(request, obj, **kwargs)
-        form.base_fields["author"].initial = request.user
-        form.base_fields["subscribed"].initial = [request.user]
+        form.base_fields["author"].initial = request.user  # type: ignore
+        form.base_fields["subscribed"].initial = [request.user]  # type: ignore
         return form
 
     def save_formset(self, request: Any, form: Any, formset: Any, change: Any) -> None:
