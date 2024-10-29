@@ -224,7 +224,10 @@ def send_notify_circle_starting(event: CircleEvent, user: User):
 
 def send_notify_circle_tomorrow(event: CircleEvent, user: User):
     start = _to_human_time(user, event.start)
+    title = event.title or event.circle.title or event.circle.title
     CircleTomorrowReminderEmail(
+        title=f"Tomorrow: {title}",
+        subject=f"Tomorrow: {title}",
         recipient=user.email,
         start=start,
         event_title=event.circle.title,
@@ -243,10 +246,11 @@ def send_notify_circle_advertisement(event: CircleEvent, user: User):
         details = event.circle.content_html
     image_url = event.circle.image.url if event.circle.image else None
     author_image_url = event.circle.author.profile_image.url if event.circle.author.profile_image else None
-
+    subject = f"✨New: {title}✨"
     CircleAdvertisementEmail(
         recipient=user.email,
         link=_make_email_url(event.get_absolute_url()),
+        subject=subject,
         start=start,
         event_title=event.title,
         space_title=event.circle.title,

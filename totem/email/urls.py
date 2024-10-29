@@ -1,9 +1,11 @@
 from django.urls import path
+from django.views.generic.base import RedirectView
 
 from . import views
 
 app_name = "email"
 urlpatterns = [
+    path("", RedirectView.as_view(pattern_name="email:template")),
     path(
         "subscribe/<uuid:id>/",
         views.SubscribeView.as_view(),
