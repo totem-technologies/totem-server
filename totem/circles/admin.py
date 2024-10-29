@@ -1,6 +1,9 @@
 from typing import Any
 
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.db.models.query import QuerySet
+from django.shortcuts import redirect
+from django.urls import reverse
 from django.utils import timezone
 
 from .models import Circle, CircleCategory, CircleEvent
@@ -92,12 +95,55 @@ class CircleAdmin(admin.ModelAdmin):
         super().save_formset(request, form, formset, change)
 
 
+def copy_event(modeladmin, request, queryset: QuerySet[CircleEvent]):
+    if queryset.count() != 1:
+        modeladmin.message_user(request, "Please select exactly one item to copy.", level=messages.ERROR)
+        return
+    event = queryset.first()
+    if not event:
+        return
+    obj = CircleEvent.objects.create(
+        title=event.title,
+        open=False,
+        listed=False,
+        # start now
+        start=timezone.now(),
+        duration_minutes=event.duration_minutes,
+        seats=event.seats,
+        circle=event.circle,
+        content=event.content,
+    )
+    change_url = reverse(f"admin:{obj._meta.app_label}_{obj._meta.model_name}_change", args=[obj.pk])
+    return redirect(change_url)
+
+
 @admin.register(CircleEvent)
 class CircleEventAdmin(admin.ModelAdmin):
     list_display = ("start", "title", "circle", "slug")
     list_filter = ["start", DropdownFilter]
     autocomplete_fields = ["attendees", "joined"]
     readonly_fields = ("date_created", "date_modified")
+    actions = [copy_event]
+    fieldsets = (
+        (
+            None,
+            {
+                "fields": (
+                    "title",
+                    "start",
+                    "duration_minutes",
+                    "seats",
+                    "content",
+                    "circle",
+                    "attendees",
+                    "joined",
+                    "meeting_url",
+                )
+            },
+        ),
+        ("Listing", {"fields": ("listed", "open", "cancelled")}),
+        ("Notifications", {"fields": ("notified", "notified_missed", "notified_tomorrow", "advertised")}),
+    )
 
     def save_model(self, request, obj: CircleEvent, form, change):
         obj.save_to_calendar()
