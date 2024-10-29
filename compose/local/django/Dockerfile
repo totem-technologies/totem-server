@@ -14,14 +14,15 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   libpq-dev
 
 RUN pip install uv
-ENV VIRTUAL_ENV=/opt/venv
-RUN uv venv ${VIRTUAL_ENV}
+ENV UV_PROJECT_ENVIRONMENT=/opt/venv
+RUN uv venv
 
 # Requirements are installed here to ensure they will be cached.
-COPY ./requirements .
+COPY ./pyproject.toml .
+COPY ./uv.lock .
 
-# Create Python Dependency and Sub-Dependency Wheels.
-RUN uv pip install -r ${BUILD_ENVIRONMENT}.txt
+# Install dependencies.
+RUN uv sync --frozen
 
 FROM node:22 AS node-build-stage
 

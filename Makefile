@@ -41,18 +41,11 @@ assets:
 	python3 -m venv .venv
 
 install_local: .venv
-	source .venv/bin/activate && pip install -Ur requirements/local.txt
+	source .venv/bin/activate && uv sync --frozen
 	npm install
 
 fixtures:
 	docker compose -f local.yml run --rm django python manage.py load_dev_data
-
-pipcompile:
-	uv pip compile --upgrade --output-file requirements/local.txt requirements/local.in
-	uv pip compile --upgrade --output-file requirements/production.txt requirements/production.in
-
-pipsync:
-	uv pip sync requirements/local.txt
 
 migrations: ## Create DB migrations in the container
 	@docker compose -f local.yml run django python manage.py makemigrations
@@ -64,6 +57,7 @@ generate_api_models:
 	@docker compose -f local.yml run django python manage.py export_openapi_schema --api totem.api.api.api > openapi.json
 	@npm run openapi-ts
 
-adddep: pipcompile pipsync build
+updatedep:
+	uv sync
 
 .PHONY: run test shell migrate deploy assets

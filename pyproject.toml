@@ -1,3 +1,76 @@
+[project]
+name = "totem-server"
+version = "0.1.0"
+description = ""
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "argon2-cffi==23.1.0",
+    "cssselect<2",
+    "google-api-python-client<3",
+    "google-auth-oauthlib<2",
+    "gunicorn<24",
+    "lxml<6",
+    "markdown<3.8.0",
+    "mrml<0.2.0",
+    "Pillow<11",
+    "posthog<4.0.0",
+    "psycopg[binary]<4",
+    "python-dateutil<3",
+    "pytz",
+    "qrcode<9",
+    "requests<3",
+    "sentry-sdk[django]<3",
+    "whitenoise<7",
+
+    # Django dependencies
+    "django-allauth<0.64.0",
+    "django-anymail<13",
+    "django-auditlog<4",
+    "django-cors-headers<5",
+    "django-environ==0.11.2",
+    "django-htmx<2",
+    "django-imagekit<6.0.0",
+    "django-impersonate<2",
+    "django-ninja<2",
+    "django-sesame==3.2.2",
+    "django-storages[s3]<2",
+    "django-taggit<6",
+    "django-timezone-field<8",
+    "django<5.2",
+]
+
+[dependency-groups]
+dev = [
+    "Werkzeug[watchdog]<4",
+    "ipdb==0.13.13",
+    "watchfiles<0.25.0",
+    "uv",
+
+    # Testing
+    "mypy<2",
+    "django-stubs[compatible-mypy]<6",
+    "pytest<9",
+    "pytest-sugar<2",
+    "pytest-socket<1",
+
+    # Code quality
+    "coverage<8.0.0",
+    "pip-tools<8",
+    "pre-commit<4",
+    "pylint-django<3.0.0",
+    "ruff",
+
+    # Django
+    "django-debug-toolbar<5",
+    "django-extensions<4",
+    "factory-boy<4",
+    "pytest-cov<6",
+    "pytest-django<5",
+    "pytest-xdist<4",
+]
+
+
 # ==== pytest ====
 [tool.pytest.ini_options]
 minversion = "6.0"
