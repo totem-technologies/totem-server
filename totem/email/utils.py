@@ -17,6 +17,8 @@ def send_mail(
     from_email: str = settings.DEFAULT_FROM_EMAIL,
     fail_silently: bool = False,
 ) -> int:
+    # remove newlines from subject
+    subject = subject.replace("\n", " ")
     return django_send_mail(
         subject, text_message, from_email, recipient_list, fail_silently=fail_silently, html_message=html_message
     )
