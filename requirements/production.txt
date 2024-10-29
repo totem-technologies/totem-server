@@ -13,9 +13,9 @@ asgiref==3.8.1
     #   django-htmx
 backoff==2.2.1
     # via posthog
-boto3==1.35.31
+boto3==1.35.50
     # via django-storages
-botocore==1.35.31
+botocore==1.35.50
     # via
     #   boto3
     #   s3transfer
@@ -27,11 +27,11 @@ certifi==2024.8.30
     #   sentry-sdk
 cffi==1.17.1
     # via argon2-cffi-bindings
-charset-normalizer==3.3.2
+charset-normalizer==3.4.0
     # via requests
 cssselect==1.2.0
     # via -r requirements/base.in
-django==5.1.1
+django==5.1.2
     # via
     #   -r requirements/base.in
     #   django-allauth
@@ -54,11 +54,11 @@ django-appconf==1.0.6
     # via django-imagekit
 django-auditlog==3.0.0
     # via -r requirements/base.in
-django-cors-headers==4.4.0
+django-cors-headers==4.5.0
     # via -r requirements/base.in
 django-environ==0.11.2
     # via -r requirements/base.in
-django-htmx==1.19.0
+django-htmx==1.21.0
     # via -r requirements/base.in
 django-imagekit==5.0.0
     # via -r requirements/base.in
@@ -74,9 +74,9 @@ django-taggit==5.0.1
     # via -r requirements/base.in
 django-timezone-field==7.0
     # via -r requirements/base.in
-google-api-core==2.20.0
+google-api-core==2.22.0
     # via google-api-python-client
-google-api-python-client==2.147.0
+google-api-python-client==2.149.0
     # via -r requirements/base.in
 google-auth==2.35.0
     # via
@@ -120,11 +120,11 @@ pillow==10.4.0
     # via
     #   -r requirements/base.in
     #   pilkit
-posthog==3.6.6
+posthog==3.7.0
     # via -r requirements/base.in
-proto-plus==1.24.0
+proto-plus==1.25.0
     # via google-api-core
-protobuf==5.28.2
+protobuf==5.28.3
     # via
     #   google-api-core
     #   googleapis-common-protos
@@ -145,7 +145,7 @@ pydantic==2.9.2
     # via django-ninja
 pydantic-core==2.23.4
     # via pydantic
-pyparsing==3.1.4
+pyparsing==3.2.0
     # via httplib2
 python-dateutil==2.9.0.post0
     # via
@@ -168,9 +168,9 @@ requests-oauthlib==2.0.0
     # via google-auth-oauthlib
 rsa==4.9
     # via google-auth
-s3transfer==0.10.2
+s3transfer==0.10.3
     # via boto3
-sentry-sdk==2.15.0
+sentry-sdk==2.17.0
     # via -r requirements/base.in
 six==1.16.0
     # via
@@ -191,5 +191,5 @@ urllib3==2.2.3
     #   django-anymail
     #   requests
     #   sentry-sdk
-whitenoise==6.7.0
+whitenoise==6.8.1
     # via -r requirements/base.in

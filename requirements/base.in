@@ -14,7 +14,7 @@ pytz
 qrcode<9
 requests<3
 sentry-sdk[django]<3
-whitenoise==6.7.0
+whitenoise<7
 
 # Django
 # ------------------------------------------------------------------------------
