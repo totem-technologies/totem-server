@@ -17,11 +17,11 @@ from imagekit.processors import ResizeToFit
 from taggit.managers import TaggableManager
 
 from totem.email.emails import (
-    send_missed_event_email,
-    send_notify_circle_advertisement,
-    send_notify_circle_signup,
-    send_notify_circle_starting,
-    send_notify_circle_tomorrow,
+    missed_event_email,
+    notify_circle_advertisement,
+    notify_circle_signup,
+    notify_circle_starting,
+    notify_circle_tomorrow,
 )
 from totem.utils.hash import basic_hash, hmac
 from totem.utils.md import MarkdownField, MarkdownMixin
@@ -211,10 +211,10 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
             self.attendees.add(user)
             if self.notified and self.can_join(user):
                 # Send the user the join email if they are attending and the event is about to start
-                send_notify_circle_starting(self, user)
+                notify_circle_starting(self, user).send()
             else:
                 # Otherwise, send the user the signed up email
-                send_notify_circle_signup(self, user)
+                notify_circle_signup(self, user).send(blocking=False)
             if not self.circle.author == user:
                 notify_slack(f"✅ New session attendee: {self._get_slack_attendee_message(user)}")
 
@@ -261,7 +261,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         self.notified = True
         self.save()
         for user in self.attendees.all():
-            send_notify_circle_starting(self, user)
+            notify_circle_starting(self, user).send()
 
     def notify_tomorrow(self, force=False):
         # Notify users who are attending that the circle is starting tomorrow
@@ -270,7 +270,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         self.notified_tomorrow = True
         self.save()
         for user in self.attendees.all():
-            send_notify_circle_tomorrow(self, user)
+            notify_circle_tomorrow(self, user).send()
 
     def notify_missed(self, force=False):
         # Notify users who signed up but didn't join
@@ -284,7 +284,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
             if user == self.circle.author:
                 continue
             if user not in self.joined.all():
-                send_missed_event_email(self, user)
+                missed_event_email(self, user).send(blocking=False)
 
     def advertise(self, force=False):
         # Notify users who are subscribed that a new event is available, if they aren't already attending.
@@ -294,7 +294,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         self.save()
         for user in self.circle.subscribed.all():
             if self.can_attend(silent=True) and user not in self.attendees.all():
-                send_notify_circle_advertisement(self, user)
+                notify_circle_advertisement(self, user).send()
 
     def cal_link(self):
         return full_url(self.get_absolute_url())

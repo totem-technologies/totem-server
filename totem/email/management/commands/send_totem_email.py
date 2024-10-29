@@ -5,11 +5,11 @@ from totem.email import emails
 from totem.users.models import User
 
 event_maps = {
-    "signup": emails.send_notify_circle_signup,
-    "start": emails.send_notify_circle_starting,
-    "tomorrow": emails.send_notify_circle_tomorrow,
-    "ad": emails.send_notify_circle_advertisement,
-    "missed": emails.send_missed_event_email,
+    "signup": emails.notify_circle_signup,
+    "start": emails.notify_circle_starting,
+    "tomorrow": emails.notify_circle_tomorrow,
+    "ad": emails.notify_circle_advertisement,
+    "missed": emails.missed_event_email,
 }
 
 
@@ -30,7 +30,7 @@ class Command(BaseCommand):
         event = CircleEvent.objects.get(slug=event_slug)
 
         try:
-            event_maps[email_type](event, user)
+            event_maps[email_type](event, user).send()
             print(f"Sent {email_type} email to {user.email}")
         except KeyError:
             raise CommandError(f"Unknown email type: {email_type}")

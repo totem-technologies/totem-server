@@ -142,10 +142,10 @@ def login(
 
     if created:
         django_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
-        emails.send_welcome_email(user)
+        emails.welcome_email(user).send()
         analytics.user_signed_up(user)
     else:
-        emails.send_returning_login_email(user.email, url)
+        emails.returning_login_email(user.email, url).send()
 
     user.identify()  # type: ignore
     return created
@@ -200,7 +200,7 @@ def _user_profile_info(request, user: User):
             if old_email != new_email:
                 login_url = user.get_login_url(after_login_url=None, mobile=False)
                 user.verified = False
-                emails.send_change_email(old_email, new_email, login_url)
+                emails.change_email(old_email, new_email, login_url).send()
                 message = f"Email successfully updated to {new_email}. Please check your inbox to confirm."
             form.save()
             messages.success(request, message)

@@ -11,7 +11,10 @@ from totem.utils.models import SluggedModel
 class Redirect(SluggedModel):
     url = models.CharField()
     alternate_slug = models.SlugField(db_index=True, unique=True, null=True, blank=True)
-    permanent = models.BooleanField(default=True)
+    permanent = models.BooleanField(
+        default=False,
+        help_text="If true, this redirect will be permanent and changes to the URL will work if the user scans the code again.",
+    )
     notes = models.TextField(blank=True)
     count = models.BigIntegerField(default=0)
 

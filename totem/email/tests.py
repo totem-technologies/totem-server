@@ -3,22 +3,26 @@ from django.test import Client, override_settings
 from django.urls import reverse
 
 from totem.circles.tests.factories import CircleEventFactory
-from totem.email.emails import send_missed_event_email, send_notify_circle_advertisement, send_returning_login_email
+from totem.email.emails import missed_event_email, notify_circle_advertisement, returning_login_email
 from totem.users.tests.factories import UserFactory
 
 from .views import get_templates
 
 
 class TestTemplateDevEmail:
-    def test_template_view_public(self, client: Client):
+    def test_template_view_public(self, client: Client, db):
         self._test_templates(client, status_code=404)
 
     @override_settings(DEBUG=True)
-    def test_template_view_debug(self, client: Client):
+    def test_template_view_debug(self, client: Client, db):
+        UserFactory()
+        CircleEventFactory()
         self._test_templates(client)
 
     def test_template_view_staff(self, client: Client, db):
+        user = UserFactory()
         user = UserFactory(is_staff=True)
+        CircleEventFactory()
         client.force_login(user)
         self._test_templates(client)
 
@@ -28,12 +32,12 @@ class TestTemplateDevEmail:
             response = _client.get(reverse("email:template", kwargs={"name": templ_name}))
             assert response.status_code == status_code
 
-    def test_template_list_public(self, client: Client):
+    def test_template_list_public(self, client: Client, db):
         response = client.get(reverse("email:template"))
         assert response.status_code == 404
 
     @override_settings(DEBUG=True)
-    def test_template_list_debug(self, client: Client):
+    def test_template_list_debug(self, client: Client, db):
         response = client.get(reverse("email:template"))
         assert response.status_code == 200
 
@@ -50,7 +54,7 @@ class TestAdvertEmail:
         user.save()
         event = CircleEventFactory()
         event.save()
-        send_notify_circle_advertisement(event, user)
+        notify_circle_advertisement(event, user).send()
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
@@ -65,7 +69,7 @@ class TestAdvertEmail:
         user.save()
         event = CircleEventFactory(content="This is a test content")
         event.save()
-        send_notify_circle_advertisement(event, user)
+        notify_circle_advertisement(event, user).send()
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
@@ -79,7 +83,7 @@ class TestAdvertEmail:
         event.save()
         event.circle.content = "This is a circle test"
         event.circle.save()
-        send_notify_circle_advertisement(event, user)
+        notify_circle_advertisement(event, user).send()
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
@@ -91,7 +95,7 @@ class TestReturningUsers:
     def test_returning_users(self, client, db):
         user = UserFactory()
         user.save()
-        send_returning_login_email(user.email, reverse("pages:home"))
+        returning_login_email(user.email, reverse("pages:home")).send()
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
@@ -102,7 +106,7 @@ class TestReturningUsers:
         user = UserFactory()
         user.save()
         client.force_login(user)
-        send_returning_login_email(user.email, reverse("pages:home"))
+        returning_login_email(user.email, reverse("pages:home")).send()
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
@@ -118,7 +122,7 @@ class TestMissedEventEmail:
         event.save()
         event.attendees.add(user)
         assert len(mail.outbox) == 0
-        send_missed_event_email(event, user)
+        missed_event_email(event, user).send()
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]

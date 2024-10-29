@@ -3,19 +3,10 @@ from django.http import Http404
 from django.shortcuts import render
 from django.views.generic import TemplateView
 
-from totem.utils.md import MarkdownMixin
+from totem.circles.models import CircleEvent
+from totem.users.models import User
 
-from .emails import (
-    ChangeEmailEmail,
-    CircleAdvertisementEmail,
-    CircleSignupEmail,
-    CircleStartingEmail,
-    CircleTomorrowReminderEmail,
-    LoginEmail,
-    MissedEventEmail,
-    TestEmail,
-    type_url,
-)
+from . import emails
 from .models import SubscribedModel
 
 
@@ -51,7 +42,7 @@ def template_view(request, name=None):
     templates = get_templates()
     if name not in templates:
         raise Http404
-    email = templates[name]
+    email = templates[name]()
     return render(
         request,
         "email/email_viewer.html",
@@ -74,61 +65,69 @@ We hope that after this space, you feel emboldened in your desires and in your a
 def get_templates():
     # files = Path(__file__).parent.joinpath("templates/email/emails").glob("*.mjml")
     # return {file.stem: file.name for file in files}
+    def login_email():
+        return emails.returning_login_email(
+            email="bo@totem.org",
+            url="https://totem.org",
+        )
+
+    def change_email():
+        return emails.change_email(
+            old_email="bo@totem.org",
+            new_email="bo@totem.org",
+            login_url="https://totem.org",
+        )
+
+    def circle_starting():
+        user = User.objects.first()
+        event = CircleEvent.objects.last()
+        if event is None or user is None:
+            raise Exception("Need user or event in DB")
+        return emails.notify_circle_starting(event, user)
+
+    def circle_advertisement():
+        user = User.objects.first()
+        event = CircleEvent.objects.last()
+        if event is None or user is None:
+            raise Exception("Need user or event in DB")
+        return emails.notify_circle_advertisement(event, user)
+
+    def circle_tomorrow_reminder():
+        user = User.objects.first()
+        event = CircleEvent.objects.last()
+        if event is None or user is None:
+            raise Exception("Need user or event in DB")
+        return emails.notify_circle_tomorrow(event, user)
+
+    def circle_signup():
+        user = User.objects.first()
+        event = CircleEvent.objects.last()
+        if event is None or user is None:
+            raise Exception("Need user or event in DB")
+        return emails.notify_circle_signup(event, user)
+
+    def test():
+        return emails.TestEmail(
+            recipient="bo@totem.org",
+            link=emails.type_url("https://totem.org"),
+            start="2021-01-01",
+            event_title="Test Event",
+        )
+
+    def missed_event():
+        user = User.objects.first()
+        event = CircleEvent.objects.last()
+        if event is None or user is None:
+            raise Exception("Need user or event in DB")
+        return emails.missed_event_email(event, user)
+
     return {
-        "login_email": LoginEmail(
-            recipient="bo@totem.org",
-            link=type_url("https://totem.org"),
-        ),
-        "change_email": ChangeEmailEmail(
-            recipient="bo@totem.org",
-            link=type_url("https://totem.org"),
-        ),
-        "circle_starting": CircleStartingEmail(
-            recipient="bo@totem.org",
-            start="2021-01-01",
-            event_title="Test Event",
-            event_link=type_url("https://totem.org/event"),
-            link=type_url("https://totem.org"),
-        ),
-        "circle_advertisement": CircleAdvertisementEmail(
-            recipient="bo@totem.org",
-            link=type_url("https://totem.org"),
-            start="2021-01-01",
-            event_title="What is Love? A Queer Loveletter",
-            space_title="LGBTQIA+ Queer Space",
-            author="John Doe",
-            space_subtitle="A Queer Space",
-            unsubscribe_url=type_url("https://totem.org?bo=bo&cool=cool"),
-            title="What is Love? A Queer Loveletter",
-            subtitle="A Queer Space",
-            image_url="https://org-totem-media.sfo3.cdn.digitaloceanspaces.com/circles/gmq438ijs/0172da11960cd18f2371.jpg",
-            # image_url=None,
-            author_image_url="https://org-totem-media.sfo3.cdn.digitaloceanspaces.com/profiles/gmq438ijs/4dc0bac00f3a4968e007.jpg",
-            event_details=MarkdownMixin.render_markdown(event_details),
-            # event_details="",
-        ),
-        "circle_tomorrow_reminder": CircleTomorrowReminderEmail(
-            recipient="bo@totem.org",
-            link=type_url("https://totem.org"),
-            start="2021-01-01",
-            event_title="Test Event",
-        ),
-        "circle_signup": CircleSignupEmail(
-            recipient="bo@totem.org",
-            link=type_url("https://totem.org"),
-            start="2021-01-01",
-            event_title="Test Event",
-        ),
-        "test": TestEmail(
-            recipient="bo@totem.org",
-            link=type_url("https://totem.org"),
-            start="2021-01-01",
-            event_title="Test Event",
-        ),
-        "missed_event": MissedEventEmail(
-            recipient="bo@totem.org",
-            start="2021-01-01",
-            event_title="Test Event",
-            event_link=type_url("https://totem.org"),
-        ),
+        "login_email": login_email,
+        "change_email": change_email,
+        "circle_starting": circle_starting,
+        "circle_advertisement": circle_advertisement,
+        "circle_tomorrow_reminder": circle_tomorrow_reminder,
+        "circle_signup": circle_signup,
+        "test": test,
+        "missed_event": missed_event,
     }

@@ -183,59 +183,59 @@ class MissedEventEmail(Email):
     title: str = "We missed you!"
 
 
-def send_welcome_email(user: User):
-    WelcomeEmail(recipient=user.email).send()
+def welcome_email(user: User) -> BrevoEmail:
     if settings.DEBUG:
         print("------------------------------------------")
         print(f"Sending welcome email to {user.email}")
         print("------------------------------------------")
+    return WelcomeEmail(recipient=user.email)
 
 
-def send_returning_login_email(email: str, url: str):
+def returning_login_email(email: str, url: str) -> Email:
     _url = _make_email_url(url)
-    LoginEmail(
-        recipient=email,
-        link=_url,
-    ).send()
-
     if settings.DEBUG:
         print("------------------------------------------")
         print(f"Sending email to {email} with link\n{_url}")
         print("------------------------------------------")
 
+    return LoginEmail(
+        recipient=email,
+        link=_url,
+    )
 
-def send_change_email(old_email: str, new_email: str, login_url: str):
-    ChangeEmailEmail(
+
+def change_email(old_email: str, new_email: str, login_url: str) -> Email:
+    return ChangeEmailEmail(
         recipient=new_email,
         link=_make_email_url(login_url),
-    ).send()
+    )
 
 
-def send_notify_circle_starting(event: CircleEvent, user: User):
+def notify_circle_starting(event: CircleEvent, user: User) -> Email:
     start = _to_human_time(user, event.start)
-    CircleStartingEmail(
+    return CircleStartingEmail(
         recipient=user.email,
         start=start,
         event_title=event.circle.title,
         event_link=_make_email_url(event.get_absolute_url()),
         link=type_url(event.join_url(user)),
-    ).send()
+    )
 
 
-def send_notify_circle_tomorrow(event: CircleEvent, user: User):
+def notify_circle_tomorrow(event: CircleEvent, user: User) -> Email:
     start = _to_human_time(user, event.start)
     title = event.title or event.circle.title or event.circle.title
-    CircleTomorrowReminderEmail(
+    return CircleTomorrowReminderEmail(
         title=f"Tomorrow: {title}",
         subject=f"Tomorrow: {title}",
         recipient=user.email,
         start=start,
         event_title=event.circle.title,
         link=_make_email_url(event.get_absolute_url()),
-    ).send()
+    )
 
 
-def send_notify_circle_advertisement(event: CircleEvent, user: User):
+def notify_circle_advertisement(event: CircleEvent, user: User) -> Email:
     start = _to_human_time(user, event.start)
     title = event.title or event.circle.subtitle
     subtitle = event.circle.title
@@ -247,7 +247,7 @@ def send_notify_circle_advertisement(event: CircleEvent, user: User):
     image_url = event.circle.image.url if event.circle.image else None
     author_image_url = event.circle.author.profile_image.url if event.circle.author.profile_image else None
     subject = f"✨New: {title}✨"
-    CircleAdvertisementEmail(
+    return CircleAdvertisementEmail(
         recipient=user.email,
         link=_make_email_url(event.get_absolute_url()),
         subject=subject,
@@ -262,25 +262,25 @@ def send_notify_circle_advertisement(event: CircleEvent, user: User):
         image_url=image_url,
         author_image_url=author_image_url,
         unsubscribe_url=type_url(event.circle.subscribe_url(user, subscribe=False)),
-    ).send()
+    )
 
 
-def send_notify_circle_signup(event: CircleEvent, user: User):
+def notify_circle_signup(event: CircleEvent, user: User) -> Email:
     start = _to_human_time(user, event.start)
-    CircleSignupEmail(
+    return CircleSignupEmail(
         recipient=user.email,
         link=_make_email_url(reverse("circles:calendar", kwargs={"event_slug": event.slug})),
         start=start,
         event_title=event.circle.title,
-    ).send(blocking=False)
+    )
 
 
-def send_missed_event_email(event: CircleEvent, user: User):
+def missed_event_email(event: CircleEvent, user: User) -> Email:
     start = _to_human_time(user, event.start)
     title = event.title or event.circle.title
-    MissedEventEmail(
+    return MissedEventEmail(
         recipient=user.email,
         start=start,
         event_title=title,
         event_link=_make_email_url(event.get_absolute_url()),
-    ).send(blocking=False)
+    )
