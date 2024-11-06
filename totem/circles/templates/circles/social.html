@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load static %}
+{% load avatar %}
+{% load icons %}
+{% load avatar %}
+{% load icons %}
+{% block title %}{{ object.title }} - Totem Spaces{% endblock title %}
+{% block description %}{{ object.content_html|striptags|truncatewords:30 }}{% endblock description %}
+{% block content %}
+  <script
+    defer
+    src="{% static 'js/bundles/social.js' %}"
+    type="module"></script>
+  <div class="h-2"></div>
+
+  {% comment %}Instagram Square Post{% endcomment %}
+  <div class="m-auto max-w-5xl px-5 pt-10">
+    <!-- prettier-ignore-start -->
+    {% if object.image %}
+        <style>
+            .circle-bg-image-{{ object.slug }}{
+                background-image: linear-gradient(355deg, rgba(1, 1, 1, 0), rgba(0, 0, 0, 0.6)),url({{ object.image.url }});
+                background-size: cover;
+                background-position: center;
+                background-repeat: no-repeat;
+            }
+        </style>
+    {% endif %}
+    <!-- prettier-ignore-end -->
+    <button data-img class="text-left">
+      <div
+        class="{% if object.image %}circle-bg-image-{{ object.slug }}{% else %}no-image{% endif %} relative h-[540] w-[540px]">
+        <div class="flex min-h-[400px] flex-col justify-between gap-y-5 p-5">
+          <div>
+            <h1 class="h1 pb-3 text-white">{{ event.title }} hihihihihih</h1>
+            <div class="h3 text-white">{{ object.title }}</div>
+            <div class="text-white">
+              with
+              <a href="{{ object.author.get_keeper_url }}"
+                >{{ object.author.name }}</a
+              >
+            </div>
+            <div class="pt-2 font-bold text-white">
+              {{ event.start | date:"F j, Y" }}
+            </div>
+            <div class="text-white">{{ start_time_pst }}</div>
+            <div class="text-white">{{ start_time_est }}</div>
+          </div>
+          <div class="absolute bottom-4 right-4 max-w-[200px]">
+            <a href="{{ object.author.get_keeper_url }}">
+              {% avatar object.author size=150 classes="m-auto" %}
+            </a>
+          </div>
+        </div>
+      </div>
+    </button>
+  </div>
+{% endblock content %}

@@ -7,7 +7,7 @@ import process from "process"
 var arg = process.argv[2]
 
 var options = {
-  entryPoints: ["assets/js/app.js", "assets/js/split.ts"],
+  entryPoints: ["assets/js/app.js", "assets/js/social.ts"],
   bundle: true,
   minify: true,
   metafile: true,

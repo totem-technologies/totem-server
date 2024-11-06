@@ -1,5 +1,6 @@
 from typing import Any
 
+import pytz
 from django.contrib import messages
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
@@ -253,3 +254,26 @@ def calendar(request: HttpRequest, event_slug: str):
         raise PermissionDenied
 
     return render(request, "circles/calendaradd.html", {"event": event})
+
+
+def event_social(request: HttpRequest, event_slug: str):
+    event = _get_circle_event(event_slug)
+    user = request.user
+    # start time in pst
+    start_time_pst = event.start.astimezone(pytz.timezone("US/Pacific")).strftime("%I:%M %p") + " PST"
+    # start time in est
+    start_time_est = event.start.astimezone(pytz.timezone("US/Eastern")).strftime("%I:%M %p") + " EST"
+
+    if not event.circle.published and not user.is_staff:  # type: ignore
+        raise PermissionDenied
+
+    return render(
+        request,
+        "circles/social.html",
+        {
+            "object": event.circle,
+            "event": event,
+            "start_time_pst": start_time_pst,
+            "start_time_est": start_time_est,
+        },
+    )

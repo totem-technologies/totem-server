@@ -1,9 +1,8 @@
+from django.contrib.sitemaps import Sitemap
 from django.urls import path
 
 from . import views
 from .models import CircleEvent
-
-from django.contrib.sitemaps import Sitemap
 
 app_name = "circles"
 
@@ -24,6 +23,7 @@ urlpatterns = [
     path("rsvp/<str:event_slug>/", views.rsvp, name="rsvp"),
     path("join/<str:event_slug>/", views.join, name="join"),
     path("event/<str:event_slug>/", views.event_detail, name="event_detail"),
+    path("event/<str:event_slug>/social", views.event_social, name="event_social"),
     path("calendar/<str:event_slug>/", views.calendar, name="calendar"),
     path("subscribe/<str:slug>/", views.subscribe, name="subscribe"),
     path("topic/<slug:slug>/", views.topic, name="topic"),
