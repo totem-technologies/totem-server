@@ -58,6 +58,6 @@ generate_api_models:
 	@npm run openapi-ts
 
 updatedep:
-	uv sync
+	uv sync -U
 
 .PHONY: run test shell migrate deploy assets
