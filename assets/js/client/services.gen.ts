@@ -8,63 +8,79 @@ export const client = createClient(createConfig());
 /**
  * Secret
  */
-export const totemApiApiSecret = <ThrowOnError extends boolean = false>(options?: Options<unknown, ThrowOnError>) => { return (options?.client ?? client).get<TotemApiApiSecretResponse, TotemApiApiSecretError, ThrowOnError>({
-    ...options,
-    url: '/api/v1/protected'
-}); };
+export const totemApiApiSecret = <ThrowOnError extends boolean = false>(options?: Options<unknown, ThrowOnError>) => {
+    return (options?.client ?? client).get<TotemApiApiSecretResponse, TotemApiApiSecretError, ThrowOnError>({
+        ...options,
+        url: '/api/v1/protected'
+    });
+};
 
 /**
  * Login
  */
-export const totemApiApiLogin = <ThrowOnError extends boolean = false>(options: Options<TotemApiApiLoginData, ThrowOnError>) => { return (options?.client ?? client).post<TotemApiApiLoginResponse, TotemApiApiLoginError, ThrowOnError>({
-    ...options,
-    url: '/api/v1/auth/login'
-}); };
+export const totemApiApiLogin = <ThrowOnError extends boolean = false>(options: Options<TotemApiApiLoginData, ThrowOnError>) => {
+    return (options?.client ?? client).post<TotemApiApiLoginResponse, TotemApiApiLoginError, ThrowOnError>({
+        ...options,
+        url: '/api/v1/auth/login'
+    });
+};
 
 /**
  * Token
  */
-export const totemApiApiToken = <ThrowOnError extends boolean = false>(options: Options<TotemApiApiTokenData, ThrowOnError>) => { return (options?.client ?? client).post<TotemApiApiTokenResponse, TotemApiApiTokenError, ThrowOnError>({
-    ...options,
-    url: '/api/v1/auth/token'
-}); };
+export const totemApiApiToken = <ThrowOnError extends boolean = false>(options: Options<TotemApiApiTokenData, ThrowOnError>) => {
+    return (options?.client ?? client).post<TotemApiApiTokenResponse, TotemApiApiTokenError, ThrowOnError>({
+        ...options,
+        url: '/api/v1/auth/token'
+    });
+};
 
 /**
  * Current User
  */
-export const totemApiApiCurrentUser = <ThrowOnError extends boolean = false>(options?: Options<unknown, ThrowOnError>) => { return (options?.client ?? client).get<TotemApiApiCurrentUserResponse, TotemApiApiCurrentUserError, ThrowOnError>({
-    ...options,
-    url: '/api/v1/auth/currentuser'
-}); };
+export const totemApiApiCurrentUser = <ThrowOnError extends boolean = false>(options?: Options<unknown, ThrowOnError>) => {
+    return (options?.client ?? client).get<TotemApiApiCurrentUserResponse, TotemApiApiCurrentUserError, ThrowOnError>({
+        ...options,
+        url: '/api/v1/auth/currentuser'
+    });
+};
 
 /**
  * List Events
  */
-export const totemCirclesApiListEvents = <ThrowOnError extends boolean = false>(options: Options<TotemCirclesApiListEventsData, ThrowOnError>) => { return (options?.client ?? client).get<TotemCirclesApiListEventsResponse, TotemCirclesApiListEventsError, ThrowOnError>({
-    ...options,
-    url: '/api/v1/spaces/'
-}); };
+export const totemCirclesApiListEvents = <ThrowOnError extends boolean = false>(options: Options<TotemCirclesApiListEventsData, ThrowOnError>) => {
+    return (options?.client ?? client).get<TotemCirclesApiListEventsResponse, TotemCirclesApiListEventsError, ThrowOnError>({
+        ...options,
+        url: '/api/v1/spaces/'
+    });
+};
 
 /**
  * Filter Options
  */
-export const totemCirclesApiFilterOptions = <ThrowOnError extends boolean = false>(options?: Options<unknown, ThrowOnError>) => { return (options?.client ?? client).get<TotemCirclesApiFilterOptionsResponse, TotemCirclesApiFilterOptionsError, ThrowOnError>({
-    ...options,
-    url: '/api/v1/spaces/filter-options'
-}); };
+export const totemCirclesApiFilterOptions = <ThrowOnError extends boolean = false>(options?: Options<unknown, ThrowOnError>) => {
+    return (options?.client ?? client).get<TotemCirclesApiFilterOptionsResponse, TotemCirclesApiFilterOptionsError, ThrowOnError>({
+        ...options,
+        url: '/api/v1/spaces/filter-options'
+    });
+};
 
 /**
  * Event Detail
  */
-export const totemCirclesApiEventDetail = <ThrowOnError extends boolean = false>(options: Options<TotemCirclesApiEventDetailData, ThrowOnError>) => { return (options?.client ?? client).get<TotemCirclesApiEventDetailResponse, TotemCirclesApiEventDetailError, ThrowOnError>({
-    ...options,
-    url: '/api/v1/spaces/event/{event_slug}'
-}); };
+export const totemCirclesApiEventDetail = <ThrowOnError extends boolean = false>(options: Options<TotemCirclesApiEventDetailData, ThrowOnError>) => {
+    return (options?.client ?? client).get<TotemCirclesApiEventDetailResponse, TotemCirclesApiEventDetailError, ThrowOnError>({
+        ...options,
+        url: '/api/v1/spaces/event/{event_slug}'
+    });
+};
 
 /**
  * Upcoming Events
  */
-export const totemCirclesApiUpcomingEvents = <ThrowOnError extends boolean = false>(options?: Options<TotemCirclesApiUpcomingEventsData, ThrowOnError>) => { return (options?.client ?? client).get<TotemCirclesApiUpcomingEventsResponse, TotemCirclesApiUpcomingEventsError, ThrowOnError>({
-    ...options,
-    url: '/api/v1/spaces/calendar'
-}); };
+export const totemCirclesApiUpcomingEvents = <ThrowOnError extends boolean = false>(options?: Options<TotemCirclesApiUpcomingEventsData, ThrowOnError>) => {
+    return (options?.client ?? client).get<TotemCirclesApiUpcomingEventsResponse, TotemCirclesApiUpcomingEventsError, ThrowOnError>({
+        ...options,
+        url: '/api/v1/spaces/calendar'
+    });
+};

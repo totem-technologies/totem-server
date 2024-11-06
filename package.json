@@ -38,7 +38,7 @@
     "livereload": "^0.9.3",
     "postcss": "^8.4.14",
     "postcss-import": "^16.0.0",
-    "postcss-nested": "^6.0.0",
+    "postcss-nested": "^7.0.0",
     "postcss-simple-vars": "^7.0.1",
     "prettier": "^3.2.5",
     "prettier-plugin-jinja-template": "^2.0.0",
