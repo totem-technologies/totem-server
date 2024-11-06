@@ -72,7 +72,7 @@ def all_upcoming_recommended_circles(user: User | None, category: str | None = N
 
 def upcoming_attending_events(user: User, limit: int = 10):
     # 60 minutes in the past
-    past = timezone.now() - timezone.timedelta(minutes=60)
+    past = timezone.now() - datetime.timedelta(minutes=60)
     return user.events_attending.filter(start__gte=past).filter(cancelled=False).order_by("start")[:limit]
 
 

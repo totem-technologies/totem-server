@@ -3,11 +3,11 @@ import { createViewportObserver } from "@solid-primitives/intersection-observer"
 import { createMediaQuery } from "@solid-primitives/media"
 import { Refs } from "@solid-primitives/refs"
 import {
-  Accessor,
+  type Accessor,
   For,
-  JSXElement,
+  type JSXElement,
   Match,
-  Resource,
+  type Resource,
   Show,
   Switch,
   createContext,
@@ -17,10 +17,10 @@ import {
   useContext,
 } from "solid-js"
 import {
-  CategoryFilterSchema,
-  EventListSchema,
-  FilterOptionsSchema,
-  PagedEventListSchema,
+  type CategoryFilterSchema,
+  type EventListSchema,
+  type FilterOptionsSchema,
+  type PagedEventListSchema,
   totemCirclesApiFilterOptions,
   totemCirclesApiListEvents,
 } from "../client/index"
@@ -47,7 +47,7 @@ interface CircleListContextType {
   setParams: (params: QueryParams) => void
   reset: () => void
   refetch: () => void
-  events: Resource<PagedEventListSchema>
+  events: Resource<PagedEventListSchema | undefined>
   chunkedEvents: () => DateChunk[]
   getMore: () => void
   activeID: Accessor<string>
@@ -55,7 +55,7 @@ interface CircleListContextType {
   scrolling: Accessor<boolean>
   setScrolling: (scrolling: boolean) => void
   setCategory: (category: string) => void
-  filters: Resource<FilterOptionsSchema>
+  filters: Resource<FilterOptionsSchema | undefined>
 }
 
 const defaultParams: QueryParams = {
@@ -77,26 +77,27 @@ function CircleListProvider(props: { children: JSXElement }) {
       if (!params()[key]) continue
       urlParams.append(key, params()[key].toString())
     }
-    window.history.replaceState(null, "", "?" + urlParams.toString())
+    window.history.replaceState(null, "", `?${urlParams.toString()}`)
     void refetch()
   })
   const [events, { refetch }] = createResource(async () => {
-    return (await totemCirclesApiListEvents({ query: params() })).data!
+    return (await totemCirclesApiListEvents({ query: params() })).data
   })
   const refetch2 = () => {
     void refetch()
   }
   const [filters] = createResource(
     async () => {
-      return (await totemCirclesApiFilterOptions({})).data!
+      return (await totemCirclesApiFilterOptions({})).data
     },
     {
       initialValue: { categories: [], authors: [] },
     }
   )
   const chunkedEvents = () => {
-    if (!events()) return []
-    return chunkEventsByDate(events()!)
+    const e = events()
+    if (!e) return []
+    return chunkEventsByDate(e)
   }
   const reset = () => setParams(defaultParams)
   const getMore = () => {
@@ -136,13 +137,18 @@ function CircleListProvider(props: { children: JSXElement }) {
 function chunkEventsByDate(events: PagedEventListSchema) {
   const dateChunks: DateChunk[] = []
   for (const event of events.items) {
-    const date = timestampToDateString(event.start!)
+    const start = event.start
+    if (!start) {
+      console.log("No start date for event", event)
+      continue
+    }
+    const date = timestampToDateString(start)
     const chunk = dateChunks.find((chunk) => chunk.date === date)
-    const day = new Date(event.start!).getDate()
-    const month = new Date(event.start!).toLocaleDateString("en-US", {
+    const day = new Date(start).getDate()
+    const month = new Date(start).toLocaleDateString("en-US", {
       month: "short",
     })
-    const weekdayShort = new Date(event.start!).toLocaleDateString("en-US", {
+    const weekdayShort = new Date(start).toLocaleDateString("en-US", {
       weekday: "short",
     })
     const dateId = `${month}-${day}`
@@ -169,7 +175,9 @@ function getFirstName(name: string) {
 function getQueryParams(): QueryParams {
   const urlParams = new URLSearchParams(window.location.search)
   return {
-    limit: parseInt(urlParams.get("limit") ?? defaultParams.limit.toString()),
+    limit: Number.parseInt(
+      urlParams.get("limit") ?? defaultParams.limit.toString()
+    ),
     category: urlParams.get("category") ?? defaultParams.category,
     author: urlParams.get("author") ?? defaultParams.author,
   }
@@ -187,38 +195,45 @@ function Circles(_: { children?: JSXElement }) {
 
 function CirclesInner() {
   const context = useContext(CircleListContext)
+  const count = () => {
+    return context?.events()?.count ?? 0
+  }
   return (
     <Show when={context}>
       <div class="m-auto max-w-7xl">
         <Switch fallback={<div>No Circles yet.</div>}>
-          <Match when={context!.events.state == "errored"}>
-            <div>Error: {context!.events.error}</div>
+          <Match when={context?.events.state === "errored"}>
+            <div>Error: {context?.events.error}</div>
           </Match>
-          <Match when={context!.events.state == "pending"}>
+          <Match when={context?.events.state === "pending"}>
             <div>Loading...</div>
           </Match>
-          <Match when={context!.events()!.count == 0}>
+          <Match when={context?.events()?.count === 0}>
             <div>
               <div>
                 No Spaces found. Try resetting the filters, or reloading the
                 page.
               </div>
+              {/* biome-ignore lint/a11y/useButtonType: <explanation> */}
               <button
                 class="btn btn-ghost btn-sm mt-5"
-                onClick={context!.reset}>
+                onClick={context?.reset}>
                 Reset
               </button>
             </div>
           </Match>
-          <Match when={context!.events()!.count > 0}>
+          <Match when={count() > 0}>
             <QuickFilters />
             <FilterBar />
             <EventsChunkedByDate />
             <Show
-              when={context!.events()!.items.length == context!.params().limit}>
+              when={
+                context?.events()?.items.length === context?.params().limit
+              }>
               <button
+                type="button"
                 class="btn btn-ghost btn-sm mt-5"
-                onClick={context!.getMore}>
+                onClick={context?.getMore}>
                 More
               </button>
             </Show>
@@ -233,26 +248,25 @@ function EventsChunkedByDate() {
   const context = useContext(CircleListContext)
   function handleIntersection() {
     // go through elements with chunk.dateIDs and find the one that is closest to the top, absolute value of boundingClientRect.top
-    const chunks = context!.chunkedEvents()
+    const chunks = context?.chunkedEvents()
+    if (!chunks) return
     const closest = chunks.reduce((prev, curr) => {
-      let currTop = document
-        .getElementById(curr.dateId)!
-        .getBoundingClientRect().top
-      const prevTop = document
-        .getElementById(prev.dateId)!
-        .getBoundingClientRect().top
+      let currTop =
+        document.getElementById(curr.dateId)?.getBoundingClientRect().top ?? 0
+      const prevTop =
+        document.getElementById(prev.dateId)?.getBoundingClientRect().top ?? 0
       currTop = currTop < 0 ? currTop - 100 : currTop
       return Math.abs(currTop) <= Math.abs(prevTop) ? curr : prev
     })
-    context!.setActiveID(closest.dateId)
+    context?.setActiveID(closest.dateId)
   }
   const [intersectionObserver] = createViewportObserver([], handleIntersection)
   return (
     <ul>
-      <For each={context!.chunkedEvents()}>
+      <For each={context?.chunkedEvents()}>
         {(chunk) => (
           <li>
-            <a
+            <div
               use:intersectionObserver={() => handleIntersection()}
               class="invisible relative -top-52 block"
               id={chunk.dateId}
@@ -285,6 +299,11 @@ function Event(props: { event: EventListSchema }) {
 }
 
 function MobileEvent(props: { event: EventListSchema }) {
+  const start = () => {
+    const s = props.event.start
+    if (s) return timestampToTimeString(s)
+    return ""
+  }
   return (
     <a
       href={props.event.url}
@@ -304,8 +323,8 @@ function MobileEvent(props: { event: EventListSchema }) {
           </Match>
         </Switch>
         <p class="text-sm">
-          with {getFirstName(props.event.space.author.name!)} @{" "}
-          {timestampToTimeString(props.event.start!)}
+          with {getFirstName(props.event.space.author.name ?? "Keeper")} @{" "}
+          {timestampToTimeString(start())}
         </p>
       </div>
       <div class="text-2xl">→</div>
@@ -320,14 +339,14 @@ function DesktopEvent(props: { event: EventListSchema }) {
       class="mx-5 mb-2 flex items-center justify-center gap-2 rounded-2xl border-2 border-gray-300 p-5 transition-all hover:bg-white hover:shadow-lg">
       <div>
         <div class="whitespace-nowrap text-lg font-bold">
-          {timestampToTimeString(props.event.start!)}
+          {timestampToTimeString(props.event.start ?? "")}
         </div>
       </div>
       <div class="divider divider-horizontal self-stretch" />
       <div class="flex items-center justify-center gap-5">
         <div>{getAvatar(props.event)}</div>
         <div class="text-lg">
-          {getFirstName(props.event.space.author.name!)}
+          {getFirstName(props.event.space.author.name ?? "Keeper")}
         </div>
       </div>
       <div class="divider divider-horizontal self-stretch" />
@@ -366,26 +385,32 @@ function getAvatar(event: EventListSchema) {
 function FilterBar() {
   const context = useContext(CircleListContext)
   return (
-    <div class="sticky top-0 w-full border-b-2 bg-tcreme px-5 pt-2">
-      <div>
-        <DateRibbon
-          chunks={context!.chunkedEvents()}
-          activeID={context!.activeID()}
-        />
-      </div>
-      <div class="flex w-full items-baseline justify-between p-2">
+    <Show when={context}>
+      <div class="sticky top-0 w-full border-b-2 bg-tcreme px-5 pt-2">
         <div>
-          <FilterModal />
+          <DateRibbon
+            // biome-ignore lint/style/noNonNullAssertion: <explanation>
+            chunks={context!.chunkedEvents()}
+            // biome-ignore lint/style/noNonNullAssertion: <explanation>
+            activeID={context!.activeID()}
+          />
         </div>
-        <div>
-          <button
-            class="btn btn-ghost btn-sm font-normal"
-            onClick={context!.reset}>
-            Reset
-          </button>
+        <div class="flex w-full items-baseline justify-between p-2">
+          <div>
+            <FilterModal />
+          </div>
+          <div>
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm font-normal"
+              // biome-ignore lint/style/noNonNullAssertion: <explanation>
+              onClick={context!.reset}>
+              Reset
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </Show>
   )
 }
 
@@ -395,7 +420,7 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
   let scrollableRef: HTMLDivElement
   let containerRef: HTMLDivElement
   createEffect(() => {
-    if (context!.scrolling()) return
+    if (context?.scrolling()) return
     // scroll active date into view, dont use scrollIntoView
     const active = refs().find((ref) => ref.dataset.dateid === props.activeID)
     if (active) {
@@ -403,7 +428,7 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
       const centerActive =
         active.getBoundingClientRect().left +
         active.getBoundingClientRect().width / 2
-      const containerCenter = containerRef.getBoundingClientRect().width / 2
+      const containerCenter = containerRef?.getBoundingClientRect().width / 2
       scrollableRef.scrollTo({
         left:
           Math.abs(containerRef.getBoundingClientRect().left) +
@@ -422,10 +447,10 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
 
   const scrollTo = (chunkID: string) => {
     setTimeout(() => {
-      context!.setScrolling(false)
+      context?.setScrolling(false)
     }, 500)
-    context!.setScrolling(true)
-    document.getElementById(chunkID)!.scrollIntoView({
+    context?.setScrolling(true)
+    document.getElementById(chunkID)?.scrollIntoView({
       behavior: "smooth",
     })
   }
@@ -433,12 +458,13 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
   return (
     <div class="flex justify-center">
       <div class="divider divider-horizontal m-0 ml-1" />
-      <div ref={scrollableRef!} class="overflow-x-auto overflow-y-hidden">
-        <div ref={containerRef!} class="flex gap-x-2 px-5 pb-3">
+      <div ref={scrollableRef} class="overflow-x-auto overflow-y-hidden">
+        <div ref={containerRef} class="flex gap-x-2 px-5 pb-3">
           <Refs ref={setRefs}>
             <For each={props.chunks}>
               {(chunk) => (
-                <a
+                <button
+                  type="button"
                   class="cursor-pointer"
                   data-dateid={chunk.dateId}
                   onClick={() => scrollTo(chunk.dateId)}>
@@ -447,7 +473,7 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
                     <div class="text-xs">{chunk.weekdayShort}</div>
                     <div class="text-lg">{chunk.day}</div>
                   </h2>
-                </a>
+                </button>
               )}
             </For>
           </Refs>
@@ -461,8 +487,8 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
 function FilterModal() {
   const context = useContext(CircleListContext)
   const drawerID = "filter-drawer"
-  const selectedCategory = () => context!.params().category
-  const selectedAuthor = () => context!.params().author
+  const selectedCategory = () => context?.params().category
+  const selectedAuthor = () => context?.params().author
   return (
     <div class="drawer drawer-end">
       <input id={drawerID} type="checkbox" class="drawer-toggle" />
@@ -486,14 +512,14 @@ function FilterModal() {
             <select
               class="form-select"
               id="category"
-              onChange={(e) => context!.setCategory(e.currentTarget.value)}>
-              <option selected={selectedCategory() == ""} value="">
+              onChange={(e) => context?.setCategory(e.currentTarget.value)}>
+              <option selected={selectedCategory() === ""} value="">
                 All
               </option>
-              <For each={context!.filters()!.categories}>
+              <For each={context?.filters()?.categories}>
                 {(category) => (
                   <option
-                    selected={selectedCategory() == category.slug}
+                    selected={selectedCategory() === category.slug}
                     value={category.slug}>
                     {category.name}
                   </option>
@@ -509,18 +535,18 @@ function FilterModal() {
               class="form-select"
               id="author"
               onChange={(e) =>
-                context!.setParams({
-                  ...context!.params(),
+                context?.setParams({
+                  ...context?.params(),
                   author: e.currentTarget.value,
                 })
               }>
-              <option selected={selectedAuthor() == ""} value="">
+              <option selected={selectedAuthor() === ""} value="">
                 All
               </option>
-              <For each={context!.filters()!.authors}>
+              <For each={context?.filters()?.authors}>
                 {(author) => (
                   <option
-                    selected={selectedAuthor() == author.slug}
+                    selected={selectedAuthor() === author.slug}
                     value={author.slug}>
                     {author.name}
                   </option>
@@ -529,7 +555,10 @@ function FilterModal() {
             </select>
           </div>
           <div class="flex justify-between">
-            <button class="btn btn-ghost btn-sm" onClick={context?.reset}>
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm"
+              onClick={context?.reset}>
               Reset
             </button>
             <label
@@ -547,22 +576,23 @@ function FilterModal() {
 
 function QuickFilters() {
   const context = useContext(CircleListContext)
-  const isActive = (category: string) => context!.params().category === category
+  const isActive = (category: string) => context?.params().category === category
   const QuickFilterButton = (props: { category: CategoryFilterSchema }) => (
     <button
+      type="button"
       class="badge"
       classList={{
         "badge-outline": !isActive(props.category.slug),
         "badge-primary": isActive(props.category.slug),
       }}
-      onClick={() => context!.setCategory(props.category.slug)}>
+      onClick={() => context?.setCategory(props.category.slug)}>
       {props.category.name}
     </button>
   )
   return (
     <div class="m-auto flex max-w-xl flex-wrap items-center justify-center gap-2 px-10 pb-10">
       <QuickFilterButton category={{ name: "All", slug: "" }} />
-      <For each={context!.filters()!.categories}>
+      <For each={context?.filters()?.categories}>
         {(category) => <QuickFilterButton category={category} />}
       </For>
     </div>

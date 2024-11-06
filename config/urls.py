@@ -1,26 +1,27 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.contrib.sitemaps.views import sitemap
+from django.contrib.sitemaps import views as sitemaps_views
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.shortcuts import redirect
 from django.urls import include, path
 from django.views import defaults as default_views
+from django.views.decorators.cache import cache_page
 from django.views.generic import RedirectView
 
 from totem.api.api import api
+from totem.circles.urls import SpacesSitemap
 from totem.pages.urls import PagesSitemap
 from totem.plans.urls import PlansSitemap
 from totem.repos.urls import ReposSitemap
 from totem.users import views as user_views
 from totem.users.views import MagicLoginView
 
-sitemap_dict = {
-    "sitemaps": {
-        "pages": PagesSitemap(),
-        "plans": PlansSitemap(),
-        "repos": ReposSitemap(),
-    }
+sitemaps = {
+    "pages": PagesSitemap(),
+    "plans": PlansSitemap(),
+    "repos": ReposSitemap(),
+    "spaces": SpacesSitemap(),
 }
 
 try:
@@ -75,9 +76,15 @@ urlpatterns = [
     path("_impersonate/", include("impersonate.urls")),
     path(
         "sitemap.xml",
-        sitemap,
-        sitemap_dict,
-        name="django.contrib.sitemaps.views.sitemap",
+        cache_page(86400)(sitemaps_views.index),
+        {"sitemaps": sitemaps, "sitemap_url_name": "sitemaps"},
+        name="sitemaps_index",
+    ),
+    path(
+        "sitemap-<section>.xml",
+        cache_page(86400)(sitemaps_views.sitemap),
+        {"sitemaps": sitemaps},
+        name="sitemaps",
     ),
     path("onboard/", include("totem.onboard.urls")),
     path("auth/link/", MagicLoginView.as_view(), name="magic-login"),

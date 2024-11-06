@@ -1,19 +1,22 @@
 from django.urls import path
 
 from . import views
+from .models import CircleEvent
+
+from django.contrib.sitemaps import Sitemap
 
 app_name = "circles"
 
 
-# class CirclesSitemap(Sitemap):
-#     priority = 0.5
-#     changefreq = "daily"
+class SpacesSitemap(Sitemap):
+    priority = 0.5
+    changefreq = "daily"
 
-#     def items(self):
-#         return Circles.objects.filter(published=True)
+    def items(self):
+        return CircleEvent.objects.filter(cancelled=False, open=True, listed=True, circle__published=True)
 
-#     def lastmod(self, obj):
-#         return obj.date_modified
+    def lastmod(self, obj: CircleEvent):
+        return obj.date_modified
 
 
 urlpatterns = [
