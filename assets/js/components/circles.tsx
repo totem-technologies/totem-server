@@ -298,7 +298,7 @@ function Event(props: { event: EventListSchema }) {
   )
 }
 
-function MobileEvent(props: { event: EventListSchema }) {
+export function MobileEvent(props: { event: EventListSchema }) {
   const start = () => {
     const s = props.event.start
     if (s) return timestampToTimeString(s)

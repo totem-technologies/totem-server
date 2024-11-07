@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 import * as esbuild from "esbuild"
 import { solidPlugin } from "esbuild-plugin-solid"
-import fs from "fs"
-import process from "process"
+import fs from "node:fs"
+import process from "node:process"
 
-var arg = process.argv[2]
+const arg = process.argv[2]
 
-var options = {
+const options = {
   entryPoints: ["assets/js/app.js", "assets/js/social.ts"],
   bundle: true,
   minify: true,
@@ -32,7 +32,7 @@ if (arg === "watch") {
   options.sourcemap = "inline"
   options.minify = false
   options.define["process.env.NODE_ENV"] = '"development"'
-  let ctx = await esbuild.context(options)
+  const ctx = await esbuild.context(options)
   await ctx.watch()
 } else {
   const result = await esbuild.build(options)

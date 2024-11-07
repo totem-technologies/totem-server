@@ -8,6 +8,7 @@ build-prod:
 	docker build -t totem-prod -f compose/production/django/Dockerfile .
 
 test:
+	npm run test:ci
 	docker compose -f local.yml run --rm django coverage run -m pytest -n auto
 
 tasks:

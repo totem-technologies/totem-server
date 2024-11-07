@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js"
-import { useTippy } from "solid-tippy"
-import { Content } from "tippy.js"
+import { useTippy } from "@/libs/tippy"
+import type { Content } from "tippy.js"
 import "tippy.js/dist/tippy.css"
 import "tippy.js/themes/light.css"
 
@@ -23,7 +23,7 @@ export function useTotemTip({ content }: { content: Content }) {
 }
 
 const Tooltip = (props: TooltipProps) => {
-  const setAnchor = () => useTotemTip({ content: props.text! })
+  const setAnchor = () => useTotemTip({ content: props.text ?? "" })
   return (
     // eslint-disable-next-line solid/no-innerhtml
     <div class={props.class} ref={setAnchor()} innerHTML={props.children} />
