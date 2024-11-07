@@ -324,7 +324,7 @@ function MobileEvent(props: { event: EventListSchema }) {
         </Switch>
         <p class="text-sm">
           with {getFirstName(props.event.space.author.name ?? "Keeper")} @{" "}
-          {timestampToTimeString(start())}
+          {start()}
         </p>
       </div>
       <div class="text-2xl">→</div>
