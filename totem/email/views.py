@@ -50,18 +50,6 @@ def template_view(request, name=None):
     )
 
 
-event_details = """
-## Sexual Liberation
-
-Sexual liberation is going to look different for each of us. For some, it may actually mean less sex—liberating your voice to say 'no' to your partner more often. For others, sexual liberation might involve buying your first solo toy or exploring a threesome. We are all on different journeys, and this space is dedicated to destigmatizing conversations about sex in a safe environment, identifying our personal boundaries, and discovering what sexual liberation means to each of us.
-
-We will ask questions like:
-
-* *What would sexual liberation look like in your life, and why would that be important?*
-
-We hope that after this space, you feel emboldened in your desires and in your ability to voice them."""
-
-
 def get_templates():
     # files = Path(__file__).parent.joinpath("templates/email/emails").glob("*.mjml")
     # return {file.stem: file.name for file in files}

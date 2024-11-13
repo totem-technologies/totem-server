@@ -23,6 +23,7 @@ from totem.email.emails import (
     notify_circle_starting,
     notify_circle_tomorrow,
 )
+from totem.email.exceptions import EmailBounced
 from totem.utils.hash import basic_hash, hmac
 from totem.utils.md import MarkdownField, MarkdownMixin
 from totem.utils.models import AdminURLMixin, SluggedModel
@@ -214,7 +215,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
                 notify_circle_starting(self, user).send()
             else:
                 # Otherwise, send the user the signed up email
-                notify_circle_signup(self, user).send(blocking=False)
+                notify_circle_signup(self, user).send()
             if not self.circle.author == user:
                 notify_slack(f"✅ New session attendee: {self._get_slack_attendee_message(user)}")
 
@@ -284,7 +285,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
             if user == self.circle.author:
                 continue
             if user not in self.joined.all():
-                missed_event_email(self, user).send(blocking=False)
+                missed_event_email(self, user).send()
 
     def advertise(self, force=False):
         # Notify users who are subscribed that a new event is available, if they aren't already attending.
@@ -294,7 +295,11 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         self.save()
         for user in self.circle.subscribed.all():
             if self.can_attend(silent=True) and user not in self.attendees.all():
-                notify_circle_advertisement(self, user).send()
+                try:
+                    notify_circle_advertisement(self, user).send()
+                except EmailBounced:
+                    # If the email was blocked, remove the user from the circle
+                    self.circle.unsubscribe(user)
 
     def cal_link(self):
         return full_url(self.get_absolute_url())

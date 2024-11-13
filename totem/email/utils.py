@@ -1,10 +1,12 @@
 import requests
+from anymail.exceptions import AnymailRecipientsRefused
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail as django_send_mail
 from pydantic import BaseModel
 
 from totem.email.data import EMAIL_BLOCKLIST
+from totem.email.exceptions import EmailBounced
 
 session = requests.Session()
 
@@ -19,9 +21,12 @@ def send_mail(
 ) -> int:
     # remove newlines from subject
     subject = subject.replace("\n", " ")
-    return django_send_mail(
-        subject, text_message, from_email, recipient_list, fail_silently=fail_silently, html_message=html_message
-    )
+    try:
+        return django_send_mail(
+            subject, text_message, from_email, recipient_list, fail_silently=fail_silently, html_message=html_message
+        )
+    except AnymailRecipientsRefused:
+        raise EmailBounced(f"Email to {recipient_list} with subject {subject} was blocked.")
 
 
 class Recipient(BaseModel):

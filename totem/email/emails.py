@@ -15,8 +15,6 @@ import mrml
 from django.template.loader import render_to_string
 from pydantic import AnyHttpUrl, BaseModel, TypeAdapter
 
-from totem.utils.pool import global_pool
-
 from .models import EmailLog
 from .utils import send_brevo_email, send_mail
 
@@ -49,22 +47,22 @@ class Email(BaseModel):
     def render_text(self) -> str:
         return render_to_string(f"email/emails/{self.template}.txt", context=self.model_dump())
 
-    def send(self, blocking: bool = True):
-        if blocking:
-            send_mail(
-                subject=self.subject,
-                html_message=self.render_html(),
-                text_message=self.render_text(),
-                recipient_list=[self.recipient],
-            )
-        else:
-            global_pool.add_task(
-                send_mail,
-                subject=self.subject,
-                html_message=self.render_html(),
-                text_message=self.render_text(),
-                recipient_list=[self.recipient],
-            )
+    def send(self):
+        # if blocking:
+        send_mail(
+            subject=self.subject,
+            html_message=self.render_html(),
+            text_message=self.render_text(),
+            recipient_list=[self.recipient],
+        )
+        # else:
+        #     global_pool.add_task(
+        #         send_mail,
+        #         subject=self.subject,
+        #         html_message=self.render_html(),
+        #         text_message=self.render_text(),
+        #         recipient_list=[self.recipient],
+        #     )
         EmailLog.objects.create(
             subject=self.subject,
             template=self.template,

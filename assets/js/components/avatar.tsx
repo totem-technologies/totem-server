@@ -1,8 +1,18 @@
 import _Avatar from "@totem.org/solid-boring-avatars"
-import { type JSXElement, Show } from "solid-js"
+import { type JSXElement, Show, mergeProps } from "solid-js"
 import { useTotemTip } from "./tooltip"
 
 import type { ProfileAvatarTypeEnum } from "../client"
+
+const defaults = {
+  size: 50,
+  name: "",
+  seed: "",
+  url: "",
+  type: "TD",
+  tooltip: false,
+}
+
 function Avatar(props: {
   size?: number
   name?: string
@@ -12,6 +22,8 @@ function Avatar(props: {
   type?: ProfileAvatarTypeEnum
   children?: JSXElement
 }) {
+  const _props = mergeProps(defaults, props)
+
   const setAnchor = () => {
     if (props.tooltip) {
       return useTotemTip({ content: props.name ?? "" })
@@ -22,24 +34,24 @@ function Avatar(props: {
     <div
       ref={setAnchor()}
       class="max-h-full rounded-full bg-white [&>svg]:h-auto [&>svg]:max-w-full"
-      style={{ padding: `${props.size ?? 25 / 1000}rem` }}>
+      style={{ padding: `${_props.size / 1000}rem` }}>
       <Show
-        when={props.type === "IM" && props.url}
+        when={_props.type === "IM" && _props.url}
         fallback={
           <_Avatar
-            size={props.size}
-            // title={props.name}
-            name={props.seed}
+            size={_props.size}
+            // title={_props.name}
+            name={_props.seed}
             variant="marble"
           />
         }>
         <img
           style={{
-            width: `${props.size}px`,
+            width: `${_props.size}px`,
           }}
           class="h-auto max-w-full rounded-full"
-          src={props.url}
-          alt={props.name}
+          src={_props.url}
+          alt={_props.name}
         />
       </Show>
     </div>
@@ -47,13 +59,6 @@ function Avatar(props: {
 }
 
 Avatar.tagName = "t-avatar"
-Avatar.propsDefault = {
-  size: 50,
-  name: "",
-  seed: "",
-  url: "",
-  type: "TD",
-  tooltip: false,
-}
+Avatar.propsDefault = defaults
 
 export default Avatar
