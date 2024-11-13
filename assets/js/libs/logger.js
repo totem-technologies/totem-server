@@ -1,17 +1,16 @@
-var logger = (function () {
-  var oldConsoleLog = null
-  var pub = {}
+const logger = (() => {
+  let oldConsoleLog = null
+  const pub = {}
 
   pub.enableLogger = function enableLogger() {
     if (oldConsoleLog == null) return
 
-    globalThis["console"]["log"] = oldConsoleLog
+    globalThis.console.log = oldConsoleLog
   }
 
   pub.disableLogger = function disableLogger() {
     oldConsoleLog = globalThis.console.log
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    globalThis["console"]["log"] = function () {}
+    globalThis.console.log = () => {}
   }
 
   return pub

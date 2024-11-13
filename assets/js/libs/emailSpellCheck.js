@@ -11,7 +11,8 @@ function debounce(func, timeout = 300) {
 }
 
 function init() {
-  globalThis.document.querySelectorAll("input[type=email]").forEach((input) => {
+  const emailInputs = globalThis.document.querySelectorAll("input[type=email]")
+  for (const input of emailInputs) {
     function clearAlert(e) {
       const alert = e.target.parentElement.querySelector(
         ".email-alert-dismissible"
@@ -40,7 +41,7 @@ function init() {
       input.after(alert)
     }
     input.addEventListener("keyup", debounce(myScript))
-  })
+  }
 }
 
 export default init

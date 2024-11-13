@@ -9,14 +9,14 @@ import timezoneDetect from "./libs/timezone"
 
 import logger from "./libs/logger"
 
-globalThis.dismiss_alert = function (e) {
+globalThis.dismiss_alert = (e) => {
   e.closest(".alert-dismissible").remove()
 }
 
 // Fix for instagram browser errors in sentry
 globalThis._AutofillCallbackHandler =
   // eslint-disable-next-line @typescript-eslint/no-empty-function
-  globalThis._AutofillCallbackHandler || function () {}
+  globalThis._AutofillCallbackHandler || (() => {})
 
 components()
 timezoneDetect()
@@ -28,10 +28,9 @@ globalThis.addEventListener("DOMContentLoaded", () => {
   emailSpellChecker()
   bot()
   shadowfill()
-  globalThis.document.querySelectorAll(".no-js").forEach((el) => {
-    // Remove elements with the no-js class
+  for (const el of globalThis.document.querySelectorAll(".no-js")) {
     el.remove()
-  })
+  }
 })
 
 globalThis.console.log(

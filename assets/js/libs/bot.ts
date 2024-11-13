@@ -7,7 +7,7 @@ export default function () {
   if (!forms) {
     return
   }
-  forms.forEach((form) => {
+  for (const form of forms) {
     form.addEventListener("submit", (event) => {
       event.preventDefault()
       const csrfInput = document.createElement("input")
@@ -19,5 +19,5 @@ export default function () {
         form.submit()
       }
     })
-  })
+  }
 }

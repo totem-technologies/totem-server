@@ -2,6 +2,7 @@
   "cSpell.words": [
     "atcb",
     "blockquote",
+    "csrfmiddlewaretoken",
     "dataid",
     "elif",
     "endcomment",
@@ -23,5 +24,10 @@
     "waitlist"
   ],
   "typescript.tsdk": "node_modules/typescript/lib",
-  "tailwindCSS.classAttributes": ["class", "className", "ngClass", ".*Classes"]
+  "tailwindCSS.classAttributes": [
+    "class",
+    "className",
+    "ngClass",
+    ".*Classes"
+  ]
 }

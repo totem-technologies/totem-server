@@ -2,21 +2,21 @@ import { postData } from "@/libs/postData"
 import { timestampToDateString, timestampToTimeString } from "@/libs/time"
 import { createQuery } from "@tanstack/solid-query"
 import {
-  createEffect,
-  createSignal,
   For,
-  JSX,
-  JSXElement,
+  type JSX,
+  type JSXElement,
   Match,
   Show,
   Suspense,
   Switch,
+  createEffect,
+  createSignal,
 } from "solid-js"
-import { EventDetailSchema, totemCirclesApiEventDetail } from "../client"
+import { type EventDetailSchema, totemCirclesApiEventDetail } from "../client"
 import AddToCalendarButton from "./AddToCalendarButton"
 import Avatar from "./avatar"
 import ErrorBoundary from "./errors"
-import Icon, { IconName } from "./icons"
+import Icon, { type IconName } from "./icons"
 import { useTotemTip } from "./tooltip"
 
 function capitalize(str: string) {
@@ -27,8 +27,7 @@ const [showAttendingPopup, setShowAttendingPopup] = createSignal<boolean>(false)
 
 function CopyToClipboard() {
   const [copied, setCopied] = createSignal(false)
-  const path =
-    location.protocol + "//" + location.host + location.pathname + "?ref=modal"
+  const path = `${location.protocol}//${location.host}${location.pathname}?ref=modal`
   async function copyTextToClipboard() {
     await navigator.clipboard.writeText(path)
     setCopied(true)
@@ -96,7 +95,8 @@ function AttendingPopup(_: { event: EventDetailSchema }) {
             <a
               class="link"
               target="_blank"
-              href="https://www.totem.org/guidelines">
+              href="https://www.totem.org/guidelines"
+              rel="noreferrer">
               Community Guidelines
             </a>{" "}
             to learn more about how to participate.
@@ -222,7 +222,8 @@ function EventInfo(props: {
             <a
               class="btn btn-primary w-full"
               target="_blank"
-              href={props.eventStore.join_url!}>
+              href={props.eventStore.join_url!}
+              rel="noreferrer">
               Enter Space
             </a>
           </Match>

@@ -25,6 +25,7 @@
     "node": ">=20"
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
     "@eslint/js": "^9.9.0",
     "@hey-api/openapi-ts": "^0.53.0",
     "@solidjs/testing-library": "^0.8.10",
