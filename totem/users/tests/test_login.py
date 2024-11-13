@@ -88,3 +88,28 @@ class TestLogInView:
         assert "next=/foo" in mail.outbox[0].body  # type: ignore
         # Check that no new user was created
         assert User.objects.count() == count
+
+    def test_login_parameters_atacker(self, client):
+        # Create an existing user
+        user = UserFactory()
+        user.save()
+        count = User.objects.count()
+        # Submit the login form with an existing email
+        response = client.post(
+            reverse("users:login"),
+            {
+                "email": user.email,
+                "name": user.name,
+                "after_login_url": "https://attacker.com",
+            },
+        )
+        # Check that the response is a redirect to the success URL
+        assert response.status_code == 302
+        assert response.url == reverse("users:login")
+        # Check that an email was sent
+        assert len(mail.outbox) == 1
+        assert mail.outbox[0].to == [user.email]
+        assert mail.outbox[0].subject == "Totem sign in link"
+        assert "attacker" not in mail.outbox[0].body  # type: ignore
+        # Check that no new user was created
+        assert User.objects.count() == count

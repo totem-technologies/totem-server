@@ -27,7 +27,7 @@
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@eslint/js": "^9.9.0",
-    "@hey-api/openapi-ts": "^0.53.0",
+    "@hey-api/openapi-ts": "^0.55.0",
     "@solidjs/testing-library": "^0.8.10",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/line-clamp": "^0.4.2",

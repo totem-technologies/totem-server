@@ -60,6 +60,20 @@ class TestUserRedirectView:
         assert isinstance(response, HttpResponseRedirect)
         assert response.url == reverse("users:profile")
 
+    def test_user_index_view_after_login_with_next_attacker(self, client, db):
+        url = "https://attacker.com"
+        user = UserFactory()
+        client.force_login(user)
+        onboard = OnboardModel.objects.create(user=user)
+        onboard.onboarded = True
+        onboard.save()
+        s = client.session
+        s["next"] = url
+        s.save()
+        response = client.get(reverse("users:index"))
+        assert isinstance(response, HttpResponseRedirect)
+        assert "attacker" not in response.url
+
 
 class TestUserDetailView:
     def test_authenticated(self, user: User, client):

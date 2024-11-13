@@ -55,7 +55,7 @@ migrate: ## Run DB migrations in the container
 	@docker compose -f local.yml run django python manage.py migrate
 
 generate_api_models:
-	@docker compose -f local.yml run django python manage.py export_openapi_schema --api totem.api.api.api > openapi.json
+	@docker compose -f local.yml run --rm --remove-orphans django python manage.py export_openapi_schema --api totem.api.api.api > openapi.json
 	@npm run openapi-ts
 
 updatedep:

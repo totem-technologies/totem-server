@@ -7,6 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404, HttpRequest, HttpResponseForbidden
 from django.shortcuts import redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 from sesame.views import LoginView as SesameLoginView
 
 from totem.circles.filters import all_upcoming_recommended_events, upcoming_attending_events, upcoming_events_by_author
@@ -73,8 +74,8 @@ def user_redirect_view(request, *args, **kwargs):
             next = request.session.get("next")
             if next:
                 del request.session["next"]
-                assert next[0] == "/"
-                return redirect(next)
+                if url_has_allowed_host_and_scheme(next, None):
+                    return redirect(next)
             return redirect("users:dashboard")
     except ObjectDoesNotExist:
         pass
@@ -100,6 +101,8 @@ def signup_view(request: HttpRequest):
 
 def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name: str):
     next = request.GET.get("next")
+    if not url_has_allowed_host_and_scheme(next, None):
+        next = None
     context = {"next": next}
     if request.POST:
         form = form_class(request.POST)
@@ -113,7 +116,11 @@ def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name
                 return redirect("users:redirect")
             else:
                 messages.success(request, f"Please check your inbox at: {email}.")
-                return redirect(request.get_full_path())
+                path = request.get_full_path()
+                if url_has_allowed_host_and_scheme(path, None):
+                    return redirect(path)
+                else:
+                    return redirect("users:redirect")
     else:
         if request.user.is_authenticated:
             return redirect(next or "users:redirect")
