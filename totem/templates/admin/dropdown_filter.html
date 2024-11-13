@@ -3,12 +3,25 @@
   <summary>
     {% blocktranslate with filter_title=title %}By {{ filter_title }}{% endblocktranslate %}
   </summary>
+  <script>
+    function safeDropdownRedirect(url) {
+      // Create an anchor element to parse the URL
+      var a = document.createElement("a")
+      a.href = url
+      // Check if the URL is safe (e.g., same origin or allowed domains)
+      if (a.origin === window.location.origin) {
+        window.location.href = url
+      } else {
+        console.error("Unsafe URL blocked:", url)
+      }
+    }
+  </script>
   <div style="padding: 0 15px 10px 15px;">
     <select
       style="width: 100%"
       id="filter-select-{{ title }}"
       class="form-control"
-      onChange="window.location.href = this.value">
+      onChange="safeDropdownRedirect(this.value)">
       {% for choice in choices %}
         <option
           value="{{ choice.query_string|iriencode }}"
