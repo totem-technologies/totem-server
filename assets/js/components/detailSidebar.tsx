@@ -23,6 +23,8 @@ function capitalize(str: string) {
   return str.charAt(0).toUpperCase() + str.slice(1)
 }
 
+const spacesListLink = "/circles/"
+
 const [showAttendingPopup, setShowAttendingPopup] = createSignal<boolean>(false)
 
 function CopyToClipboard() {
@@ -39,6 +41,7 @@ function CopyToClipboard() {
     <>
       <Show when={!copied()}>
         <button
+          type="button"
           onClick={() => void copyTextToClipboard()}
           class="btn btn-primary btn-sm">
           Copy Link
@@ -46,6 +49,7 @@ function CopyToClipboard() {
       </Show>
       <Show when={copied()}>
         <button
+          type="button"
           class="btn btn-primary btn-sm"
           onClick={() => void copyTextToClipboard()}>
           Copied!
@@ -108,6 +112,7 @@ function AttendingPopup(_: { event: EventDetailSchema }) {
             <div class="modal-action">
               <form method="dialog">
                 <button
+                  type="button"
                   class="btn btn-ghost btn-sm"
                   onClick={() => setShowAttendingPopup(false)}>
                   Close
@@ -215,26 +220,46 @@ function EventInfo(props: {
       <div class="pt-3 text-center">
         <Switch>
           <Match when={props.eventStore.cancelled}>
-            <div>This session has been cancelled.</div>
+            <div>
+              This session has been cancelled.{" "}
+              <a class="link" href={spacesListLink}>
+                See upcoming sessions.
+              </a>
+            </div>
           </Match>
           <Match when={props.eventStore.joinable}>
             <p class="pb-4">The session is starting now!</p>
             <a
               class="btn btn-primary w-full"
               target="_blank"
-              href={props.eventStore.join_url!}
+              href={props.eventStore.join_url ?? ""}
               rel="noreferrer">
               Enter Space
             </a>
           </Match>
           <Match when={props.eventStore.ended}>
-            <div>This session has ended.</div>
+            <div>
+              This session has ended.{" "}
+              <a class="link" href={spacesListLink}>
+                See upcoming sessions.
+              </a>
+            </div>
           </Match>
           <Match when={props.eventStore.started}>
-            <div>This session has already started.</div>
+            <div>
+              This session has already started.{" "}
+              <a class="link" href={spacesListLink}>
+                See upcoming sessions.
+              </a>
+            </div>
           </Match>
           <Match when={!props.eventStore.open && !props.eventStore.attending}>
-            <div>This session is not open to new participants.</div>
+            <div>
+              This session is not open to new participants.{" "}
+              <a class="link" href={spacesListLink}>
+                See upcoming sessions.
+              </a>
+            </div>
           </Match>
 
           <Match when={props.eventStore.attending}>
@@ -245,6 +270,7 @@ function EventInfo(props: {
               durationMinutes={props.eventStore.duration}
             />
             <button
+              type="button"
               class="a pt-2 text-gray-400"
               onClick={(e) => void handleGiveUp(e)}>
               Give up spot
@@ -253,6 +279,7 @@ function EventInfo(props: {
 
           <Match when={!props.eventStore.attending}>
             <button
+              type="button"
               onClick={(e) => void handleAttend(e)}
               class="btn btn-primary w-full p-2 px-6">
               Attend this session
@@ -279,7 +306,7 @@ function Attendees(props: { event: EventDetailSchema }) {
                 size={50}
                 name={attendee.name ?? ""}
                 seed={attendee.profile_avatar_seed}
-                url={attendee.profile_image!}
+                url={attendee.profile_image ?? ""}
                 type={attendee.profile_avatar_type}
               />
             )}
@@ -318,6 +345,7 @@ function Subscribe(props: {
           <Match when={props.event.subscribed}>
             <div>You are currently subscribed to this Space.</div>
             <button
+              type="button"
               class="a pt-2 text-gray-400"
               onClick={(e) => void handleUnsubscribe(e)}>
               Unsubscribe from updates
@@ -328,6 +356,7 @@ function Subscribe(props: {
               Subscribe to this Space to notified about upcoming sessions.
             </div>
             <button
+              type="button"
               class="btn btn-outline w-full p-2 px-6"
               onClick={(e) => void handleSubscribe(e)}>
               Subscribe
