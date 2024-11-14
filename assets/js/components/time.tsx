@@ -1,6 +1,12 @@
-import { JSXElement, Match, Switch } from "solid-js"
+import { type JSXElement, Match, Switch, mergeProps } from "solid-js"
 
 type TimeFormat = "short" | "at"
+
+const defaults = {
+  time: "",
+  format: "short",
+  className: "",
+}
 
 function Time(props: {
   time?: string
@@ -8,13 +14,14 @@ function Time(props: {
   className?: string
   children?: JSXElement
 }) {
+  const _props = mergeProps(defaults, props)
   const time = () => {
-    return new Date(props.time!)
+    return new Date(_props.time)
   }
   return (
-    <time class={props.className} dateTime={props.time}>
+    <time class={_props.className} dateTime={_props.time}>
       <Switch>
-        <Match when={props.format === "short"}>
+        <Match when={_props.format === "short"}>
           <span>
             {time().toLocaleTimeString(undefined, {
               hour: "2-digit",
@@ -22,7 +29,7 @@ function Time(props: {
             })}
           </span>
         </Match>
-        <Match when={props.format === "at"}>
+        <Match when={_props.format === "at"}>
           {time().toLocaleDateString(undefined, {
             month: "short",
             day: "numeric",
@@ -42,9 +49,5 @@ function Time(props: {
 }
 
 Time.tagName = "t-time"
-Time.propsDefault = {
-  time: "",
-  format: "short",
-  className: "",
-}
+Time.propsDefault = defaults
 export default Time

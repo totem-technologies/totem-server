@@ -37,6 +37,7 @@
         eventID="{{ event.slug }}"></t-eventcalendar>
     </div>
     <div class="mt-5 flex-grow pr-4">
+      <div class="italic">Updated {{ event.date_modified|date:"M d, Y" }}</div>
       <div>
         {% if not object.published %}
           <div class="text-red-500">This Space is not published yet.</div>

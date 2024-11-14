@@ -41,8 +41,14 @@
       {% endif %}
       <div class="text-white">
         with
-        <a href="{{ object.author.get_keeper_url }}"
+        <a class="font-semibold" href="{{ object.author.get_keeper_url }}"
           >{{ object.author.name }}</a
+        >
+      </div>
+      <div class="text-white">
+        Starting
+        <t-time time="{{ event.start|date:'c' }}" format="at"
+          >{{ event.start|date:"M d, Y gA T" }}</t-time
         >
       </div>
     </div>
