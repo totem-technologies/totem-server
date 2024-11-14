@@ -107,5 +107,5 @@ def upcoming_events_by_author(user: User, author: User, exclude_circle: Circle |
     upcoming_events = CircleEvent.objects.filter(id__in=circles_with_upcoming_event.values("next_event_id")).order_by(
         "start"
     )
-    upcoming_events = upcoming_events.prefetch_related("circle__author")
+    upcoming_events = upcoming_events.select_related("circle__author")
     return upcoming_events

@@ -33,7 +33,11 @@ def _get_circle(slug: str) -> Circle:
 
 def _get_circle_event(slug: str) -> CircleEvent:
     try:
-        return CircleEvent.objects.get(slug=slug)
+        return (
+            CircleEvent.objects.select_related("circle", "circle__author")
+            .prefetch_related("attendees", "circle__subscribed")
+            .get(slug=slug)
+        )
     except CircleEvent.DoesNotExist:
         raise Http404
 
@@ -53,20 +57,6 @@ def detail(request, slug):
 def _circle_detail(request: HttpRequest, user: User, circle: Circle, event: CircleEvent | None):
     if not circle.published and not user.is_staff:
         raise PermissionDenied
-
-    # if user.is_authenticated and request.session.get(AUTO_RSVP_SESSION_KEY) and event:
-    #     event_slug = request.session[AUTO_RSVP_SESSION_KEY]
-    #     del request.session[AUTO_RSVP_SESSION_KEY]
-    #     if event_slug == event.slug:
-    #         try:
-    #             _add_or_remove_attendee(user, event, True)
-    #             messages.info(request, "Your spot in this Circle has been reserved.")
-    #         except CircleEventException as e:
-    #             messages.error(request, str(e))
-
-    # token = request.GET.get("token")
-    # if token and event:
-    #     _resolve_event_action(request, user, event, token)
 
     attending = False
     joinable = False
@@ -91,28 +81,6 @@ def _circle_detail(request: HttpRequest, user: User, circle: Circle, event: Circ
             "other_circles": other_circles,
         },
     )
-
-
-# def _resolve_event_action(request: HttpRequest, user: User, event: CircleEvent, token: str):
-#     try:
-#         token_user, params = AttendCircleAction.resolve(token)
-#         if user.is_authenticated and user != token_user:
-#             return
-#         token_event_slug = params["event_slug"]
-#         if token_event_slug != event.slug:
-#             print("Invalid event slug")
-#             raise PermissionDenied
-#         try:
-#             event.add_attendee(token_user)
-#         except CircleEventException as e:
-#             messages.error(request, f"{str(e)}")
-#             return
-#         messages.success(request, "You have successfully reserved a spot to this session.")
-#     except Exception as e:
-#         capture_exception(e)
-#         messages.error(
-#             request, "Invalid or expired link. If you think this is an error, please contact us: help@totem.org."
-#         )
 
 
 def ics_hash(slug, user_ics_key):
