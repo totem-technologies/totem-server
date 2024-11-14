@@ -16,6 +16,7 @@ from imagekit.models import ProcessedImageField
 from imagekit.processors import ResizeToFit
 from taggit.managers import TaggableManager
 
+from totem.circles import jsonld
 from totem.email.emails import (
     missed_event_email,
     notify_circle_advertisement,
@@ -324,6 +325,9 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
 
     def join_url(self, user):
         return JoinCircleAction(user=user, parameters={"event_slug": self.slug}).build_url()
+
+    def jsonld(self):
+        return jsonld.create_jsonld(self)
 
     # def attend_url(self, user):
     #     return AttendCircleAction(user=user, parameters={"event_slug": self.slug}).build_url()

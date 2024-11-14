@@ -50,14 +50,16 @@
       Test at
       https://developers.google.com/search/docs/appearance/structured-data
     {% endcomment %}
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "Organization",
-        "url": "https://www.totem.org",
-        "logo": "{% static 'images/totem-symbol.png' %}"
-      }
-    </script>
+    {% block jsonld %}
+      <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          "url": "https://www.totem.org",
+          "logo": "{% static 'images/totem-symbol.png' %}"
+        }
+      </script>
+    {% endblock jsonld %}
     <!-- prettier-ignore-start -->
     <script>
         window.TOTEM_DATA = {

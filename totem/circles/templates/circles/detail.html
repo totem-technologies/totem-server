@@ -2,11 +2,15 @@
 {% load static %}
 {% load avatar %}
 {% load markdown %}
+{% load jsonld %}
 {% load icons %}
 {# djlint:off #}
 {% block title %}{{ object.title }} - Totem Spaces{% endblock title %}
-{% block description %}{{ object.content_html|striptags|truncatewords:30 }}{% endblock description %}
+{% block description %}{{ object.content_text|truncatewords:30 }}{% endblock description %}
 {# djlint:on #}
+{% block jsonld %}
+  {{ event.jsonld|jsonld }}
+{% endblock jsonld %}
 {% block content %}
   <div class="h-2"></div>
   <div class="m-auto flex max-w-5xl px-5 pb-2">

@@ -6,6 +6,7 @@ from django.core.validators import MaxLengthValidator
 from django.db.models import TextField
 from django.forms import widgets
 from django.template import Context, Template
+from django.utils.html import strip_tags
 from django.utils.safestring import mark_safe
 
 
@@ -44,16 +45,21 @@ class MarkdownMixin:
         try:
             cls.render_markdown(value)
         except Exception as e:
-            raise ValidationError(e)
+            raise ValidationError(str(e))
 
     @staticmethod
     def render_markdown(content: str):
+        content = content or ""
         md = markdown.Markdown(extensions=["toc"])
         return Template(md.convert(content)).render(Context())
 
     @property
     def content_html(self):
         return self.render_markdown(getattr(self, "content", ""))
+
+    @property
+    def content_text(self):
+        return strip_tags(self.render_markdown(getattr(self, "content", "")))
 
     @property
     def toc(self):
