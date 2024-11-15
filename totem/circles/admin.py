@@ -6,10 +6,12 @@ from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
 
+from totem.users.models import User
+
 from .models import Circle, CircleCategory, CircleEvent
 
 
-class DropdownFilter(admin.SimpleListFilter):
+class SpaceDropdownFilter(admin.SimpleListFilter):
     template = "admin/dropdown_filter.html"
     parameter_name = "circle"
     title = "circle"
@@ -20,6 +22,20 @@ class DropdownFilter(admin.SimpleListFilter):
     def queryset(self, request, queryset):
         if self.value():
             return queryset.filter(circle__slug=self.value())
+        return queryset
+
+
+class AuthorDropdownFilter(admin.SimpleListFilter):
+    template = "admin/dropdown_filter.html"
+    parameter_name = "circle__author"
+    title = "author"
+
+    def lookups(self, request, model_admin):
+        return User.objects.filter(keeper_profile__isnull=False).values_list("slug", "name")
+
+    def queryset(self, request, queryset):
+        if self.value():
+            return queryset.filter(circle__author__slug=self.value())
         return queryset
 
 
@@ -120,7 +136,7 @@ def copy_event(modeladmin, request, queryset: QuerySet[CircleEvent]):
 @admin.register(CircleEvent)
 class CircleEventAdmin(admin.ModelAdmin):
     list_display = ("start", "title", "circle", "slug")
-    list_filter = ["start", DropdownFilter]
+    list_filter = [AuthorDropdownFilter, SpaceDropdownFilter, "start", "listed", "open", "cancelled"]
     autocomplete_fields = ["attendees", "joined"]
     readonly_fields = ("date_created", "date_modified")
     actions = [copy_event]

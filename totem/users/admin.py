@@ -1,3 +1,5 @@
+from auditlog.admin import LogEntryAdmin
+from auditlog.models import LogEntry
 from django.contrib import admin
 from django.contrib.auth import admin as auth_admin
 from django.utils.translation import gettext_lazy as _
@@ -58,3 +60,24 @@ class KeeperProfileAdmin(admin.ModelAdmin):
 @admin.register(Feedback)
 class FeedbackAdmin(admin.ModelAdmin):
     pass
+
+
+# Create a custom auitlog admin to remove the first_name field from the search
+# Unregister the default LogEntryAdmin
+admin.site.unregister(LogEntry)
+
+
+# Create a subclass of LogEntryAdmin with modified search_fields
+class CustomLogEntryAdmin(LogEntryAdmin):
+    search_fields = [
+        "timestamp",
+        "object_repr",
+        "changes",
+        "actor__name",
+        "actor__email",
+        "actor__slug",
+    ]
+
+
+# Register your customized version
+admin.site.register(LogEntry, CustomLogEntryAdmin)
