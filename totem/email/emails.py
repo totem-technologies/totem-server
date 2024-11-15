@@ -118,8 +118,8 @@ class CircleStartingEmail(Email):
     event_link: AnyHttpUrl
     link: AnyHttpUrl
     button_text: str = "Join Session"
-    subject: str = "Your Space is starting soon"
-    title: str = "Get Ready"
+    subject: str = "🚨 Space is starting soon 🚨"
+    title: str = "Get Ready!"
 
 
 class CircleAdvertisementEmail(Email):

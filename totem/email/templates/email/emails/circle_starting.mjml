@@ -2,6 +2,6 @@
 {% block message %}
 <mj-text mj-class="p">
   <a class="link-nostyle" href="{{event_link}}">{{event_title}}</a>, is starting soon at <strong>{{start}}</strong>.
-  Click the button below to join the session. If you are more than 5 minutes late, you may not be allowed to participate.
+  Click the button below to join the session. This link expires <strong>5 minutes</strong> after the session starts.
 </mj-text>
 {% endblock message %}

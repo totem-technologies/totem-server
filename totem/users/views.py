@@ -1,6 +1,7 @@
 from auditlog.context import disable_auditlog
 from auditlog.models import LogEntry
 from django import forms
+from django.db import transaction
 from django.contrib import messages
 from django.contrib.auth import login as django_login
 from django.contrib.auth.decorators import login_required
@@ -133,6 +134,7 @@ def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name
     return response
 
 
+@transaction.atomic
 def login(
     request, *, email: str, create_params: dict | None = None, after_login_url: str | None = None, mobile: bool = False
 ) -> bool:

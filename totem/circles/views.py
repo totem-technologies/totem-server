@@ -1,11 +1,11 @@
 from typing import Any
-
 import pytz
 from django.contrib import messages
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
+from django.db import transaction
 from sentry_sdk import capture_exception
 
 from totem.users import analytics
@@ -105,7 +105,8 @@ def rsvp(request: HttpRequest, event_slug):
     error = ""
     if request.POST:
         try:
-            _add_or_remove_attendee(request.user, event, request.POST.get("action") != "remove")
+            with transaction.atomic():
+                _add_or_remove_attendee(request.user, event, request.POST.get("action") != "remove")
         except CircleEventException as e:
             error = str(e)
     if is_ajax(request):
@@ -148,6 +149,7 @@ def topic(request, slug):
     return render(request, "circles/list.html", context=context)
 
 
+@transaction.atomic
 def join(request, event_slug):
     token = request.GET.get("token")
     if token:
@@ -179,6 +181,7 @@ def join(request, event_slug):
     return redirect("circles:event_detail", event_slug=event.slug)
 
 
+@transaction.atomic
 def subscribe(request: HttpRequest, slug: str):
     token = request.GET.get("token")
 
