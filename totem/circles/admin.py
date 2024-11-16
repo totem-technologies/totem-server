@@ -1,3 +1,4 @@
+import datetime
 from typing import Any
 
 from django.contrib import admin, messages
@@ -77,7 +78,7 @@ class CircleEventInline(admin.StackedInline):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        now_minus_2_hour = timezone.now() - timezone.timedelta(hours=2)
+        now_minus_2_hour = timezone.now() - datetime.timedelta(hours=2)
         return qs.filter(start__gte=now_minus_2_hour).order_by("start").prefetch_related("attendees", "joined")
 
     def get_formset(self, request, obj=None, **kwargs):
