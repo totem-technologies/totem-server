@@ -5,7 +5,7 @@
 {% load jsonld %}
 {% load icons %}
 {# djlint:off #}
-{% block title %}{{ object.title }} - Totem Spaces{% endblock title %}
+{% block title %}{{ object.title }}{% endblock title %}
 {% block description %}{{ object.content_text|truncatewords:30 }}{% endblock description %}
 {# djlint:on #}
 {% block jsonld %}

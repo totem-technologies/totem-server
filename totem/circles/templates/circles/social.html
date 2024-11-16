@@ -4,8 +4,11 @@
 {% load icons %}
 {% load avatar %}
 {% load icons %}
-{% block title %}{{ object.title }} - Totem Spaces{% endblock title %}
+{% block title %}{{ object.title }}{% endblock title %}
 {% block description %}{{ object.content_html|striptags|truncatewords:30 }}{% endblock description %}
+{% block meta %}
+<meta name="robots" content="noindex" />
+{% endblock meta %}
 {% block content %}
   <script
     defer

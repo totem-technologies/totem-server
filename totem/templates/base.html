@@ -5,10 +5,12 @@
   <head>
     <meta charset="utf-8" />
     <meta name="keywords" content="totem,circles,peer support" />
+    {% block meta %}
+    {% endblock meta %}
     <meta http-equiv="x-ua-compatible" content="ie=edge" />
     {# djlint:off #}
     <title>
-      Totem - {% block title %}Peer support Spaces{% endblock title %}
+      {% block title %}Peer support spaces{% endblock title %} - Totem Spaces
     </title>
     {% include "_analytics.html" %}
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
