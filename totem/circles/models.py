@@ -318,7 +318,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
 
     def delete(self, *args, **kwargs):
         calendar.delete_event(event_id=self.slug)
-        super().delete(*args, **kwargs)
+        return super().delete(*args, **kwargs)
 
     def password(self):
         return basic_hash(hmac(f"{self.slug}|{self.meeting_url}"))
