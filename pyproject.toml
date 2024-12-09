@@ -57,7 +57,7 @@ dev = [
     # Code quality
     "coverage<8.0.0",
     "pip-tools<8",
-    "pre-commit<4",
+    "pre-commit<5",
     "pylint-django<3.0.0",
     "ruff",
 
