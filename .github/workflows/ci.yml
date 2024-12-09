@@ -24,14 +24,16 @@ jobs:
     steps:
       - name: Checkout Code Repository
         uses: actions/checkout@v4
-
       - uses: jdx/mise-action@v2
-
       - run: npm ci --include=dev
       - run: echo `which python`
       - name: Run pre-commit
         run: |
+          echo `which pip`
           pip install 'pre-commit<5'
+          ls "$HOME/.local/share/mise/bin"
+          ls "$HOME/.local/share/mise/shims"
+          ls $GITHUB_PATH
           pre-commit run --show-diff-on-failure --color=always --all-files
 
   pytest:
