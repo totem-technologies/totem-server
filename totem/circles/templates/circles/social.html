@@ -7,7 +7,12 @@
 {% block title %}{{ object.title }}{% endblock title %}
 {% block description %}{{ object.content_html|striptags|truncatewords:30 }}{% endblock description %}
 {% block meta %}
-<meta name="robots" content="noindex" />
+  <meta name="robots" content="noindex" />
+  <link
+    href="http://fonts.googleapis.com/css?family=Montserrat"
+    name="Montserrat"
+    rel="stylesheet"
+    type="text/css" />
 {% endblock meta %}
 {% block content %}
   <script
