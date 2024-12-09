@@ -34,7 +34,7 @@ jobs:
           ls "$HOME/.local/share/mise/bin"
           ls "$HOME/.local/share/mise/shims"
           ls $GITHUB_PATH
-          pipx pre-commit run --show-diff-on-failure --color=always --all-files
+          pipx run pre-commit run --show-diff-on-failure --color=always --all-files
 
   pytest:
     runs-on: ubuntu-latest
