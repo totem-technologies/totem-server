@@ -6,6 +6,11 @@ for (const imgDiv of imgsDivs) {
   console.log(imgDiv)
   domToPng(imgDiv, {
     scale: 2,
+    fetch: {
+      requestInit: {
+        cache: "no-cache",
+      },
+    },
   }).then((dataUrl) => {
     // generate filename from current URL
     const slug = window.location.pathname
