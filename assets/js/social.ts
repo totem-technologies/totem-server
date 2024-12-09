@@ -1,11 +1,10 @@
-import { domToWebp } from "modern-screenshot"
+import { domToPng } from "modern-screenshot"
 
 const imgsDivs = document.querySelectorAll("[data-img]>div")
 
-// biome-ignore lint/complexity/noForEach: <explanation>
-imgsDivs.forEach((imgDiv) => {
+for (const imgDiv of imgsDivs) {
   console.log(imgDiv)
-  domToWebp(imgDiv, {
+  domToPng(imgDiv, {
     scale: 2,
   }).then((dataUrl) => {
     // generate filename from current URL
@@ -17,9 +16,9 @@ imgsDivs.forEach((imgDiv) => {
     imgDiv.addEventListener("click", () => {
       const link = document.createElement("a")
       link.href = dataUrl
-      link.download = `${slug}.webp`
+      link.download = `${slug}.png`
       console.log(link)
       link.click()
     })
   })
-})
+}
