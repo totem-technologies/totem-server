@@ -28,7 +28,7 @@ jobs:
       - uses: jdx/mise-action@v2
 
       - run: npm ci --include=dev
-
+      - run: echo `which python`
       - name: Run pre-commit
         run: |
           pip install 'pre-commit<5'
