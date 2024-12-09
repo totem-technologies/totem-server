@@ -6,6 +6,12 @@
  * https://unpkg.com/browse/tailwindcss@latest/stubs/defaultConfig.stub.js
  */
 
+import aspectRatio from "@tailwindcss/aspect-ratio"
+import lineClamp from "@tailwindcss/line-clamp"
+import typography from "@tailwindcss/typography"
+import daisyui from "daisyui"
+import { bumblebee } from "daisyui/src/theming/themes"
+
 const basedir = "totem"
 
 // Creme
@@ -39,7 +45,7 @@ const totemColors = {
   pinkTint: "#8B5363",
 }
 
-module.exports = {
+export default {
   content: [
     /**
      * HTML. Paths to Django template files that will contain Tailwind CSS classes.
@@ -93,17 +99,12 @@ module.exports = {
       },
     },
   },
-  plugins: [
-    require("@tailwindcss/typography"),
-    require("@tailwindcss/line-clamp"),
-    require("@tailwindcss/aspect-ratio"),
-    require("daisyui"),
-  ],
+  plugins: [typography, lineClamp, aspectRatio, daisyui],
   daisyui: {
     themes: [
       {
         mytheme: {
-          ...require("daisyui/src/theming/themes").bumblebee,
+          ...bumblebee,
           primary: totemColors.mauve,
         },
       },

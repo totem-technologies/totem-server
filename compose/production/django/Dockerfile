@@ -28,9 +28,11 @@ FROM node:22 AS node-build-stage
 
 WORKDIR /app
 
-COPY . .
+COPY package.json .
+COPY package-lock.json .
 RUN npm install
 
+COPY . .
 COPY assets ./assets
 RUN npm run build
 

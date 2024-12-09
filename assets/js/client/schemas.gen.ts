@@ -434,7 +434,7 @@ export const EventCalendarFilterSchemaSchema = {
             type: 'string'
         },
         month: {
-            default: 11,
+            default: 12,
             description: 'Month of the year, 1-12',
             exclusiveMaximum: 13,
             exclusiveMinimum: 0,

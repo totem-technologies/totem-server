@@ -8,10 +8,10 @@ ARG BUILD_ENVIRONMENT=local
 
 # Install apt packages
 RUN apt-get update && apt-get install --no-install-recommends -y \
-  # dependencies for building Python packages
-  build-essential \
-  # psycopg2 dependencies
-  libpq-dev
+    # dependencies for building Python packages
+    build-essential \
+    # psycopg2 dependencies
+    libpq-dev
 
 RUN pip install uv
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv
@@ -28,9 +28,11 @@ FROM node:22 AS node-build-stage
 
 WORKDIR /app
 
-COPY . .
+COPY package.json .
+COPY package-lock.json .
 RUN npm install
 
+COPY . .
 COPY assets ./assets
 RUN npm run build
 
@@ -49,13 +51,13 @@ WORKDIR ${APP_HOME}
 
 # Install required system dependencies
 RUN apt-get update && apt-get install --no-install-recommends -y \
-  # psycopg2 dependencies
-  libpq-dev \
-  # Translations dependencies
-  gettext \
-  # cleaning up unused files
-  && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-  && rm -rf /var/lib/apt/lists/*
+    # psycopg2 dependencies
+    libpq-dev \
+    # Translations dependencies
+    gettext \
+    # cleaning up unused files
+    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+    && rm -rf /var/lib/apt/lists/*
 
 # All absolute dir copies ignore workdir instruction.
 COPY --from=python-build-stage /opt/venv /opt/venv
