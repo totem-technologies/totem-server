@@ -1,5 +1,10 @@
-run:
-	./node_modules/.bin/concurrently "docker compose -f local.yml up --remove-orphans" "npm run dev"
+MAKEFLAGS += -j4
+.PHONY: *
+
+run: up assets-watch
+
+up:
+	docker compose -f local.yml up --remove-orphans
 
 build:
 	docker compose -f local.yml build
@@ -60,5 +65,3 @@ generate_api_models:
 
 updatedep:
 	uv sync -U
-
-.PHONY: run test shell migrate deploy assets

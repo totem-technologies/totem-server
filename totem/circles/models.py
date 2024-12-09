@@ -163,7 +163,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
     seats = models.IntegerField(default=8)
     start = models.DateTimeField(default=timezone.now)
 
-    class Meta:
+    class Meta:  # pyright: ignore [reportIncompatibleVariableOverride]
         ordering = ["start"]
         unique_together = [["circle", "start", "open", "title"]]
 

@@ -24,12 +24,12 @@ class UserManager(DjangoUserManager["User"]):
         user.save(using=self._db)
         return user
 
-    def create_user(self, email: str, password: str | None = None, **extra_fields):
-        extra_fields.setdefault("is_staff", False)
-        extra_fields.setdefault("is_superuser", False)
-        return self._create_user(email, password, **extra_fields)
+    def create_user(self, email: str, password: str | None = None, *args, **kwargs):
+        kwargs.setdefault("is_staff", False)
+        kwargs.setdefault("is_superuser", False)
+        return self._create_user(email, password, **kwargs)
 
-    def create_superuser(self, email: str, password: str | None = None, **extra_fields):
+    def create_superuser(self, email: str, password: str | None = None, *args, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
 
@@ -40,7 +40,7 @@ class UserManager(DjangoUserManager["User"]):
 
         return self._create_user(email, password, **extra_fields)
 
-    def make_random_password(self):
+    def make_random_password(self, *args, **kwargs):
         # From https://docs.python.org/3.10/library/secrets.html#recipes-and-best-practices
         alphabet = string.ascii_letters + string.digits
         while True:

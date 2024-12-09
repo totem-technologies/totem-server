@@ -36,5 +36,5 @@ class AdminURLMixin:
 class SluggedModel(BaseModel):
     slug = models.SlugField(db_index=True, unique=True, editable=False, blank=True, default=make_slug)
 
-    class Meta:
+    class Meta:  # pyright: ignore [reportIncompatibleVariableOverride]
         abstract = True

@@ -417,8 +417,8 @@ function FilterBar() {
 function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
   const context = useContext(CircleListContext)
   const [refs, setRefs] = createSignal<HTMLAnchorElement[]>([])
-  let scrollableRef: HTMLDivElement
-  let containerRef: HTMLDivElement
+  let scrollableRef: HTMLDivElement | undefined
+  let containerRef: HTMLDivElement | undefined
   createEffect(() => {
     if (context?.scrolling()) return
     // scroll active date into view, dont use scrollIntoView
@@ -428,10 +428,10 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
       const centerActive =
         active.getBoundingClientRect().left +
         active.getBoundingClientRect().width / 2
-      const containerCenter = containerRef?.getBoundingClientRect().width / 2
-      scrollableRef.scrollTo({
+      const containerCenter = containerRef?.getBoundingClientRect().width??2 / 2
+      scrollableRef?.scrollTo({
         left:
-          Math.abs(containerRef.getBoundingClientRect().left) +
+          Math.abs(containerRef?.getBoundingClientRect().left??0) +
           centerActive -
           containerCenter,
         behavior: "smooth",

@@ -97,8 +97,8 @@ class CircleAdmin(admin.ModelAdmin):
         CircleEventInline,
     ]
 
-    def get_form(self, request, obj=None, **kwargs):
-        form = super().get_form(request, obj, **kwargs)
+    def get_form(self, request, obj=None, change=False, **kwargs):
+        form = super().get_form(request, obj, change, **kwargs)
         form.base_fields["author"].initial = request.user  # type: ignore
         form.base_fields["subscribed"].initial = [request.user]  # type: ignore
         return form
