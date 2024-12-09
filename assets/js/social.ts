@@ -7,11 +7,6 @@ for (const imgDiv of imgsDivs) {
   imgDiv.addEventListener("click", async () => {
     const dataUrl = await domToPng(imgDiv, {
       scale: 2,
-      fetch: {
-        requestInit: {
-          cache: "no-cache",
-        },
-      },
     })
     // generate filename from current URL
     const slug = window.location.pathname

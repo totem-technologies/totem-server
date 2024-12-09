@@ -8,6 +8,7 @@
 {% block description %}{{ object.content_html|striptags|truncatewords:30 }}{% endblock description %}
 {% block meta %}
   <meta name="robots" content="noindex" />
+  {% comment %}Adding Google fonts seems to let the screenshot work{% endcomment %}
   <link
     href="http://fonts.googleapis.com/css?family=Montserrat"
     name="Montserrat"
