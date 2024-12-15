@@ -9,6 +9,8 @@ from django.utils import timezone
 
 from totem.utils.models import BaseModel
 
+MAX_ACTIVITY_PAGES = 100
+
 # subscribe: form, welcome email, subscribed page
 # unsubscribe: unsubscribe link, unsubscribe page, unsubscribe email
 
@@ -81,10 +83,13 @@ class EmailActivity(BaseModel):
 
     @classmethod
     def fetch_email_activity(cls):
-        # If the newest log is less than 12 hours old, don't fetch new logs
-        if cls.objects.latest("timestamp").timestamp > timezone.now() - timedelta(hours=12):
-            print("Skipping fetch_email_activity because the newest log is less than 12 hours old.")
-            return
+        try:
+            # If the newest log is less than 12 hours old, don't fetch new logs
+            if cls.objects.latest("timestamp").timestamp > timezone.now() - timedelta(hours=12):
+                print("Skipping fetch_email_activity because the newest log is less than 12 hours old.")
+                return
+        except cls.DoesNotExist:
+            pass
         _fetch_email_activity()
 
     @classmethod
@@ -100,10 +105,10 @@ def _fetch_email_activity():
     if not settings.MAILERSEND_DOMAIN_ID:
         raise Exception("MAILERSEND_DOMAIN_ID not set")
     page = 1
-    now = datetime.now()
+    now = timezone.now()
     while True:
         next = _get_activity_page(page, now)
-        if not next:
+        if not next or page > MAX_ACTIVITY_PAGES:
             break
         page += 1
 
@@ -124,10 +129,14 @@ def _get_activity_page(page: int, now: datetime):
     }
 
     headers = {"Authorization": f"Bearer {settings.MAILERSEND_API_TOKEN}"}
-    response = requests.get(MAILERSEND_API_URL, headers=headers, params=params)
 
-    if response.status_code != 200:
-        raise Exception(f"MailerSend API error: {response.status_code} - {response.text}")
+    try:
+        response = requests.get(MAILERSEND_API_URL, headers=headers, params=params, timeout=10)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"Failed to fetch email activity: {e}")
+        return False
+
     payload = response.json()
     next = payload.get("links", {}).get("next")
     activities = payload.get("data", [])
