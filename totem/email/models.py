@@ -94,7 +94,7 @@ class EmailActivity(BaseModel):
 
     @classmethod
     def clear_old(cls):
-        cls.objects.filter(created__lte=timezone.now() - timedelta(days=365)).delete()
+        cls.objects.filter(date_created__lte=timezone.now() - timedelta(days=365)).delete()
 
 
 def _fetch_email_activity():
