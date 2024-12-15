@@ -1,8 +1,13 @@
-from .models import EmailLog
+from .models import EmailActivity, EmailLog
 
 
-def clear_old_email_logs():
+def clear_old_logs():
     EmailLog.clear_old()
+    EmailActivity.clear_old()
 
 
-tasks = [clear_old_email_logs]
+def backup_email_activity():
+    EmailActivity.fetch_email_activity()
+
+
+tasks = [clear_old_logs, backup_email_activity]

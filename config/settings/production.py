@@ -1,7 +1,7 @@
 import socket
 
 from .base import *  # noqa
-from .base import env
+from .base import MAILERSEND_API_TOKEN, env
 
 STATIC_HOST = STATIC_HOST or None  # noqa: F405
 
@@ -28,7 +28,7 @@ DATABASES["default"]["CONN_MAX_AGE"] = env.int("CONN_MAX_AGE", default=60)  # no
 #         "LOCATION": env("REDIS_URL"),
 #         "OPTIONS": {
 #             "CLIENT_CLASS": "django_redis.client.DefaultClient",
-#             # Mimicing memcache behavior.
+#             # Mimicking memcache behavior.
 #             # https://github.com/jazzband/django-redis#memcached-exceptions-behavior
 #             "IGNORE_EXCEPTIONS": True,
 #         },
@@ -79,7 +79,7 @@ INSTALLED_APPS += ["anymail"]  # noqa: F405
 # # https://anymail.readthedocs.io/en/stable/installation/#anymail-settings-reference
 # # https://anymail.readthedocs.io/en/stable/esps/mailgun/
 EMAIL_BACKEND = "anymail.backends.mailersend.EmailBackend"
-ANYMAIL = {"MAILERSEND_API_TOKEN": env("MAILERSEND_API_TOKEN"), "MAILERSEND_BATCH_SEND_MODE": "use-bulk-email"}
+ANYMAIL = {"MAILERSEND_API_TOKEN": MAILERSEND_API_TOKEN, "MAILERSEND_BATCH_SEND_MODE": "use-bulk-email"}
 
 
 # LOGGING

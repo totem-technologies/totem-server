@@ -47,7 +47,7 @@ else:
 
 # INSTALLED_APPS += ["anymail"]  # noqa: F405
 # EMAIL_BACKEND = "anymail.backends.mailersend.EmailBackend"
-# ANYMAIL = {"MAILERSEND_API_TOKEN": env("MAILERSEND_API_TOKEN"), "MAILERSEND_BATCH_SEND_MODE": "use-bulk-email"}
+# ANYMAIL = {"MAILERSEND_API_TOKEN": MAILERSEND_API_TOKEN, "MAILERSEND_BATCH_SEND_MODE": "use-bulk-email"}
 
 # WhiteNoise
 # ------------------------------------------------------------------------------

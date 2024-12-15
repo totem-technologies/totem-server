@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import EmailLog, SubscribedModel
+from .models import EmailActivity, EmailLog, SubscribedModel
 
 
 @admin.register(SubscribedModel)
@@ -19,3 +19,10 @@ class EmailLogAdmin(admin.ModelAdmin):
     list_filter = ["template"]
     readonly_fields = [field.name for field in EmailLog._meta.get_fields()]
     actions = [clear_logs]
+
+
+@admin.register(EmailActivity)
+class EmailActivityAdmin(admin.ModelAdmin):
+    list_display = ("email", "event_type", "timestamp", "subject", "status")
+    search_fields = ("email", "subject", "event_type", "status")
+    list_filter = ("event_type", "status", "timestamp")

@@ -1,6 +1,8 @@
 MAKEFLAGS += -j4
 .PHONY: *
 
+RUN_DJANGO = docker compose -f local.yml run --rm --remove-orphans django
+
 run: up assets-watch
 
 up:
@@ -18,13 +20,13 @@ test-js:
 	npm run test:ci
 
 test-python:
-	docker compose -f local.yml run --rm django coverage run -m pytest -n auto
+	@${RUN_DJANGO} coverage run -m pytest -n auto
 
 tasks:
-	docker compose -f local.yml run --rm django python manage.py totem_tasks
+	@${RUN_DJANGO} python manage.py totem_tasks
 
 shell:
-	docker compose -f local.yml run --rm django bash
+	@${RUN_DJANGO} bash
 
 dbshell:
 	docker compose -f local.yml exec postgres bash
@@ -33,7 +35,7 @@ sqlshell:
 	docker compose -f local.yml exec postgres psql -U debug -d totem
 
 pyshell:
-	docker compose -f local.yml run --rm django ./manage.py shell_plus
+	@${RUN_DJANGO} ./manage.py shell_plus
 
 deploy:
 	git push dokku
@@ -55,16 +57,16 @@ install_local: .venv
 	npm install
 
 fixtures:
-	docker compose -f local.yml run --rm django python manage.py load_dev_data
+	@${RUN_DJANGO} python manage.py load_dev_data
 
 migrations: ## Create DB migrations in the container
-	@docker compose -f local.yml run django python manage.py makemigrations
+	@${RUN_DJANGO} python manage.py makemigrations
 
 migrate: ## Run DB migrations in the container
-	@docker compose -f local.yml run django python manage.py migrate
+	@${RUN_DJANGO} python manage.py migrate
 
 generate_api_models:
-	@docker compose -f local.yml run --rm --remove-orphans django python manage.py export_openapi_schema --api totem.api.api.api > openapi.json
+	@${RUN_DJANGO} python manage.py export_openapi_schema --api totem.api.api.api > openapi.json
 	@npm run openapi-ts
 
 updatedep:
