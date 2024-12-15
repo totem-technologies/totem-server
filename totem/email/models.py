@@ -6,7 +6,8 @@ from django.conf import settings
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
-from utils.models import BaseModel
+
+from totem.utils.models import BaseModel
 
 # subscribe: form, welcome email, subscribed page
 # unsubscribe: unsubscribe link, unsubscribe page, unsubscribe email
