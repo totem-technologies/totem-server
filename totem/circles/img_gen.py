@@ -4,6 +4,7 @@ import json
 import os
 from dataclasses import asdict, dataclass
 from io import BytesIO
+from math import floor
 
 import requests
 from django.conf import settings
@@ -12,7 +13,9 @@ from PIL.ImageFile import ImageFile
 
 folder_path = os.path.dirname(os.path.realpath(__file__))
 font_path = f"{folder_path}/../static/fonts/Montserrat-VariableFont_wght.ttf"
+logo_path = f"{folder_path}/../static/images/totem-logo.png"
 client = requests.session()
+PADDING = 20
 
 
 @dataclass
@@ -37,6 +40,24 @@ class ImageParams:
         print(input_string)
         sha256_hash.update(input_string.encode("utf-8"))
         return sha256_hash.hexdigest()
+
+
+def adjust_transparency(img: Image.Image, opacity=0.2):
+    # factor is a number between 0 and 1
+    # Convert the image into RGBA (if not already) and get its pixels
+    img = img.convert("RGBA")
+    pixels = img.getdata()
+
+    new_pixels = []
+
+    for pixel in pixels:
+        # Change the fourth value (alpha) in each pixel according to opacity percentage
+        new_pixel = (pixel[0], pixel[1], pixel[2], int(opacity * pixel[3]))
+        new_pixels.append(new_pixel)
+
+    # Update the pixels of the image with our newly modified pixels and return it
+    img.putdata(new_pixels)
+    return img
 
 
 def _make_gradient(image):
@@ -132,11 +153,19 @@ def _draw_avatar(image: Image.Image, avatar_path: str):
         ),
         dest=(border_width, border_width),
     )
-    image.alpha_composite(
-        canvas, dest=(image.width - canvas.width - border_width, image.height - canvas.width - border_width)
-    )
+    image.alpha_composite(canvas, dest=(image.width - canvas.width - PADDING, image.height - canvas.width - PADDING))
     # Uncomment to see avatar render
     # canvas.save("circular_avatar.png")
+
+
+def _draw_logo(image: Image.Image):
+    logo = Image.open(logo_path).convert("RGBA")
+    scale_factor = image.height / 10000
+    logo_size_height = floor(logo.height * scale_factor)
+    logo_size_width = floor(logo.width * scale_factor)
+    logo = logo.resize((logo_size_width, logo_size_height))
+    logo = adjust_transparency(logo)
+    image.alpha_composite(logo, dest=(PADDING, image.height - logo.height - PADDING))
 
 
 def _load_img(path: str):
@@ -154,7 +183,7 @@ def generate_image(params: ImageParams):
     image = _make_gradient(image)
 
     # Set up text
-    text_position = (20, 20)  # (x, y) coordinates
+    text_position = (PADDING, PADDING)  # (x, y) coordinates
     scale_factor = (params.width * params.height) // 1000  # Factor is a ratio of width and height.
     spacing = scale_factor // 30
 
@@ -169,7 +198,7 @@ def generate_image(params: ImageParams):
     )
     text_position = _draw_wrapped_text(
         image,
-        f"with {params.author_name}",
+        f"with {params.author_name} @ totem.org",
         (text_position[0], text_position[1] + 10),
         font_size=scale_factor // 30,
         variation="Regular",
@@ -198,6 +227,7 @@ def generate_image(params: ImageParams):
 
     # Plop that cherry on top
     _draw_avatar(image, params.author_img_path)
+    # _draw_logo(image)
     return image.convert("RGB")
 
 
