@@ -72,16 +72,24 @@
     </button>
   </div>
   <div class="m-auto max-w-5xl px-5 pt-10">
-    <img
-      class="h-[540px] w-[540px]"
-      src="{% url 'circles:event_social_img' event_slug=event.slug image_format="square" %}"
-      alt="" />
+    <a
+      href="{% url 'circles:event_social_img' event_slug=event.slug image_format="square" %}">
+      <img
+        data-download
+        class="h-[540px] w-[540px]"
+        src="{% url 'circles:event_social_img' event_slug=event.slug image_format="square" %}"
+        alt="" />
+    </a>
   </div>
 
   <div class="m-auto max-w-5xl px-5 pt-10">
-    <img
-      class="h-[270px] w-[540px]"
-      src="{% url 'circles:event_social_img' event_slug=event.slug image_format="2to1" %}"
-      alt="" />
+    <a
+      href="{% url 'circles:event_social_img' event_slug=event.slug image_format="2to1" %}">
+      <img
+        data-download
+        class="h-[270px] w-[540px]"
+        src="{% url 'circles:event_social_img' event_slug=event.slug image_format="2to1" %}"
+        alt="" />
+    </a>
   </div>
 {% endblock content %}

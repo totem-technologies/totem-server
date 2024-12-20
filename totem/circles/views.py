@@ -267,7 +267,7 @@ def event_social_img(request: HttpRequest, event_slug: str, image_format: str):
     # start time in est
     start_time_est = event.start.astimezone(pytz.timezone("US/Eastern")).strftime("%I:%M %p") + " EST"
     buffer = BytesIO()
-    _make_social_img(event, start_day, start_time_pst, start_time_est, image_size).save(buffer, "JPEG")
+    _make_social_img(event, start_day, start_time_pst, start_time_est, image_size).save(buffer, "JPEG", optimize=True)
     response = HttpResponse(content_type="image/jpeg")
     response.write(buffer.getvalue())
     return response
