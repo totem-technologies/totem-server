@@ -13,11 +13,11 @@ class TestLogInView:
         with pytest.raises(User.DoesNotExist):
             User.objects.get(email=email)
         response = client.post(reverse("users:login"), {"email": email})
-        # Check that the response is a redirect to the success URL
-        assert response.status_code == 302
-        assert response.url == reverse("users:redirect")
-        # Check that an email NOT was sent
-        assert len(mail.outbox) == 0
+        # Check that the response is a 200
+        assert response.status_code == 200
+        # Check that an email was sent
+        assert len(mail.outbox) == 1
+        assert "link" in mail.outbox[0].body
         # Check that a new user was created
         count = User.objects.count()
         assert count == 1
@@ -26,14 +26,15 @@ class TestLogInView:
         assert user.newsletter_consent is False
 
     def test_signup_new_with_consent(self, client):
+        assert len(mail.outbox) == 0
         email = "testuserconsent@totem.org"
         with pytest.raises(User.DoesNotExist):
             User.objects.get(email=email)
         response = client.get(reverse("users:signup"))
         assert "newsletter_consent" in response.content.decode()
         client.post(reverse("users:signup"), {"email": email, "newsletter_consent": True})
-        # Check that an email NOT was sent
-        assert len(mail.outbox) == 0
+        # Check that an email was sent
+        assert len(mail.outbox) == 1
         user = User.objects.get(email=email)
         assert user.newsletter_consent is True
 
@@ -43,9 +44,7 @@ class TestLogInView:
         count = User.objects.count()
         # Submit the login form with an existing email
         response = client.post(reverse("users:login"), {"email": user.email, "name": "Not my name"})
-        # Check that the response is a redirect to the success URL
-        assert response.status_code == 302
-        assert response.url == reverse("users:login")
+        assert response.status_code == 200
         # Check that an email was sent
         assert len(mail.outbox) == 1
         assert mail.outbox[0].to == [user.email]
@@ -78,9 +77,7 @@ class TestLogInView:
                 "after_login_url": "/foo",
             },
         )
-        # Check that the response is a redirect to the success URL
-        assert response.status_code == 302
-        assert response.url == reverse("users:login")
+        assert response.status_code == 200
         # Check that an email was sent
         assert len(mail.outbox) == 1
         assert mail.outbox[0].to == [user.email]
@@ -103,9 +100,7 @@ class TestLogInView:
                 "after_login_url": "https://attacker.com",
             },
         )
-        # Check that the response is a redirect to the success URL
-        assert response.status_code == 302
-        assert response.url == reverse("users:login")
+        assert response.status_code == 200
         # Check that an email was sent
         assert len(mail.outbox) == 1
         assert mail.outbox[0].to == [user.email]

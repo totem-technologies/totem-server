@@ -1,6 +1,7 @@
 from django.urls import path
 
 from totem.users.views import (
+    login_link_view,
     login_view,
     signup_view,
     user_dashboard_view,
@@ -16,6 +17,7 @@ from totem.users.views import (
 app_name = "users"
 urlpatterns = [
     path("~redirect/", view=user_redirect_view, name="redirect"),
+    path("login/linksent", login_link_view, name="login_link"),
     path("login/", login_view, name="login"),
     path("signup/", signup_view, name="signup"),
     path("dashboard/", user_dashboard_view, name="dashboard"),

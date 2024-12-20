@@ -12,7 +12,10 @@ function init() {
       globalThis.TOTEM_DATA.reload_on_login === true &&
       event.data === LOGIN_MESSAGE
     ) {
-      globalThis.location.reload()
+      // biome-ignore lint/correctness/noSelfAssign: This has an effect
+      globalThis.location.href = globalThis.location.href
+      // No .reload() as it sends POST data again.
+      // globalThis.location.reload()
     }
   }
   if (globalThis.TOTEM_DATA.is_authenticated === true) {

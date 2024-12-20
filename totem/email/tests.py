@@ -3,7 +3,7 @@ from django.test import Client, override_settings
 from django.urls import reverse
 
 from totem.circles.tests.factories import CircleEventFactory
-from totem.email.emails import missed_event_email, notify_circle_advertisement, returning_login_email
+from totem.email.emails import login_email, missed_event_email, notify_circle_advertisement
 from totem.users.tests.factories import UserFactory
 
 from .views import get_templates
@@ -95,7 +95,7 @@ class TestReturningUsers:
     def test_returning_users(self, client, db):
         user = UserFactory()
         user.save()
-        returning_login_email(user.email, reverse("pages:home")).send()
+        login_email(user.email, reverse("pages:home")).send()
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
@@ -106,7 +106,7 @@ class TestReturningUsers:
         user = UserFactory()
         user.save()
         client.force_login(user)
-        returning_login_email(user.email, reverse("pages:home")).send()
+        login_email(user.email, reverse("pages:home")).send()
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]

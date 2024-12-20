@@ -99,7 +99,7 @@ class ButtonEmail(Email):
 class LoginEmail(ButtonEmail):
     button_text: str = "Sign in"
     subject: str = "Totem sign in link"
-    title: str = "Sign in link"
+    title: str = "Let's get you signed in"
     message: str = "You requested a link to sign in, and here it is! Note that this link expires in an hour and can only be used once."
 
 
@@ -189,7 +189,7 @@ def welcome_email(user: User) -> BrevoEmail:
     return WelcomeEmail(recipient=user.email)
 
 
-def returning_login_email(email: str, url: str) -> Email:
+def login_email(email: str, url: str) -> Email:
     _url = _make_email_url(url)
     if settings.DEBUG:
         print("------------------------------------------")
