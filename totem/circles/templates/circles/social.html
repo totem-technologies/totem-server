@@ -9,11 +9,13 @@
 {% block meta %}
   <meta name="robots" content="noindex" />
   {% comment %}Adding Google fonts seems to let the screenshot work{% endcomment %}
-  <link
-    href="http://fonts.googleapis.com/css?family=Montserrat"
-    name="Montserrat"
-    rel="stylesheet"
-    type="text/css" />
+  {% comment %}
+    <link
+      href="http://fonts.googleapis.com/css?family=Montserrat"
+      name="Montserrat"
+      rel="stylesheet"
+      type="text/css" />
+  {% endcomment %}
 {% endblock meta %}
 {% block content %}
   <script
@@ -68,5 +70,18 @@
         </div>
       </div>
     </button>
+  </div>
+  <div class="m-auto max-w-5xl px-5 pt-10">
+    <img
+      class="h-[540px] w-[540px]"
+      src="{% url 'circles:event_social_img' event_slug=event.slug image_format="square" %}"
+      alt="" />
+  </div>
+
+  <div class="m-auto max-w-5xl px-5 pt-10">
+    <img
+      class="h-[270px] w-[540px]"
+      src="{% url 'circles:event_social_img' event_slug=event.slug image_format="2to1" %}"
+      alt="" />
   </div>
 {% endblock content %}
