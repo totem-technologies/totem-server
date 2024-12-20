@@ -1,10 +1,10 @@
-import base64
 import hashlib
-import json
 import os
 from dataclasses import asdict, dataclass
+from functools import lru_cache
 from io import BytesIO
 from math import floor
+from typing import Any
 
 import requests
 from django.conf import settings
@@ -31,22 +31,25 @@ class ImageParams:
     width: int
     height: int
 
-    def cache_key(self):
+    def cache_key(self) -> int:
+        # It's important for this to be stable across instances
+        # in case it's sent to a shared cache.
         VERSION = 1  # bump to invalidate all them cache
         sha256_hash = hashlib.sha256()
-        # Let's attempt to make this somewhat stable in the face of changes we don't care about.
-        json_string = json.dumps([[k, v] for (k, v) in sorted(list(asdict(self).items()))])
-        input_string = f"{VERSION}:{json_string}"
-        print(input_string)
+        data_dict = asdict(self)
+        input_string = f"{VERSION}:{data_dict}"
         sha256_hash.update(input_string.encode("utf-8"))
-        return sha256_hash.hexdigest()
+        return int.from_bytes(sha256_hash.digest())
+
+    def __hash__(self):
+        return self.cache_key()
 
 
 def adjust_transparency(img: Image.Image, opacity=0.2):
     # factor is a number between 0 and 1
     # Convert the image into RGBA (if not already) and get its pixels
     img = img.convert("RGBA")
-    pixels = img.getdata()
+    pixels: Any = img.getdata()
 
     new_pixels = []
 
@@ -177,6 +180,7 @@ def _load_img(path: str):
         return Image.open(path)
 
 
+@lru_cache(maxsize=100)
 def generate_image(params: ImageParams):
     image = _load_img(params.background_path)  # Replace with your image path
     image = _resize(image, params.width, params.height).convert("RGBA")
@@ -231,15 +235,15 @@ def generate_image(params: ImageParams):
     return image.convert("RGB")
 
 
-def image_to_data_url(image: Image.Image):
-    # Save the image in memory as bytes
-    with BytesIO() as output:
-        image.save(output, format="JPEG")
-        contents = output.getvalue()
+# def image_to_data_url(image: Image.Image):
+#     # Save the image in memory as bytes
+#     with BytesIO() as output:
+#         image.save(output, format="JPEG")
+#         contents = output.getvalue()
 
-    # Encode the bytes as base64 and create a data URL
-    encoded_image = base64.b64encode(contents).decode("utf-8")
-    return f"data:image/png;base64,{encoded_image}"
+#     # Encode the bytes as base64 and create a data URL
+#     encoded_image = base64.b64encode(contents).decode("utf-8")
+#     return f"data:image/png;base64,{encoded_image}"
 
 
 def _test():
