@@ -95,10 +95,10 @@ def user_avatar_update(request: HttpRequest, avatar_data: AvatarUpdate):
 
 
 @api.post("/user/avatarimage", response={200: None, 404: Message})
-def user_upload_profile_image(request, file: UploadedFile = File(...)):
+def user_upload_profile_image(request, file: UploadedFile = File(...)):  # type: ignore
     if not request.user.is_authenticated:
         return 404, {"message": "Not found"}
     user: User = request.user  # type: ignore
-    user.profile_image = file.read()
+    user.profile_image.save(file.name, file)
     user.save()
     return None
