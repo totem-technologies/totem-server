@@ -372,7 +372,7 @@ function Loading() {
   return (
     <DetailBox>
       <div class="text-center">
-        <div class="spinner-border" role="status">
+        <div class="spinner-border">
           <span class="loading loading-spinner loading-lg" />
         </div>
       </div>
@@ -398,12 +398,12 @@ function DetailSidebar(props: DetailSidebarProps) {
     queryKey: ["eventData"],
     queryFn: async () => {
       const response = await totemCirclesApiEventDetail({
-        path: { event_slug: props.eventid! },
+        path: { event_slug: props.eventid || "" },
       })
       if (response.error) {
         throw new Error(response.error as string)
       }
-      return response.data!
+      return response.data
     },
     throwOnError: true,
   }))

@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/solid-query"
 import { customElement, noShadowDOM } from "solid-element"
-import { Component, JSXElement } from "solid-js"
+import type { Component, JSXElement } from "solid-js"
 import Avatar from "./avatar"
 import Circles from "./circles"
 import DetailSidebar from "./detailSidebar"
+import { EditAvatar } from "./editAvatar"
 import ErrorBoundary from "./errors"
 import EventCalendar from "./eventCalendar"
 import PromptSearch from "./promptSearch"
@@ -23,6 +24,7 @@ const components: WCComponent[] = [
   DetailSidebar,
   EventCalendar,
   Time,
+  EditAvatar,
 ]
 
 type CustomElementProps = (typeof components)[number]["propsDefault"] & {
@@ -30,7 +32,9 @@ type CustomElementProps = (typeof components)[number]["propsDefault"] & {
 }
 
 export default function () {
-  components.forEach((c) => customElementWC(c.tagName, c.propsDefault || {}, c))
+  for (const c of components) {
+    customElementWC(c.tagName, c.propsDefault || {}, c)
+  }
 }
 
 const queryClient = new QueryClient({})
@@ -49,14 +53,14 @@ function customElementWC(
       const slots = element.querySelectorAll(
         "[slot]"
       ) as NodeListOf<HTMLSlotElement>
-      slots.forEach((slot: HTMLSlotElement) => {
-        const slotName = slot.getAttribute("slot")!
+      for (const slot of slots) {
+        const slotName = slot.getAttribute("slot")
         if (slotName !== null) {
           // eslint-disable-next-line solid/no-innerhtml
           props[slotName] = <div innerHTML={slot.innerHTML} />
           slot.remove()
         }
-      })
+      }
 
       props.children = element.innerHTML as string | undefined
       element.innerHTML = ""

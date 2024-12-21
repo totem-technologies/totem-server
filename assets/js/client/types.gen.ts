@@ -5,6 +5,11 @@ export type AuthorFilterSchema = {
     slug: string;
 };
 
+export type AvatarUpdate = {
+    avatar_type: (ProfileAvatarTypeEnum | null);
+    update_avatar_seed: (boolean | null);
+};
+
 export type CategoryFilterSchema = {
     name: string;
     slug: string;
@@ -151,6 +156,24 @@ export type TotemApiApiTokenError = unknown;
 export type TotemApiApiCurrentUserResponse = (UserSchema);
 
 export type TotemApiApiCurrentUserError = (Message);
+
+export type TotemApiApiUserAvatarUpdateData = {
+    body: AvatarUpdate;
+};
+
+export type TotemApiApiUserAvatarUpdateResponse = (unknown);
+
+export type TotemApiApiUserAvatarUpdateError = (Message);
+
+export type TotemApiApiUserUploadProfileImageData = {
+    body: {
+        file: (Blob | File);
+    };
+};
+
+export type TotemApiApiUserUploadProfileImageResponse = (unknown);
+
+export type TotemApiApiUserUploadProfileImageError = (Message);
 
 export type TotemCirclesApiListEventsData = {
     query: {
