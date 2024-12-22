@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING
 
-from django.templatetags.static import static
+from django.urls import reverse
 
 if TYPE_CHECKING:
     from totem.circles.models import CircleEvent
@@ -61,7 +61,7 @@ def create_jsonld(event: "CircleEvent"):
     # Create a JSON-LD object for a online virtual event
     title = event.title or event.circle.title
     description = event.content_text or event.circle.content_text
-    url = full_url(event.get_absolute_url())
+    absurl = full_url(event.get_absolute_url())
     jsonld = {
         "@context": "https://schema.org",
         "@type": "Event",
@@ -72,12 +72,12 @@ def create_jsonld(event: "CircleEvent"):
         "eventAttendanceMode": "https://schema.org/OnlineEventAttendanceMode",
         "location": {
             "@type": "VirtualLocation",
-            "url": url,
+            "url": absurl,
         },
         "description": description,
         "offers": {
             "@type": "Offer",
-            "url": url,
+            "url": absurl,
             "price": event.circle.price,
             "priceCurrency": "USD",
             "availability": _availability(event),
@@ -92,9 +92,7 @@ def create_jsonld(event: "CircleEvent"):
             "url": "https://www.totem.org",
         },
     }
-
-    if event.circle.image:
-        jsonld["image"] = [full_url(event.circle.image.url)]
-    else:
-        jsonld["image"] = [full_url(static("images/ogimage.jpg"))]
+    jsonld["image"] = [
+        full_url(reverse("circles:event_social_img", kwargs={"event_slug": event.slug, "image_format": "2to1"}))
+    ]
     return jsonld
