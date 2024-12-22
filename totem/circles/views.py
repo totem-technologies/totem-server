@@ -1,11 +1,14 @@
+from io import BytesIO
 from typing import Any
+
 import pytz
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
-from django.db import transaction
 from sentry_sdk import capture_exception
 
 from totem.users import analytics
@@ -18,6 +21,7 @@ from .filters import (
     all_upcoming_recommended_circles,
     upcoming_events_by_author,
 )
+from .img_gen import ImageParams, generate_image
 from .models import Circle, CircleCategory, CircleEvent, CircleEventException
 
 ICS_QUERY_PARAM = "key"
@@ -248,3 +252,56 @@ def event_social(request: HttpRequest, event_slug: str):
             "start_time_est": start_time_est,
         },
     )
+
+
+def event_social_img(request: HttpRequest, event_slug: str, image_format: str):
+    image_size = {"square": (1080, 1080), "2to1": (1280, 640)}.get(image_format)
+    if not image_size:
+        raise Http404
+
+    event = _get_circle_event(event_slug)
+    # {{ event.start | date:"F j, Y" }}
+    start_day = event.start.strftime("%B %d, %Y")
+    # start time in pst
+    start_time_pst = event.start.astimezone(pytz.timezone("US/Pacific")).strftime("%I:%M %p") + " PST"
+    # start time in est
+    start_time_est = event.start.astimezone(pytz.timezone("US/Eastern")).strftime("%I:%M %p") + " EST"
+    buffer = BytesIO()
+    _make_social_img(event, start_day, start_time_pst, start_time_est, image_size).save(buffer, "JPEG", optimize=True)
+    response = HttpResponse(content_type="image/jpeg")
+    response.write(buffer.getvalue())
+    return response
+
+
+def _make_social_img(event: CircleEvent, start_day, start_time_pst, start_time_est, image_size: tuple):
+    title = event.circle.title
+    subtitle = event.circle.subtitle
+    if event.title:
+        title = event.title
+        subtitle = event.circle.title
+
+    background_url = f"{settings.BASE_DIR}/totem/static/images/circles/test-background.jpg"
+    if event.circle.image:
+        background_url = event.circle.image.url
+        if background_url.startswith("/"):
+            background_url = f"totem/{background_url}"
+
+    author_profile_url = f"{settings.BASE_DIR}/totem/static/images/default_profile.webp"
+    if event.circle.author.profile_image:
+        author_profile_url = event.circle.author.profile_image.url
+        if author_profile_url.startswith("/"):
+            author_profile_url = f"totem/{author_profile_url}"
+
+    params = ImageParams(
+        background_path=background_url,
+        author_img_path=author_profile_url,
+        author_name=event.circle.author.name,
+        title=title,
+        subtitle=subtitle,
+        day=start_day,
+        time_pst=start_time_pst,
+        time_est=start_time_est,
+        width=image_size[0],
+        height=image_size[1],
+    )
+    return generate_image(params)

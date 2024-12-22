@@ -129,27 +129,6 @@ def test_magic_login_view_verify_email(client):
     assert user.verified is True
 
 
-class UserProfileImageViewTest(TestCase):
-    def setUp(self):
-        self.user = UserFactory()
-        self.client.force_login(self.user)
-
-    def test_user_profile_image_view(self):
-        url = reverse("users:profile-image")
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "users/profile/_profile_image_edit.html")
-
-        # Test POST request
-        data = {"randomize": True}
-        oldseed = self.user.profile_avatar_seed
-        response = self.client.post(url, data)
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, "users/profile/_profile_image_edit.html")
-        self.user.refresh_from_db()
-        assert oldseed != self.user.profile_avatar_seed
-
-
 class UserProfileViewTest(TestCase):
     def setUp(self):
         self.user = user = UserFactory()

@@ -18,7 +18,7 @@ def avatar(user: User, size=120, blank_ok=False, classes="", tooltip=False):
     }
     if tooltip:
         ctx["tooltip"] = True
-    # if user.profile_avatar_type == User.ProfileChoices.IMAGE:
+
     if user.profile_image:
         ctx["src"] = user.profile_image.url
     return ctx

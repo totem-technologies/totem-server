@@ -54,7 +54,7 @@ def get_templates():
     # files = Path(__file__).parent.joinpath("templates/email/emails").glob("*.mjml")
     # return {file.stem: file.name for file in files}
     def login_email():
-        return emails.returning_login_email(
+        return emails.login_email(
             email="bo@totem.org",
             url="https://totem.org",
         )

@@ -160,7 +160,7 @@ class EventCalendarSchema(Schema):
 
 
 class EventCalendarFilterSchema(FilterSchema):
-    space_slug: str = Field(default=None, description="Space slug")
+    space_slug: str = Field(default="", description="Space slug")
     month: int = Field(default=datetime.now().month, description="Month of the year, 1-12", gt=0, lt=13)
     year: int = Field(default=datetime.now().year, description="Year of the month, e.g. 2024", gt=1000, lt=3000)
 

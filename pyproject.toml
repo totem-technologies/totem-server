@@ -29,7 +29,6 @@ dependencies = [
     "django-auditlog<4",
     "django-cors-headers<5",
     "django-environ==0.11.2",
-    "django-htmx<2",
     "django-imagekit<6.0.0",
     "django-impersonate<2",
     "django-ninja<2",

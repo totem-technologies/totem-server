@@ -1,0 +1,32 @@
+{% extends "account/base.html" %}
+{% load i18n %}
+{% load static %}
+{% load settings_value %}
+{# djlint:off #}
+{% block head_title %}{% translate "Link Sent" %}{% endblock head_title %}
+{# djlint:on #}
+{% block javascript %}
+  <script>
+    window.TOTEM_DATA.reload_on_login = true
+  </script>
+{% endblock javascript %}
+{% block inner %}
+  <h2 class="h2">Link sent!</h2>
+  <div class="mt-5">
+    <p>
+      An email has been sent to <strong>{{ email }}</strong> with a link to
+      continue.
+    </p>
+    <p class="pt-2 text-sm">
+      Don't see the email? Please check that it didn't end up in your spam
+      folder.
+    </p>
+    <p class="pt-2 text-sm">
+      Otherwise, press the back button to enter a different email. You can also
+      reach out to us at
+      <a class="a" href="mailto:{% settings_value 'EMAIL_SUPPORT_ADDRESS' %}"
+        >{% settings_value 'EMAIL_SUPPORT_ADDRESS' %}</a
+      >
+    </p>
+  </div>
+{% endblock inner %}

@@ -2,7 +2,6 @@ import components from "./components"
 import bot from "./libs/bot"
 import copyToClipboard from "./libs/copyToClipboard"
 import emailSpellChecker from "./libs/emailSpellCheck"
-import htmxLoader from "./libs/htmx-loader"
 import loginChannel from "./libs/loginChannel"
 import shadowfill from "./libs/shadowfill"
 import timezoneDetect from "./libs/timezone"
@@ -20,7 +19,6 @@ globalThis._AutofillCallbackHandler =
 
 components()
 timezoneDetect()
-htmxLoader()
 loginChannel()
 copyToClipboard()
 

@@ -1,8 +1,8 @@
 from auditlog.context import disable_auditlog
 from auditlog.models import LogEntry
 from django import forms
+from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth import login as django_login
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
@@ -96,6 +96,12 @@ def login_view(request: HttpRequest):
     return _auth_view(request, LoginForm, "users/login.html")
 
 
+def login_link_view(request: HttpRequest):
+    if not settings.DEBUG:
+        raise Http404
+    return render(request, "users/link_sent.html", {"email": "test@totem.org"})
+
+
 def signup_view(request: HttpRequest):
     return _auth_view(request, SignupForm, "users/signup.html")
 
@@ -112,16 +118,8 @@ def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name
             email: str = data["email"].lower()
             after_login_url: str = data.get("after_login_url", next)
             create_params = {"newsletter_consent": data.get("newsletter_consent", False)}
-            created = login(request, email=email, create_params=create_params, after_login_url=after_login_url)
-            if created:
-                return redirect("users:redirect")
-            else:
-                messages.success(request, f"Please check your inbox at: {email}.")
-                path = request.get_full_path()
-                if url_has_allowed_host_and_scheme(path, None):
-                    return redirect(path)
-                else:
-                    return redirect("users:redirect")
+            login(request, email=email, create_params=create_params, after_login_url=after_login_url)
+            return render(request, "users/link_sent.html", {"email": email})
     else:
         if request.user.is_authenticated:
             return redirect(next or "users:redirect")
@@ -149,12 +147,10 @@ def login(
 
     url = user.get_login_url(after_login_url, mobile)  # type: ignore
 
+    emails.login_email(user.email, url).send()
     if created:
-        django_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
         emails.welcome_email(user).send()
         analytics.user_signed_up(user)
-    else:
-        emails.returning_login_email(user.email, url).send()
 
     user.identify()  # type: ignore
     return created
