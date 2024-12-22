@@ -280,13 +280,13 @@ def _make_social_img(event: CircleEvent, start_day, start_time_pst, start_time_e
         title = event.title
         subtitle = event.circle.title
 
-    background_url = f"{settings.BASE_DIR}/totem/static/images/circles/test-background.jpg"
+    background_url = f"{settings.BASE_DIR}/totem/static/images/circles/default-bg.jpg"
     if event.circle.image:
         background_url = event.circle.image.url
         if background_url.startswith("/"):
             background_url = f"totem/{background_url}"
 
-    author_profile_url = f"{settings.BASE_DIR}/totem/static/images/default_profile.webp"
+    author_profile_url = f"{settings.BASE_DIR}/totem/static/images/default-avatar.jpg"
     if event.circle.author.profile_image:
         author_profile_url = event.circle.author.profile_image.url
         if author_profile_url.startswith("/"):
