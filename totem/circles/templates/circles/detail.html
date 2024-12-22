@@ -9,7 +9,9 @@
 {# djlint:off #}
 {% block title %}{{ object.title }}{% endblock title %}
 {% block description %}{{ object.content_text|truncatewords:30 }}{% endblock description %}
-{% comment %}{% block ogimage %}{% if event %}{% absurl 'circles:event_social_img' event_slug=event.slug image_format="2to1" %}{% endif %}{% endblock ogimage %}{% endcomment %}
+{% if event %}
+  {% block ogimage %}{% absurl 'circles:event_social_img' event_slug=event.slug image_format="2to1" %}{% endblock ogimage %}
+{% endif %}
 {# djlint:on #}
 {% block jsonld %}
   {{ event.jsonld|jsonld }}
