@@ -163,7 +163,6 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "totem.utils.middleware.robotnoindex",
-    "django_htmx.middleware.HtmxMiddleware",
     "totem.utils.middleware.TimezoneMiddleware",
     "totem.utils.middleware.CDNGuard",
     "auditlog.middleware.AuditlogMiddleware",

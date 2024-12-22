@@ -86,7 +86,7 @@ function openFileDialog() {
   return new Promise<File | null>((resolve) => {
     const input = document.createElement("input")
     input.type = "file"
-    input.accept = "image/*"
+    input.accept = "image/png, image/jpeg"
     input.onchange = () => {
       resolve(input.files?.[0] ?? null)
     }
@@ -196,7 +196,8 @@ function EditAvatarModal(props: {
           class="btn btn-sm mt-5"
           type="button"
           onClick={() => {
-            globalThis.location.reload()
+            // biome-ignore lint/correctness/noSelfAssign: assignment has side effects
+            globalThis.window.location = globalThis.window.location
           }}>
           Close
         </button>
