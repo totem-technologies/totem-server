@@ -6,38 +6,12 @@ import {
   totemApiApiUserUploadProfileImage,
 } from "@/client"
 import { createQuery } from "@tanstack/solid-query"
-import {
-  For,
-  type Setter,
-  Show,
-  Suspense,
-  createEffect,
-  createSignal,
-  onMount,
-} from "solid-js"
+import { For, Show, Suspense, createEffect, createSignal } from "solid-js"
 import Avatar from "./avatar"
 const defaults = {}
 
 function EditAvatar() {
   let modalRef: HTMLDialogElement | undefined
-  const [showModal, setShowModal] = createSignal<boolean>(false)
-  createEffect(() => {
-    if (showModal()) {
-      modalRef?.showModal()
-    } else {
-      modalRef?.close()
-    }
-  })
-  onMount(() => {
-    if (modalRef) {
-      modalRef.onclose = (_) => {
-        setShowModal(false)
-      }
-    }
-    setTimeout(() => {
-      setShowModal(true)
-    }, 1000)
-  })
   const query = createQuery(() => ({
     queryKey: ["userData"],
     queryFn: async () => {
@@ -50,10 +24,13 @@ function EditAvatar() {
     throwOnError: true,
   }))
   const user = () => query.data
+  function closeModal() {
+    modalRef?.close()
+  }
   return (
     <div
-      onClick={() => setShowModal(true)}
-      onKeyDown={() => setShowModal(true)}
+      onClick={() => modalRef?.showModal()}
+      onKeyDown={() => modalRef?.showModal()}
       class="relative h-[150px] w-[150px] rounded-full p-1 transition hover:shadow-md">
       <Suspense fallback={"Loading..."}>
         <Avatar
@@ -81,7 +58,7 @@ function EditAvatar() {
             <EditAvatarModal
               //biome-ignore lint/style/noNonNullAssertion: <explanation>
               user={user()!}
-              setShowModal={setShowModal}
+              closeModal={closeModal}
               refetch={() => {
                 query.refetch()
               }}
@@ -137,15 +114,20 @@ async function uploadProfileImage() {
 
 function EditAvatarModal(props: {
   user: UserSchema
-  setShowModal: Setter<boolean>
+  closeModal: () => void
   refetch: () => void
 }) {
   const [avatarType, setAvatarType] = createSignal<ProfileAvatarTypeEnum>(
     props.user.profile_avatar_type
   )
+  const [error, setError] = createSignal<string | null>(null)
   createEffect(async () => {
-    await setUpdate(avatarType(), false)
-    props.refetch()
+    try {
+      await setUpdate(avatarType(), false)
+      props.refetch()
+    } catch (error) {
+      setError(error as string)
+    }
   })
   async function clickHandler() {
     if (avatarType() === "TD") {
@@ -158,6 +140,14 @@ function EditAvatarModal(props: {
   }
   return (
     <div class="modal-box flex w-96 flex-col items-center justify-center">
+      <Show when={error()}>
+        <div class="alert alert-error">
+          <div class="flex-1">
+            <p class="font-bold">Error:</p>
+            <p>{error()}</p>
+          </div>
+        </div>
+      </Show>
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: <explanation> */}
       <div
         class="relative mb-5 inline-block cursor-pointer"
@@ -206,17 +196,9 @@ function EditAvatarModal(props: {
           class="btn btn-sm mt-5"
           type="button"
           onClick={() => {
-            props.setShowModal(false)
+            globalThis.location.reload()
           }}>
-          Cancel
-        </button>
-        <button
-          class="btn btn-primary btn-sm mt-5"
-          type="button"
-          onClick={() => {
-            props.setShowModal(false)
-          }}>
-          Save
+          Close
         </button>
       </div>
     </div>
