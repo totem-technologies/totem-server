@@ -15,10 +15,6 @@
       "@/*": ["./assets/js/*"]
     },
     "isolatedModules": true,
-    "plugins": [
-      {
-        "name": "typescript-plugin-css-modules"
-      }
-    ]
+    "plugins": []
   }
 }
