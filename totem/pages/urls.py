@@ -16,6 +16,7 @@ class PagesSitemap(Sitemap):
             "tos",
             "privacy",
             "team",
+            "why-totem",
             "how-it-works",
             "team-pam",
         ]
@@ -30,6 +31,7 @@ webflow_pages = [
     "about",
     "guidelines",
     "training",
+    "why-totem",
     "topics/mothers",
     "topics/lgbtq",
     "topics/lgbtqia-topic-details",
