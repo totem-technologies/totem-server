@@ -15,9 +15,10 @@
         {{ form.non_field_errors }}
         {% csrf_token %}
         <div class="pb-5">
-          <label for="{{ form.name.id_for_label }}">Name</label>
-          {{ form.name.errors }}
-          {{ form.name }}
+          <label for="{{ form.name.id_for_label }}"
+            >Name<span class="text-red-500">*</span></label
+          >
+          {{ form.name.errors }} {{ form.name }}
           <p class="pt-1 text-xs">
             Other people will see this, but you don't have to use your real
             name. Add any pronouns in parentheses if you'd like.
@@ -25,7 +26,9 @@
         </div>
         <div class="pb-5">
           <div>
-            <label for="{{ form.age.id_for_label }}">Age</label>
+            <label for="{{ form.age.id_for_label }}"
+              >Age<span class="text-red-500">*</span></label
+            >
           </div>
           {{ form.age.errors }}
           <div class="w-[100px]">{{ form.age }}</div>
@@ -46,6 +49,20 @@
             Your feedback here will help inform us about new topics to offer.
           </p>
         </div>
+        <div class="pb-5">
+          <div>
+            <label for="{{ form.referral_source.id_for_label }}">
+              How did you hear about us? (Optional)
+            </label>
+          </div>
+          {{ form.referral_source.errors }} {{ form.referral_source }}
+          <div id="referral-other-container" class="mt-3 hidden">
+            {{ form.referral_other.errors }} {{ form.referral_other }}
+          </div>
+          <p class="pt-1 text-xs">
+            This helps us understand how to reach more people like you.
+          </p>
+        </div>
         <div class="mt-10 text-center">
           <button class="shimmer btn btn-primary m-auto w-full" type="submit">
             Submit
@@ -54,4 +71,28 @@
       </form>
     </div>
   </div>
+
+  <script>
+    function showOtherField(value) {
+      const otherField = document.getElementById("referral-other-container")
+      const otherInput = document.getElementById("id_referral_other")
+
+      if (otherField) {
+        if (value === "other") {
+          otherField.style.display = "block"
+          otherField.required = true
+          otherInput.focus()
+        } else {
+          otherField.style.display = "none"
+          otherField.required = false
+        }
+      }
+    }
+    document.addEventListener("DOMContentLoaded", function () {
+      const selectField = document.getElementById("id_referral_source")
+      if (selectField) {
+        showOtherField(selectField.value)
+      }
+    })
+  </script>
 {% endblock content %}

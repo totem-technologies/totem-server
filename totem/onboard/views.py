@@ -1,7 +1,7 @@
 import datetime
 
 from django.contrib.auth.decorators import login_required
-from django.forms import CharField, Form, IntegerField, Textarea, TextInput
+from django.forms import CharField, ChoiceField, Form, IntegerField, Select, Textarea, TextInput
 from django.http import HttpRequest
 from django.shortcuts import redirect, render
 
@@ -26,6 +26,20 @@ class OnboardForm(Form):
     )
     age = IntegerField(required=True, initial=None, min_value=13, max_value=120, widget=TextInput())
     hopes = CharField(max_length=1000, required=False, widget=Textarea(attrs={"rows": 3}))
+    referral_source = ChoiceField(
+        choices=OnboardModel.REFERRAL_CHOICES,
+        required=False,
+        widget=Select(attrs={"class": "form-select", "onchange": "showOtherField(this.value)"}),
+    )
+    referral_other = CharField(
+        max_length=100,
+        required=False,
+        widget=TextInput(
+            attrs={
+                "placeholder": "Please tell us more about how you found us",
+            }
+        ),
+    )
 
     def save(self, user: User, onboard: OnboardModel):
         user.name = self.cleaned_data.pop("name")
