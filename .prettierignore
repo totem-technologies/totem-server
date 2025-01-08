@@ -1,5 +1,6 @@
 # Ignore all HTML files:
 totem/**/*.css
+.zed/**/*
 *.min.*
 *.mjml
 totem/static/js/bundles/*

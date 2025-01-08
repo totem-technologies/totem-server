@@ -8,6 +8,7 @@ repos:
       - id: trailing-whitespace
         exclude: ".min."
       - id: check-json
+        exclude: ".zed"
       - id: check-toml
       - id: check-xml
       - id: check-yaml
