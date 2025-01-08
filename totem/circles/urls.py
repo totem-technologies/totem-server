@@ -1,5 +1,6 @@
 from django.contrib.sitemaps import Sitemap
 from django.urls import path
+from django.utils import timezone
 
 from . import views
 from .models import CircleEvent
@@ -12,7 +13,9 @@ class SpacesSitemap(Sitemap):
     changefreq = "daily"
 
     def items(self):
-        return CircleEvent.objects.filter(cancelled=False, open=True, listed=True, circle__published=True)
+        return CircleEvent.objects.filter(
+            start__gte=timezone.now(), cancelled=False, open=True, listed=True, circle__published=True
+        )
 
     def lastmod(self, obj: CircleEvent):
         return obj.date_modified
