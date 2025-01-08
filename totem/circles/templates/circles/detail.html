@@ -8,7 +8,7 @@
 
 {# djlint:off #}
 {% block title %}{{ object.title }}{% endblock title %}
-{% block description %}{{ object.content_text|truncatewords:30 }}{% endblock description %}
+{% block description %}{{ object.content_text|truncatechars:140 }}{% endblock description %}
 {% block ogimage %}{% if event %}{% absurl 'circles:event_social_img' event_slug=event.slug image_format="2to1" %}{% endif %}{% endblock ogimage %}
 {# djlint:on #}
 {% block jsonld %}
