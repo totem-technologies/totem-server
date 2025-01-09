@@ -1,28 +1,34 @@
 import emailSpellChecker from "@zootools/email-spell-checker"
 
-function debounce(func, timeout = 300) {
-  let timer
-  return (...args) => {
+function debounce<T extends (e: Event) => void>(
+  func: T,
+  timeout = 300
+): (...args: Parameters<T>) => void {
+  let timer: ReturnType<typeof setTimeout>
+  return (...args: Parameters<T>) => {
     globalThis.clearTimeout(timer)
     timer = globalThis.setTimeout(() => {
-      func.apply(this, args)
+      func.apply(undefined, args)
     }, timeout)
   }
 }
 
-function init() {
-  const emailInputs = globalThis.document.querySelectorAll("input[type=email]")
+function init(): void {
+  const emailInputs =
+    globalThis.document.querySelectorAll<HTMLInputElement>("input[type=email]")
   for (const input of emailInputs) {
-    function clearAlert(e) {
-      const alert = e.target.parentElement.querySelector(
+    function clearAlert(e: Event): void {
+      const target = e.target as HTMLInputElement
+      const alert = target.parentElement?.querySelector<HTMLElement>(
         ".email-alert-dismissible"
       )
       if (alert) {
         alert.remove()
       }
     }
-    const myScript = (e) => {
-      const email = e.target.value.trim()
+    const myScript = (e: Event): void => {
+      const target = e.target as HTMLInputElement
+      const email = target.value.trim()
       const suggestedEmail = emailSpellChecker.run({
         email,
       })

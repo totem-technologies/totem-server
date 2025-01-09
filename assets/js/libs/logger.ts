@@ -1,14 +1,19 @@
-const logger = (() => {
-  let oldConsoleLog = null
-  const pub = {}
+interface Logger {
+  enableLogger: () => void
+  disableLogger: () => void
+}
 
-  pub.enableLogger = function enableLogger() {
+const logger = (() => {
+  let oldConsoleLog: typeof console.log | null = null
+  const pub = {} as Logger
+
+  pub.enableLogger = function enableLogger(): void {
     if (oldConsoleLog == null) return
 
     globalThis.console.log = oldConsoleLog
   }
 
-  pub.disableLogger = function disableLogger() {
+  pub.disableLogger = function disableLogger(): void {
     oldConsoleLog = globalThis.console.log
     globalThis.console.log = () => {}
   }
@@ -16,7 +21,7 @@ const logger = (() => {
   return pub
 })()
 
-function init(debug) {
+function init(debug: boolean): void {
   if (debug === true) logger.enableLogger()
   else logger.disableLogger()
 }

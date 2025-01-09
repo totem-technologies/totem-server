@@ -19,7 +19,7 @@ from imagekit.processors import ResizeToFill
 from timezone_field import TimeZoneField
 
 from totem.email.utils import validate_email_blocked
-from totem.users.managers import UserManager
+from totem.users.managers import TotemUserManager as UserManager
 from totem.utils.fields import MaxLengthTextField
 from totem.utils.hash import basic_hash
 from totem.utils.md import MarkdownField, MarkdownMixin
@@ -55,6 +55,7 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
     check forms.SignupForm and forms.SocialSignupForms accordingly.
     """
 
+    objects: UserManager = UserManager()
     # Related Types
     onboard: "OnboardModel"
     events_attending: "QuerySet[CircleEvent]"
@@ -67,7 +68,6 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
         IMAGE = "IM", _("Image")
 
     # First and last name do not cover name patterns around the globe
-    objects: UserManager = UserManager()
     name = CharField(_("Name"), blank=True, max_length=255)
     first_name = None  # type: ignore
     last_name = None  # type: ignore
@@ -94,8 +94,6 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
-
-    objects = UserManager()
 
     def get_absolute_url(self) -> str:
         """Get URL for user's detail view.

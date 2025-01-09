@@ -12,6 +12,7 @@ declare namespace JSX {
 declare global {
   function dismiss_alert(e: HTMLElement): void
   function _AutofillCallbackHandler(): void
+  function copyTextToClipboard(element: HTMLElement): void
   var TOTEM_DATA: {
     debug: boolean
     csrf_token: string
