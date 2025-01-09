@@ -55,7 +55,7 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
     check forms.SignupForm and forms.SocialSignupForms accordingly.
     """
 
-    objects: UserManager = UserManager()
+    objects: UserManager = UserManager()  # type: ignore
     # Related Types
     onboard: "OnboardModel"
     events_attending: "QuerySet[CircleEvent]"

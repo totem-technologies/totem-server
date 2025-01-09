@@ -7,7 +7,7 @@ import { solidPlugin } from "esbuild-plugin-solid"
 const arg = process.argv[2]
 
 const options = {
-  entryPoints: ["assets/js/app.ts", "assets/js/social.ts"],
+  entryPoints: ["assets/js/app.ts"],
   bundle: true,
   minify: true,
   metafile: true,
