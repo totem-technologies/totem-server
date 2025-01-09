@@ -1,5 +1,11 @@
 import uFuzzy from "@leeoniya/ufuzzy"
-import { For, JSXElement, createEffect, createSignal, onMount } from "solid-js"
+import {
+  For,
+  type JSXElement,
+  createEffect,
+  createSignal,
+  onMount,
+} from "solid-js"
 
 interface TagProps {
   onClick: (tag: string) => void
@@ -45,20 +51,14 @@ function PromptSearch(props: { dataid?: string; children?: JSXElement }) {
 
   onMount(() => {
     const data = JSON.parse(
-      document.getElementById(props.dataid!)!.textContent!
+      document.getElementById(props.dataid ?? "")?.textContent ?? "[]"
     ) as PromptItem[]
     setData(data)
   })
 
   const uf = new uFuzzy()
   const tags = () => {
-    return [
-      ...new Set(
-        data()
-          .map((r) => r.tags)
-          .flat()
-      ),
-    ].sort()
+    return [...new Set(data().flatMap((r) => r.tags))].sort()
   }
   const haystack = () => {
     return data().map((r) => `${r.prompt} ${r.tags.join(" ")}`)
@@ -66,11 +66,10 @@ function PromptSearch(props: { dataid?: string; children?: JSXElement }) {
   const items = () => {
     if (search() === "") {
       return data()
-    } else {
-      const [idxs, _info, order] = uf.search(haystack(), search(), 0)
-      if (order) {
-        return order.map((i: number) => idxs.map((i: number) => data()[i])[i])
-      }
+    }
+    const [idxs, _info, order] = uf.search(haystack(), search(), 0)
+    if (order) {
+      return order.map((i: number) => idxs.map((i: number) => data()[i])[i])
     }
   }
 

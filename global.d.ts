@@ -9,12 +9,15 @@ declare namespace JSX {
   }
 }
 
-// add TOTEM_DATA to window
-declare interface Window {
-  TOTEM_DATA: {
+declare global {
+  function dismiss_alert(e: HTMLElement): void
+  function _AutofillCallbackHandler(): void
+  var TOTEM_DATA: {
     debug: boolean
     csrf_token: string
     is_authenticated: boolean
     reload_on_login: boolean
   }
 }
+
+export {}

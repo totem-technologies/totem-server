@@ -7,6 +7,7 @@ from ninja import Field, FilterSchema, ModelSchema, Router, Schema
 from ninja.pagination import paginate
 from ninja.params.functions import Query
 
+from totem.users.models import User
 from totem.users.schemas import UserSchema
 
 from .filters import all_upcoming_recommended_events, events_by_month
@@ -115,6 +116,7 @@ class EventDetailSchema(Schema):
     url_name="event_detail",
 )
 def event_detail(request, event_slug):
+    user: User = request.user
     event = get_object_or_404(CircleEvent, slug=event_slug)
     space = event.circle
     attending = event.attendees.filter(pk=request.user.pk).exists()
@@ -122,6 +124,7 @@ def event_detail(request, event_slug):
     join_url = event.join_url(request.user) if attending else None
     subscribed = space.subscribed.contains(request.user) if request.user.is_authenticated else None
     ended = event.ended()
+    tz = user.timezone if user.is_authenticated else "UTC"
     if attending and not ended:
         attendees = [a for a in event.attendees.all()]
     else:
@@ -148,7 +151,7 @@ def event_detail(request, event_slug):
         calLink=event.cal_link(),
         subscribe_url=reverse("circles:subscribe", kwargs={"slug": space.slug}),
         subscribed=subscribed,
-        user_timezone="UTC",
+        user_timezone=str(tz),
     )
 
 

@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-import * as esbuild from "esbuild"
-import { solidPlugin } from "esbuild-plugin-solid"
 import fs from "node:fs"
 import process from "node:process"
+import * as esbuild from "esbuild"
+import { solidPlugin } from "esbuild-plugin-solid"
 
 const arg = process.argv[2]
 
 const options = {
-  entryPoints: ["assets/js/app.js", "assets/js/social.ts"],
+  entryPoints: ["assets/js/app.ts", "assets/js/social.ts"],
   bundle: true,
   minify: true,
   metafile: true,

@@ -2,7 +2,7 @@ import { totemCirclesApiUpcomingEvents } from "@/client"
 import Calendar from "@rnwonder/solid-date-picker/calendar"
 import "@rnwonder/solid-date-picker/dist/style.css"
 import { createQuery } from "@tanstack/solid-query"
-import { createSignal, JSX, JSXElement, Suspense } from "solid-js"
+import { type JSX, type JSXElement, Suspense, createSignal } from "solid-js"
 import "./eventCalendar.css"
 
 function DetailBox(props: { children: JSX.Element }) {
@@ -17,7 +17,7 @@ function Loading() {
   return (
     <DetailBox>
       <div class="text-center">
-        <div class="spinner-border" role="status">
+        <div class="spinner-border">
           <span class="loading loading-spinner loading-lg" />
         </div>
       </div>
@@ -26,8 +26,8 @@ function Loading() {
 }
 
 const EventCalendar = (props: {
-  spaceid?: string
-  eventid?: string
+  spaceid: string
+  eventid: string
   children?: JSXElement
 }) => {
   const [month, setMonth] = createSignal(new Date().getMonth() + 1)
@@ -37,7 +37,7 @@ const EventCalendar = (props: {
     queryFn: async () => {
       const response = await totemCirclesApiUpcomingEvents({
         query: {
-          space_slug: props.spaceid!,
+          space_slug: props.spaceid,
           month: month(),
           year: year(),
         },
@@ -45,7 +45,7 @@ const EventCalendar = (props: {
       if (response.error) {
         throw new Error(response.error as string)
       }
-      return response.data!
+      return response.data
     },
     throwOnError: true,
   }))

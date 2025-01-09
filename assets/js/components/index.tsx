@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/solid-query"
 import { customElement, noShadowDOM } from "solid-element"
-import type { Component, JSXElement } from "solid-js"
+import type { JSXElement, ValidComponent } from "solid-js"
+import { Dynamic } from "solid-js/web"
 import Avatar from "./avatar"
 import Circles from "./circles"
 import DetailSidebar from "./detailSidebar"
@@ -11,7 +12,7 @@ import PromptSearch from "./promptSearch"
 import Time from "./time"
 import Tooltip from "./tooltip"
 
-type WCComponent = Component & {
+type WCComponent = ValidComponent & {
   tagName: string
   propsDefault: Record<string, string | number | null | JSXElement>
 }
@@ -42,7 +43,7 @@ const queryClient = new QueryClient({})
 function customElementWC(
   name: string,
   propDefaults: CustomElementProps,
-  Components: Component<CustomElementProps>
+  Components: ValidComponent
 ) {
   customElement(
     name,
@@ -67,7 +68,7 @@ function customElementWC(
       return (
         <QueryClientProvider client={queryClient}>
           <ErrorBoundary>
-            <Components {...props} />
+            <Dynamic component={Components} {...props} />
           </ErrorBoundary>
         </QueryClientProvider>
       )

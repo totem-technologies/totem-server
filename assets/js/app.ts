@@ -4,12 +4,12 @@ import copyToClipboard from "./libs/copyToClipboard"
 import emailSpellChecker from "./libs/emailSpellCheck"
 import loginChannel from "./libs/loginChannel"
 import shadowfill from "./libs/shadowfill"
-import timezoneDetect from "./libs/timezone"
+import { setTimeZoneCookie } from "./libs/timezone"
 
 import logger from "./libs/logger"
 
 globalThis.dismiss_alert = (e) => {
-  e.closest(".alert-dismissible").remove()
+  e.closest(".alert-dismissible")?.remove()
 }
 
 // Fix for instagram browser errors in sentry
@@ -18,7 +18,7 @@ globalThis._AutofillCallbackHandler =
   globalThis._AutofillCallbackHandler || (() => {})
 
 components()
-timezoneDetect()
+setTimeZoneCookie()
 loginChannel()
 copyToClipboard()
 

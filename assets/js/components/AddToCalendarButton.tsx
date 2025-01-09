@@ -1,5 +1,5 @@
 import { convertISOToHHMM, getDateFromISOString } from "@/libs/time"
-
+import { getTimeZone } from "@/libs/timezone"
 function AddToCalendarButton(props: {
   name: string
   calLink: string
@@ -21,7 +21,7 @@ function AddToCalendarButton(props: {
   const calLink = () => `${props.calLink}?r=cal_link`.replaceAll('"', "")
 
   // console.log(props)
-  const debug = window.TOTEM_DATA.debug ? "true" : "false"
+  const debug = globalThis.TOTEM_DATA.debug ? "true" : "false"
   const el = `<add-to-calendar-button
       styleLight="--btn-shadow:none; --btn-shadow-hover:none"
       inline
@@ -36,7 +36,7 @@ function AddToCalendarButton(props: {
       endDate="${endDate()}"
       startTime="${startTime()}"
       endTime="${endTime()}"
-      timeZone="UTC"></add-to-calendar-button>`
+      timeZone="${getTimeZone()}"></add-to-calendar-button>`
   // eslint-disable-next-line solid/no-innerhtml
   return <div innerHTML={el} />
 }
