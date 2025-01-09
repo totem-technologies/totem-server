@@ -10,7 +10,7 @@ function InstrumentedErrorBoundary(props: { children: JSXElement }) {
         ;(globalThis as any).Sentry?.captureException(error)
         return (
           <div>
-            <h3 class="pb-5" onClick={reset}>
+            <h3 class="pb-5" onClick={reset} onKeyUp={reset}>
               Something went wrong. Please refresh this page, or try again
               later. This error has been sent to our team.
             </h3>
