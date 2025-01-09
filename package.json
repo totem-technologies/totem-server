@@ -27,7 +27,7 @@
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",
     "@eslint/js": "^9.9.0",
-    "@hey-api/openapi-ts": "^0.60.1",
+    "@hey-api/openapi-ts": "^0.61.1",
     "@solidjs/testing-library": "^0.8.10",
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/line-clamp": "^0.4.2",
@@ -59,7 +59,7 @@
     "vitest": "^2.1.4"
   },
   "dependencies": {
-    "@hey-api/client-fetch": "^0.5.4",
+    "@hey-api/client-fetch": "^0.6.0",
     "@leeoniya/ufuzzy": "^1.0.14",
     "@rnwonder/solid-date-picker": "^1.4.0",
     "@solid-primitives/intersection-observer": "^2.1.6",
