@@ -7,6 +7,7 @@ requires-python = ">=3.11"
 dependencies = [
     "argon2-cffi==23.1.0",
     "cssselect<2",
+    "fonttools>=4.55.3",
     "google-api-python-client<3",
     "google-auth-oauthlib<2",
     "gunicorn<24",
@@ -36,12 +37,10 @@ dependencies = [
     "django-taggit<6",
     "django-timezone-field<8",
     "django<5.2",
-    "fonttools>=4.55.3",
 ]
 
 [dependency-groups]
 dev = [
-    "Werkzeug[watchdog]<4",
     "ipdb==0.13.13",
     "watchfiles<2",
     "uv",
