@@ -4,18 +4,35 @@ from dataclasses import asdict, dataclass
 from functools import lru_cache
 from io import BytesIO
 from math import floor
-from typing import Any
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
 import requests
 from django.conf import settings
+from fontTools.ttLib import TTFont
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from PIL.ImageFile import ImageFile
 
 folder_path = os.path.dirname(os.path.realpath(__file__))
 font_path = f"{folder_path}/../static/fonts/Montserrat-VariableFont_wght.ttf"
+font_fallback_path = f"{folder_path}/../static/fonts/NotoSansLiving-Regular.ttf"
+font_emoji_path = f"{folder_path}/../static/fonts/TwemojiCOLRv0.ttf"
 logo_path = f"{folder_path}/../static/images/totem-logo.png"
 client = requests.session()
 PADDING = 20
+
+
+def load_fonts(*font_paths: str) -> Dict[str, TTFont]:
+    """
+    Loads font files specified by paths into memory and returns a dictionary of font objects.
+    """
+    fonts = {}
+    for path in font_paths:
+        font = TTFont(path)
+        fonts[path] = font
+    return fonts
+
+
+fonts = load_fonts(font_path, font_fallback_path, font_emoji_path)
 
 
 @dataclass
@@ -121,7 +138,8 @@ def _draw_wrapped_text(
 
     for line in lines:
         bbox = draw.textbbox((x, y), line, font=font)
-        draw.text((x, y), line, font=font, fill=fill)
+        # draw.text((x, y), line, font=font, fill=fill)
+        draw_multiline_text_v2(draw, (x, y), line, (255, 255, 255), fonts, font_size, variation, align="left")
         y += (bbox[3] - bbox[1]) + line_height
 
     return (x, y)
@@ -235,15 +253,113 @@ def generate_image(params: ImageParams):
     return image.convert("RGB")
 
 
-# def image_to_data_url(image: Image.Image):
-#     # Save the image in memory as bytes
-#     with BytesIO() as output:
-#         image.save(output, format="JPEG")
-#         contents = output.getvalue()
+def has_glyph(font: TTFont, glyph: str) -> bool:
+    """
+    Checks if the given font contains a glyph for the specified character.
+    """
+    for table in font["cmap"].tables:  # type: ignore
+        if table.cmap.get(ord(glyph)):
+            return True
+    return False
 
-#     # Encode the bytes as base64 and create a data URL
-#     encoded_image = base64.b64encode(contents).decode("utf-8")
-#     return f"data:image/png;base64,{encoded_image}"
+
+def merge_chunks(text: str, fonts: Dict[str, TTFont]) -> List[List[str]]:
+    """
+    Merges consecutive characters with the same font into clusters, optimizing font lookup.
+    """
+    chunks = []
+
+    for char in text:
+        for font_path, font in fonts.items():
+            if has_glyph(font, char):
+                chunks.append([char, font_path])
+                break
+
+    cluster = chunks[:1]
+
+    for char, font_path in chunks[1:]:
+        if cluster[-1][1] == font_path:
+            cluster[-1][0] += char
+        else:
+            cluster.append([char, font_path])
+
+    return cluster
+
+
+def draw_text_v2(
+    draw: ImageDraw.ImageDraw,
+    xy: Tuple[int, int],
+    text: str,
+    color: Tuple[int, int, int],
+    fonts: Dict[str, TTFont],
+    variation: str,
+    size: int,
+    anchor: Optional[str] = None,
+    align: Literal["left", "center", "right"] = "left",
+) -> None:
+    """
+    Draws text on an image at given coordinates, using specified size, color, and fonts.
+    """
+
+    y_offset = 0
+    sentence = merge_chunks(text, fonts)
+
+    for words in sentence:
+        xy_ = (xy[0] + y_offset, xy[1])
+
+        font = ImageFont.truetype(words[1], size)
+        try:
+            font.set_variation_by_name(variation)
+        except OSError:
+            # Some fonts don't support variations, and that's OK.
+            pass
+        draw.text(
+            xy=xy_,
+            text=words[0],
+            fill=color,
+            font=font,
+            variation=variation,
+            anchor=anchor,
+            align=align,
+            embedded_color=True,
+        )
+
+        draw.text
+        box = font.getbbox(words[0])
+        y_offset += box[2] - box[0]
+
+
+def draw_multiline_text_v2(
+    draw: ImageDraw.ImageDraw,
+    xy: Tuple[int, int],
+    text: str,
+    color: Tuple[int, int, int],
+    fonts: Dict[str, TTFont],
+    size: int,
+    variation: str,
+    anchor: Optional[str] = None,
+    align: Literal["left", "center", "right"] = "left",
+) -> None:
+    """
+    Draws multiple lines of text on an image, handling newline characters and adjusting spacing between lines.
+    """
+    spacing = xy[1]
+    lines = text.split("\n")
+
+    for line in lines:
+        mod_cord = (xy[0], spacing)
+        draw_text_v2(
+            draw,
+            xy=mod_cord,
+            text=line,
+            color=color,
+            fonts=fonts,
+            variation=variation,
+            size=size,
+            anchor=anchor,
+            align=align,
+        )
+        spacing += size + 5
 
 
 def _test():

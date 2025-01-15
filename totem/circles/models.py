@@ -146,7 +146,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
     title = models.CharField(max_length=255, blank=True)
     advertised = models.BooleanField(default=False)
     attendees = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="events_attending")
-    cancelled = models.BooleanField(default=False, help_text="Is this session cancelled?")
+    cancelled = models.BooleanField(default=False, help_text="Is this session canceled?")
     circle = models.ForeignKey(Circle, on_delete=models.CASCADE, related_name="events")
     content = MarkdownField(
         help_text="Optional description for this specific session. Markdown is supported.",

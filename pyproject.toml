@@ -22,7 +22,6 @@ dependencies = [
     "requests<3",
     "sentry-sdk[django]<3",
     "whitenoise<7",
-
     # Django dependencies
     "django-allauth<0.64.0",
     "django-anymail<13",
@@ -37,6 +36,7 @@ dependencies = [
     "django-taggit<6",
     "django-timezone-field<8",
     "django<5.2",
+    "fonttools>=4.55.3",
 ]
 
 [dependency-groups]

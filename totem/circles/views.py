@@ -1,3 +1,4 @@
+import datetime
 from io import BytesIO
 from typing import Any
 
@@ -260,14 +261,20 @@ def event_social_img(request: HttpRequest, event_slug: str, image_format: str):
         raise Http404
 
     event = _get_circle_event(event_slug)
-    # {{ event.start | date:"F j, Y" }}
-    start_day = event.start.strftime("%B %d, %Y")
+    pst: datetime.datetime = event.start.astimezone(pytz.timezone("US/Pacific"))
+    est: datetime.datetime = event.start.astimezone(pytz.timezone("US/Eastern"))
     # start time in pst
-    start_time_pst = event.start.astimezone(pytz.timezone("US/Pacific")).strftime("%I:%M %p") + " PST"
+    start_day_pst: str = pst.strftime("%B %d, %Y")
+    start_time_pst: str = pst.strftime("%-I:%M %p") + " PST"
     # start time in est
-    start_time_est = event.start.astimezone(pytz.timezone("US/Eastern")).strftime("%I:%M %p") + " EST"
+    start_day_est: str = est.strftime("%B %d, %Y")
+    start_time_est: str = est.strftime("%-I:%M %p") + " EST"
+    if start_day_pst != start_day_est:
+        start_time_est = f"{start_time_est}+1"
     buffer = BytesIO()
-    _make_social_img(event, start_day, start_time_pst, start_time_est, image_size).save(buffer, "JPEG", optimize=True)
+    _make_social_img(event, start_day_pst, start_time_pst, start_time_est, image_size).save(
+        buffer, "JPEG", optimize=True
+    )
     response = HttpResponse(content_type="image/jpeg")
     response.write(buffer.getvalue())
     return response
