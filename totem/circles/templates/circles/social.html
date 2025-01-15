@@ -15,6 +15,7 @@
   <div class="m-auto max-w-5xl px-5 pt-10">
     <h2>Square Post</h2>
     <a
+      class="block h-[540px] w-[540px]"
       download="{{ event.slug }}-square.jpg"
       href="{% url 'circles:event_social_img' event_slug=event.slug image_format="square" %}">
       <img
@@ -27,6 +28,7 @@
   <div class="m-auto max-w-5xl px-5 pt-10">
     <h2>2:1 Post</h2>
     <a
+      class="block h-[270px] w-[540px]"
       download="{{ event.slug }}-wide.jpg"
       href="{% url 'circles:event_social_img' event_slug=event.slug image_format="2to1" %}">
       <img
