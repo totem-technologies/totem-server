@@ -1,44 +1,47 @@
-{% extends "base.html" %}
+{% extends "account/base.html" %}
 {% load settings_value %}
 {# djlint:off #}
-{% block title %}No Access{% endblock title %}
+{% block title %}Restricted Access{% endblock title %}
 {# djlint:on #}
-{% block content %}
-  <div class="m-auto mt-20 max-w-sm rounded-xl border bg-white p-5 shadow-md">
-    <div class="m-auto pb-5">
-      <h1 class="h1 m-auto text-center text-9xl">
-        <svg
-          width="128"
-          height="128"
-          class="m-auto inline-block"
-          viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg">
-          <path
-            fill="#000000"
-            d="M6 22q-.825 0-1.413-.588T4 20V10q0-.825.588-1.413T6 8h1V6q0-2.075 1.463-3.538T12 1q2.075 0 3.538 1.463T17 6v2h1q.825 0 1.413.588T20 10v10q0 .825-.588 1.413T18 22H6Zm6-5q.825 0 1.413-.588T14 15q0-.825-.588-1.413T12 13q-.825 0-1.413.588T10 15q0 .825.588 1.413T12 17ZM9 8h6V6q0-1.25-.875-2.125T12 3q-1.25 0-2.125.875T9 6v2Z" />
-        </svg>
-      </h1>
-    </div>
-    <hr />
-    <p class="mt-4 text-xl">Restricted Access</p>
-    <p class="mt-4">
-      This page has content that is only available to certain people.
-    </p>
-    <p class="mt-4">
-      If you got here while trying to log in,
-      <strong>you may have used an old link</strong>. Please log in again to
-      access this page. Make sure you are using the most recent link.
-    </p>
-    <p class="mt-4 text-right">
-      <a
-        class="btn btn-primary w-full"
-        href="{% url 'users:login' %}?next={{ request.path }}"
-        >Log in</a
-      >
-    </p>
-    <p class="mt-4 text-center">
-      If you think this is a mistake,
-      <a class="link" href="{% url "users:feedback" %}">let us know</a>.
-    </p>
+{% block javascript %}
+  <script>
+    window.TOTEM_DATA.reload_on_login = true
+  </script>
+{% endblock javascript %}
+{% block inner %}
+  <div class="m-auto pb-5">
+    <h1 class="h1 m-auto text-center text-9xl">
+      <svg
+        width="128"
+        height="128"
+        class="m-auto inline-block"
+        viewBox="0 0 24 24"
+        xmlns="http://www.w3.org/2000/svg">
+        <path
+          fill="#000000"
+          d="M6 22q-.825 0-1.413-.588T4 20V10q0-.825.588-1.413T6 8h1V6q0-2.075 1.463-3.538T12 1q2.075 0 3.538 1.463T17 6v2h1q.825 0 1.413.588T20 10v10q0 .825-.588 1.413T18 22H6Zm6-5q.825 0 1.413-.588T14 15q0-.825-.588-1.413T12 13q-.825 0-1.413.588T10 15q0 .825.588 1.413T12 17ZM9 8h6V6q0-1.25-.875-2.125T12 3q-1.25 0-2.125.875T9 6v2Z" />
+      </svg>
+    </h1>
   </div>
-{% endblock content %}
+  <hr />
+  <p class="mt-4 text-xl">Restricted Access</p>
+  <p class="mt-4">
+    This page has content that is only available to certain people.
+  </p>
+  <p class="mt-4">
+    If you got here while trying to log in,
+    <strong>you may have used an old link</strong>. Please log in again to
+    access this page. Make sure you are using the most recent link.
+  </p>
+  <p class="mt-4 text-right">
+    <a
+      class="btn btn-primary w-full"
+      href="{% url 'users:login' %}?next={{ request.path }}"
+      >Log in</a
+    >
+  </p>
+  <p class="mt-4 text-center">
+    If you think this is a mistake,
+    <a class="link" href="{% url "users:feedback" %}">let us know</a>.
+  </p>
+{% endblock inner %}
