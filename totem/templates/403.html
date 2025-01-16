@@ -4,8 +4,8 @@
 {% block title %}No Access{% endblock title %}
 {# djlint:on #}
 {% block content %}
-  <div class="pt-10">
-    <div class="m-auto">
+  <div class="m-auto mt-20 max-w-sm rounded-xl border bg-white p-5 shadow-md">
+    <div class="m-auto pb-5">
       <h1 class="h1 m-auto text-center text-9xl">
         <svg
           width="128"
@@ -19,17 +19,19 @@
         </svg>
       </h1>
     </div>
-    {% if not request.user.is_authenticated %}
-      <p class="mt-4 text-center text-xl">You may to log in to access this.</p>
-    {% else %}
-      <p class="mt-4 text-center text-xl">Restricted access.</p>
-      <p class="mt-4 text-center">
-        You can trying logging in with a different account.
-      </p>
-    {% endif %}
-    <p class="mt-4 text-center">
+    <hr />
+    <p class="mt-4 text-xl">Restricted Access</p>
+    <p class="mt-4">
+      This page has content that is only available to certain people.
+    </p>
+    <p class="mt-4">
+      If you got here while trying to log in,
+      <strong>you may have used an old link</strong>. Please log in again to
+      access this page. Make sure you are using the most recent link.
+    </p>
+    <p class="mt-4 text-right">
       <a
-        class="btn btn-primary"
+        class="btn btn-primary w-full"
         href="{% url 'users:login' %}?next={{ request.path }}"
         >Log in</a
       >
