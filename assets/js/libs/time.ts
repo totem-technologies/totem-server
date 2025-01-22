@@ -36,8 +36,8 @@ export function convertISOToHHMM(isoString: string) {
   const date = new Date(isoString)
 
   // Extract hours and minutes, adding leading zeros if necessary
-  const hours = date.getUTCHours().toString().padStart(2, "0")
-  const minutes = date.getUTCMinutes().toString().padStart(2, "0")
+  const hours = date.getHours().toString().padStart(2, "0")
+  const minutes = date.getMinutes().toString().padStart(2, "0")
 
   // Return the time in HH:MM format
   return `${hours}:${minutes}`
@@ -48,9 +48,9 @@ export function getDateFromISOString(isoString: string) {
   const date = new Date(isoString)
 
   // Extract year, month, and day, adding leading zeros to month and day if necessary
-  const year = date.getUTCFullYear()
-  const month = (date.getUTCMonth() + 1).toString().padStart(2, "0") // Months are zero-based, so add 1
-  const day = date.getUTCDate().toString().padStart(2, "0")
+  const year = date.getFullYear()
+  const month = (date.getMonth() + 1).toString().padStart(2, "0") // Months are zero-based, so add 1
+  const day = date.getDate().toString().padStart(2, "0")
 
   // Return the date in YYYY-MM-DD format
   return `${year}-${month}-${day}`

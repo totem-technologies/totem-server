@@ -31,7 +31,7 @@ function AddToCalendarButton(props: {
       listStyle="overlay"
       name="Totem - ${name()}"
       options="'Apple','Google','Outlook.com'"
-      location="${calLink()}?r=cal_link"
+      location="${calLink()}"
       startDate="${startDate()}"
       endDate="${endDate()}"
       startTime="${startTime()}"
