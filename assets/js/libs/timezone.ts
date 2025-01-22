@@ -1,12 +1,17 @@
+import Cookies from "js-cookie"
+
 function setTimeZoneCookie() {
   // Timezone settings. See TimezoneMiddleware in utils/middleware.py
-  // If timezone isn't set in cookies, set it. Pages can force a reload if they need to.
+  // If timezone isn't set in cookies, or if the timezone is not current, set it. Pages can force a reload if they need to.
   const timezone = getTimeZone() // e.g. "America/New_York"
-  const hasTimezone = globalThis.document.cookie
-    .split(";")
-    .some((item) => item.trim().startsWith("totem_timezone="))
-  if (timezone && !hasTimezone) {
-    globalThis.document.cookie = `totem_timezone=${timezone}; SameSite=Strict; Secure; path=/; max-age=31536000`
+  const timezoneKey = "totem_timezone"
+  const currentTimezone = Cookies.get(timezoneKey)
+  if (currentTimezone !== timezone) {
+    Cookies.set(timezoneKey, timezone, {
+      expires: 365,
+      secure: true,
+      sameSite: "Strict",
+    }) // 1 year
   }
 }
 

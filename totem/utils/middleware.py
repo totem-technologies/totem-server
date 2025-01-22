@@ -1,8 +1,12 @@
 import zoneinfo
+from typing import TYPE_CHECKING
 
 from django.conf import settings
 from django.http import Http404, HttpRequest
 from django.utils import timezone
+
+if TYPE_CHECKING:
+    from totem.users.models import User
 
 
 def robotnoindex(get_response):
@@ -18,6 +22,8 @@ def robotnoindex(get_response):
 
 
 class TimezoneMiddleware:
+    """Set the timezone for the request based on the authenticated user's timezone or the timezone cookie."""
+
     def __init__(self, get_response):
         self.get_response = get_response
 
@@ -28,10 +34,10 @@ class TimezoneMiddleware:
             detected_tzname = zoneinfo.ZoneInfo(request.COOKIES.get("totem_timezone"))
         except (zoneinfo.ZoneInfoNotFoundError, TypeError):
             pass
-        user = request.user
+        user: "User" = request.user
         if user.is_authenticated and user.timezone:
             tzname = user.timezone
-        if tzname is None and detected_tzname is not None:
+        if detected_tzname is not None and detected_tzname != tzname:
             tzname = detected_tzname
             if user.is_authenticated:
                 user.timezone = tzname
