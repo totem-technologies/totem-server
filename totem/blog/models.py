@@ -16,6 +16,10 @@ class BlogPost(SluggedModel, AdminURLMixin, MarkdownMixin):
 
     def __str__(self):
         return self.title
+        
+    def clean(self):
+        super().clean()
+        self.validate_markdown(self.content)  # Add markdown validation
 
     class Meta:
         ordering = ["-date_published"]
