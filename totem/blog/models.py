@@ -1,6 +1,6 @@
 from django.db import models
 from totem.utils.models import SluggedModel, AdminURLMixin
-from totem.utils.md import MarkdownMixin
+from totem.utils.md import MarkdownMixin, MarkdownField
 
 class BlogPost(SluggedModel, AdminURLMixin, MarkdownMixin):
     title = models.CharField(max_length=255)
@@ -9,7 +9,7 @@ class BlogPost(SluggedModel, AdminURLMixin, MarkdownMixin):
         blank=True,
         help_text="Header image for blog post (PNG, JPG, max 5MB)"
     )
-    content = models.TextField(
+    content = MarkdownField(
         help_text="Markdown content for the blog post",
     )
     date_published = models.DateTimeField(auto_now_add=True)
