@@ -54,7 +54,6 @@ class MarkdownMixin:
             "extra",  # Add tables, fenced code, etc
             "sane_lists",  # Better list handling
             "toc",
-            "mdx_breakless_lists",  # Prevent line breaks in lists
         ])
         html = md.convert(content)
         return strip_tags(html)  # Final sanitization
