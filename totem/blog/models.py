@@ -1,5 +1,6 @@
 from django.db import models
-from totem.utils.models import SluggedModel, AdminURLMixin, MarkdownMixin
+from totem.utils.models import SluggedModel, AdminURLMixin
+from totem.utils.md import MarkdownMixin
 
 class BlogPost(SluggedModel, AdminURLMixin, MarkdownMixin):
     title = models.CharField(max_length=255)
