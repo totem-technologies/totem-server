@@ -285,3 +285,4 @@ openapi.json
 !.envs/.local/
 !.envs/.ci/
 .mailpit
+.aider*
