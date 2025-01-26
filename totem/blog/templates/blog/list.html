@@ -83,3 +83,43 @@
     </div>
   </div>
 {% endblock content %}
+{% extends "base.html" %}
+{% load static %}
+{% load avatar %}
+
+{% block title %}Blog{% endblock %}
+
+{% block content %}
+<div class="mx-auto max-w-7xl px-4">
+  <div class="py-16 text-center">
+    <h1 class="h1">Blog</h1>
+  </div>
+
+  <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+    {% for post in posts %}
+      <div class="card">
+        {% if post.header_image %}
+          <figure>
+            <img src="{{ post.header_image.url }}" alt="{{ post.title }}">
+          </figure>
+        {% endif %}
+        <div class="card-body">
+          <div class="flex items-center gap-2 pb-2">
+            {% avatar user=post.author classes="w-8 h-8 rounded-full" %}
+            <div class="text-sm font-semibold">{{ post.author.name }}</div>
+          </div>
+          <h2 class="card-title">{{ post.title }}</h2>
+          <p class="text-sm text-gray-600">
+            {{ post.date_published|date:"F j, Y" }}
+          </p>
+          <div class="card-actions justify-end">
+            <a href="{{ post.get_absolute_url }}" class="btn btn-primary">Read more</a>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  {% include "pagination.html" %}
+</div>
+{% endblock %}
