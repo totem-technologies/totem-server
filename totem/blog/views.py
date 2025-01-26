@@ -10,3 +10,4 @@ class BlogPostListView(ListView):
     model = BlogPost
     template_name = "blog/list.html"
     context_object_name = "posts"
+    paginate_by = 12
