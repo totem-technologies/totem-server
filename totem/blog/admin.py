@@ -9,7 +9,7 @@ class BlogPostAdmin(admin.ModelAdmin):
     save_on_top = True
     list_display = ("title", "header_image_preview", "slug", "date_published")
     search_fields = ("title", "content")
-    prepopulated_fields = {"slug": ("title",)}
+    # prepopulated_fields = {"slug": ("title",)}
 
     def header_image_preview(self, obj):
         if obj.header_image:
@@ -22,7 +22,7 @@ class BlogPostAdmin(admin.ModelAdmin):
         (
             "Header",
             {
-                "fields": ("title", "slug", "header_image"),
+                "fields": ("title", "header_image"),
             },
         ),
         (
