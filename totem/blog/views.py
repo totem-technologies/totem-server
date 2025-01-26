@@ -1,6 +1,8 @@
-from django.views.generic import DetailView, ListView
 from django.http import Http404
+from django.views.generic import DetailView, ListView
+
 from .models import BlogPost
+
 
 class BlogPostDetailView(DetailView):
     model = BlogPost
@@ -17,6 +19,7 @@ class BlogPostDetailView(DetailView):
         if not post.publish and not self.request.user.is_staff:
             raise Http404("Post not found")
         return post
+
 
 class BlogPostListView(ListView):
     model = BlogPost
