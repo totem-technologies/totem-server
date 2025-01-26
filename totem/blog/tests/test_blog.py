@@ -1,31 +1,32 @@
-from django.test import TestCase
-from django.urls import reverse
-from django.core.exceptions import ValidationError
 from datetime import timedelta
 
+from django.core.exceptions import ValidationError
+from django.test import TestCase
+from django.urls import reverse
+
 from totem.users.tests.factories import UserFactory
+
 from .factories import BlogPostFactory
+
 
 class BlogPostModelTests(TestCase):
     def test_default_publish_status(self):
         post = BlogPostFactory()
         self.assertFalse(post.publish)
-    
+
     def test_string_representation(self):
         post = BlogPostFactory(title="Test Post")
         self.assertEqual(str(post), "Test Post")
 
     def test_get_absolute_url(self):
         post = BlogPostFactory()
-        self.assertEqual(
-            post.get_absolute_url(),
-            f"/blog/{post.slug}/"
-        )
+        self.assertEqual(post.get_absolute_url(), f"/blog/{post.slug}/")
 
     def test_markdown_validation(self):
         post = BlogPostFactory(content="# Invalid H1")
         with self.assertRaises(ValidationError):
             post.full_clean()
+
 
 class BlogViewTests(TestCase):
     def setUp(self):
@@ -59,7 +60,10 @@ class BlogViewTests(TestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_ordering(self):
-        older_post = BlogPostFactory(date_published=self.published_post.date_published - timedelta(days=1))
+        older_post = BlogPostFactory(
+            date_published=self.published_post.date_published - timedelta(days=1), publish=True
+        )
+        older_post.save()
         response = self.client.get(reverse("blog:list"))
         posts = response.context["posts"]
         self.assertEqual(posts[0], self.published_post)
