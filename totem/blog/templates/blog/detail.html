@@ -1,96 +1,71 @@
 {% extends "base.html" %}
 {% load markdown %}
-{% load absurl %}
+{% load avatar %}
 
 {# djlint:off #}
 {% block title %}{{ post.title }}{% endblock title %}
-{% block description %}{{ post.content|striptags|truncatechars:140 }}{% endblock description %}
+{% block description %}{{ post.subtitle|striptags|truncatechars:140 }}{% endblock description %}
 {% block ogimage %}{% if post.header_image %}{{ post.header_image.url }}{% endif %}{% endblock ogimage %}
 {# djlint:on #}
 
 {% block content %}
   <div class="h-2"></div>
-  <div class="m-auto flex max-w-5xl px-5 pb-2">
+  <div class="m-auto flex max-w-4xl px-5 pb-2">
     <a class="hover:text-tblue" href="{% url 'blog:list' %}">
       <h2 class="font-semibold">← Back to Blog</h2>
     </a>
   </div>
 
-  <div class="m-auto max-w-5xl px-5">
-    <article class="prose mx-auto lg:prose-xl">
-      <header class="mb-10">
-        <h1 class="text-4xl font-bold md:text-5xl">{{ post.title }}</h1>
-        <div class="mt-2 text-sm text-gray-500">
-          Published {{ post.date_published|date:"M d, Y" }}
-          {% if request.user.is_staff %}
-            ·
-            <a class="link" target="_blank" href="{{ post.get_admin_url }}"
-              >Edit</a
+  <div class="m-auto max-w-4xl px-5 pt-20">
+    <header class="mb-4 lg:mb-6">
+      <address class="mb-6 flex items-center not-italic">
+        <div class="mr-3 inline-flex items-center gap-2 text-sm text-gray-500">
+          {% avatar user=post.author size=50 %}
+          <div>
+            <a href="#" rel="author" class="text-xl font-bold text-gray-900"
+              >{{ post.author.name }}</a
             >
-          {% endif %}
-        </div>
-
-        {% if post.header_image %}
-          <div class="card mt-5 shadow-xl">
-            <figure>
-              <img
-                src="{{ post.header_image.url }}"
-                alt="{{ post.title }} header image"
-                class="h-auto w-full rounded-lg"
-                loading="lazy" />
-            </figure>
+            <p class="text-base text-gray-500">
+              <time
+                pubdate
+                datetime="{{ post.date_published|date:'Y-m-d' }}"
+                title="{{ post.date_published|date:'M d, Y' }}"
+                >{{ post.date_published|date:"M d, Y" }}</time
+              >
+              {% if request.user.is_staff %}
+                ·
+                <a class="link" target="_blank" href="{{ post.get_admin_url }}"
+                  >Edit</a
+                >
+              {% endif %}
+            </p>
           </div>
+        </div>
+      </address>
+      <h1
+        class="mb-4 text-3xl font-extrabold leading-tight text-gray-900 lg:mb-6 lg:text-4xl">
+        {% if not post.published %}[DRAFT]{% endif %}{{ post.title }}
+      </h1>
+      <p>
+        {% if post.subtitle %}
+          <span class="text-lg text-gray-600">{{ post.subtitle }}</span>
         {% endif %}
-      </header>
+      </p>
+      {% if post.header_image %}
+        <div class="card mt-5 shadow-xl">
+          <figure>
+            <img
+              src="{{ post.header_image.url }}"
+              alt="{{ post.title }} header image"
+              class="h-auto w-full rounded-lg"
+              loading="lazy" />
+          </figure>
+        </div>
+      {% endif %}
+    </header>
 
+    <article class="prose mx-auto lg:prose-xl">
       <div class="tprose">{{ post.content_html|safe }}</div>
     </article>
   </div>
 {% endblock content %}
-{% extends "base.html" %}
-{% load static %}
-{% load avatar %}
-{% load markdown %}
-{% load icons %}
-
-{% block title %}{{ post.title }}{% endblock %}
-
-{% block content %}
-<article class="prose prose-lg mx-auto max-w-4xl px-4">
-  {% if post.header_image %}
-    <img src="{{ post.header_image.url }}" alt="{{ post.title }}" class="w-full rounded-lg">
-  {% endif %}
-  
-  <h1>{{ post.title }}</h1>
-  
-  <div class="text-gray-600">
-    {{ post.date_published|date:"F j, Y" }}
-  </div>
-
-  {{ post.content|to_html }}
-
-  <div class="divider"></div>
-  <div class="pb-10">
-    <h3 class="font-semibold">About the Author</h3>
-    <div class="flex items-center gap-4 pt-5">
-      <a href="{{ post.author.get_keeper_url }}" class="block">
-        {% avatar user=post.author classes="w-16 h-16 rounded-full" %}
-      </a>
-      <div>
-        <a href="{{ post.author.get_keeper_url }}" class="link">
-          <h3 class="text-xl font-bold">{{ post.author.name }}</h3>
-        </a>
-        {% if post.author.keeper_profile.location %}
-          <div class="flex items-center gap-2 text-sm text-gray-500">
-            {% icons "location" size=16 %}
-            {{ post.author.keeper_profile.location }}
-          </div>
-        {% endif %}
-      </div>
-    </div>
-    <div class="tprose mt-4">
-      {{ post.author.keeper_profile.bio|to_html }}
-    </div>
-  </div>
-</article>
-{% endblock %}

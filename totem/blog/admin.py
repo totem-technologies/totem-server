@@ -8,9 +8,8 @@ from .models import BlogPost
 class BlogPostAdmin(admin.ModelAdmin):
     save_on_top = True
     list_display = ("title", "author", "header_image_preview", "slug", "date_published")
-    search_fields = ("title", "content")
+    search_fields = ("title", "subtitle", "content")
     autocomplete_fields = ["author"]
-    # prepopulated_fields = {"slug": ("title",)}
 
     def header_image_preview(self, obj):
         if obj.header_image:
@@ -23,7 +22,7 @@ class BlogPostAdmin(admin.ModelAdmin):
         (
             "Header",
             {
-                "fields": ("author", "title", "header_image"),
+                "fields": ("author", "title", "subtitle", "header_image", "publish", "date_published"),
             },
         ),
         (
