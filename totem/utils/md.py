@@ -50,13 +50,8 @@ class MarkdownMixin:
     @staticmethod
     def render_markdown(content: str):
         content = content or ""
-        md = markdown.Markdown(extensions=[
-            "extra",  # Add tables, fenced code, etc
-            "sane_lists",  # Better list handling
-            "toc",
-        ])
-        html = md.convert(content)
-        return strip_tags(html)  # Final sanitization
+        md = markdown.Markdown(extensions=["toc"])
+        return Template(md.convert(content)).render(Context())
 
     @property
     def content_html(self):
