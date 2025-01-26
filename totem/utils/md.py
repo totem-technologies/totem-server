@@ -54,9 +54,10 @@ class MarkdownMixin:
 
     @staticmethod
     def render_markdown(content: str):
+        templatetags = "\n".join(["{% load image %}"]) + "\n"
         content = content or ""
-        md = markdown.Markdown(extensions=["toc"])
-        return Template(md.convert(content)).render(Context())
+        md = markdown.Markdown(extensions=["toc"]).convert(content)
+        return Template(templatetags + md).render(Context())
 
     @property
     def content_html(self):

@@ -1,12 +1,31 @@
+import time
+
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.urls import reverse
 from django.utils import timezone
+from imagekit import ImageSpec
+from imagekit.models import ProcessedImageField
+from imagekit.processors import ResizeToFit
 
+from totem.utils.hash import basic_hash
 from totem.utils.md import MarkdownField, MarkdownMixin
 from totem.utils.models import AdminURLMixin, SluggedModel
 
 User = get_user_model()
+
+
+class BlogImageSpec(ImageSpec):
+    processors = [ResizeToFit(1500, 1500)]
+    format = "JPEG"
+    options = {"quality": 80, "optimize": True}
+
+
+def upload_to_id_image(instance, filename: str):
+    extension = filename.split(".")[-1]
+    epoch_time = int(time.time())
+    new_filename = basic_hash(f"{filename}-{epoch_time}")
+    return f"blog/headers/{new_filename}.{extension}"
 
 
 class BlogPost(AdminURLMixin, MarkdownMixin, SluggedModel):
@@ -18,8 +37,15 @@ class BlogPost(AdminURLMixin, MarkdownMixin, SluggedModel):
     header_image = models.ImageField(
         upload_to="blog/headers/%Y/%m/%d/", blank=True, help_text="Header image for blog post (PNG, JPG, max 5MB)"
     )
+    header_image = ProcessedImageField(
+        blank=True,
+        upload_to=upload_to_id_image,
+        spec=BlogImageSpec,  # type: ignore
+        help_text="Image for the blog header, must be under 5mb",
+    )
     content = MarkdownField(
-        help_text="Markdown content for the blog post. Do not use h1 (single #) headers.",
+        help_text="""Markdown content for the blog post. Do not use h1 (single #) headers.
+        Add inline images like {% image slug="vji504tvi" %}, after uploading them in the Images section.""",
     )
     date_published = models.DateTimeField(default=timezone.now)
     publish = models.BooleanField(default=False)
