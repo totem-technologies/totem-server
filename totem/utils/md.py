@@ -42,10 +42,15 @@ class _MarkdownWidget(widgets.Textarea):
 class MarkdownMixin:
     @classmethod
     def validate_markdown(cls, value):
+        # Check for prohibited H1 headers
+        if any(line.strip().startswith("# ") for line in value.split("\n")):
+            raise ValidationError("H1 headers (starting with #) are not allowed in content")
+        
         try:
+            # Verify markdown can be rendered
             cls.render_markdown(value)
         except Exception as e:
-            raise ValidationError(str(e))
+            raise ValidationError(f"Markdown error: {str(e)}") from e
 
     @staticmethod
     def render_markdown(content: str):
