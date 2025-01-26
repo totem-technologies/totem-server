@@ -34,9 +34,6 @@ class BlogPost(AdminURLMixin, MarkdownMixin, SluggedModel):
     author = models.ForeignKey(
         User, on_delete=models.DO_NOTHING, related_name="blog_posts", help_text="Author of the blog post", null=True
     )
-    header_image = models.ImageField(
-        upload_to="blog/headers/%Y/%m/%d/", blank=True, help_text="Header image for blog post (PNG, JPG, max 5MB)"
-    )
     header_image = ProcessedImageField(
         blank=True,
         upload_to=upload_to_id_image,
