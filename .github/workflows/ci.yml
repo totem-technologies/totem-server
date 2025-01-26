@@ -25,7 +25,7 @@ jobs:
       - name: Checkout Code Repository
         uses: actions/checkout@v4
       - uses: jdx/mise-action@v2
-      - run: npm ci --include=dev
+      - run: bun ci --include=dev
       - name: Run pre-commit
         run: |
           pip install pipx

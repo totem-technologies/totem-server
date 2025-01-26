@@ -24,17 +24,17 @@ COPY ./uv.lock .
 # Install dependencies.
 RUN uv sync --frozen
 
-FROM node:22 AS node-build-stage
+FROM oven/bun:1 AS js-build-stage
 
 WORKDIR /app
 
 COPY package.json .
 COPY package-lock.json .
-RUN npm install
+RUN bun install
 
 COPY . .
 COPY assets ./assets
-RUN npm run build
+RUN bun run build
 
 # Python 'run' stage
 FROM python AS python-run-stage
@@ -72,7 +72,7 @@ RUN chmod +x /start
 
 # copy application code to WORKDIR
 COPY . ${APP_HOME}
-COPY --from=node-build-stage /app/totem/static/js/bundles /app/totem/static/js/bundles
+COPY --from=js-build-stage /app/totem/static/js/bundles /app/totem/static/js/bundles
 
 # Define the default command.
 CMD ["/start"]

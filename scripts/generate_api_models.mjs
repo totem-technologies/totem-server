@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 import { TS_COMMON_PRESET, TypeScriptGenerator } from "@asyncapi/modelina"
 
 import fs from "fs/promises"

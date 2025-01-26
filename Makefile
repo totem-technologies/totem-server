@@ -17,7 +17,7 @@ build-prod:
 test: test-python test-js
 
 test-js:
-	npm run test:ci
+	bun run test:ci
 
 test-python:
 	@${RUN_DJANGO} coverage run -m pytest -n auto
@@ -44,17 +44,17 @@ deploy-prod:
 	git push dokku-prod
 
 assets-watch:
-	npm run dev
+	bun run dev
 
 assets:
-	npm run build
+	bun run build
 
 .venv:
 	python3 -m venv .venv
 
 install_local: .venv
 	source .venv/bin/activate && uv sync --frozen
-	npm install
+	bun install
 
 fixtures:
 	@${RUN_DJANGO} python manage.py load_dev_data
@@ -67,7 +67,7 @@ migrate: ## Run DB migrations in the container
 
 generate_api_models:
 	@${RUN_DJANGO} python manage.py export_openapi_schema --api totem.api.api.api > openapi.json
-	@npm run openapi-ts
+	@bun run openapi-ts
 
 updatedep:
 	uv sync -U

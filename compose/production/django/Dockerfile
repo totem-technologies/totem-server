@@ -8,10 +8,10 @@ ARG BUILD_ENVIRONMENT=production
 
 # Install apt packages
 RUN apt-get update && apt-get install --no-install-recommends -y \
-  # dependencies for building Python packages
-  build-essential \
-  # psycopg2 dependencies
-  libpq-dev
+    # dependencies for building Python packages
+    build-essential \
+    # psycopg2 dependencies
+    libpq-dev
 
 RUN pip install uv
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv
@@ -24,17 +24,17 @@ COPY ./uv.lock .
 # Install dependencies.
 RUN uv sync --no-dev --frozen
 
-FROM node:22 AS node-build-stage
+FROM oven/bun:1 AS js-build-stage
 
 WORKDIR /app
 
 COPY package.json .
 COPY package-lock.json .
-RUN npm install
+RUN bun install
 
 COPY . .
 COPY assets ./assets
-RUN npm run build
+RUN bun run build
 
 # Python 'run' stage
 FROM python AS python-run-stage
@@ -50,17 +50,17 @@ ENV PATH="/opt/venv/bin:$PATH"
 WORKDIR ${APP_HOME}
 
 RUN addgroup --system django \
-  && adduser --system --ingroup django django
+    && adduser --system --ingroup django django
 
 # Install required system dependencies
 RUN apt-get update && apt-get install --no-install-recommends -y \
-  # psycopg2 dependencies
-  libpq-dev \
-  # Translations dependencies
-  gettext \
-  # cleaning up unused files
-  && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-  && rm -rf /var/lib/apt/lists/*
+    # psycopg2 dependencies
+    libpq-dev \
+    # Translations dependencies
+    gettext \
+    # cleaning up unused files
+    && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
+    && rm -rf /var/lib/apt/lists/*
 
 # All absolute dir copies ignore workdir instruction.
 COPY --from=python-build-stage /opt/venv /opt/venv
@@ -79,7 +79,7 @@ RUN chmod +x /predeploy
 
 # copy application code to WORKDIR
 COPY --chown=django:django . ${APP_HOME}
-COPY --chown=django:django --from=node-build-stage /app/totem/static/js/bundles /app/totem/static/js/bundles
+COPY --chown=django:django --from=js-build-stage /app/totem/static/js/bundles /app/totem/static/js/bundles
 
 # make django owner of the WORKDIR directory as well.
 RUN chown django:django ${APP_HOME}

@@ -30,7 +30,7 @@
       </address>
       <h1
         class="mb-4 text-3xl font-extrabold leading-tight text-gray-900 lg:mb-6 lg:text-4xl">
-        {% if not post.published %}[DRAFT]{% endif %}{{ post.title }}
+        {% if not post.publish %}[DRAFT]{% endif %}{{ post.title }}
       </h1>
       <p>
         {% if post.subtitle %}
