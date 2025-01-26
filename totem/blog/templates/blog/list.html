@@ -6,7 +6,6 @@
 {# djlint:off #}
 {% block title %}Blog - {{ site_name }}{% endblock title %}
 {% block description %}Latest articles and updates from {{ site_name }}{% endblock description %}
-{% block ogimage %}{% absurl static_path|add:"images/social/blog-social.png" %}{% endblock ogimage %}
 {# djlint:on #}
 
 {% block content %}
@@ -17,28 +16,34 @@
         Updates, guides, and community stories
       </h3>
     </div>
-    
+
     <div class="m-auto max-w-5xl px-5">
       <div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
         {% for post in posts %}
-          <article class="card bg-base-100 shadow-xl transition-all hover:shadow-2xl">
+          <article
+            class="card bg-base-100 shadow-xl transition-all hover:shadow-2xl">
             <a href="{{ post.get_absolute_url }}">
               {% if post.header_image %}
                 <figure class="px-4 pt-4">
-                  <img 
-                    src="{{ post.header_image.url }}" 
+                  <img
+                    src="{{ post.header_image.url }}"
                     alt="{{ post.title }} header image"
                     class="h-48 w-full rounded-xl object-cover"
-                    loading="lazy"
-                  >
+                    loading="lazy" />
                 </figure>
               {% endif %}
-              <div class="card-body">
+              <div class="card-body text-left">
                 <h2 class="card-title">{{ post.title }}</h2>
                 <div class="text-sm text-gray-500">
                   {{ post.date_published|date:"M d, Y" }}
                   {% if request.user.is_staff %}
-                    · <a class="link" target="_blank" href="{{ post.get_admin_url }}">Edit</a>
+                    ·
+                    <a
+                      class="link"
+                      target="_blank"
+                      href="{{ post.get_admin_url }}"
+                      >Edit</a
+                    >
                   {% endif %}
                 </div>
                 <p class="line-clamp-3 text-gray-600">
@@ -47,7 +52,7 @@
               </div>
             </a>
           </article>
-        {% empty %}
+          {% empty %}
           <div class="col-span-full text-center text-gray-500">
             No blog posts yet. Check back soon!
           </div>
@@ -57,13 +62,21 @@
       {% if is_paginated %}
         <div class="join mt-10 flex justify-center">
           {% if page_obj.has_previous %}
-            <a class="btn join-item" href="?page={{ page_obj.previous_page_number }}">«</a>
+            <a
+              class="btn join-item"
+              href="?page={{ page_obj.previous_page_number }}"
+              >«</a
+            >
           {% endif %}
           <button class="btn join-item pointer-events-none">
             Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
           </button>
           {% if page_obj.has_next %}
-            <a class="btn join-item" href="?page={{ page_obj.next_page_number }}">»</a>
+            <a
+              class="btn join-item"
+              href="?page={{ page_obj.next_page_number }}"
+              >»</a
+            >
           {% endif %}
         </div>
       {% endif %}

@@ -5,45 +5,45 @@
 {# djlint:off #}
 {% block title %}{{ post.title }}{% endblock title %}
 {% block description %}{{ post.content|striptags|truncatechars:140 }}{% endblock description %}
-{% block ogimage %}{% if post.header_image %}{% absurl post.header_image.url %}{% endif %}{% endblock ogimage %}
+{% block ogimage %}{% if post.header_image %}{{ post.header_image.url }}{% endif %}{% endblock ogimage %}
 {# djlint:on #}
 
 {% block content %}
-<div class="h-2"></div>
-<div class="m-auto flex max-w-5xl px-5 pb-2">
-  <a class="hover:text-tblue" href="{% url 'blog:list' %}">
-    <h2 class="font-semibold">← Back to Blog</h2>
-  </a>
-</div>
+  <div class="h-2"></div>
+  <div class="m-auto flex max-w-5xl px-5 pb-2">
+    <a class="hover:text-tblue" href="{% url 'blog:list' %}">
+      <h2 class="font-semibold">← Back to Blog</h2>
+    </a>
+  </div>
 
-<div class="m-auto max-w-5xl px-5">
-  <article class="prose mx-auto lg:prose-xl">
-    <header class="mb-10">
-      <h1 class="text-4xl font-bold md:text-5xl">{{ post.title }}</h1>
-      <div class="mt-2 text-sm text-gray-500">
-        Published {{ post.date_published|date:"M d, Y" }}
-        {% if request.user.is_staff %}
-          · <a class="link" target="_blank" href="{{ post.get_admin_url }}">Edit</a>
-        {% endif %}
-      </div>
-      
-      {% if post.header_image %}
-        <div class="card mt-5 shadow-xl">
-          <figure>
-            <img 
-              src="{{ post.header_image.url }}" 
-              alt="{{ post.title }} header image"
-              class="h-auto w-full rounded-lg"
-              loading="lazy"
+  <div class="m-auto max-w-5xl px-5">
+    <article class="prose mx-auto lg:prose-xl">
+      <header class="mb-10">
+        <h1 class="text-4xl font-bold md:text-5xl">{{ post.title }}</h1>
+        <div class="mt-2 text-sm text-gray-500">
+          Published {{ post.date_published|date:"M d, Y" }}
+          {% if request.user.is_staff %}
+            ·
+            <a class="link" target="_blank" href="{{ post.get_admin_url }}"
+              >Edit</a
             >
-          </figure>
+          {% endif %}
         </div>
-      {% endif %}
-    </header>
 
-    <div class="tprose">
-      {{ post.content_html|safe }}
-    </div>
-  </article>
-</div>
+        {% if post.header_image %}
+          <div class="card mt-5 shadow-xl">
+            <figure>
+              <img
+                src="{{ post.header_image.url }}"
+                alt="{{ post.title }} header image"
+                class="h-auto w-full rounded-lg"
+                loading="lazy" />
+            </figure>
+          </div>
+        {% endif %}
+      </header>
+
+      <div class="tprose">{{ post.content_html|safe }}</div>
+    </article>
+  </div>
 {% endblock content %}
