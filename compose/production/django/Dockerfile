@@ -29,7 +29,7 @@ FROM oven/bun:1 AS js-build-stage
 WORKDIR /app
 
 COPY package.json .
-COPY package-lock.json .
+COPY bun.lock .
 RUN bun install
 
 COPY . .
