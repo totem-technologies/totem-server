@@ -1,4 +1,5 @@
 from django.db import models
+from django.urls import reverse
 
 from totem.utils.md import MarkdownField, MarkdownMixin
 from totem.utils.models import AdminURLMixin, SluggedModel
@@ -20,6 +21,9 @@ class BlogPost(AdminURLMixin, MarkdownMixin, SluggedModel):
     def clean(self):
         super().clean()
         self.validate_markdown(self.content)  # Add markdown validation
+
+    def get_absolute_url(self) -> str:
+        return reverse("blog:detail", kwargs={"slug": self.slug})
 
     class Meta:
         ordering = ["-date_published"]
