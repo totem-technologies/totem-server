@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% load markdown %}
+{% load avatar %}
+
+{# djlint:off #}
+{% block title %}{{ post.title }}{% endblock title %}
+{% block description %}{{ post.subtitle|striptags|truncatechars:140 }}{% endblock description %}
+{% block ogimage %}{% if post.header_image %}{{ post.header_image.url }}{% endif %}{% endblock ogimage %}
+{% block meta %}
+  {% if post.published %}
+    <meta name="robots" content="index" />
+  {% else %}
+    <meta name="robots" content="noindex" />
+  {% endif %}
+{% endblock meta %}
+{# djlint:on #}
+
+{% block content %}
+  <div class="h-8"></div>
+  <div class="m-auto flex max-w-4xl px-5 pb-2">
+    <a class="hover:text-tblue" href="{% url 'blog:list' %}">
+      <h2 class="font-semibold">← Back to Blog</h2>
+    </a>
+  </div>
+
+  <div class="m-auto max-w-4xl px-5 pt-8">
+    <header class="mb-4 lg:mb-6">
+      <address class="mb-6 flex items-center not-italic">
+        {% include "blog/_author_date.html" %}
+      </address>
+      <h1
+        class="mb-4 text-3xl font-extrabold leading-tight text-gray-900 lg:mb-6 lg:text-4xl">
+        {% if not post.published %}[DRAFT]{% endif %}{{ post.title }}
+      </h1>
+      <p>
+        {% if post.subtitle %}
+          <span class="text-lg text-gray-600">{{ post.subtitle }}</span>
+        {% endif %}
+      </p>
+      {% if post.header_image %}
+        <div class="card mt-5 shadow-xl">
+          <figure>
+            <img
+              src="{{ post.header_image.url }}"
+              alt="{{ post.title }} header image"
+              class="h-auto w-full rounded-lg"
+              loading="lazy" />
+          </figure>
+        </div>
+      {% endif %}
+    </header>
+
+    <article class="prose mx-auto lg:prose-xl">
+      <div class="tprose mx-auto">{{ post.content_html|safe }}</div>
+    </article>
+  </div>
+{% endblock content %}

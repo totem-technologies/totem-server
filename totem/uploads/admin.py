@@ -8,8 +8,8 @@ from .models import Image
 
 @admin.register(Image)
 class ImageAdmin(admin.ModelAdmin):
-    list_display = ("title", "image")
-    search_fields = ("title",)
+    list_display = ("title", "image", "slug")
+    search_fields = ("title", "slug")
     list_filter = ("title",)
     fields = ["title", "image"]
     readonly_fields = ["image_tag"]
