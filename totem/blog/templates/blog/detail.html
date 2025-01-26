@@ -6,41 +6,27 @@
 {% block title %}{{ post.title }}{% endblock title %}
 {% block description %}{{ post.subtitle|striptags|truncatechars:140 }}{% endblock description %}
 {% block ogimage %}{% if post.header_image %}{{ post.header_image.url }}{% endif %}{% endblock ogimage %}
+{% block meta %}
+  {% if post.published %}
+    <meta name="robots" content="index" />
+  {% else %}
+    <meta name="robots" content="noindex" />
+  {% endif %}
+{% endblock meta %}
 {# djlint:on #}
 
 {% block content %}
-  <div class="h-2"></div>
+  <div class="h-8"></div>
   <div class="m-auto flex max-w-4xl px-5 pb-2">
     <a class="hover:text-tblue" href="{% url 'blog:list' %}">
       <h2 class="font-semibold">← Back to Blog</h2>
     </a>
   </div>
 
-  <div class="m-auto max-w-4xl px-5 pt-20">
+  <div class="m-auto max-w-4xl px-5 pt-8">
     <header class="mb-4 lg:mb-6">
       <address class="mb-6 flex items-center not-italic">
-        <div class="mr-3 inline-flex items-center gap-2 text-sm text-gray-500">
-          {% avatar user=post.author size=50 %}
-          <div>
-            <a href="#" rel="author" class="text-xl font-bold text-gray-900"
-              >{{ post.author.name }}</a
-            >
-            <p class="text-base text-gray-500">
-              <time
-                pubdate
-                datetime="{{ post.date_published|date:'Y-m-d' }}"
-                title="{{ post.date_published|date:'M d, Y' }}"
-                >{{ post.date_published|date:"M d, Y" }}</time
-              >
-              {% if request.user.is_staff %}
-                ·
-                <a class="link" target="_blank" href="{{ post.get_admin_url }}"
-                  >Edit</a
-                >
-              {% endif %}
-            </p>
-          </div>
-        </div>
+        {% include "blog/_author_date.html" %}
       </address>
       <h1
         class="mb-4 text-3xl font-extrabold leading-tight text-gray-900 lg:mb-6 lg:text-4xl">

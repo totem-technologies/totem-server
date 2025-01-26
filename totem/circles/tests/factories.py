@@ -24,7 +24,7 @@ class CircleFactory(DjangoModelFactory, metaclass=BaseMetaFactory[Circle]):
         self.categories.add(*extracted)  # type: ignore
         self.save()  # type: ignore
 
-    class Meta:
+    class Meta:  # type: ignore
         model = Circle
         skip_postgeneration_save = True
 
@@ -35,7 +35,7 @@ class CircleEventFactory(DjangoModelFactory, metaclass=BaseMetaFactory[CircleEve
     meeting_url = "https://example.com"
     duration_minutes = 60
 
-    class Meta:
+    class Meta:  # type: ignore
         model = CircleEvent
 
 
@@ -43,5 +43,5 @@ class CircleCategoryFactory(DjangoModelFactory, metaclass=BaseMetaFactory[Circle
     name = Faker("name")
     slug = Faker("slug")
 
-    class Meta:
+    class Meta:  # type: ignore
         model = CircleCategory

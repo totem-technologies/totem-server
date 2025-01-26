@@ -45,7 +45,7 @@ class MarkdownMixin:
         # Check for prohibited H1 headers
         if any(line.strip().startswith("# ") for line in value.split("\n")):
             raise ValidationError("H1 headers (starting with #) are not allowed in content")
-        
+
         try:
             # Verify markdown can be rendered
             cls.render_markdown(value)

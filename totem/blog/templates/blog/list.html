@@ -5,7 +5,7 @@
 {% load avatar %}
 
 {# djlint:off #}
-{% block title %}Blog - {{ site_name }}{% endblock title %}
+{% block title %}Blog{% endblock title %}
 {% block description %}Latest articles and updates from {{ site_name }}{% endblock description %}
 {# djlint:on #}
 
@@ -22,7 +22,7 @@
       <div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
         {% for post in posts %}
           <article
-            class="card bg-base-100 shadow-xl transition-all hover:shadow-2xl">
+            class="card compact bg-base-100 shadow-xl transition-all hover:shadow-2xl">
             <a href="{{ post.get_absolute_url }}">
               {% if post.header_image %}
                 <figure class="px-4 pt-4">
@@ -34,29 +34,10 @@
                 </figure>
               {% endif %}
               <div class="card-body text-left">
-                {% if post.author %}
-                <div class="flex items-center gap-2 pb-2">
-                  {% avatar user=post.author classes="w-8 h-8 rounded-full" %}
-                  <div class="text-sm font-semibold">
-                    {{ post.author.name }}
-                  </div>
-                </div>
-                {% endif %}
+                {% include "blog/_author_date.html" %}
                 <h2 class="card-title">{{ post.title }}</h2>
-                <div class="text-sm text-gray-500">
-                  {{ post.date_published|date:"M d, Y" }}
-                  {% if request.user.is_staff %}
-                    ·
-                    <a
-                      class="link"
-                      target="_blank"
-                      href="{{ post.get_admin_url }}"
-                      >Edit</a
-                    >
-                  {% endif %}
-                </div>
                 <p class="line-clamp-3 text-gray-600">
-                  {{ post.content|striptags|truncatechars:140 }}
+                  {{ post.subtitle|striptags|truncatechars:140 }}
                 </p>
               </div>
             </a>

@@ -1,0 +1,25 @@
+{% load avatar %}
+<div class="mr-3 inline-flex items-center gap-2 text-sm text-gray-500">
+  {% if post.author %}
+    {% avatar user=post.author size=50 %}
+  {% endif %}
+  <div>
+    {% if post.author %}
+      <span class="text-xl font-bold text-gray-900"
+        >{{ post.author.name }}</span
+      >
+    {% endif %}
+    <p class="text-base text-gray-500">
+      <time
+        pubdate
+        datetime="{{ post.date_published|date:'Y-m-d' }}"
+        title="{{ post.date_published|date:'M d, Y' }}"
+        >{{ post.date_published|date:"M d, Y" }}</time
+      >
+      {% if request.user.is_staff %}
+        ·
+        <a class="link" target="_blank" href="{{ post.get_admin_url }}">Edit</a>
+      {% endif %}
+    </p>
+  </div>
+</div>
