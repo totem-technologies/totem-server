@@ -35,7 +35,9 @@
               {% endif %}
               <div class="card-body text-left">
                 {% include "blog/_author_date.html" %}
-                <h2 class="card-title">{{ post.title }}</h2>
+                <h2 class="card-title">
+                  {% if not post.published %}[DRAFT]{% endif %}{{ post.title }}
+                </h2>
                 <p class="line-clamp-3 text-gray-600">
                   {{ post.subtitle|striptags|truncatechars:140 }}
                 </p>
