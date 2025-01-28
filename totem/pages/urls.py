@@ -38,6 +38,7 @@ webflow_pages = [
     "topics/creatives",
     "topics/self-improvement",
     "docs/crisis-resources",
+    "docs/keeper-trainer-curriculum",
 ]
 
 webflow_patterns = [re_path(rf"^{page}/", views.webflow_proxy, name=page) for page in webflow_pages]
