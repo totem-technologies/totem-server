@@ -27,18 +27,22 @@ class PagesSitemap(Sitemap):
 
 
 webflow_pages = [
-    "how-it-works",
     "about",
-    "guidelines",
-    "training",
-    "why-totem",
-    "topics/mothers",
-    "topics/lgbtq",
-    "topics/lgbtqia-topic-details",
-    "topics/creatives",
-    "topics/self-improvement",
+    "crisis-resources",
     "docs/crisis-resources",
     "docs/keeper-trainer-curriculum",
+    "friends-of-totem",
+    "guidelines",
+    "how-it-works",
+    "staying-grounded",
+    "topics/creatives",
+    "topics/lgbtq",
+    "topics/lgbtqia-topic-details",
+    "topics/mothers",
+    "topics/self-improvement",
+    "totem-for-introverts",
+    "training",
+    "why-totem",
 ]
 
 webflow_patterns = [re_path(rf"^{page}/", views.webflow_proxy, name=page) for page in webflow_pages]
