@@ -174,3 +174,59 @@ def upcoming_events(request, filters: EventCalendarFilterSchema = Query()):
         )
         for event in events
     ]
+
+
+class WebflowEventsFilterSchema(FilterSchema):
+    keeper_username: str | None = Field(
+        default=None,
+        description="Filter by Keeper's username",
+    )
+
+
+class WebflowEventSchema(Schema):
+    start: str
+    name: str
+    keeper_name: str
+    keeper_username: str
+    join_link: str
+    image_link: str | None
+    keeper_image_link: str | None
+
+
+@router.get(
+    "/webflow/list_events",
+    response={200: List[WebflowEventSchema]},
+    tags=["events"],
+    url_name="webflow_events_list",
+    auth=None,
+)
+def webflow_events_list(request, filters: WebflowEventsFilterSchema = Query()):
+    events = all_upcoming_recommended_events(None)
+    if filters.keeper_username:
+        events = events.filter(circle__author__keeper_profile__username=filters.keeper_username)
+
+    results: list[WebflowEventSchema] = []
+    for event in events:
+        circle = event.circle
+
+        keeper_profile = getattr(circle.author, "keeper_profile", None)
+        if not keeper_profile:
+            continue
+
+        image_url = circle.image.url if circle.image else None
+        keeper_image_link = circle.author.profile_image.url if circle.author.profile_image else None
+        join_link = request.build_absolute_uri(event.get_absolute_url())
+
+        results.append(
+            WebflowEventSchema(
+                start=event.start.isoformat(),
+                name=event.title or circle.title,
+                keeper_name=circle.author.name,
+                keeper_username=keeper_profile.username,
+                join_link=join_link,
+                image_link=image_url,
+                keeper_image_link=keeper_image_link,
+            )
+        )
+
+    return results

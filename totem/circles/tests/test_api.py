@@ -5,7 +5,7 @@ from django.utils import timezone
 
 from totem.circles.api import EventCalendarFilterSchema, EventsFilterSchema
 from totem.circles.tests.factories import CircleCategoryFactory, CircleEventFactory, CircleFactory
-from totem.users.tests.factories import UserFactory
+from totem.users.tests.factories import KeeperProfileFactory, UserFactory
 
 
 class TestCircleListAPI:
@@ -177,3 +177,55 @@ class TestEventCalendar:
         assert response.status_code == 200
         assert response.json()[0]["title"] == event.title
         assert len(response.json()) == 1
+
+
+class TestWebflowEventsAPI:
+    def test_webflow_no_events(self, client, db):
+        response = client.get(reverse("api-1:webflow_events_list"))
+        assert response.status_code == 200
+        assert response.json() == []
+
+    def test_webflow_events_ordered(self, client, db):
+        now = timezone.now()
+        keeper1 = UserFactory()
+        KeeperProfileFactory(user=keeper1, username="keeper1")
+        circle1 = CircleFactory(author=keeper1)
+        event1 = CircleEventFactory(circle=circle1, start=now + timedelta(days=2))
+
+        keeper2 = UserFactory()
+        KeeperProfileFactory(user=keeper2, username="keeper2")
+        circle2 = CircleFactory(author=keeper2)
+        event2 = CircleEventFactory(circle=circle2, start=now + timedelta(days=1))
+
+        response = client.get(reverse("api-1:webflow_events_list"))
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 2
+        assert data[0]["start"] == event2.start.isoformat()
+        assert data[1]["start"] == event1.start.isoformat()
+
+    def test_webflow_filter_keeper(self, client, db):
+        # Create keepers with profiles
+        keeper1 = UserFactory()
+        KeeperProfileFactory(user=keeper1, username="keeper1")
+        circle1 = CircleFactory(author=keeper1)
+        CircleEventFactory(circle=circle1)
+
+        keeper2 = UserFactory()
+        KeeperProfileFactory(user=keeper2, username="keeper2")
+        circle2 = CircleFactory(author=keeper2)
+        CircleEventFactory(circle=circle2)
+
+        # Test filter
+        response = client.get(reverse("api-1:webflow_events_list"), {"keeper_username": "keeper1"})
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["keeper_username"] == "keeper1"
+
+    def test_webflow_past_events_excluded(self, client, db):
+        CircleEventFactory(start=timezone.now() - timedelta(days=1))
+        response = client.get(reverse("api-1:webflow_events_list"))
+        assert len(response.json()) == 0
