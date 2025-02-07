@@ -34,6 +34,7 @@ webflow_pages = [
     "friends-of-totem",
     "guidelines",
     "how-it-works",
+    "privacy-notice",
     "staying-grounded",
     "topics/creatives",
     "topics/lgbtq",
