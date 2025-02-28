@@ -40,7 +40,7 @@ def events_by_month(user: User | None, circle_slug: str, month: int, year: int):
 
 
 def all_upcoming_recommended_events(user: User | None, category: str | None = None, author: str | None = None):
-    events = CircleEvent.objects.filter(start__gte=timezone.now(), cancelled=False, open=True, listed=True)
+    events = CircleEvent.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True)
     events = events.order_by("start")
     if not user or not user.is_staff:
         events = events.filter(circle__published=True)
