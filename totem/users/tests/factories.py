@@ -34,7 +34,7 @@ class UserFactory(DjangoModelFactory, metaclass=BaseMetaFactory[User]):
         if create:
             self.save()  # type: ignore
 
-    class Meta:
+    class Meta:  # type: ignore
         model = get_user_model()
         django_get_or_create = ["email"]
         skip_postgeneration_save = True
@@ -48,7 +48,7 @@ class KeeperProfileFactory(DjangoModelFactory, metaclass=BaseMetaFactory[KeeperP
 
     user = SubFactory(UserFactory)
 
-    class Meta:
+    class Meta:  # type: ignore
         model = KeeperProfile
         django_get_or_create = ["user"]
         skip_postgeneration_save = True
