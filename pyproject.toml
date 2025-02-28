@@ -28,13 +28,13 @@ dependencies = [
     "django-anymail<13",
     "django-auditlog<4",
     "django-cors-headers<5",
-    "django-environ==0.11.2",
+    "django-environ==0.12.0",
     "django-imagekit<6.0.0",
     "django-impersonate<2",
     "django-ninja<2",
     "django-sesame==3.2.2",
     "django-storages[s3]<2",
-    "django-taggit<6",
+    "django-taggit<7",
     "django-timezone-field<8",
     "django<5.2",
 ]
@@ -60,7 +60,7 @@ dev = [
     "ruff",
 
     # Django
-    "django-debug-toolbar<5",
+    "django-debug-toolbar<6",
     "django-extensions<4",
     "factory-boy<4",
     "pytest-cov<7",
