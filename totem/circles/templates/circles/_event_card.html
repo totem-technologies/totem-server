@@ -24,7 +24,7 @@
         class="{% if event.circle.image %}circle-bg-image-{{ event.slug }}{% else %}no-image{% endif %} relative flex flex-col rounded-t-3xl p-5">
         <div class="flex min-h-[100px] justify-between">
           <div>
-            <h1 class="h3 pb-3 text-white">{{ event.circle.title }}</h1>
+            <h1 class="h3 pb-3 text-white">{{ event.event_title_or_title }}</h1>
             <div class="text-white">with {{ event.circle.author.name }}</div>
           </div>
           <div class="min-w-[50px] self-end">

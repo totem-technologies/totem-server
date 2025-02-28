@@ -331,6 +331,8 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
 
     # def attend_url(self, user):
     #     return AttendCircleAction(user=user, parameters={"event_slug": self.slug}).build_url()
+    def event_title_or_title(self):
+        return self.title or self.circle.title
 
     def __str__(self):
         return f"CircleEvent: {self.start}"

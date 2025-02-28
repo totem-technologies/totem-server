@@ -72,7 +72,7 @@ def _circle_detail(request: HttpRequest, user: User, circle: Circle, event: Circ
             attending = event.attendees.contains(user)
             joinable = event.can_join(user)
 
-    other_circles = upcoming_events_by_author(user, circle.author, exclude_circle=circle)[:6]
+    other_circles = upcoming_events_by_author(user, circle.author, exclude_event=event)[:6]
 
     return render(
         request,
