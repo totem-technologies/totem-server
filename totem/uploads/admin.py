@@ -3,6 +3,8 @@ from django.utils.html import escape
 from django.utils.safestring import mark_safe
 from django.core.exceptions import ValidationError
 from django import forms
+from django.urls import reverse
+
 
 from .models import Image
 
@@ -23,7 +25,7 @@ class ImageAdminForm(forms.ModelForm):
 @admin.register(Image)
 class ImageAdmin(admin.ModelAdmin):
     form = ImageAdminForm
-    list_display = ("title", "thumbnail_preview", "image", "slug", "date_created")
+    list_display = ("title", "thumbnail_preview", "slug", "date_created")
     search_fields = ("title", "slug")
     list_filter = ("date_created",)
     fields = ["title", "image", "slug", "image_tag", "date_created", "date_modified"]
@@ -46,8 +48,10 @@ class ImageAdmin(admin.ModelAdmin):
 
     def thumbnail_preview(self, obj):
         if obj and obj.image:
+            # Link to the change page rather than the raw image
+            change_url = reverse("admin:uploads_image_change", args=(obj.pk,))
             return mark_safe(
-                f'<a href="{escape(obj.image.url)}" target="_blank">'
+                f'<a href="{change_url}">'
                 f'<img src="{escape(obj.image.url)}" width="100" height="auto" '
                 f'style="object-fit: contain;" />'
                 f"</a>"
