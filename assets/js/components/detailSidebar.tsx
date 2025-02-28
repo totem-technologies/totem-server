@@ -264,7 +264,7 @@ function EventInfo(props: {
 
           <Match when={props.eventStore.attending}>
             <AddToCalendarButton
-              name={props.eventStore.title}
+              name={`${props.eventStore.title} - ${props.eventStore.space_title}`}
               calLink={props.eventStore.calLink}
               start={props.eventStore.start}
               durationMinutes={props.eventStore.duration}

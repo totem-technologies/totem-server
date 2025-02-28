@@ -85,6 +85,7 @@ export type FilterOptionsSchema = {
 export type EventDetailSchema = {
     slug: string;
     title: string;
+    space_title: string;
     description: string;
     price: number;
     seats_left: number;

@@ -86,6 +86,7 @@ def filter_options(request):
 class EventDetailSchema(Schema):
     slug: str
     title: str
+    space_title: str
     description: str
     price: int
     seats_left: int
@@ -128,7 +129,8 @@ def event_detail(request, event_slug):
         attendees = []
     return EventDetailSchema(
         slug=event.slug,
-        title=space.title,
+        title=event.title,
+        space_title=space.title,
         description=space.content_html,
         price=space.price,
         seats_left=event.seats_left(),
