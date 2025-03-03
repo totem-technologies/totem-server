@@ -22,7 +22,7 @@ class AuthorDropdownFilter(admin.SimpleListFilter):
 @admin.register(BlogPost)
 class BlogPostAdmin(admin.ModelAdmin):
     save_on_top = True
-    list_display = ("title", "author", "slug", "date_published")
+    list_display = ("title", "author__email", "slug", "date_published")
     list_filter = [AuthorDropdownFilter]
     search_fields = ("title", "subtitle", "content")
     autocomplete_fields = ["author"]
