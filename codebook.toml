@@ -1,4 +1,4 @@
-dictionaries = ["en"]
+dictionaries = []
 words = [
     "allauth",
     "atcb",
@@ -40,6 +40,7 @@ words = [
     "webflow",
     "wght",
     "woff",
+    "fieldsets",
 ]
 flag_words = []
 ignore_paths = []
