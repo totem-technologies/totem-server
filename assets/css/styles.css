@@ -1,11 +1,15 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
-/* @plugin "@tailwindcss/line-clamp"; */
+
 @plugin "daisyui";
 @plugin "daisyui/theme" {
   name: "bumblebee";
   default: true;
   prefersdark: true;
+  --color-primary: var(--color-tmauve);
+}
+
+@theme {
   --color-tcreme: #f3f1e9;
   --color-tyellow: #f4dc92;
   --color-tmauve: #987aa5;
@@ -15,15 +19,6 @@
   --color-tblue-tint: #55778f;
   --color-tpink: #d999aa;
   --color-tpink-tint: #8b5363;
-  --color-primary: var(--color-tmauve);
-  --background-color-primary: #f3f1e9;
-  --background-color-tcreme: #f3f1e9;
-  --background-color-tyellow: #f4dc92;
-  --background-color-tmauve: #987aa5;
-  --background-color-tslate: #262f37;
-}
-
-@theme {
   --font-serif: Erode, serif;
   --font-sans: Montserrat, sans-serif;
 }
