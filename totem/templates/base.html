@@ -79,7 +79,7 @@
     <script defer src="{% static 'js/bundles/app.js' %}" type="module"></script>
   </head>
   <body
-    class="flex flex-col bg-primary text-tslate"
+    class="text-tslate flex flex-col"
     hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     <noscript>
       <div class="no-js bg-red-800 text-center text-white">
@@ -105,11 +105,11 @@
       {% if messages %}
         {% for message in messages %}
           <div
-            class="alert-dismissible {% if message.tags %}alert-{{ message.tags }}{% endif %} relative m-auto mb-5 mt-10 max-w-2xl rounded-sm border border-blue-500 bg-blue-100 px-4 py-3 text-blue-500"
+            class="alert-dismissible {% if message.tags %}alert-{{ message.tags }}{% endif %} relative m-auto mt-10 mb-5 max-w-2xl rounded-sm border border-blue-500 bg-blue-100 px-4 py-3 text-blue-500"
             role="alert">
             <span class="block sm:inline">{{ message }}</span>
             <span
-              class="absolute bottom-0 right-0 top-0 px-4 py-3"
+              class="absolute top-0 right-0 bottom-0 px-4 py-3"
               aria-label="Close">
               <svg
                 class="h-6 w-6 fill-current text-blue-500"
@@ -143,7 +143,7 @@
       </script>
     {% endif %}
     {% if request.user.is_impersonate %}
-      <div class="fixed bottom-0 right-0 bg-error p-2 text-white">
+      <div class="bg-error fixed right-0 bottom-0 p-2 text-white">
         As {{ request.user.email }}
         <a class="link" href="{% url 'impersonate-stop' %}">Stop</a>
       </div>

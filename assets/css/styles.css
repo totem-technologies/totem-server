@@ -1,11 +1,11 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 /* @plugin "@tailwindcss/line-clamp"; */
-@plugin "daisyui" {
-  themes: bumblebee --default;
-}
-
-@theme {
+@plugin "daisyui";
+@plugin "daisyui/theme" {
+  name: "bumblebee";
+  default: true;
+  prefersdark: true;
   --color-tcreme: #f3f1e9;
   --color-tyellow: #f4dc92;
   --color-tmauve: #987aa5;
@@ -21,7 +21,9 @@
   --background-color-tyellow: #f4dc92;
   --background-color-tmauve: #987aa5;
   --background-color-tslate: #262f37;
+}
 
+@theme {
   --font-serif: Erode, serif;
   --font-sans: Montserrat, sans-serif;
 }
@@ -35,7 +37,7 @@
 }
 
 @utility section-prose {
-  @apply tprose section;
+  @apply prose section;
 }
 
 @utility h1 {
