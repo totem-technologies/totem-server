@@ -6,7 +6,7 @@
   <ul role="list" class="grid grid-cols-1 gap-6 pb-5 sm:grid-cols-2">
     {% for event_item in attending_events %}
       <li
-        class="col-span-1 divide-y divide-gray-200 rounded-3xl bg-white shadow transition-all duration-500 hover:shadow-xl">
+        class="col-span-1 divide-y divide-gray-200 rounded-3xl bg-white shadow-sm transition-all duration-500 hover:shadow-xl">
         <a href="{% url 'circles:event_detail' event_slug=event_item.slug %}">
           <div class="flex w-full items-start justify-between space-x-6 p-4">
             <div class="flex-1">

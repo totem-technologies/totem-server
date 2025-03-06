@@ -43,7 +43,7 @@
         spaceID="{{ object.slug }}"
         eventID="{{ event.slug }}"></t-eventcalendar>
     </div>
-    <div class="mt-5 flex-grow pr-4">
+    <div class="mt-5 grow pr-4">
       <div class="italic">Updated {{ event.date_modified|date:"M d, Y" }}</div>
       <div>
         {% if not object.published %}
@@ -79,7 +79,7 @@
             href="{{ object.author.get_keeper_url }}">
             {% avatar user=object.author classes="m-auto" %}
           </a>
-          <div class="flex-grow">
+          <div class="grow">
             <a href="{{ object.author.get_keeper_url }}">
               <h3 class="h3 pb-1">{{ object.author.name }}</h3>
             </a>

@@ -11,7 +11,7 @@
       {% for plan in object_list %}
         <div class="-my-8 divide-y-2 divide-gray-100">
           <div class="flex flex-wrap py-8 md:flex-nowrap">
-            <div class="md:flex-grow">
+            <div class="md:grow">
               <a href="{% url 'plans:detail' plan.id %}">
                 <h2 class="h2 mb-2">{{ plan.name }}</h2>
               </a>

@@ -4,7 +4,7 @@
     <span class="label-text">{{ field.label }}</span>
     <input
       type="checkbox"
-      class="checkbox-primary checkbox"
+      class="checkbox"
       name="{{ field.name }}"
       {% if field.value %}checked{% endif %}{% include "django/forms/widgets/attrs.html" %} />
   </label>
