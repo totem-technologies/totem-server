@@ -101,11 +101,11 @@
       </div>
     </noscript>
     {% include "header.html" %}
-    <main class="min-h-[92vh] flex-grow">
+    <main class="min-h-[92vh] grow">
       {% if messages %}
         {% for message in messages %}
           <div
-            class="alert-dismissible {% if message.tags %}alert-{{ message.tags }}{% endif %} relative m-auto mb-5 mt-10 max-w-2xl rounded border border-blue-500 bg-blue-100 px-4 py-3 text-blue-500"
+            class="alert-dismissible {% if message.tags %}alert-{{ message.tags }}{% endif %} relative m-auto mb-5 mt-10 max-w-2xl rounded-sm border border-blue-500 bg-blue-100 px-4 py-3 text-blue-500"
             role="alert">
             <span class="block sm:inline">{{ message }}</span>
             <span

@@ -440,8 +440,8 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
   })
   const isActive = (chunk: DateChunk) => chunk.dateId === props.activeID
   const activeClasses =
-    "bg-white rounded border-t-4 border-tmauve pt-0 font-semibold shadow-md"
-  const inactiveClasses = "text-gray-500 pt-1 hover:bg-white rounded"
+    "bg-white rounded-sm border-t-4 border-tmauve pt-0 font-semibold shadow-md"
+  const inactiveClasses = "text-gray-500 pt-1 hover:bg-white rounded-sm"
   const classes = (chunk: DateChunk) =>
     isActive(chunk) ? activeClasses : inactiveClasses
 

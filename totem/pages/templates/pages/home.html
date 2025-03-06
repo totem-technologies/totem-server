@@ -7,7 +7,7 @@
       src="{% static 'images/home/brush2.png' %}"
       alt="" />
     <h1
-      class="h1 bg-gradient-to-r from-tpink to-tmauve bg-clip-text pb-10 pt-10 text-transparent drop-shadow-xl md:text-8xl">
+      class="h1 bg-linear-to-r from-tpink to-tmauve bg-clip-text pb-10 pt-10 text-transparent drop-shadow-xl md:text-8xl">
       Guided introspection for the modern world
     </h1>
     <p class="tprose m-auto pt-10">
@@ -31,7 +31,7 @@
           src="{% static 'images/home/peoplegrid.jpg' %}" />
       </div>
       <div
-        class="relative flex flex-col md:w-1/2 md:items-start md:pl-16 md:text-left lg:flex-grow lg:pl-24">
+        class="relative flex flex-col md:w-1/2 md:items-start md:pl-16 md:text-left lg:grow lg:pl-24">
         <img
           class="absolute top-auto -z-10 rotate-180 overflow-clip opacity-60 md:-translate-x-1/4"
           src="{% static 'images/home/brush.png' %}"
@@ -88,7 +88,7 @@
   </section>
   <section class="section m-auto max-w-5xl overflow-x-auto">
     <div
-      class="grid grid-cols-[repeat(3,_minmax(270px,_1fr))] px-5 max-md:min-w-fit max-md:pt-10">
+      class="grid grid-cols-[repeat(3,minmax(270px,1fr))] px-5 max-md:min-w-fit max-md:pt-10">
       {% for quote in quotes %}
         <blockquote class="relative p-5 max-md:w-64">
           <svg
@@ -125,7 +125,7 @@
           src="{% static 'images/home/group_of_teenagers_sitting_around_in_a_circe._Forrest.jpg' %}" />
       </div>
       <div
-        class="relative flex flex-col md:order-1 md:w-1/2 md:items-start md:pr-16 md:text-left lg:flex-grow lg:pr-24">
+        class="relative flex flex-col md:order-1 md:w-1/2 md:items-start md:pr-16 md:text-left lg:grow lg:pr-24">
         <img
           class="absolute top-auto -z-10 overflow-clip opacity-60"
           src="{% static 'images/home/brush.png' %}"
@@ -155,7 +155,7 @@
           src="{% static 'images/home/one_girl_full_image_talking_explaining_surrounded.jpg' %}" />
       </div>
       <div
-        class="relative flex flex-col md:w-1/2 md:items-start md:pl-16 md:text-left lg:flex-grow lg:pl-24">
+        class="relative flex flex-col md:w-1/2 md:items-start md:pl-16 md:text-left lg:grow lg:pl-24">
         <img
           class="absolute top-auto -z-10 rotate-180 overflow-clip opacity-60 md:-translate-x-1/4"
           src="{% static 'images/home/brush.png' %}"
