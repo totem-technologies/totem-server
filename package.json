@@ -6,8 +6,8 @@
   "scripts": {
     "build:atcb": "bun build node_modules/add-to-calendar-button/dist/atcb-no-pro.js --drop=console --minify --outfile=totem/static/js/atcb.min.js && perl -pi -e s,add-to-calendar-pro.com,totem.org,g totem/static/js/atcb.min.js",
     "build:js": "./build.ts",
-    "build:tailwind": "NODE_ENV=production bun run tw",
-    "build": "concurrently \"bun run build:tailwind -- --minify\" \"bun run build:js\" \"bun run build:atcb\"",
+    "build:tailwind": "NODE_ENV=production bun run tw -- --minify",
+    "build": "concurrently \"bun run build:tailwind\" \"bun run build:js\" \"bun run build:atcb\"",
     "dev": "concurrently --kill-others \"bun run watch:js\" \"bun run watch:tailwind\" \"bun run livereload\"",
     "livereload": "livereload ./totem/ -e 'html,css,js,py,mjml' --wait 200",
     "openapi-ts": "openapi-ts",

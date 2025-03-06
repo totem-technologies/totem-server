@@ -1,4 +1,8 @@
-@import "tailwindcss";
+@import "tailwindcss" source(none);
+@source "./";
+@source "../js";
+@source "../../totem/**/*.html";
+@source "../../totem/**/*.py";
 @plugin "@tailwindcss/typography";
 
 @plugin "daisyui";
