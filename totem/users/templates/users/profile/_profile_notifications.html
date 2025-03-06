@@ -32,7 +32,9 @@
                     name="return_url"
                     value="{{ request.path }}" />
                   {% csrf_token %}
-                  <button class="text-error" type="submit">Remove</button>
+                  <button class="text-error btn btn-ghost" type="submit">
+                    Remove
+                  </button>
                 </form>
               </td>
             </tr>

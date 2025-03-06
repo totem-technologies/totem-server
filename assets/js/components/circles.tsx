@@ -307,7 +307,7 @@ export function MobileEvent(props: { event: EventListSchema }) {
   return (
     <a
       href={props.event.url}
-      class="flex items-center justify-center gap-2 border-t-2 p-5 text-left last:border-b-2 hover:bg-white">
+      class="flex items-center justify-center gap-2 border-t-2 border-gray-300 p-5 text-left last:border-b-2 hover:bg-white">
       <div class="rounded-full pr-2">{getAvatar(props.event)}</div>
       <div class="grow">
         <Switch>
@@ -338,7 +338,7 @@ function DesktopEvent(props: { event: EventListSchema }) {
       href={props.event.url}
       class="mx-5 mb-2 flex items-center justify-center gap-2 rounded-2xl border-2 border-gray-300 p-5 transition-all hover:bg-white hover:shadow-lg">
       <div>
-        <div class="whitespace-nowrap text-lg font-bold">
+        <div class="text-lg font-bold whitespace-nowrap">
           {timestampToTimeString(props.event.start ?? "")}
         </div>
       </div>
@@ -386,7 +386,7 @@ function FilterBar() {
   const context = useContext(CircleListContext)
   return (
     <Show when={context}>
-      <div class="sticky top-0 w-full border-b-2 bg-tcreme px-5 pt-2">
+      <div class="bg-tcreme sticky top-0 w-full border-b-2 border-gray-300 px-5 pt-2">
         <div>
           <DateRibbon
             // biome-ignore lint/style/noNonNullAssertion: <explanation>
@@ -428,10 +428,11 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
       const centerActive =
         active.getBoundingClientRect().left +
         active.getBoundingClientRect().width / 2
-      const containerCenter = containerRef?.getBoundingClientRect().width??2 / 2
+      const containerCenter =
+        containerRef?.getBoundingClientRect().width ?? 2 / 2
       scrollableRef?.scrollTo({
         left:
-          Math.abs(containerRef?.getBoundingClientRect().left??0) +
+          Math.abs(containerRef?.getBoundingClientRect().left ?? 0) +
           centerActive -
           containerCenter,
         behavior: "smooth",
@@ -503,7 +504,7 @@ function FilterModal() {
           aria-label="close sidebar"
           class="drawer-overlay"
         />
-        <div class="flex min-h-full w-[90vw] max-w-80 flex-col gap-5 bg-tcreme p-4 text-left">
+        <div class="bg-tcreme flex min-h-full w-[90vw] max-w-80 flex-col gap-5 p-4 text-left">
           <h3 class="text-lg font-bold">Filter Circles</h3>
           <div>
             <label class="form-label" for="category">
@@ -580,10 +581,10 @@ function QuickFilters() {
   const QuickFilterButton = (props: { category: CategoryFilterSchema }) => (
     <button
       type="button"
-      class="badge"
+      class="badge cursor-pointer"
       classList={{
         "badge-outline": !isActive(props.category.slug),
-        "badge-primary": isActive(props.category.slug),
+        "badge-primary text-white": isActive(props.category.slug),
       }}
       onClick={() => context?.setCategory(props.category.slug)}>
       {props.category.name}

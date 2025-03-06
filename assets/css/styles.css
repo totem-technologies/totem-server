@@ -51,22 +51,12 @@
   @apply text-blue-500 underline;
 }
 
-@utility checkbox-primary {
-  @apply [--chkfg:white];
-}
-
 @utility tshadow {
   @apply shadow-2xl ring-1 ring-gray-900/10;
 }
 
 @utility btn-primary {
   @apply text-white;
-}
-
-@utility btn {
-  &:is(input[type="radio"]:checked) {
-    @apply text-white;
-  }
 }
 
 @layer utilities {
@@ -94,6 +84,12 @@
   input[type="email"],
   input[type="password"],
   input[type="text"],
+  select {
+    @apply input;
+  }
+  textarea {
+    @apply textarea;
+  }
   label {
     @apply text-sm! leading-6! font-medium! text-gray-900!;
   }
