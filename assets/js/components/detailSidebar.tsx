@@ -2,7 +2,6 @@ import { postData } from "@/libs/postData"
 import { timestampToDateString, timestampToTimeString } from "@/libs/time"
 import { createQuery } from "@tanstack/solid-query"
 import {
-  For,
   type JSX,
   type JSXElement,
   Match,
@@ -14,7 +13,6 @@ import {
 } from "solid-js"
 import { type EventDetailSchema, totemCirclesApiEventDetail } from "../client"
 import AddToCalendarButton from "./AddToCalendarButton"
-import Avatar from "./avatar"
 import ErrorBoundary from "./errors"
 import Icon, { type IconName } from "./icons"
 import { useTotemTip } from "./tooltip"
@@ -210,7 +208,7 @@ function EventInfo(props: {
           {props.eventStore.seats_left} seat{plural()} left
         </IconLine>
       </div>
-      <div class="pb-1 pt-2">
+      <div class="pt-2 pb-1">
         <strong>{timestampToDateString(props.eventStore.start)}</strong>
         <div>{timestampToTimeString(props.eventStore.start)}</div>
       </div>
@@ -288,32 +286,6 @@ function EventInfo(props: {
         </Switch>
       </div>
     </DetailBox>
-  )
-}
-
-function Attendees(props: { event: EventDetailSchema }) {
-  return (
-    <Show when={!props.event.ended}>
-      <DetailBox>
-        <div class="pb-3">
-          <strong>Going</strong>
-        </div>
-        <div class="flex flex-wrap justify-center gap-2">
-          <For each={props.event.attendees}>
-            {(attendee) => (
-              <Avatar
-                tooltip={true}
-                size={50}
-                name={attendee.name ?? ""}
-                seed={attendee.profile_avatar_seed}
-                url={attendee.profile_image ?? ""}
-                type={attendee.profile_avatar_type}
-              />
-            )}
-          </For>
-        </div>
-      </DetailBox>
-    </Show>
   )
 }
 
@@ -418,9 +390,6 @@ function DetailSidebar(props: DetailSidebarProps) {
           </Match>
           <Match when={query.data}>
             <EventInfo eventStore={query.data!} refetchEvent={refetch} />
-            {/* <Show when={query.data?.attending}>
-              <Attendees event={query.data!} />
-            </Show> */}
             <Show when={query.data?.subscribed !== null}>
               <Subscribe event={query.data!} refetchEvent={refetch} />
             </Show>

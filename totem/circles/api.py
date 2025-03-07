@@ -104,7 +104,6 @@ class EventDetailSchema(Schema):
     join_url: str | None
     subscribe_url: str
     calLink: str
-    attendees: list[UserSchema]
     subscribed: bool | None
     user_timezone: str | None
 
@@ -123,10 +122,6 @@ def event_detail(request, event_slug):
     join_url = event.join_url(request.user) if attending else None
     subscribed = space.subscribed.contains(request.user) if request.user.is_authenticated else None
     ended = event.ended()
-    if attending and not ended:
-        attendees = [a for a in event.attendees.all()]
-    else:
-        attendees = []
     return EventDetailSchema(
         slug=event.slug,
         title=event.title,
@@ -139,7 +134,6 @@ def event_detail(request, event_slug):
         subscribers=space.subscribed.count(),
         start=start,
         attending=event.attendees.filter(pk=request.user.pk).exists(),
-        attendees=attendees,
         open=event.open,
         started=event.started(),
         cancelled=event.cancelled,
@@ -232,3 +226,50 @@ def webflow_events_list(request, filters: WebflowEventsFilterSchema = Query()):
         )
 
     return results
+
+
+class NextEventSchema(Schema):
+    slug: str
+    start: str
+    link: str
+    title: str | None
+
+
+class SpaceDetailSchema(Schema):
+    slug: str
+    title: str
+    image_link: str | None
+    description: str
+    author: UserSchema
+    nextEvent: NextEventSchema
+    category: str | None
+
+
+@router.get("/list", response={200: List[SpaceDetailSchema]}, tags=["spaces"], url_name="spaces_list")
+def list_spaces(request):
+    events = all_upcoming_recommended_events(None)
+    spaces_set: set[str] = set()
+    spaces = []
+    for event in events:
+        if event.circle.slug in spaces_set:
+            continue
+        spaces_set.add(event.circle.slug)
+        circle: Circle = event.circle
+        category = circle.categories.first()
+        if category:
+            category = category.name
+        description = circle.short_description
+        spaces.append(
+            {
+                "slug": circle.slug,
+                "title": circle.title,
+                "image_link": circle.image.url if circle.image else None,
+                "description": description,
+                "author": circle.author,
+                "nextEvent": NextEventSchema(
+                    slug=event.slug, start=event.start.isoformat(), title=event.title, link=event.get_absolute_url()
+                ),
+                "category": category,
+            }
+        )
+    return spaces

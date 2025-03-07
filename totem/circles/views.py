@@ -128,6 +128,10 @@ def list(request):
     return render(request, "circles/list.html")
 
 
+def spaces(request):
+    return render(request, "circles/spaces.html")
+
+
 def topic(request, slug):
     category = slug
     limit = int(request.GET.get("limit", 9))

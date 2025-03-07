@@ -9,6 +9,7 @@ import { EditAvatar } from "./editAvatar"
 import ErrorBoundary from "./errors"
 import EventCalendar from "./eventCalendar"
 import PromptSearch from "./promptSearch"
+import SpacesList from "./spaces"
 import Time from "./time"
 import Tooltip from "./tooltip"
 
@@ -26,6 +27,7 @@ const components: WCComponent[] = [
   EventCalendar,
   Time,
   EditAvatar,
+  SpacesList,
 ]
 
 type CustomElementProps = (typeof components)[number]["propsDefault"] & {

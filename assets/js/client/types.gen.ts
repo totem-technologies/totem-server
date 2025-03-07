@@ -103,7 +103,6 @@ export type EventDetailSchema = {
     join_url: string | null;
     subscribe_url: string;
     calLink: string;
-    attendees: Array<UserSchema>;
     subscribed: boolean | null;
     user_timezone: string | null;
 };
@@ -145,6 +144,23 @@ export type WebflowEventSchema = {
     join_link: string;
     image_link: string | null;
     keeper_image_link: string | null;
+};
+
+export type NextEventSchema = {
+    slug: string;
+    start: string;
+    link: string;
+    title: string | null;
+};
+
+export type SpaceDetailSchema = {
+    slug: string;
+    title: string;
+    image_link: string | null;
+    description: string;
+    author: UserSchema;
+    nextEvent: NextEventSchema;
+    category: string | null;
 };
 
 export type TotemApiApiSecretData = {
@@ -374,6 +390,22 @@ export type TotemCirclesApiWebflowEventsListResponses = {
 };
 
 export type TotemCirclesApiWebflowEventsListResponse = TotemCirclesApiWebflowEventsListResponses[keyof TotemCirclesApiWebflowEventsListResponses];
+
+export type TotemCirclesApiListSpacesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/spaces/list';
+};
+
+export type TotemCirclesApiListSpacesResponses = {
+    /**
+     * OK
+     */
+    200: Array<SpaceDetailSchema>;
+};
+
+export type TotemCirclesApiListSpacesResponse = TotemCirclesApiListSpacesResponses[keyof TotemCirclesApiListSpacesResponses];
 
 export type ClientOptions = {
     baseUrl: string;

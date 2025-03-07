@@ -22,6 +22,16 @@ export function timestampToDateString(timestamp: string) {
   return date + nthNumber(new Date(timestamp).getDate())
 }
 
+export function timestampToDateStringShort(dateString: string) {
+  // Date in the form of "Tue, May 20"
+  const date = new Date(dateString)
+  return date.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  })
+}
+
 export function timestampToTimeString(timestamp: string) {
   // Convert timestamp to HH:MM AM/PM Timezone
   return new Date(timestamp).toLocaleTimeString(undefined, {

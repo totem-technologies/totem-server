@@ -3,7 +3,7 @@ MAKEFLAGS += -j4
 
 RUN_DJANGO = docker compose -f local.yml run --rm --remove-orphans django
 
-run: up assets-watch
+run: up assets-watch livereload
 
 up:
 	docker compose -f local.yml up --remove-orphans
@@ -44,7 +44,10 @@ deploy-prod:
 	git push dokku-prod
 
 assets-watch:
-	bun run dev
+	watchexec -e js,jsx,ts,tsx,css,html bun run dev
+
+livereload:
+	bun run livereload
 
 assets:
 	bun run build

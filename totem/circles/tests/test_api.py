@@ -134,7 +134,6 @@ class TestEventDetail:
         assert response.status_code == 200
         assert response.json()["slug"] == event.slug
         assert response.json()["attending"] is True
-        assert len(response.json()["attendees"]) == 1
 
     def test_event_detail_ended(self, client, db):
         user = UserFactory()
@@ -148,7 +147,6 @@ class TestEventDetail:
         assert response.status_code == 200
         assert response.json()["ended"] is True
         assert response.json()["attending"] is True
-        assert len(response.json()["attendees"]) == 0
 
 
 class TestEventCalendar:
@@ -229,3 +227,36 @@ class TestWebflowEventsAPI:
         CircleEventFactory(start=timezone.now() - timedelta(days=1))
         response = client.get(reverse("api-1:webflow_events_list"))
         assert len(response.json()) == 0
+
+
+class TestListSpaces:
+    def test_list_spaces(self, client, db):
+        event = CircleEventFactory()
+        event.save()
+        response = client.get(reverse("api-1:spaces_list"))
+        assert response.status_code == 200
+        assert len(response.json()) == 1
+        assert response.json()[0]["slug"] == event.circle.slug
+
+    def test_list_spaces_no_events(self, client, db):
+        response = client.get(reverse("api-1:spaces_list"))
+        assert response.status_code == 200
+        assert response.json() == []
+
+    def test_list_spaces_multiple_events(self, client, db):
+        event1 = CircleEventFactory()
+        event1.save()
+        event2 = CircleEventFactory()
+        event2.save()
+        response = client.get(reverse("api-1:spaces_list"))
+        assert response.status_code == 200
+        assert len(response.json()) == 2
+
+    def test_list_spaces_with_category(self, client, db):
+        category = CircleCategoryFactory()
+        circle = CircleFactory(categories=[category])
+        event = CircleEventFactory(circle=circle)
+        event.save()
+        response = client.get(reverse("api-1:spaces_list"))
+        assert response.status_code == 200
+        assert response.json()[0]["category"] == category.name

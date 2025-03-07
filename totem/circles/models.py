@@ -88,6 +88,7 @@ class Circle(AdminURLMixin, MarkdownMixin, SluggedModel):
         help_text="Image for the Space header, must be under 5mb",
     )
     tags = TaggableManager(blank=True)
+    short_description = models.CharField(max_length=255, blank=True, help_text="Short description, max 255 characters")
     content = MarkdownField(default="")
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
