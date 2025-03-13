@@ -24,7 +24,8 @@
     "totemcircles",
     "tpink",
     "truncatewords",
-    "waitlist"
+    "waitlist",
+    "webflow"
   ],
   "typescript.tsdk": "node_modules/typescript/lib",
   "tailwindCSS.classAttributes": [

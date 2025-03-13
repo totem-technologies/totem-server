@@ -1,4 +1,4 @@
-# define an alias for the specfic python version used in this file.
+# define an alias for the specific python version used in this file.
 FROM python:3.13-slim-bookworm AS python
 
 # Python build stage
