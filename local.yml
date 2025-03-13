@@ -38,7 +38,6 @@ services:
   mailpit:
     image: axllent/mailpit
     container_name: mailpit
-    restart: always
     volumes:
       - ./.mailpit:/data
     ports:

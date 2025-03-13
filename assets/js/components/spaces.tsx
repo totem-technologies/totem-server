@@ -1,4 +1,5 @@
 import { timestampToDateStringShort, timestampToTimeString } from "@/libs/time"
+import { eventCalendarURL } from "@/libs/urls"
 import {
   FaRegularCalendar as Calendar,
   FaSolidChevronRight as ChevronRight,
@@ -20,6 +21,26 @@ import {
   useContext,
 } from "solid-js"
 import Avatar from "./avatar"
+
+const testCategories = [
+  "Technology",
+  "Design",
+  "Business",
+  "Arts",
+  "Lifestyle",
+  "Science",
+  "Health",
+  "Sports",
+  "Music",
+  "Food & Drink",
+  "Film",
+  "Books",
+  "Games",
+  "Travel",
+  "Hobbies",
+  "Social",
+  "Other",
+]
 
 // // Mock data for spaces (same as before)
 // const spaces = [
@@ -227,6 +248,7 @@ function SpacesListInner() {
   const categories: Accessor<string[]> = () => {
     let c = spaces().map((space) => space.category)
     c = Array.from(new Set(c)).sort()
+    // const c = testCategories
     return [ALL, ...c].filter((c) => c !== null)
   }
 
@@ -239,19 +261,27 @@ function SpacesListInner() {
     <Show when={context}>
       <div class="container mx-auto px-2">
         <div class="mb-8">
-          <div class="mb-4 flex flex-wrap justify-center gap-2 rounded-lg bg-white/70 p-2 md:rounded-full">
-            <For each={categories()}>
-              {(category) => (
-                <button
-                  type="button"
-                  onClick={() => setActiveCategory(category)}
-                  class={`btn rounded-full ${
-                    activeCategory() === category ? "btn-primary" : "btn-ghost"
-                  }`}>
-                  {category}
-                </button>
-              )}
-            </For>
+          <div class="mb-4 flex flex-col items-center justify-between gap-4 md:flex-row">
+            <div class="justify-left flex gap-2 overflow-x-scroll rounded-lg border border-gray-300 bg-white/70 p-2 max-md:flex-wrap md:rounded-full">
+              <For each={categories()}>
+                {(category) => (
+                  <button
+                    type="button"
+                    onClick={() => setActiveCategory(category)}
+                    class={`btn md:rounded-full ${
+                      activeCategory() === category
+                        ? "btn-primary"
+                        : "btn-ghost"
+                    }`}>
+                    {category}
+                  </button>
+                )}
+              </For>
+            </div>
+            <a class="btn" href={eventCalendarURL}>
+              <Calendar class="mr-1 h-4 w-4" />
+              All Events
+            </a>
           </div>
 
           <div class="border-gr overflow-hidden rounded-lg border border-gray-300">
@@ -260,7 +290,7 @@ function SpacesListInner() {
                 <>
                   <a
                     href={`${space.nextEvent.link}`}
-                    class="group block bg-white text-left transition-colors hover:bg-white/50">
+                    class="group block bg-white/70 text-left transition-colors hover:bg-white md:bg-white/50">
                     <div class="p-4 transition-colors md:p-6">
                       <div class="flex flex-col gap-4 md:flex-row md:gap-6">
                         {/* Space Image */}
