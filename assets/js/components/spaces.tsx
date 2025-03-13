@@ -245,9 +245,9 @@ function SpacesListInner() {
   const setActiveCategory = context?.setCategory || (() => {})
   const spaces = () => context?.spaces() ?? []
   const categories: Accessor<string[]> = () => {
-    // let c = spaces().map((space) => space.category)
-    // c = Array.from(new Set(c)).sort()
-    const c = testCategories
+    let c = spaces().map((space) => space.category)
+    c = Array.from(new Set(c)).sort()
+    // const c = testCategories
     return [ALL, ...c].filter((c) => c !== null)
   }
 
