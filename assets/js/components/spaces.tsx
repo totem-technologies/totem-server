@@ -262,7 +262,7 @@ function SpacesListInner() {
       <div class="container mx-auto px-2">
         <div class="mb-8">
           <div class="mb-4 flex flex-col items-center justify-between gap-4 md:flex-row">
-            <div class="justify-left flex gap-2 overflow-x-scroll rounded-lg border border-gray-300 bg-white/70 p-2 max-md:flex-wrap md:rounded-full">
+            <div class="justify-left flex gap-2 overflow-x-scroll rounded-lg border border-gray-300 bg-white/90 p-2 max-md:flex-wrap md:rounded-full">
               <For each={categories()}>
                 {(category) => (
                   <button
@@ -290,7 +290,7 @@ function SpacesListInner() {
                 <>
                   <a
                     href={`${space.nextEvent.link}`}
-                    class="group block bg-white/70 text-left transition-colors hover:bg-white md:bg-white/50">
+                    class="group block bg-white/80 text-left transition-colors hover:bg-white">
                     <div class="p-4 transition-colors md:p-6">
                       <div class="flex flex-col gap-4 md:flex-row md:gap-6">
                         {/* Space Image */}
