@@ -10,6 +10,7 @@ from django.views.decorators.cache import cache_page
 from django.views.generic import RedirectView
 
 from totem.api.api import api
+from totem.blog.urls import BlogSitemap
 from totem.circles.urls import SpacesSitemap
 from totem.pages.urls import PagesSitemap
 from totem.plans.urls import PlansSitemap
@@ -22,6 +23,7 @@ sitemaps = {
     "plans": PlansSitemap(),
     "repos": ReposSitemap(),
     "spaces": SpacesSitemap(),
+    "blog": BlogSitemap(),
 }
 
 try:
