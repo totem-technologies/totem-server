@@ -158,3 +158,12 @@ video {
   -webkit-backface-visibility: hidden;
   -moz-backface-visibility: hidden;
 }
+
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

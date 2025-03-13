@@ -228,7 +228,6 @@ function SpacesList(_: { children?: JSXElement }) {
 }
 
 function SpaceAvatar(props: { author: SpaceDetailSchema["author"] }) {
-  console.log(props.author)
   return (
     <Avatar
       size={70}
@@ -246,9 +245,9 @@ function SpacesListInner() {
   const setActiveCategory = context?.setCategory || (() => {})
   const spaces = () => context?.spaces() ?? []
   const categories: Accessor<string[]> = () => {
-    let c = spaces().map((space) => space.category)
-    c = Array.from(new Set(c)).sort()
-    // const c = testCategories
+    // let c = spaces().map((space) => space.category)
+    // c = Array.from(new Set(c)).sort()
+    const c = testCategories
     return [ALL, ...c].filter((c) => c !== null)
   }
 
@@ -262,13 +261,13 @@ function SpacesListInner() {
       <div class="container mx-auto px-2">
         <div class="mb-8">
           <div class="mb-4 flex flex-col items-center justify-between gap-4 md:flex-row">
-            <div class="justify-left flex gap-2 overflow-x-scroll rounded-lg border border-gray-300 bg-white/90 p-2 max-md:flex-wrap md:rounded-full">
+            <div class="justify-left no-scrollbar flex max-w-full gap-2 overflow-x-scroll rounded-full border border-gray-300 bg-white/90 p-2">
               <For each={categories()}>
                 {(category) => (
                   <button
                     type="button"
                     onClick={() => setActiveCategory(category)}
-                    class={`btn md:rounded-full ${
+                    class={`btn rounded-full ${
                       activeCategory() === category
                         ? "btn-primary"
                         : "btn-ghost"
