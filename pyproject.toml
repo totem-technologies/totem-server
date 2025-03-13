@@ -13,7 +13,7 @@ dependencies = [
     "gunicorn<24",
     "lxml<6",
     "markdown<3.8.0",
-    "mrml<0.2.0",
+    "mrml<0.3.0",
     "Pillow<12",
     "posthog<4.0.0",
     "psycopg[binary]<4",

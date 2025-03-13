@@ -42,7 +42,7 @@ class Email(BaseModel):
 
     def render_html(self) -> str:
         s = render_to_string(f"email/emails/{self.template}.mjml", context=self.model_dump())
-        return mrml.to_html(s)
+        return mrml.to_html(s).content
 
     def render_text(self) -> str:
         return render_to_string(f"email/emails/{self.template}.txt", context=self.model_dump())
