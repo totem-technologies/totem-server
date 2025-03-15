@@ -17,7 +17,7 @@ class TestActions:
         action = actions.JoinCircleAction(user, parameters={"event_slug": event_slug})
         assert action.action_id == "circles:join"
         url = action.build_url()
-        assert f"circles/join/{event_slug}" in url
+        assert f"spaces/join/{event_slug}" in url
         assert "?token=" in url
         # get it back
         token = url.split("?token=")[1]
@@ -55,7 +55,7 @@ class TestSubscribeAction:
         circle = CircleFactory()
         assert circle.subscribed.count() == 0
         url = SubscribeAction(user=user, parameters={"circle_slug": circle.slug, "subscribe": True}).build_url()
-        assert "circles/subscribe/" in url
+        assert "spaces/subscribe/" in url
         assert circle.slug in url
         token = url.split("token=")[1].split("&")[0]
         user1, params = SubscribeAction.resolve(token)
@@ -75,7 +75,7 @@ class TestSubscribeAction:
         circle.subscribed.add(user)
         assert circle.subscribed.count() == 1
         url = SubscribeAction(user=user, parameters={"circle_slug": circle.slug, "subscribe": False}).build_url()
-        assert "circles/subscribe/" in url
+        assert "spaces/subscribe/" in url
         assert circle.slug in url
         token = url.split("token=")[1].split("&")[0]
         user1, params = SubscribeAction.resolve(token)
@@ -94,12 +94,12 @@ class TestSubscribeAction:
         user = UserFactory()
         circle = CircleFactory()
         url = SubscribeAction(user=user, parameters={"circle_slug": circle.slug, "subscribe": False}).build_url()
-        assert "circles/subscribe/" in url
+        assert "spaces/subscribe/" in url
         assert circle.slug in url
         token = url.split("token=")[1].split("&")[0]
         token = token[:-1] + "0"
         response = client.get(url[:-3])  # make the token invalid
         assert response.status_code == 302
-        assert response.url == f"/circles/{circle.slug}/"
+        assert response.url == f"/spaces/{circle.slug}/"
         message = list(get_messages(response.wsgi_request))[0]
         assert "invalid" in message.message.lower()

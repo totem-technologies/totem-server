@@ -67,7 +67,7 @@ urlpatterns = [
     path("course/", include("totem.course.urls", namespace="course")),
     path("repos/", include("totem.repos.urls", namespace="repos")),
     path("email/", include("totem.email.urls", namespace="email")),
-    path("circles/", include("totem.circles.urls", namespace="circles")),
+    path("spaces/", include("totem.circles.urls", namespace="circles")),
     path("blog/", include("totem.blog.urls", namespace="blog")),
     # Django Admin, use {% url 'admin:index' %}
     path(f"admin/{settings.ADMIN_URL}", admin_urls),  # type: ignore

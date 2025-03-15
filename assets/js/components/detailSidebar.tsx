@@ -21,7 +21,7 @@ function capitalize(str: string) {
   return str.charAt(0).toUpperCase() + str.slice(1)
 }
 
-const spacesListLink = "/circles/"
+const spacesListLink = "/spaces/"
 
 const [showAttendingPopup, setShowAttendingPopup] = createSignal<boolean>(false)
 
@@ -57,7 +57,7 @@ function CopyToClipboard() {
   )
 }
 
-function AttendingPopup(_: { event: EventDetailSchema }) {
+function AttendingPopup() {
   createEffect(() => {
     const modal = document.getElementById(
       "attending_modal"
@@ -221,7 +221,7 @@ function EventInfo(props: {
             <div>
               This session has been cancelled.{" "}
               <a class="link" href={spacesListLink}>
-                See upcoming sessions.
+                See upcoming Spaces.
               </a>
             </div>
           </Match>
@@ -239,7 +239,7 @@ function EventInfo(props: {
             <div>
               This session has ended.{" "}
               <a class="link" href={spacesListLink}>
-                See upcoming sessions.
+                See upcoming Spaces.
               </a>
             </div>
           </Match>
@@ -247,7 +247,7 @@ function EventInfo(props: {
             <div>
               This session has already started.{" "}
               <a class="link" href={spacesListLink}>
-                See upcoming sessions.
+                See upcoming Spaces.
               </a>
             </div>
           </Match>
@@ -255,7 +255,7 @@ function EventInfo(props: {
             <div>
               This session is not open to new participants.{" "}
               <a class="link" href={spacesListLink}>
-                See upcoming sessions.
+                See upcoming Spaces.
               </a>
             </div>
           </Match>
@@ -383,14 +383,16 @@ function DetailSidebar(props: DetailSidebarProps) {
   return (
     <ErrorBoundary>
       <Suspense fallback={<Loading />}>
-        <AttendingPopup event={query.data!} />
+        <AttendingPopup />
         <Switch fallback={<Loading />}>
           <Match when={query.isFetching}>
             <Loading />
           </Match>
           <Match when={query.data}>
+            {/* biome-ignore lint/style/noNonNullAssertion: <explanation> */}
             <EventInfo eventStore={query.data!} refetchEvent={refetch} />
             <Show when={query.data?.subscribed !== null}>
+              {/* biome-ignore lint/style/noNonNullAssertion: <explanation> */}
               <Subscribe event={query.data!} refetchEvent={refetch} />
             </Show>
           </Match>

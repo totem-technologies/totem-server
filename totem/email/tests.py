@@ -59,9 +59,9 @@ class TestAdvertEmail:
         email = mail.outbox[0]
         assert email.to == [user.email]
         message = str(email.message())
-        assert "http://testserver/circles/event" in message
+        assert "http://testserver/spaces/event" in message
         assert event.circle.title in message
-        assert "http://testserver/circles/subscribe" in message
+        assert "http://testserver/spaces/subscribe" in message
         assert event.circle.slug in message
 
     def test_advert_email_with_content(self, client, db):
@@ -127,7 +127,7 @@ class TestMissedEventEmail:
         email = mail.outbox[0]
         assert email.to == [user.email]
         message = str(email.message())
-        assert "http://testserver/circles/event" in message
+        assert "http://testserver/spaces/event" in message
         assert event.title in message
         assert "missed you" in message
         assert "forms.gle" in message

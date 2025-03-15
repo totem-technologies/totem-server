@@ -18,13 +18,13 @@ def test_ics_hash():
 class CircleModelTest(TestCase):
     def test_title_label(self):
         circle = CircleFactory()
-        field_label = circle._meta.get_field("title").verbose_name
+        field_label = circle._meta.get_field("title").verbose_name  # type: ignore
         self.assertEqual(field_label, "title")
 
     def test_get_absolute_url(self):
         circle = CircleFactory()
         # This will also fail if the urlconf is not defined.
-        self.assertEqual(circle.get_absolute_url(), f"/circles/{circle.slug}/")
+        self.assertEqual(circle.get_absolute_url(), f"/spaces/{circle.slug}/")
 
     def test_subscribed_list(self):
         circle = CircleFactory()
@@ -67,7 +67,7 @@ class TestCircleEventModel:
         email = mail.outbox[0]
         assert email.to == [user.email]
         message = str(email.message())
-        assert "http://testserver/circles/join/" in message
+        assert "http://testserver/spaces/join/" in message
         event.refresh_from_db()
         assert event.notified
 
@@ -83,8 +83,8 @@ class TestCircleEventModel:
         email = mail.outbox[0]
         assert email.to == [user.email]
         message = str(email.message())
-        assert "http://testserver/circles/event" in message
-        assert "http://testserver/circles/subscribe" in message
+        assert "http://testserver/spaces/event" in message
+        assert "http://testserver/spaces/subscribe" in message
         event.refresh_from_db()
         assert event.advertised
 
@@ -100,6 +100,6 @@ class TestCircleEventModel:
         email = mail.outbox[0]
         assert email.to == [user.email]
         message = str(email.message())
-        assert "http://testserver/circles/event" in message
+        assert "http://testserver/spaces/event" in message
         event.refresh_from_db()
         assert event.notified_tomorrow

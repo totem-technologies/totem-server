@@ -22,8 +22,8 @@ class SpacesSitemap(Sitemap):
 
 
 urlpatterns = [
-    path("", views.list, name="list"),
-    path("spaces/", views.spaces, name="spaces"),
+    path("events/", views.list, name="list"),
+    path("", views.spaces, name="spaces"),
     path("rsvp/<str:event_slug>/", views.rsvp, name="rsvp"),
     path("join/<str:event_slug>/", views.join, name="join"),
     path("event/<str:event_slug>/", views.event_detail, name="event_detail"),
