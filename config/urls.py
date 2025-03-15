@@ -92,6 +92,9 @@ urlpatterns = [
     path("onboard/", include("totem.onboard.urls")),
     path("auth/link/", MagicLoginView.as_view(), name="magic-login"),
     path("dev/", include("totem.dev.urls", namespace="dev")),
+    # Redirects
+    path("circles/", RedirectView.as_view(url="/spaces/", permanent=True)),
+    path("circles/<path:path>", RedirectView.as_view(url="/spaces/%(path)s", permanent=True)),
 ]
 
 if not settings.USE_S3_STORAGE:
