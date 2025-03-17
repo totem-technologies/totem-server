@@ -22,8 +22,8 @@ class SpacesSitemap(Sitemap):
 
 
 urlpatterns = [
-    path("events/", views.list, name="list"),
-    path("", views.spaces, name="spaces"),
+    path("", views.spaces, name="list"),
+    path("events/", views.events, name="events"),
     path("rsvp/<str:event_slug>/", views.rsvp, name="rsvp"),
     path("join/<str:event_slug>/", views.join, name="join"),
     path("event/<str:event_slug>/", views.event_detail, name="event_detail"),
@@ -31,7 +31,6 @@ urlpatterns = [
     path("event/<str:event_slug>/social/<str:image_format>.jpg", views.event_social_img, name="event_social_img"),
     path("calendar/<str:event_slug>/", views.calendar, name="calendar"),
     path("subscribe/<str:slug>/", views.subscribe, name="subscribe"),
-    path("topic/<slug:slug>/", views.topic, name="topic"),
     path("<str:slug>/", views.detail, name="detail"),
     # path("<str:slug>/event.ics", views.ics, name="ics"),
     # path("sitemap.xml", CirclesSitemap),
