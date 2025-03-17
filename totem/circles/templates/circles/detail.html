@@ -52,7 +52,7 @@
       </div>
       <div class="h-5"></div>
       {% if event and event.content_html or request.user.is_staff %}
-        <h3 class="font-semibold">
+        <h3 class="mb-5 font-semibold">
           About this Session
           {% if request.user.is_staff %}
             (<a class="link" target="_blank" href="{{ event.get_admin_url }}"
@@ -60,9 +60,9 @@
             >)
           {% endif %}
         </h3>
-        <div class="tprose">{{ event.content_html }}</div>
+        <div class="prose">{{ event.content_html }}</div>
       {% endif %}
-      <h3 class="font-semibold">
+      <h3 class="mb-5 font-semibold">
         About this Space
         {% if request.user.is_staff %}
           (<a class="link" target="_blank" href="{{ object.get_admin_url }}"
@@ -70,7 +70,7 @@
           >)
         {% endif %}
       </h3>
-      <div class="tprose">{{ object.content_html }}</div>
+      <div class="prose">{{ object.content_html }}</div>
       <h3 class="pb-5 font-semibold md:pb-0">Meet the Keeper</h3>
       <div class="pt-5">
         <div class="flex items-center gap-4">
@@ -84,7 +84,7 @@
               <h3 class="h3 pb-1">{{ object.author.name }}</h3>
             </a>
             <div
-              class="flex gap-2 pb-1 text-sm font-semibold uppercase text-gray-500">
+              class="flex gap-2 pb-1 text-sm font-semibold text-gray-500 uppercase">
               {% icons "location" size=20 %}
               {{ object.author.keeper_profile.location }}
             </div>

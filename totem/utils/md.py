@@ -54,6 +54,8 @@ class MarkdownMixin:
 
     @staticmethod
     def render_markdown(content: str):
+        if not content:
+            return ""
         templatetags = "\n".join(["{% load image %}"]) + "\n"
         content = content or ""
         md = markdown.Markdown(extensions=["toc"]).convert(content)

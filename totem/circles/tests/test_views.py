@@ -28,6 +28,7 @@ class TestCircleDetailView:
         url = reverse("circles:event_detail", kwargs={"event_slug": circle.slug})
         response = client.get(url)
         assert response.status_code == 200
+        assert "About this Session" not in response.content.decode()
 
     def test_detail_circle(self, client, db):
         event = CircleEventFactory()
