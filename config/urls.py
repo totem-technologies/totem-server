@@ -67,7 +67,7 @@ urlpatterns = [
     path("course/", include("totem.course.urls", namespace="course")),
     path("repos/", include("totem.repos.urls", namespace="repos")),
     path("email/", include("totem.email.urls", namespace="email")),
-    path("circles/", include("totem.circles.urls", namespace="circles")),
+    path("spaces/", include("totem.circles.urls", namespace="circles")),
     path("blog/", include("totem.blog.urls", namespace="blog")),
     # Django Admin, use {% url 'admin:index' %}
     path(f"admin/{settings.ADMIN_URL}", admin_urls),  # type: ignore
@@ -92,6 +92,9 @@ urlpatterns = [
     path("onboard/", include("totem.onboard.urls")),
     path("auth/link/", MagicLoginView.as_view(), name="magic-login"),
     path("dev/", include("totem.dev.urls", namespace="dev")),
+    # Redirects
+    path("circles/", RedirectView.as_view(url="/spaces/", permanent=True)),
+    path("circles/<path:path>", RedirectView.as_view(url="/spaces/%(path)s", permanent=True)),
 ]
 
 if not settings.USE_S3_STORAGE:

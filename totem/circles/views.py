@@ -1,6 +1,5 @@
 import datetime
 from io import BytesIO
-from typing import Any
 
 import pytz
 from django.conf import settings
@@ -19,11 +18,10 @@ from totem.utils.utils import is_ajax
 
 from .actions import JoinCircleAction, SubscribeAction
 from .filters import (
-    all_upcoming_recommended_circles,
     upcoming_events_by_author,
 )
 from .img_gen import ImageParams, generate_image
-from .models import Circle, CircleCategory, CircleEvent, CircleEventException
+from .models import Circle, CircleEvent, CircleEventException
 
 ICS_QUERY_PARAM = "key"
 AUTO_RSVP_SESSION_KEY = "auto_rsvp"
@@ -56,7 +54,9 @@ def event_detail(request, event_slug):
 def detail(request, slug):
     circle = _get_circle(slug)
     event = circle.next_event()
-    return _circle_detail(request, request.user, circle, event)
+    if not event:
+        return _circle_detail(request, request.user, circle, event)
+    return redirect("circles:event_detail", event_slug=event.slug)
 
 
 def _circle_detail(request: HttpRequest, user: User, circle: Circle, event: CircleEvent | None):
@@ -124,38 +124,12 @@ def rsvp(request: HttpRequest, event_slug):
         return redirect("circles:event_detail", event_slug=event.slug)
 
 
-def list(request):
-    return render(request, "circles/list.html")
+def events(request):
+    return render(request, "circles/events.html")
 
 
 def spaces(request):
     return render(request, "circles/spaces.html")
-
-
-def topic(request, slug):
-    category = slug
-    limit = int(request.GET.get("limit", 9))
-    if limit > 100:
-        raise ValueError
-    events = all_upcoming_recommended_circles(request.user, category=category)[: limit + 1].all()
-    context: dict[str, Any] = {"events": events[:limit]}
-    context["selected_category"] = category or ""
-    categories = []
-    categories_values = CircleCategory.objects.values_list("name", "slug").distinct()
-    for category in categories_values:
-        value = category[1]
-        if value == slug:
-            continue
-        categories.append(
-            {"value": category[1], "label": category[0]},
-        )
-    circles = set()
-    for event in events:
-        circles.add(event.circle)
-    context["circles"] = circles
-    context["categories"] = categories
-    context["show_load_more"] = len(events) > limit
-    return render(request, "circles/list.html", context=context)
 
 
 @transaction.atomic
