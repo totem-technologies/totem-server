@@ -39,6 +39,7 @@ webflow_pages = [
     "topics/creatives",
     "topics/lgbtq",
     "topics/lgbtqia-topic-details",
+    "topics/love-and-other-emotions",
     "topics/mothers",
     "topics/self-improvement",
     "totem-for-introverts",
