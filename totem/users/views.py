@@ -127,8 +127,6 @@ def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name
             request.session["next"] = next
         form = form_class()
     response = render(request, template_name, context=context | {"form": form})
-    # Make sure htmx redirects to the login page with a full refresh
-    response.headers["HX-Redirect"] = request.get_full_path()  # type: ignore
     return response
 
 
