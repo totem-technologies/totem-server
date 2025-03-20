@@ -85,6 +85,7 @@ export type FilterOptionsSchema = {
 export type EventDetailSchema = {
     slug: string;
     title: string;
+    space: EventSpaceSchema;
     space_title: string;
     description: string;
     price: number;
@@ -105,6 +106,28 @@ export type EventDetailSchema = {
     calLink: string;
     subscribed: boolean | null;
     user_timezone: string | null;
+};
+
+export type EventSpaceSchema = {
+    author: UserSchema;
+    title: string;
+    slug?: string | null;
+    date_created: string;
+    date_modified: string;
+    subtitle: string;
+    categories: Array<number>;
+    /**
+     * Short description, max 255 characters
+     */
+    short_description?: string | null;
+    /**
+     * Example: Once a month (or week, day, etc). Do not put specific times or days of the week.
+     */
+    recurring: string;
+    /**
+     * Image for the Space header, must be under 5mb
+     */
+    image?: string | null;
 };
 
 export type EventCalendarFilterSchema = {

@@ -83,9 +83,31 @@ def filter_options(request):
     return {"categories": categories, "authors": authors}
 
 
+class EventSpaceSchema(ModelSchema):
+    author: UserSchema
+
+    def description(self, obj: Circle):
+        return obj.content_html
+
+    class Meta:
+        model = Circle
+        fields = [
+            "title",
+            "slug",
+            "date_created",
+            "date_modified",
+            "subtitle",
+            "categories",
+            "short_description",
+            "recurring",
+            "image",
+        ]
+
+
 class EventDetailSchema(Schema):
     slug: str
     title: str
+    space: EventSpaceSchema
     space_title: str
     description: str
     price: int
@@ -116,7 +138,7 @@ class EventDetailSchema(Schema):
 )
 def event_detail(request, event_slug):
     event = get_object_or_404(CircleEvent, slug=event_slug)
-    space = event.circle
+    space: Circle = event.circle
     attending = event.attendees.filter(pk=request.user.pk).exists()
     start = event.start
     join_url = event.join_url(request.user) if attending else None
@@ -126,7 +148,8 @@ def event_detail(request, event_slug):
         slug=event.slug,
         title=event.title,
         space_title=space.title,
-        description=space.content_html,
+        space=EventSpaceSchema.from_orm(space),
+        description=event.content_html,
         price=space.price,
         seats_left=event.seats_left(),
         duration=event.duration_minutes,
