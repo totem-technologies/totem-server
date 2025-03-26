@@ -116,7 +116,7 @@ def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name
         if form.is_valid():
             data = form.cleaned_data
             email: str = data["email"].lower()
-            after_login_url: str = data.get("after_login_url", next)
+            after_login_url: str | None = data.get("after_login_url") or next
             create_params = {"newsletter_consent": data.get("newsletter_consent", False)}
             login(request, email=email, create_params=create_params, after_login_url=after_login_url)
             return render(request, "users/link_sent.html", {"email": email})

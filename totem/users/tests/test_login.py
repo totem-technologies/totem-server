@@ -108,3 +108,47 @@ class TestLogInView:
         assert "attacker" not in mail.outbox[0].body  # type: ignore
         # Check that no new user was created
         assert User.objects.count() == count
+
+    def test_after_login_url_priority(self, client):
+        """Test that after_login_url from the form takes precedence over next parameter."""
+        # Create an existing user
+        user = UserFactory()
+
+        # Case 1: Test when both after_login_url and next are provided
+        response = client.post(
+            reverse("users:login") + "?next=/next-param",
+            {
+                "email": user.email,
+                "after_login_url": "/form-after-login",
+            },
+        )
+        assert response.status_code == 200
+        assert len(mail.outbox) == 1
+        assert "next=/form-after-login" in mail.outbox[0].body
+        mail.outbox.clear()
+
+        # Case 2: Test when only next parameter is provided
+        response = client.post(
+            reverse("users:login") + "?next=/next-param",
+            {
+                "email": user.email,
+            },
+        )
+        assert response.status_code == 200
+        assert len(mail.outbox) == 1
+        assert "next=/next-param" in mail.outbox[0].body
+        mail.outbox.clear()
+
+        # Case 3: Test when neither is provided
+        response = client.post(
+            reverse("users:login"),
+            {
+                "email": user.email,
+            },
+        )
+        assert response.status_code == 200
+        assert len(mail.outbox) == 1
+        assert "next=/next-param" not in mail.outbox[0].body
+        assert "next=/form-after-login" not in mail.outbox[0].body
+        # Verify it contains the default redirect
+        assert "next=/users/~redirect/" in mail.outbox[0].body
