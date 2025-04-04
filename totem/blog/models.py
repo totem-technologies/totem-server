@@ -41,6 +41,7 @@ class BlogPost(AdminURLMixin, MarkdownMixin, SluggedModel):
         help_text="Image for the blog header, must be under 5mb",
     )
     content = MarkdownField(
+        max_length=20000,
         help_text="""Markdown content for the blog post. Do not use h1 (single #) headers.
         Add inline images like {% image slug="vji504tvi" %}, after uploading them in the Images section.""",
     )
