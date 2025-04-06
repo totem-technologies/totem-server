@@ -425,7 +425,8 @@ SAVE_TO_GOOGLE_CALENDAR = env.bool("SAVE_TO_GOOGLE_CALENDAR", default=False)  # 
 
 # Slack
 # ------------------------------------------------------------------------------
-SLACK_WEBHOOK_URL = env("SLACK_WEBHOOK_URL", default=None)  # type: ignore
+SLACK_BOT_TOKEN = env("SLACK_BOT_TOKEN", default=None)  # type: ignore
+SLACK_CHANNEL_ID = env("SLACK_CHANNEL_ID", default=None)  # type: ignore
 
 
 # Impersonate

@@ -219,7 +219,10 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
                 # Otherwise, send the user the signed up email
                 notify_circle_signup(self, user).send()
             if not self.circle.author == user:
-                notify_slack(f"✅ New session attendee: {self._get_slack_attendee_message(user)}")
+                notify_slack(
+                    f"✅ New session attendee: {self._get_slack_attendee_message(user)}",
+                    email_to_mention=self.circle.author.email,
+                )
 
     def started(self):
         return self.start < timezone.now()
@@ -250,12 +253,15 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         if self.started():
             raise CircleEventException("Session has already started")
         self.attendees.remove(user)
-        notify_slack(f"🛑 Session attendee left: {self._get_slack_attendee_message(user)}")
+        notify_slack(
+            f"🛑 Session attendee left: {self._get_slack_attendee_message(user)}",
+            email_to_mention=self.circle.author.email,
+        )
 
     def _get_slack_attendee_message(self, user):
         start_time_in_pst = self.start.astimezone(pytz.timezone("America/Los_Angeles")).strftime("%I:%M %p %Z")
         short_date = self.start.astimezone(pytz.timezone("America/Los_Angeles")).strftime("%b %d")
-        return f"<{full_url(user.get_admin_url())}|{user.name}> for <{full_url(self.get_admin_url())}|{self.circle.title}> @ {start_time_in_pst}, {short_date} by {self.circle.author.name}"
+        return f"<{full_url(user.get_admin_url())}|{user.name}> for <{full_url(self.get_admin_url())}|{self.circle.title}> @ {start_time_in_pst}, {short_date}"
 
     def notify(self, force=False):
         # Notify users who are attending that the circle is about to start

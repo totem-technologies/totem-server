@@ -86,6 +86,7 @@ def onboard_view(request: HttpRequest):
 
 
 def _notify_slack(user_name: str, url: str):
-    message = f"Onboarding: ✨*{user_name} just onboarded!*✨\n"
-    message += f"Say 'Hi ✌️' at: {url}"
+    if not user_name:
+        user_name = "Unknown User"
+    message = f"Onboarding: ✨*<{url}|{user_name}> just onboarded!*✨\n"
     notify_slack(message)
