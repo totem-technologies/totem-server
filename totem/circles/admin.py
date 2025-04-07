@@ -146,12 +146,12 @@ class CircleEventAdmin(admin.ModelAdmin):
             None,
             {
                 "fields": (
+                    "circle",
                     "title",
                     "start",
                     "duration_minutes",
                     "seats",
                     "content",
-                    "circle",
                     "attendees",
                     "joined",
                     "meeting_url",
