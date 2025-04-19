@@ -70,7 +70,7 @@ urlpatterns = [
     path("spaces/", include("totem.circles.urls", namespace="circles")),
     path("blog/", include("totem.blog.urls", namespace="blog")),
     # Django Admin, use {% url 'admin:index' %}
-    path(f"admin/{settings.ADMIN_URL}", admin_urls),  # type: ignore
+    path(f"admin/{settings.ADMIN_URL}", admin_urls),
     # API
     api_path,
     # User management
