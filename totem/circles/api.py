@@ -9,7 +9,7 @@ from ninja.params.functions import Query
 
 from totem.users.schemas import UserSchema
 
-from .filters import all_upcoming_recommended_events, events_by_month
+from .filters import all_upcoming_recommended_events, events_by_month, get_upcoming_events_for_spaces_list
 from .models import Circle, CircleEvent
 
 router = Router()
@@ -256,6 +256,7 @@ class NextEventSchema(Schema):
     start: str
     link: str
     title: str | None
+    seats_left: int
 
 
 class SpaceDetailSchema(Schema):
@@ -270,29 +271,42 @@ class SpaceDetailSchema(Schema):
 
 @router.get("/list", response={200: List[SpaceDetailSchema]}, tags=["spaces"], url_name="spaces_list")
 def list_spaces(request):
-    events = all_upcoming_recommended_events(None)
-    spaces_set: set[str] = set()
+    # Get events with availability information
+    events = get_upcoming_events_for_spaces_list()
+
+    # Build spaces list
+    spaces_set = set()
     spaces = []
+
     for event in events:
         if event.circle.slug in spaces_set:
             continue
+
         spaces_set.add(event.circle.slug)
-        circle: Circle = event.circle
+        circle = event.circle
+
         category = circle.categories.first()
-        if category:
-            category = category.name
-        description = circle.short_description
+        category_name = category.name if category else None
+
+        # Calculate seats left for this event
+        seats_left = max(0, event.seats - event.attendee_count)  # type: ignore
+
         spaces.append(
             {
                 "slug": circle.slug,
                 "title": circle.title,
                 "image_link": circle.image.url if circle.image else None,
-                "description": description,
+                "description": circle.short_description,
                 "author": circle.author,
                 "nextEvent": NextEventSchema(
-                    slug=event.slug, start=event.start.isoformat(), title=event.title, link=event.get_absolute_url()
+                    slug=event.slug,
+                    start=event.start.isoformat(),
+                    title=event.title,
+                    link=event.get_absolute_url(),
+                    seats_left=seats_left,  # Add seats_left to the event
                 ),
-                "category": category,
+                "category": category_name,
             }
         )
+
     return spaces

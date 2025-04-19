@@ -260,3 +260,88 @@ class TestListSpaces:
         response = client.get(reverse("api-1:spaces_list"))
         assert response.status_code == 200
         assert response.json()[0]["category"] == category.name
+
+    def test_list_spaces_with_full_events(self, client, db):
+        """Test that spaces with full events still appear in the spaces list.
+
+        Note: This test is expected to FAIL with the current implementation,
+        demonstrating that spaces with only full events don't appear in listings.
+        """
+        # Create a space with a full event
+        circle = CircleFactory()
+        event = CircleEventFactory(circle=circle, seats=1)
+        user = UserFactory()
+        event.attendees.add(user)  # This makes the event full (1 seat, 1 attendee)
+
+        # Create another space with a non-full event
+        circle2 = CircleFactory()
+        CircleEventFactory(circle=circle2)
+
+        response = client.get(reverse("api-1:spaces_list"))
+        assert response.status_code == 200
+
+        # Extract slugs from the response
+        data = response.json()
+        slugs = [space["slug"] for space in data]
+
+        # This assertion will fail - demonstrating that spaces with only full events
+        # don't currently appear in the listing
+        assert circle.slug in slugs, "Spaces with full events should still appear in listings"
+        assert circle2.slug in slugs
+        assert len(slugs) == 2  # Both spaces should be in the response
+
+    def test_list_spaces_with_seats_left(self, client, db):
+        """Test that spaces in the list API show correct seats_left values."""
+        now = timezone.now()
+
+        # Create three spaces with events having different seat availability
+        # Space 1: All seats available (10 seats, 0 attendees)
+        circle1 = CircleFactory(title="All Seats Available")
+        CircleEventFactory(circle=circle1, seats=10, start=now + timedelta(days=1))
+
+        # Space 2: Some seats taken (10 seats, 3 attendees = 7 seats left)
+        circle2 = CircleFactory(title="Some Seats Taken")
+        event2 = CircleEventFactory(circle=circle2, seats=10, start=now + timedelta(days=2))
+        # Add 3 attendees
+        for _ in range(3):
+            user = UserFactory()
+            event2.attendees.add(user)
+
+        # Space 3: Full event (3 seats, 3 attendees = 0 seats left)
+        circle3 = CircleFactory(title="Full Event")
+        event3 = CircleEventFactory(circle=circle3, seats=3, start=now + timedelta(days=3))
+        # Add 3 attendees (making it full)
+        for _ in range(3):
+            user = UserFactory()
+            event3.attendees.add(user)
+
+        # Call the API
+        response = client.get(reverse("api-1:spaces_list"))
+        assert response.status_code == 200
+
+        data = response.json()
+
+        # Verify we have all three spaces
+        assert len(data) == 3, "Expected 3 spaces, including the one with full event"
+
+        # Create a mapping of title to space data for easier testing
+        title_to_space = {item["title"]: item for item in data}
+
+        # Verify each space has the correct seats_left value
+        assert (
+            title_to_space["All Seats Available"]["nextEvent"]["seats_left"] == 10
+        ), "Expected 10 seats left for 'All Seats Available'"
+        assert (
+            title_to_space["Some Seats Taken"]["nextEvent"]["seats_left"] == 7
+        ), "Expected 7 seats left for 'Some Seats Taken'"
+        assert title_to_space["Full Event"]["nextEvent"]["seats_left"] == 0, "Expected 0 seats left for 'Full Event'"
+
+        # Verify other properties are present
+        for space in data:
+            assert "slug" in space
+            assert "title" in space
+            assert "author" in space
+            assert "nextEvent" in space
+            assert "start" in space["nextEvent"]
+            assert "link" in space["nextEvent"]
+            assert "seats_left" in space["nextEvent"]

@@ -5,6 +5,7 @@ import {
   FaSolidChevronRight as ChevronRight,
 } from "solid-icons/fa"
 import { FiClock as Clock } from "solid-icons/fi"
+import { TbArmchair } from "solid-icons/tb"
 import ErrorBoundary from "./errors"
 
 import { type SpaceDetailSchema, totemCirclesApiListSpaces } from "@/client"
@@ -41,117 +42,6 @@ const testCategories = [
   "Social",
   "Other",
 ]
-
-// // Mock data for spaces (same as before)
-// const spaces = [
-//   {
-//     id: "1",
-//     title: "Web Development Meetup?",
-//     image:
-//       "https://totem.local/media/circles/tfl678grw/30f3cb96beeb7bfa44fa.jpeg",
-//     description:
-//       "A community of web developers sharing knowledge and experiences.",
-//     author: {
-//       name: "Alex Johnson",
-//       image: "/placeholder.svg?height=40&width=40",
-//     },
-//     nextEvent: {
-//       id: "101",
-//       date: "2025-03-15T18:00:00",
-//       title: "Modern Frontend Frameworks",
-//     },
-//     category: "Technology",
-//   },
-//   {
-//     id: "2",
-//     title: "Design Thinking Workshop",
-//     image:
-//       "https://totem.local/media/circles/tfl678grw/30f3cb96beeb7bfa44fa.jpeg",
-//     description:
-//       "Explore design thinking methodologies and creative problem solving.",
-//     author: {
-//       name: "Sarah Chen",
-//       image: "/placeholder.svg?height=40&width=40",
-//     },
-//     nextEvent: {
-//       id: "102",
-//       date: "2025-03-18T14:00:00",
-//       title: "User Experience Research",
-//     },
-//     category: "Design",
-//   },
-//   {
-//     id: "3",
-//     title: "Startup Founders Network",
-//     image:
-//       "https://totem.local/media/circles/tfl678grw/30f3cb96beeb7bfa44fa.jpeg",
-//     description:
-//       "Connect with fellow entrepreneurs and share startup experiences.",
-//     author: {
-//       name: "Michael Rodriguez",
-//       image: "/placeholder.svg?height=40&width=40",
-//     },
-//     nextEvent: {
-//       id: "103",
-//       date: "2025-03-20T19:30:00",
-//       title: "Fundraising Strategies",
-//     },
-//     category: "Business",
-//   },
-//   {
-//     id: "4",
-//     title: "AI & Machine Learning Group",
-//     image:
-//       "https://totem.local/media/circles/tfl678grw/30f3cb96beeb7bfa44fa.jpeg",
-//     description:
-//       "Discussions on the latest in artificial intelligence and machine learning.",
-//     author: {
-//       name: "Priya Patel",
-//       image: "/placeholder.svg?height=40&width=40",
-//     },
-//     nextEvent: {
-//       id: "104",
-//       date: "2025-03-22T16:00:00",
-//       title: "Deep Learning Applications",
-//     },
-//     category: "Technology",
-//   },
-//   {
-//     id: "5",
-//     title: "Creative Writing Circle",
-//     image:
-//       "https://totem.local/media/circles/tfl678grw/30f3cb96beeb7bfa44fa.jpeg",
-//     description: "A supportive community for writers of all levels and genres.",
-//     author: {
-//       name: "David Wilson",
-//       image: "/placeholder.svg?height=40&width=40",
-//     },
-//     nextEvent: {
-//       id: "105",
-//       date: "2025-03-16T11:00:00",
-//       title: "Character Development Workshop",
-//     },
-//     category: "Arts",
-//   },
-//   {
-//     id: "6",
-//     title: "Sustainable Living Community",
-//     image:
-//       "https://totem.local/media/circles/tfl678grw/30f3cb96beeb7bfa44fa.jpeg",
-//     description:
-//       "Learn practical ways to live more sustainably and reduce your environmental impact.",
-//     author: {
-//       name: "Emma Green",
-//       image: "/placeholder.svg?height=40&width=40",
-//     },
-//     nextEvent: {
-//       id: "106",
-//       date: "2025-03-19T17:30:00",
-//       title: "Zero Waste Home",
-//     },
-//     category: "Lifestyle",
-//   },
-// ]
 
 const ALL = "All"
 
@@ -348,7 +238,7 @@ function SpacesListInner() {
                               <p class="text-sm font-medium">
                                 Next event: {space.nextEvent.title}
                               </p>
-                              <div class="mt-1 flex gap-4">
+                              <div class="mt-2 flex gap-4">
                                 <div class="text-muted-foreground flex items-center text-xs">
                                   <Calendar class="mr-1 h-3.5 w-3.5" />
                                   {timestampToDateStringShort(
@@ -358,6 +248,19 @@ function SpacesListInner() {
                                 <div class="text-muted-foreground flex items-center text-xs">
                                   <Clock class="mr-1 h-3.5 w-3.5" />
                                   {timestampToTimeString(space.nextEvent.start)}
+                                </div>
+                                {/* Add seats left info with armchair icon */}
+                                <div class="text-muted-foreground flex items-center text-xs">
+                                  <TbArmchair class="mr-1 h-3.5 w-3.5" />
+                                  <Show
+                                    when={space.nextEvent.seats_left > 0}
+                                    fallback="Full">
+                                    {space.nextEvent.seats_left}{" "}
+                                    {space.nextEvent.seats_left === 1
+                                      ? "seat"
+                                      : "seats"}{" "}
+                                    left
+                                  </Show>
                                 </div>
                               </div>
                             </div>

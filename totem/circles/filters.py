@@ -56,6 +56,21 @@ def all_upcoming_recommended_events(user: User | None, category: str | None = No
     return events
 
 
+def get_upcoming_events_for_spaces_list():
+    """Get all upcoming events for spaces listing, including spaces with full events.
+
+    Specifically designed for the spaces list API endpoint.
+    Does NOT filter by seat availability, ensuring all spaces with upcoming events are shown.
+    """
+    return (
+        CircleEvent.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True, circle__published=True)
+        .select_related("circle")
+        .prefetch_related("circle__author", "circle__categories")
+        .annotate(attendee_count=Count("attendees"))
+        .order_by("start")
+    )
+
+
 def all_upcoming_recommended_circles(user: User | None, category: str | None = None):
     events = CircleEvent.objects.filter(start__gte=timezone.now(), cancelled=False, open=True, listed=True)
     events = events.order_by("start")

@@ -174,6 +174,7 @@ export type NextEventSchema = {
     start: string;
     link: string;
     title: string | null;
+    seats_left: number;
 };
 
 export type SpaceDetailSchema = {
