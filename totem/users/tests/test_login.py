@@ -187,3 +187,17 @@ class TestLogInView:
         response = client.post(reverse("users:verify-pin"), {"email": user.email, "pin": pin})
         assert response.status_code == 302
         assert response.url == "/users/~redirect/"
+
+    def test_deactivated_account(self, client):
+        user = User.objects.create_user(email="test@example.com", password="password")
+        user.is_active = False
+        user.save()
+
+        response = client.post(
+            reverse("users:login"),
+            {
+                "email": user.email,
+            },
+        )
+        assert response.status_code == 302
+        assert response.url == reverse("users:deactivated")

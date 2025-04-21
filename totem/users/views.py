@@ -95,6 +95,11 @@ def verify_pin_view(request: HttpRequest):
             pin = form.cleaned_data["pin"]
             try:
                 user = User.objects.get(email=email)
+
+                # Check if account is deactivated
+                if not user.is_active:
+                    return redirect("users:deactivated")
+
                 is_valid, pin_obj = LoginPin.objects.validate_pin(user, pin)
 
                 if is_valid:
@@ -132,6 +137,10 @@ def signup_view(request: HttpRequest):
     return _auth_view(request, SignupForm, "users/signup.html")
 
 
+def user_deactivated_view(request: HttpRequest):
+    return render(request, "users/deactivated.html")
+
+
 def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name: str):
     next = request.GET.get("next")
     if not url_has_allowed_host_and_scheme(next, None):
@@ -145,8 +154,14 @@ def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name
             after_login_url: str | None = data.get("after_login_url") or next
             create_params = {"newsletter_consent": data.get("newsletter_consent", False)}
 
-            # Create or get user and generate PIN
+            # Create or get user
             user, created = User.objects.get_or_create(email=email, defaults=create_params or {})
+
+            # Check if account is deactivated
+            if not user.is_active:
+                return redirect("users:deactivated")
+
+            # Generate PIN and continue with login process
             login_pin = LoginPin.objects.generate_pin(user)
 
             # Store after_login_url in session if provided
