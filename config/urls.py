@@ -16,7 +16,6 @@ from totem.pages.urls import PagesSitemap
 from totem.plans.urls import PlansSitemap
 from totem.repos.urls import ReposSitemap
 from totem.users import views as user_views
-from totem.users.views import MagicLoginView
 
 sitemaps = {
     "pages": PagesSitemap(),
@@ -90,7 +89,6 @@ urlpatterns = [
         name="sitemaps",
     ),
     path("onboard/", include("totem.onboard.urls")),
-    path("auth/link/", MagicLoginView.as_view(), name="magic-login"),
     path("dev/", include("totem.dev.urls", namespace="dev")),
     # Redirects
     path("circles/", RedirectView.as_view(url="/spaces/", permanent=True)),

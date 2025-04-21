@@ -105,18 +105,6 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
         """
         return reverse("users:detail", kwargs={"slug": self.slug})
 
-    def get_login_url(self, after_login_url: str | None, mobile: bool = False) -> str:
-        from sesame.utils import get_query_string
-
-        if not after_login_url or after_login_url.startswith("http"):
-            after_login_url = reverse("users:redirect")
-
-        url = reverse("magic-login")
-
-        url += get_query_string(self)
-        url += "&next=" + after_login_url
-        return url
-
     def get_keeper_url(self):
         if self.keeper_profile.username:
             return reverse("profiles", kwargs={"name": self.keeper_profile.username})

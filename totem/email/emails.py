@@ -104,21 +104,6 @@ class LoginPinEmail(Email):
     pin: str
 
 
-class LoginEmail(ButtonEmail):
-    button_text: str = "Sign in"
-    subject: str = "Totem sign in link"
-    title: str = "Let's get you signed in"
-    message: str = "You requested a link to sign in, and here it is! Note that this link expires in an hour and can only be used once."
-
-
-class ChangeEmailEmail(ButtonEmail):
-    link: AnyHttpUrl
-    button_text: str = "Confirm"
-    subject: str = "Confirm your new email address"
-    title: str = "Confirm your new email address"
-    message: str = "You're almost there! Please confirm your new email address by clicking the button below."
-
-
 class CircleStartingEmail(Email):
     template: str = "circle_starting"
     start: str
@@ -206,26 +191,6 @@ def welcome_email(user: User) -> BrevoEmail:
         print(f"Sending welcome email to {user.email}")
         print("------------------------------------------")
     return WelcomeEmail(recipient=user.email)
-
-
-def login_email(email: str, url: str) -> Email:
-    _url = _make_email_url(url)
-    if settings.DEBUG:
-        print("------------------------------------------")
-        print(f"Sending email to {email} with link\n{_url}")
-        print("------------------------------------------")
-
-    return LoginEmail(
-        recipient=email,
-        link=_url,
-    )
-
-
-def change_email(old_email: str, new_email: str, login_url: str) -> Email:
-    return ChangeEmailEmail(
-        recipient=new_email,
-        link=_make_email_url(login_url),
-    )
 
 
 def notify_circle_starting(event: CircleEvent, user: User) -> Email:

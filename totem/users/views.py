@@ -1,7 +1,6 @@
 from auditlog.context import disable_auditlog
 from auditlog.models import LogEntry
 from django import forms
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required
@@ -10,7 +9,6 @@ from django.db import transaction
 from django.http import Http404, HttpRequest, HttpResponseForbidden
 from django.shortcuts import redirect, render, reverse
 from django.utils.http import url_has_allowed_host_and_scheme
-from sesame.views import LoginView as SesameLoginView
 
 from totem.circles.filters import all_upcoming_recommended_events, upcoming_attending_events, upcoming_events_by_author
 from totem.email import emails
@@ -82,15 +80,6 @@ def user_redirect_view(request, *args, **kwargs):
     return redirect("onboard:index")
 
 
-class MagicLoginView(SesameLoginView):
-    def login_success(self):
-        user = self.request.user
-        if not user.verified:  # type: ignore
-            user.verified = True  # type: ignore
-            user.save()
-        return super().login_success()
-
-
 class PinVerifyForm(forms.Form):
     pin = forms.CharField(max_length=6, min_length=6)
     email = forms.EmailField()
@@ -136,12 +125,6 @@ def verify_pin_view(request: HttpRequest):
 
 def login_view(request: HttpRequest):
     return _auth_view(request, LoginForm, "users/login.html")
-
-
-def login_link_view(request: HttpRequest):
-    if not settings.DEBUG:
-        raise Http404
-    return render(request, "users/link_sent.html", {"email": "test@totem.org"})
 
 
 def signup_view(request: HttpRequest):
@@ -232,15 +215,22 @@ def _user_profile_info(request, user: User):
         old_email = user.email
         form = UserUpdateForm(request.POST, instance=user)
         if form.is_valid():
-            message = "Profile successfully updated."
             new_email = form.cleaned_data["email"]
             if old_email != new_email:
-                login_url = user.get_login_url(after_login_url=None, mobile=False)
+                user.email = new_email
                 user.verified = False
-                emails.change_email(old_email, new_email, login_url).send()
-                message = f"Email successfully updated to {new_email}. Please check your inbox to confirm."
+                user.save()
+                # Generate a PIN for the new email confirmation
+                login_pin = LoginPin.objects.generate_pin(user)
+                emails.login_pin_email(new_email, login_pin.pin).send()
+                # Redirect to PIN verification with email prefilled
+                request.session["after_login_url"] = reverse("users:profile")
+                messages.success(
+                    request, f"Email successfully updated to {new_email}. Please check your inbox to confirm."
+                )
+                return redirect(f"{reverse('users:verify-pin')}?email={new_email}")
             form.save()
-            messages.success(request, message)
+            messages.success(request, "Profile successfully updated.")
         consent_form = UserConsentForm(request.POST, instance=user)
         if consent_form.is_valid():
             consent_form.save()
