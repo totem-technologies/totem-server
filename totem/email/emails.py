@@ -96,19 +96,12 @@ class ButtonEmail(Email):
     message: str
 
 
-class LoginEmail(ButtonEmail):
-    button_text: str = "Sign in"
-    subject: str = "Totem sign in link"
-    title: str = "Let's get you signed in"
-    message: str = "You requested a link to sign in, and here it is! Note that this link expires in an hour and can only be used once."
-
-
-class ChangeEmailEmail(ButtonEmail):
-    link: AnyHttpUrl
-    button_text: str = "Confirm"
-    subject: str = "Confirm your new email address"
-    title: str = "Confirm your new email address"
-    message: str = "You're almost there! Please confirm your new email address by clicking the button below."
+class LoginPinEmail(Email):
+    template: str = "pin"
+    subject: str = "Your Totem login PIN"
+    title: str = "Here's your login PIN"
+    message: str = "Use this 6-digit PIN to sign in. It expires in 15 minutes and can only be used once."
+    pin: str
 
 
 class CircleStartingEmail(Email):
@@ -181,32 +174,23 @@ class MissedEventEmail(Email):
     title: str = "We missed you!"
 
 
+def login_pin_email(email: str, pin: str) -> Email:
+    if settings.DEBUG:
+        print("------------------------------------------")
+        print(f"Sending PIN email to {email} with PIN: {pin}")
+        print("------------------------------------------")
+    return LoginPinEmail(
+        recipient=email,
+        pin=pin,
+    )
+
+
 def welcome_email(user: User) -> BrevoEmail:
     if settings.DEBUG:
         print("------------------------------------------")
         print(f"Sending welcome email to {user.email}")
         print("------------------------------------------")
     return WelcomeEmail(recipient=user.email)
-
-
-def login_email(email: str, url: str) -> Email:
-    _url = _make_email_url(url)
-    if settings.DEBUG:
-        print("------------------------------------------")
-        print(f"Sending email to {email} with link\n{_url}")
-        print("------------------------------------------")
-
-    return LoginEmail(
-        recipient=email,
-        link=_url,
-    )
-
-
-def change_email(old_email: str, new_email: str, login_url: str) -> Email:
-    return ChangeEmailEmail(
-        recipient=new_email,
-        link=_make_email_url(login_url),
-    )
 
 
 def notify_circle_starting(event: CircleEvent, user: User) -> Email:

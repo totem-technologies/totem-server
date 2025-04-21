@@ -118,8 +118,6 @@ MIGRATION_MODULES = {"sites": "totem.contrib.sites.migrations"}
 # https://docs.djangoproject.com/en/dev/ref/settings/#authentication-backends
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
-    "allauth.account.auth_backends.AuthenticationBackend",
-    "sesame.backends.ModelBackend",
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#auth-user-model
 AUTH_USER_MODEL = "users.User"
@@ -368,13 +366,6 @@ SOCIALACCOUNT_FORMS = {"signup": "totem.users.forms.UserSocialSignupForm"}
 # ------------------------------------------------------------------------------
 TOTEM_RUN_TASKS_TOKEN = env("TOTEM_RUN_TASKS_TOKEN")
 TOTEM_ASYNC_WORKER_QUEUE_ENABLED = env.bool("TOTEM_ASYNC_WORKER_QUEUE_ENABLED", default=True)  # type: ignore
-
-# django-sesame
-# ------------------------------------------------------------------------------
-SESAME_TOKEN_NAME = "token"
-SESAME_MAX_AGE = 60 * 30  # 30 minutes
-SESAME_TOKENS = ["sesame.tokens_v2"]
-SESAME_INVALIDATE_ON_PASSWORD_CHANGE = False
 
 
 ROBOTS_NO_INDEX = env.bool("ROBOT_NO_INDEX", False)  # type: ignore

@@ -1,13 +1,15 @@
+from datetime import timedelta
+
 import pytest
 from django.contrib.messages import get_messages
 from django.http import HttpResponseRedirect
 from django.test import TestCase
 from django.urls import reverse
-from sesame.utils import get_query_string
+from django.utils import timezone
 
 from totem.circles.tests.factories import CircleEventFactory, CircleFactory
 from totem.onboard.models import OnboardModel
-from totem.users.models import Feedback, User
+from totem.users.models import Feedback, LoginPin, User
 from totem.users.tests.factories import KeeperProfileFactory, UserFactory
 from totem.users.views import FEEDBACK_SUCCESS_MESSAGE
 
@@ -23,7 +25,7 @@ def test_user_update_view(client):
         reverse("users:profile"), {"email": "new@example.com", "name": "New Name", "timezone": "UTC"}
     )
     assert user.email != "new@example.com"
-    assert response.status_code == 200
+    assert response.status_code == 200  # Response shows success message
     messages = list(get_messages(response.wsgi_request))
     assert len(messages) == 1
     user.refresh_from_db()
@@ -110,23 +112,50 @@ class TestUserIndexView:
         assert response.url == "/users/dashboard/"
 
 
-def test_magic_login_view_verify_email(client):
-    user = UserFactory()
-    user.verified = False
-    qs = get_query_string(user)
-    response = client.get(reverse("magic-login") + qs)
-    assert response.status_code == 302
-    messages = list(get_messages(response.wsgi_request))
-    assert len(messages) == 0
-    user.refresh_from_db()
-    assert user.verified is True
+class TestPinVerification:
+    def test_verify_pin_success(self, client):
+        user = UserFactory(verified=False)
+        pin = LoginPin.objects.generate_pin(user)
 
-    qs = get_query_string(user)
-    response = client.get(reverse("magic-login") + qs)
-    assert response.status_code == 302
-    assert len(get_messages(response.wsgi_request)) == 0
-    user.refresh_from_db()
-    assert user.verified is True
+        response = client.post(reverse("users:verify-pin"), {"email": user.email, "pin": pin.pin})
+        assert response.status_code == 302
+        assert response.url == reverse("users:redirect")
+
+        user.refresh_from_db()
+        assert user.verified is True
+
+    def test_verify_pin_invalid(self, client):
+        user = UserFactory(verified=False)
+        LoginPin.objects.generate_pin(user)
+
+        response = client.post(
+            reverse("users:verify-pin"),
+            {"email": user.email, "pin": "000000"},  # Wrong PIN
+        )
+        assert response.status_code == 200
+        assert b"Invalid or expired verification code" in response.content
+
+        user.refresh_from_db()
+        assert user.verified is False
+
+    def test_verify_pin_expired(self, client):
+        user = UserFactory(verified=False)
+        pin = LoginPin.objects.generate_pin(user)
+        # Manually set expiration to the past
+        pin.expires_at = timezone.now() - timedelta(minutes=30)
+        pin.save()
+
+        response = client.post(reverse("users:verify-pin"), {"email": user.email, "pin": pin.pin})
+        assert response.status_code == 200
+        assert b"Invalid or expired verification code" in response.content
+
+        user.refresh_from_db()
+        assert user.verified is False
+
+    def test_verify_pin_nonexistent_user(self, client):
+        response = client.post(reverse("users:verify-pin"), {"email": "nonexistent@example.com", "pin": "123456"})
+        assert response.status_code == 200
+        assert b"Invalid or expired verification code" in response.content
 
 
 class UserProfileViewTest(TestCase):

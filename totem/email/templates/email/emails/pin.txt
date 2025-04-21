@@ -1,0 +1,7 @@
+{{ title }}
+
+{{ message }}
+
+Your verification code: {{ pin }}
+
+Didn't request this code? You can safely ignore this email.

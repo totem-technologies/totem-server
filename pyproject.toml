@@ -32,7 +32,6 @@ dependencies = [
     "django-imagekit<6.0.0",
     "django-impersonate<2",
     "django-ninja<2",
-    "django-sesame==3.2.2",
     "django-storages[s3]<2",
     "django-taggit<7",
     "django-timezone-field<8",

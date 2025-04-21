@@ -51,20 +51,18 @@ def template_view(request, name=None):
 
 
 def get_templates():
-    # files = Path(__file__).parent.joinpath("templates/email/emails").glob("*.mjml")
-    # return {file.stem: file.name for file in files}
-    def login_email():
-        return emails.login_email(
-            email="bo@totem.org",
-            url="https://totem.org",
+    def login_pin():
+        return emails.login_pin_email(
+            email="test@totem.org",
+            pin="223412",
         )
 
-    def change_email():
-        return emails.change_email(
-            old_email="bo@totem.org",
-            new_email="bo@totem.org",
-            login_url="https://totem.org",
-        )
+    # def change_email():
+    #     return emails.change_email(
+    #         old_email="bo@totem.org",
+    #         new_email="bo@totem.org",
+    #         login_url="https://totem.org",
+    #     )
 
     def circle_starting():
         user = User.objects.first()
@@ -110,8 +108,8 @@ def get_templates():
         return emails.missed_event_email(event, user)
 
     return {
-        "login_email": login_email,
-        "change_email": change_email,
+        "login_pin": login_pin,  # Updated key
+        # "change_email": change_email,
         "circle_starting": circle_starting,
         "circle_advertisement": circle_advertisement,
         "circle_tomorrow_reminder": circle_tomorrow_reminder,
