@@ -429,7 +429,9 @@ IMPERSONATE = {
 
 # CORS
 # ------------------------------------------------------------------------------
-CORS_ALLOWED_ORIGINS = ["https://app.posthog.com"]
+CORS_ALLOWED_ORIGINS = ["https://app.posthog.com", "https://js.sentry-cdn.com"]
+if STATIC_HOST:
+    CORS_ALLOWED_ORIGINS.append(f"https://{STATIC_HOST}")
 
 
 # Auditlog
