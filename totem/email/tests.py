@@ -3,7 +3,8 @@ from django.test import Client, override_settings
 from django.urls import reverse
 
 from totem.circles.tests.factories import CircleEventFactory
-from totem.email.emails import login_email, missed_event_email, notify_circle_advertisement
+from totem.email.emails import missed_event_email, notify_circle_advertisement, login_pin_email
+from totem.users.models import LoginPin
 from totem.users.tests.factories import UserFactory
 
 from .views import get_templates
@@ -91,27 +92,17 @@ class TestAdvertEmail:
         assert "This is a circle" in message
 
 
-class TestReturningUsers:
-    def test_returning_users(self, client, db):
+class TestAuthEmails:
+    def test_login_pin_email(self, client, db):
         user = UserFactory()
-        user.save()
-        login_email(user.email, reverse("pages:home")).send()
+        pin = LoginPin.objects.generate_pin(user)
+        login_pin_email(user.email, pin.pin).send()
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
         message = str(email.message())
-        assert "http://testserver/" in message
-
-    def test_returning_users_after_login(self, client, db):
-        user = UserFactory()
-        user.save()
-        client.force_login(user)
-        login_email(user.email, reverse("pages:home")).send()
-        assert len(mail.outbox) == 1
-        email = mail.outbox[0]
-        assert email.to == [user.email]
-        message = str(email.message())
-        assert "http://testserver/" in message
+        assert pin.pin in message
+        assert "PIN" in message
 
 
 class TestMissedEventEmail:

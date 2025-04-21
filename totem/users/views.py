@@ -7,7 +7,8 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.http import Http404, HttpRequest, HttpResponseForbidden
-from django.shortcuts import redirect, render, reverse
+from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 
 from totem.circles.filters import all_upcoming_recommended_events, upcoming_attending_events, upcoming_events_by_author
@@ -16,7 +17,7 @@ from totem.utils.slack import notify_slack
 
 from . import analytics
 from .forms import LoginForm, SignupForm
-from .models import Feedback, KeeperProfile, User, LoginPin
+from .models import Feedback, KeeperProfile, LoginPin, User
 
 
 def user_detail_view(request, slug):
@@ -220,15 +221,6 @@ def _user_profile_info(request, user: User):
                 user.email = new_email
                 user.verified = False
                 user.save()
-                # Generate a PIN for the new email confirmation
-                login_pin = LoginPin.objects.generate_pin(user)
-                emails.login_pin_email(new_email, login_pin.pin).send()
-                # Redirect to PIN verification with email prefilled
-                request.session["after_login_url"] = reverse("users:profile")
-                messages.success(
-                    request, f"Email successfully updated to {new_email}. Please check your inbox to confirm."
-                )
-                return redirect(f"{reverse('users:verify-pin')}?email={new_email}")
             form.save()
             messages.success(request, "Profile successfully updated.")
         consent_form = UserConsentForm(request.POST, instance=user)

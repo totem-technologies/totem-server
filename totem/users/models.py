@@ -1,6 +1,6 @@
+import secrets
 import time
 import uuid
-import secrets
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
@@ -227,7 +227,7 @@ class LoginPin(models.Model):
     used = models.BooleanField(default=False)
     failed_attempts = models.IntegerField(default=0)
 
-    objects = LoginPinManager()
+    objects: LoginPinManager = LoginPinManager()
 
     def is_valid(self) -> bool:
         return not self.used and timezone.now() < self.expires_at and self.failed_attempts < self.MAX_ATTEMPTS
