@@ -1,0 +1,56 @@
+{% extends "account/base.html" %}
+{% load i18n %}
+{% load static %}
+{# djlint:off #}
+{% block head_title %}{% translate "Verify Code" %}{% endblock head_title %}
+{# djlint:on #}
+
+{% block inner %}
+  <h2 class="h2">Enter verification code</h2>
+  <div class="mt-5">
+    <p>
+      We sent a 6-digit code to {{ form.email.value }}. Please enter it below.
+    </p>
+    <form class="mt-5" method="post">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+        <div class="alert alert-error mb-4" role="alert">
+          {% for error in form.non_field_errors %}
+            <p>{{ error }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+      {{ form.email.as_hidden }}
+      <div class="form-control w-full">
+        <input
+          type="text"
+          name="pin"
+          maxlength="6"
+          placeholder="Enter 6-digit code"
+          class="input input-bordered w-full"
+          value="{{ form.pin.value|default:'' }}"
+          {% if form.pin.errors %}aria-invalid="true"{% endif %}
+          required />
+        {% if form.pin.errors %}
+          <div class="text-error mt-2">
+            {% for error in form.pin.errors %}
+              <p>{{ error }}</p>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+      <button
+        class="btn btn-primary mt-4 flex w-full justify-center"
+        type="submit">
+        Verify Code
+      </button>
+    </form>
+  </div>
+{% endblock inner %}
+
+{% block after %}
+  <p class="text-center text-gray-400">
+    Need a new code?
+    <a class="a" href="{% url 'users:login' %}">Send again</a>
+  </p>
+{% endblock after %}

@@ -96,6 +96,14 @@ class ButtonEmail(Email):
     message: str
 
 
+class LoginPinEmail(Email):
+    template: str = "pin"
+    subject: str = "Your Totem login PIN"
+    title: str = "Here's your login PIN"
+    message: str = "Use this 6-digit PIN to sign in. It expires in 15 minutes and can only be used once."
+    pin: str
+
+
 class LoginEmail(ButtonEmail):
     button_text: str = "Sign in"
     subject: str = "Totem sign in link"
@@ -179,6 +187,17 @@ class MissedEventEmail(Email):
     button_text: str = "Let us know how we can help"
     subject: str = "We missed you!"
     title: str = "We missed you!"
+
+
+def login_pin_email(email: str, pin: str) -> Email:
+    if settings.DEBUG:
+        print("------------------------------------------")
+        print(f"Sending PIN email to {email} with PIN: {pin}")
+        print("------------------------------------------")
+    return LoginPinEmail(
+        recipient=email,
+        pin=pin,
+    )
 
 
 def welcome_email(user: User) -> BrevoEmail:

@@ -1,0 +1,21 @@
+{% extends 'email/emails/_base.mjml' %} {% load static %} {% block content %}
+<mj-section mj-class="section">
+  <mj-column padding="0">
+    <mj-text mj-class="h1">
+      <strong>{{title}}</strong>
+    </mj-text>
+    <mj-spacer height="10px"></mj-spacer>
+    <mj-text mj-class="p">
+      {{message}}
+    </mj-text>
+    <mj-spacer height="30px"></mj-spacer>
+    <mj-text mj-class="h1" align="center">
+      <span style="font-family: monospace; font-size: 32px;">{{pin}}</span>
+    </mj-text>
+    <mj-spacer height="30px"></mj-spacer>
+    <mj-text mj-class="sub">
+      Didn't request this code? You can safely ignore this email.
+    </mj-text>
+  </mj-column>
+</mj-section>
+{% endblock %}

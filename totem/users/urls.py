@@ -11,12 +11,14 @@ from totem.users.views import (
     user_profile_delete_view,
     user_profile_view,
     user_redirect_view,
+    verify_pin_view,
 )
 
 app_name = "users"
 urlpatterns = [
     path("~redirect/", view=user_redirect_view, name="redirect"),
     path("login/linksent", login_link_view, name="login_link"),
+    path("login/verify-pin/", verify_pin_view, name="verify-pin"),
     path("login/", login_view, name="login"),
     path("signup/", signup_view, name="signup"),
     path("dashboard/", user_dashboard_view, name="dashboard"),

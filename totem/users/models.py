@@ -197,6 +197,30 @@ def default_expires_at() -> datetime:
     return timezone.now() + timedelta(days=14)
 
 
+def default_pin_expires_at() -> datetime:
+    return timezone.now() + timedelta(minutes=15)
+
+
+class LoginPin(models.Model):
+    MAX_ATTEMPTS = 10
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    pin = models.CharField(max_length=6)
+    expires_at = models.DateTimeField(default=default_pin_expires_at)
+    used = models.BooleanField(default=False)
+    failed_attempts = models.IntegerField(default=0)
+
+    def is_valid(self) -> bool:
+        return not self.used and timezone.now() < self.expires_at and self.failed_attempts < self.MAX_ATTEMPTS
+
+    def increment_failed_attempts(self):
+        self.failed_attempts += 1
+        self.save()
+
+    @classmethod
+    def cleanup(cls):
+        cls.objects.filter(expires_at__lt=timezone.now()).delete()
+
+
 class ActionToken(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
