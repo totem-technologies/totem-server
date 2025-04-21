@@ -1,5 +1,6 @@
 import time
 import uuid
+import secrets
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
@@ -201,6 +202,35 @@ def default_pin_expires_at() -> datetime:
     return timezone.now() + timedelta(minutes=15)
 
 
+class LoginPinManager(models.Manager):
+    def generate_pin(self, user: User) -> "LoginPin":
+        """Generate a new PIN for a user, invalidating any existing PINs."""
+        # Generate a secure 6-digit PIN using the secrets module
+        pin = "".join(secrets.choice("0123456789") for _ in range(6))
+
+        # Delete any existing PINs for this user and create new one
+        self.filter(user=user).delete()
+        return self.create(user=user, pin=pin)
+
+    def validate_pin(self, user: User, pin: str) -> tuple[bool, "LoginPin | None"]:
+        """
+        Validate a PIN for a user. Returns (is_valid, pin_obj).
+        PIN object is returned even if invalid to allow for attempt counting.
+        """
+        try:
+            pin_obj = self.get(user=user, expires_at__gt=timezone.now())
+            is_valid = pin_obj.is_valid() and pin_obj.pin == pin
+            if not is_valid and pin_obj.is_valid():
+                pin_obj.increment_failed_attempts()
+            if is_valid:
+                # Valid PIN - mark as used
+                pin_obj.used = True
+                pin_obj.save()
+            return is_valid, pin_obj
+        except self.model.DoesNotExist:
+            return False, None
+
+
 class LoginPin(models.Model):
     MAX_ATTEMPTS = 10
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -208,6 +238,8 @@ class LoginPin(models.Model):
     expires_at = models.DateTimeField(default=default_pin_expires_at)
     used = models.BooleanField(default=False)
     failed_attempts = models.IntegerField(default=0)
+
+    objects = LoginPinManager()
 
     def is_valid(self) -> bool:
         return not self.used and timezone.now() < self.expires_at and self.failed_attempts < self.MAX_ATTEMPTS
@@ -218,7 +250,13 @@ class LoginPin(models.Model):
 
     @classmethod
     def cleanup(cls):
+        """Remove expired PINs."""
         cls.objects.filter(expires_at__lt=timezone.now()).delete()
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "pin", "expires_at"]),
+        ]
 
 
 class ActionToken(models.Model):

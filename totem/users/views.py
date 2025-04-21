@@ -11,8 +11,6 @@ from django.http import Http404, HttpRequest, HttpResponseForbidden
 from django.shortcuts import redirect, render, reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from sesame.views import LoginView as SesameLoginView
-import random
-import string
 
 from totem.circles.filters import all_upcoming_recommended_events, upcoming_attending_events, upcoming_events_by_author
 from totem.email import emails
@@ -62,8 +60,6 @@ class UserUpdateForm(forms.ModelForm):
 
 
 class UserConsentForm(forms.ModelForm):
-    # newsletter_consent = forms.BooleanField(template_name="fields/checkbox.html", required=False)  # type: ignore
-
     class Meta:
         model = User
         fields = ("newsletter_consent",)
@@ -100,6 +96,7 @@ class PinVerifyForm(forms.Form):
     email = forms.EmailField()
 
 
+@transaction.atomic
 def verify_pin_view(request: HttpRequest):
     if request.method == "POST":
         form = PinVerifyForm(request.POST)
@@ -108,13 +105,9 @@ def verify_pin_view(request: HttpRequest):
             pin = form.cleaned_data["pin"]
             try:
                 user = User.objects.get(email=email)
-                login_pin = getattr(user, "loginpin", None)
+                is_valid, pin_obj = LoginPin.objects.validate_pin(user, pin)
 
-                if login_pin and login_pin.is_valid() and login_pin.pin == pin:
-                    # Valid PIN - log the user in
-                    login_pin.used = True
-                    login_pin.save()
-
+                if is_valid:
                     auth_login(request, user)
 
                     if not user.verified:
@@ -127,11 +120,8 @@ def verify_pin_view(request: HttpRequest):
                         next_url = "users:redirect"
 
                     return redirect(next_url)
-                elif login_pin:
-                    # Invalid PIN but pin exists - increment failed attempts
-                    login_pin.increment_failed_attempts()
 
-                # Use a generic error message to avoid revealing if email exists
+                # Use generic error message to avoid revealing if email exists
                 form.add_error(None, "Invalid or expired verification code. Please try again or request a new code.")
             except User.DoesNotExist:
                 # Use same generic error to avoid revealing if email exists
@@ -170,7 +160,23 @@ def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name
             email: str = data["email"].lower()
             after_login_url: str | None = data.get("after_login_url") or next
             create_params = {"newsletter_consent": data.get("newsletter_consent", False)}
-            login(request, email=email, create_params=create_params, after_login_url=after_login_url)
+
+            # Create or get user and generate PIN
+            user, created = User.objects.get_or_create(email=email, defaults=create_params or {})
+            login_pin = LoginPin.objects.generate_pin(user)
+
+            # Store after_login_url in session if provided
+            if after_login_url:
+                request.session["after_login_url"] = after_login_url
+
+            # Send PIN via email
+            emails.login_pin_email(user.email, login_pin.pin).send()
+
+            if created:
+                emails.welcome_email(user).send()
+                analytics.user_signed_up(user)
+
+            user.identify()
             return redirect(f"{reverse('users:verify-pin')}?email={email}")
     else:
         if request.user.is_authenticated:
@@ -180,47 +186,6 @@ def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name
         form = form_class()
     response = render(request, template_name, context=context | {"form": form})
     return response
-
-
-def generate_pin() -> str:
-    """Generate a 6-digit PIN."""
-    return "".join(random.choices(string.digits, k=6))
-
-
-@transaction.atomic
-def login(
-    request, *, email: str, create_params: dict | None = None, after_login_url: str | None = None, mobile: bool = False
-) -> bool:
-    """Login a user by sending them a PIN via email. If it's a new user, create the account and send them
-    a welcome email.
-
-    Args:
-        email (str): The email address to send the PIN to.
-        create_params (dict, optional): Parameters for new user creation. Defaults to None.
-        after_login_url (str, optional): The URL to redirect to after the user logs in. Defaults to None.
-    """
-    user, created = User.objects.get_or_create(email=email, defaults=create_params or {})
-
-    # Generate and save PIN
-    pin = generate_pin()
-
-    # Delete any existing PIN and create a new one (OneToOne relationship ensures only one active PIN)
-    LoginPin.objects.filter(user=user).delete()
-    LoginPin.objects.create(user=user, pin=pin)
-
-    # Store after_login_url in session if provided
-    if after_login_url:
-        request.session["after_login_url"] = after_login_url
-
-    # Send PIN via email
-    emails.login_pin_email(user.email, pin).send()
-
-    if created:
-        emails.welcome_email(user).send()
-        analytics.user_signed_up(user)
-
-    user.identify()  # type: ignore
-    return created
 
 
 def user_index_view(request):
