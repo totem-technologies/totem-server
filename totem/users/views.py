@@ -109,10 +109,14 @@ def verify_pin_view(request: HttpRequest):
                         user.verified = True
                         user.save()
 
-                    # Get redirect URL from session or default
-                    next_url = request.session.pop("after_login_url", None)
+                    # Get redirect URL from session or default (now only 'next')
+                    next_url = request.session.pop("next", None)
                     if not next_url or not url_has_allowed_host_and_scheme(next_url, None):
                         next_url = "users:redirect"
+
+                    # ENFORCE ONBOARDING
+                    if not getattr(user, "onboard", None) or not getattr(user.onboard, "onboarded", False):
+                        return redirect(f"{reverse('onboard:index')}?next={next_url}")
 
                     return redirect(next_url)
 
@@ -151,7 +155,7 @@ def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name
         if form.is_valid():
             data = form.cleaned_data
             email: str = data["email"].lower()
-            after_login_url: str | None = data.get("after_login_url") or next
+            # Only use 'next' as the post-auth redirect parameter
             create_params = {"newsletter_consent": data.get("newsletter_consent", False)}
 
             # Create or get user
@@ -164,9 +168,9 @@ def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name
             # Generate PIN and continue with login process
             login_pin = LoginPin.objects.generate_pin(user)
 
-            # Store after_login_url in session if provided
-            if after_login_url:
-                request.session["after_login_url"] = after_login_url
+            # Store 'next' in session for redirect after validation
+            if next:
+                request.session["next"] = next
 
             # Send PIN via email
             emails.login_pin_email(user.email, login_pin.pin).send()
