@@ -63,11 +63,10 @@ def onboard_view(request: HttpRequest):
         form = OnboardForm(request.POST)
         if form.is_valid():
             form.save(user, onboard)
-            next = request.session.get("next")
-            if next:
-                del request.session["next"]
-                assert next[0] == "/"
-                return redirect(next)
+            # Prefer 'next' as query param, but support session as fallback
+            next_url = request.session.pop("next", None)
+            if next_url and next_url.startswith("/"):
+                return redirect(next_url)
             return redirect("users:redirect")
     else:
         next = request.GET.get("next")

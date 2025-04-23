@@ -34,6 +34,16 @@ class UserFactory(DjangoModelFactory, metaclass=BaseMetaFactory[User]):
         if create:
             self.save()  # type: ignore
 
+    @post_generation
+    def onboarded(self, create: bool, extracted: bool | None, **kwargs):
+        if create:
+            # Import here to avoid circular imports
+            from totem.onboard.tests.factories import OnboardModelFactory
+
+            # Only skip creating the onboard profile if explicitly set to False
+            if extracted is not False:
+                OnboardModelFactory(user=self, onboarded=True)
+
     class Meta:  # type: ignore
         model = get_user_model()
         django_get_or_create = ["email"]

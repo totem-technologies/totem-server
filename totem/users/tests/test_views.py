@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from totem.circles.tests.factories import CircleEventFactory, CircleFactory
-from totem.onboard.models import OnboardModel
+from totem.onboard.tests.factories import OnboardModelFactory
 from totem.users.models import Feedback, LoginPin, User
 from totem.users.tests.factories import KeeperProfileFactory, UserFactory
 from totem.users.views import FEEDBACK_SUCCESS_MESSAGE
@@ -35,15 +35,13 @@ def test_user_update_view(client):
 
 class TestUserRedirectView:
     def test_get_redirect_url(self, client, db):
-        user = UserFactory()
+        user = UserFactory(onboarded=False)
         client.force_login(user)
         url = reverse("users:redirect")
         response = client.get(url)
         assert response.status_code == 302
         assert response.url == reverse("onboard:index")
-        onboard = OnboardModel.objects.create(user=user)
-        onboard.onboarded = True
-        onboard.save()
+        OnboardModelFactory(user=user, onboarded=True)
         response = client.get(url)
         assert response.status_code == 302
         assert response.url == reverse("users:dashboard")
@@ -52,9 +50,6 @@ class TestUserRedirectView:
         url = reverse("users:profile")
         user = UserFactory()
         client.force_login(user)
-        onboard = OnboardModel.objects.create(user=user)
-        onboard.onboarded = True
-        onboard.save()
         s = client.session
         s["next"] = url
         s.save()
@@ -66,9 +61,6 @@ class TestUserRedirectView:
         url = "https://attacker.com"
         user = UserFactory()
         client.force_login(user)
-        onboard = OnboardModel.objects.create(user=user)
-        onboard.onboarded = True
-        onboard.save()
         s = client.session
         s["next"] = url
         s.save()
@@ -98,15 +90,12 @@ class TestUserIndexView:
         assert response.url == reverse("users:signup") + "?next=" + url
 
         url = reverse("users:index")
-        user = UserFactory()
+        user = UserFactory(onboarded=False)
         client.force_login(user)
         response = client.get(url)
         assert response.status_code == 302
         assert response.url == "/onboard/"
-
-        OnboardModel.objects.create(user=user)
-        user.onboard.onboarded = True
-        user.onboard.save()
+        OnboardModelFactory(user=user, onboarded=True)
         response = client.get(url)
         assert response.status_code == 302
         assert response.url == "/users/dashboard/"

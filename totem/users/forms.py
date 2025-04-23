@@ -51,7 +51,7 @@ class UserSocialSignupForm(SocialSignupForm):
 class LoginForm(Form):
     form_url = reverse_lazy("users:login")
     email = EmailField(validators=[validate_email_blocked])
-    after_login_url = CharField(required=False, widget=HiddenInput())
+    # after_login_url removed, only 'next' is supported
     success_url = CharField(required=False, widget=HiddenInput())
 
 

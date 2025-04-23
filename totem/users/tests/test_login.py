@@ -84,17 +84,16 @@ class TestLogInView:
         # Check that no email was sent
         assert len(mail.outbox) == 0
 
-    def test_login_parameters(self, client):
+    def test_login_next_redirect(self, client):
         # Create an existing user
         user = UserFactory()
         count = User.objects.count()
 
-        # Submit login with after_login_url
+        # Submit login with next parameter
         response = client.post(
-            reverse("users:login"),
+            reverse("users:login") + "?next=/my-dest-url",
             {
                 "email": user.email,
-                "after_login_url": "/foo",
             },
         )
         assert response.status_code == 302
@@ -106,22 +105,21 @@ class TestLogInView:
         # Verify PIN and check redirect
         response = client.post(reverse("users:verify-pin"), {"email": user.email, "pin": pin})
         assert response.status_code == 302
-        assert response.url == "/foo"
+        assert response.url == "/my-dest-url"
 
         # Check that no new user was created
         assert User.objects.count() == count
 
-    def test_login_parameters_attacker(self, client):
+    def test_next_redirect_security(self, client):
         # Create an existing user
         user = UserFactory()
         count = User.objects.count()
 
-        # Try to redirect to attacker site
+        # Try to redirect to unallowed host (e.g., attacker)
         response = client.post(
-            reverse("users:login"),
+            reverse("users:login") + "?next=https://attacker.com",
             {
                 "email": user.email,
-                "after_login_url": "https://attacker.com",
             },
         )
         assert response.status_code == 302
@@ -133,60 +131,37 @@ class TestLogInView:
         # Should redirect to safe default URL
         assert response.status_code == 302
         assert "attacker" not in response.url
+        assert response.url == reverse("users:redirect")
 
         # Check no new user created
         assert User.objects.count() == count
 
-    def test_after_login_url_priority(self, client):
-        """Test that after_login_url from the form takes precedence over next parameter."""
+    def test_next_redirect_cases(self, client):
         user = UserFactory()
 
-        # Case 1: Test when both after_login_url and next are provided
+        # 1. next provided (/next-dest)
         response = client.post(
-            reverse("users:login") + "?next=/next-param",
-            {
-                "email": user.email,
-                "after_login_url": "/form-after-login",
-            },
+            reverse("users:login") + "?next=/next-dest",
+            {"email": user.email},
         )
         assert response.status_code == 302
-        # Get PIN and verify to test redirect
         pin = LoginPin.objects.get(user=user).pin
         response = client.post(reverse("users:verify-pin"), {"email": user.email, "pin": pin})
         assert response.status_code == 302
-        assert response.url == "/form-after-login"
+        assert response.url == "/next-dest"
         mail.outbox.clear()
         LoginPin.objects.all().delete()
 
-        # Case 2: Test when only next parameter is provided
-        response = client.post(
-            reverse("users:login") + "?next=/next-param",
-            {
-                "email": user.email,
-            },
-        )
-        assert response.status_code == 302
-        # Get PIN and verify to test redirect
-        pin = LoginPin.objects.get(user=user).pin
-        response = client.post(reverse("users:verify-pin"), {"email": user.email, "pin": pin})
-        assert response.status_code == 302
-        assert response.url == "/next-param"
-        mail.outbox.clear()
-        LoginPin.objects.all().delete()
-
-        # Case 3: Test when neither is provided
+        # 2. No next provided: should land on users:redirect
         response = client.post(
             reverse("users:login"),
-            {
-                "email": user.email,
-            },
+            {"email": user.email},
         )
         assert response.status_code == 302
-        # Get PIN and verify to test redirect
         pin = LoginPin.objects.get(user=user).pin
         response = client.post(reverse("users:verify-pin"), {"email": user.email, "pin": pin})
         assert response.status_code == 302
-        assert response.url == "/users/~redirect/"
+        assert response.url == reverse("users:redirect")
 
     def test_deactivated_account(self, client):
         user = User.objects.create_user(email="test@example.com", password="password")
