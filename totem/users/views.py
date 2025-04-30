@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 from auditlog.context import disable_auditlog
 from auditlog.models import LogEntry
 from django import forms
@@ -180,7 +182,7 @@ def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name
                 analytics.user_signed_up(user)
 
             user.identify()
-            return redirect(f"{reverse('users:verify-pin')}?email={email}")
+            return redirect(f"{reverse('users:verify-pin')}?email={quote(email)}")
     else:
         if request.user.is_authenticated:
             return redirect(next or "users:redirect")
