@@ -127,8 +127,8 @@ class TestPinValidationEndpoint:
             content_type="application/json",
         )
 
-        assert response.status_code == 400
-        assert response.json() == {"error": "Incorrect code."}
+        assert response.status_code == 401
+        assert response.json() == {"detail": "INCORRECT_PIN"}
 
     def test_validate_pin_incorrect_pin(self, client: Client, db, setup_user):
         """Test PIN validation with incorrect PIN."""
@@ -144,8 +144,8 @@ class TestPinValidationEndpoint:
             content_type="application/json",
         )
 
-        assert response.status_code == 400
-        assert response.json() == {"error": "Incorrect code."}
+        assert response.status_code == 401
+        assert response.json() == {"detail": "INCORRECT_PIN"}
 
         # Check failed attempts counter
         pin.refresh_from_db()
@@ -169,8 +169,8 @@ class TestPinValidationEndpoint:
             content_type="application/json",
         )
 
-        assert response.status_code == 400
-        assert response.json() == {"error": "PIN is too old. Please request a new code."}
+        assert response.status_code == 401
+        assert response.json() == {"detail": "PIN_EXPIRED"}
 
     def test_validate_pin_too_many_attempts(self, client: Client, db, setup_user):
         """Test PIN validation with too many attempts."""
@@ -190,8 +190,8 @@ class TestPinValidationEndpoint:
             content_type="application/json",
         )
 
-        assert response.status_code == 400
-        assert response.json() == {"error": "Too many attempts. Please request a new code."}
+        assert response.status_code == 401
+        assert response.json() == {"detail": "TOO_MANY_ATTEMPTS"}
 
     def test_validate_pin_deactivated_account(self, client: Client, db, setup_user):
         """Test PIN validation with deactivated account."""
@@ -211,10 +211,8 @@ class TestPinValidationEndpoint:
             content_type="application/json",
         )
 
-        assert response.status_code == 400
-        assert response.json() == {
-            "error": "This account has been deactivated for violating our community guidelines. Please contact support for more information."
-        }
+        assert response.status_code == 401
+        assert response.json() == {"detail": "ACCOUNT_DEACTIVATED"}
 
 
 class TestRefreshTokenEndpoint:
@@ -251,8 +249,8 @@ class TestRefreshTokenEndpoint:
             content_type="application/json",
         )
 
-        assert response.status_code == 400
-        assert response.json() == {"error": "Please sign in again."}
+        assert response.status_code == 401
+        assert response.json() == {"detail": "REAUTH_REQUIRED"}
 
     def test_refresh_token_deactivated_account(self, client: Client, db, setup_user):
         """Test refresh with deactivated account."""
@@ -270,10 +268,8 @@ class TestRefreshTokenEndpoint:
             content_type="application/json",
         )
 
-        assert response.status_code == 400
-        assert response.json() == {
-            "error": "This account has been deactivated for violating our community guidelines. Please contact support for more information."
-        }
+        assert response.status_code == 401
+        assert response.json() == {"detail": "ACCOUNT_DEACTIVATED"}
 
         # Verify token was invalidated
         token_obj.refresh_from_db()

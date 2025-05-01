@@ -1,9 +1,11 @@
 from datetime import timedelta
+from enum import Enum
 
 import jwt
 from django.conf import settings
 from django.utils import timezone
 from ninja import Router, Schema
+from ninja.errors import AuthenticationError
 
 from totem.email import emails
 from totem.email.emails import login_pin_email
@@ -13,17 +15,16 @@ from totem.users.models import LoginPin, RefreshToken, User
 # Create router
 router = Router()
 
-# Error messages
-ERROR_MESSAGES = {
-    "RATE_LIMIT_EXCEEDED": "Too many attempts. Please try again later.",
-    "PIN_EXPIRED": "PIN is too old. Please request a new code.",
-    "INCORRECT_PIN": "Incorrect code.",
-    "TOO_MANY_ATTEMPTS": "Too many attempts. Please request a new code.",
-    "REAUTH_REQUIRED": "Please sign in again.",
-    "NETWORK_ERROR": "Please check your connection.",
-    "SERVER_ERROR": "Something went wrong. Please try again later.",
-    "ACCOUNT_DEACTIVATED": "This account has been deactivated for violating our community guidelines. Please contact support for more information.",
-}
+
+# Enum for error messages
+class AuthErrors(Enum):
+    RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED"
+    PIN_EXPIRED = "PIN_EXPIRED"
+    INCORRECT_PIN = "INCORRECT_PIN"
+    TOO_MANY_ATTEMPTS = "TOO_MANY_ATTEMPTS"
+    REAUTH_REQUIRED = "REAUTH_REQUIRED"
+    NETWORK_ERROR = "NETWORK_ERROR"
+    ACCOUNT_DEACTIVATED = "ACCOUNT_DEACTIVATED"
 
 
 # Schemas
@@ -111,22 +112,22 @@ def validate_pin(request, data: ValidatePinSchema):
     try:
         user = User.objects.get(email=data.email.lower())
     except User.DoesNotExist:
-        return 400, {"error": ERROR_MESSAGES["INCORRECT_PIN"]}
+        raise AuthenticationError(message=AuthErrors.INCORRECT_PIN.value)
 
     # Validate PIN
     is_valid, pin_obj = LoginPin.objects.validate_pin(user, data.pin)
 
     if not is_valid:
         if pin_obj and pin_obj.has_too_many_attempts():
-            return 400, {"error": ERROR_MESSAGES["TOO_MANY_ATTEMPTS"]}
+            raise AuthenticationError(message=AuthErrors.TOO_MANY_ATTEMPTS.value)
         elif pin_obj is None:
-            return 400, {"error": ERROR_MESSAGES["PIN_EXPIRED"]}
+            raise AuthenticationError(message=AuthErrors.PIN_EXPIRED.value)
         else:
-            return 400, {"error": ERROR_MESSAGES["INCORRECT_PIN"]}
+            raise AuthenticationError(message=AuthErrors.INCORRECT_PIN.value)
 
     # Check if account is deactivated
     if check_account_deactivated(user):
-        return 400, {"error": ERROR_MESSAGES["ACCOUNT_DEACTIVATED"]}
+        raise AuthenticationError(message=AuthErrors.ACCOUNT_DEACTIVATED.value)
 
     # Generate tokens
     refresh_token_string, _ = RefreshToken.objects.generate_token(user)
@@ -148,13 +149,13 @@ def refresh_token(request, data: RefreshTokenSchema):
     user, token_obj = RefreshToken.objects.validate_token(data.refresh_token)
 
     if not user or not token_obj:
-        return 400, {"error": ERROR_MESSAGES["REAUTH_REQUIRED"]}
+        raise AuthenticationError(message=AuthErrors.REAUTH_REQUIRED.value)
 
     # Check if account is deactivated
     if check_account_deactivated(user):
         # Invalidate token since account is deactivated
         token_obj.invalidate()
-        return 400, {"error": ERROR_MESSAGES["ACCOUNT_DEACTIVATED"]}
+        raise AuthenticationError(message=AuthErrors.ACCOUNT_DEACTIVATED.value)
 
     # Generate new access token
     access_token = generate_jwt_token(user)
