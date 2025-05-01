@@ -1,11 +1,12 @@
+from datetime import timedelta
+
 import pytest
 from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
-from datetime import timedelta
 
-from totem.users.tests.factories import UserFactory
 from totem.api.auth import generate_jwt_token
+from totem.users.tests.factories import UserFactory
 
 
 @pytest.fixture
@@ -28,7 +29,7 @@ class TestProtectedMobileEndpoint:
         # Construct the authorization header
         auth_header = f"Bearer {auth_token}"
 
-        response = client.get(reverse("api-1:mobile_current_user"), HTTP_AUTHORIZATION=auth_header)
+        response = client.get(reverse("mobile-api:current_user"), HTTP_AUTHORIZATION=auth_header)
 
         # Check response
         assert response.status_code == 200
@@ -38,7 +39,7 @@ class TestProtectedMobileEndpoint:
 
     def test_current_user_without_token(self, client: Client, db):
         """Test accessing the currentuser endpoint without a token."""
-        response = client.get(reverse("api-1:mobile_current_user"))
+        response = client.get(reverse("mobile-api:current_user"))
 
         # Should return 401 Unauthorized
         assert response.status_code == 401
@@ -47,7 +48,7 @@ class TestProtectedMobileEndpoint:
         """Test accessing the currentuser endpoint with an invalid token."""
         auth_header = "Bearer invalid.token.here"
 
-        response = client.get(reverse("api-1:mobile_current_user"), HTTP_AUTHORIZATION=auth_header)
+        response = client.get(reverse("mobile-api:current_user"), HTTP_AUTHORIZATION=auth_header)
 
         # Should return 401 Unauthorized
         assert response.status_code == 401
@@ -60,7 +61,7 @@ class TestProtectedMobileEndpoint:
 
         auth_header = f"Bearer {expired_token}"
 
-        response = client.get(reverse("api-1:mobile_current_user"), HTTP_AUTHORIZATION=auth_header)
+        response = client.get(reverse("mobile-api:current_user"), HTTP_AUTHORIZATION=auth_header)
 
         # Should return 401 Unauthorized
         assert response.status_code == 401
@@ -73,7 +74,7 @@ class TestProtectedMobileEndpoint:
 
         auth_header = f"Bearer {auth_token}"
 
-        response = client.get(reverse("api-1:mobile_current_user"), HTTP_AUTHORIZATION=auth_header)
+        response = client.get(reverse("mobile-api:current_user"), HTTP_AUTHORIZATION=auth_header)
 
         # Should return 401 Unauthorized
         assert response.status_code == 401
@@ -89,7 +90,7 @@ class TestProtectedMobileEndpoint:
 
         auth_header = f"Bearer {token}"
 
-        response = client.get(reverse("api-1:mobile_current_user"), HTTP_AUTHORIZATION=auth_header)
+        response = client.get(reverse("mobile-api:current_user"), HTTP_AUTHORIZATION=auth_header)
 
         # Should return 401 Unauthorized
         assert response.status_code == 401

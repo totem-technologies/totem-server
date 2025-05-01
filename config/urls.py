@@ -9,7 +9,7 @@ from django.views import defaults as default_views
 from django.views.decorators.cache import cache_page
 from django.views.generic import RedirectView
 
-from totem.api.api import api
+from totem.api.api import api, mobile_api
 from totem.blog.urls import BlogSitemap
 from totem.circles.urls import SpacesSitemap
 from totem.pages.urls import PagesSitemap
@@ -28,8 +28,10 @@ sitemaps = {
 try:
     # This raises an error when other errors happen. Reduce noise.
     api_path = path("api/v1/", api.urls)  # type: ignore
+    mobile_api_path = path("api/mobile/", mobile_api.urls)  # type: ignore
 except Exception:
     api_path = None
+    mobile_api_path = None
 
 
 _reserved_paths = [
@@ -70,8 +72,6 @@ urlpatterns = [
     path("blog/", include("totem.blog.urls", namespace="blog")),
     # Django Admin, use {% url 'admin:index' %}
     path(f"admin/{settings.ADMIN_URL}", admin_urls),
-    # API
-    api_path,
     # User management
     path("users/", include("totem.users.urls", namespace="users")),
     path("accounts/", include("allauth.urls")),
@@ -94,6 +94,11 @@ urlpatterns = [
     path("circles/", RedirectView.as_view(url="/spaces/", permanent=True)),
     path("circles/<path:path>", RedirectView.as_view(url="/spaces/%(path)s", permanent=True)),
 ]
+# API
+if api_path:
+    urlpatterns += [api_path]
+if mobile_api_path:
+    urlpatterns += [mobile_api_path]
 
 if not settings.USE_S3_STORAGE:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -44,6 +44,6 @@ class JWTAuth(HttpBearer):
 router = Router(auth=JWTAuth())
 
 
-@router.get("/currentuser", response={200: UserSchema}, url_name="mobile_current_user")
+@router.get("/currentuser", response={200: UserSchema}, url_name="current_user")
 def current_user(request: HttpRequest):
     return request.user

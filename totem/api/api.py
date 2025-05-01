@@ -11,8 +11,9 @@ from .mobile_api import router as mobile_router
 
 api = NinjaAPI(title="Totem API", version="1")
 api.add_router("/spaces/", circles_router)
-api.add_router("/auth/", auth_router)
-api.add_router("/mobile/", mobile_router)
+mobile_api = NinjaAPI(title="Totem Mobile API", version="1", urls_namespace="mobile-api")
+mobile_api.add_router("/protected/", mobile_router)
+mobile_api.add_router("/auth/", auth_router)
 
 
 class InvalidToken(Exception):

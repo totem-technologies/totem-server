@@ -1,6 +1,6 @@
 import { postData } from "@/libs/postData"
 import { timestampToDateString, timestampToTimeString } from "@/libs/time"
-import { createQuery } from "@tanstack/solid-query"
+import { useQuery } from "@tanstack/solid-query"
 import {
   type JSX,
   type JSXElement,
@@ -366,7 +366,7 @@ function DetailSidebar(props: DetailSidebarProps) {
         </div>
       </DetailBox>
     )
-  const query = createQuery(() => ({
+  const query = useQuery(() => ({
     queryKey: ["eventData"],
     queryFn: async () => {
       const response = await totemCirclesApiEventDetail({

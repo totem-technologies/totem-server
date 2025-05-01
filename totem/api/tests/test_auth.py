@@ -24,7 +24,7 @@ class TestPinRequestEndpoint:
         """Test requesting a PIN for a new user."""
         email = "newuser+1234@example.com"
         response = client.post(
-            reverse("api-1:auth_request_pin"),
+            reverse("mobile-api:auth_request_pin"),
             data={"email": email, "newsletter_consent": True},
             content_type="application/json",
         )
@@ -48,7 +48,7 @@ class TestPinRequestEndpoint:
         """Test requesting PIN for existing user."""
         user = setup_user
         response = client.post(
-            reverse("api-1:auth_request_pin"),
+            reverse("mobile-api:auth_request_pin"),
             data={"email": user.email, "newsletter_consent": True},
             content_type="application/json",
         )
@@ -74,7 +74,7 @@ class TestPinRequestEndpoint:
         uppercase_email = user.email.upper()
 
         response = client.post(
-            reverse("api-1:auth_request_pin"),
+            reverse("mobile-api:auth_request_pin"),
             data={"email": uppercase_email},
             content_type="application/json",
         )
@@ -93,7 +93,7 @@ class TestPinValidationEndpoint:
         pin = LoginPin.objects.generate_pin(user)
 
         response = client.post(
-            reverse("api-1:auth_validate_pin"),
+            reverse("mobile-api:auth_validate_pin"),
             data={
                 "email": user.email,
                 "pin": pin.pin,
@@ -119,7 +119,7 @@ class TestPinValidationEndpoint:
     def test_validate_pin_nonexistent_user(self, client: Client, db):
         """Test PIN validation with nonexistent user."""
         response = client.post(
-            reverse("api-1:auth_validate_pin"),
+            reverse("mobile-api:auth_validate_pin"),
             data={
                 "email": "nonexistent@example.com",
                 "pin": "123456",
@@ -136,7 +136,7 @@ class TestPinValidationEndpoint:
         pin = LoginPin.objects.generate_pin(user)
 
         response = client.post(
-            reverse("api-1:auth_validate_pin"),
+            reverse("mobile-api:auth_validate_pin"),
             data={
                 "email": user.email,
                 "pin": "000000",  # Wrong PIN
@@ -161,7 +161,7 @@ class TestPinValidationEndpoint:
         pin.save()
 
         response = client.post(
-            reverse("api-1:auth_validate_pin"),
+            reverse("mobile-api:auth_validate_pin"),
             data={
                 "email": user.email,
                 "pin": pin.pin,
@@ -182,7 +182,7 @@ class TestPinValidationEndpoint:
         pin.save()
 
         response = client.post(
-            reverse("api-1:auth_validate_pin"),
+            reverse("mobile-api:auth_validate_pin"),
             data={
                 "email": user.email,
                 "pin": pin.pin,
@@ -203,7 +203,7 @@ class TestPinValidationEndpoint:
         user.save()
 
         response = client.post(
-            reverse("api-1:auth_validate_pin"),
+            reverse("mobile-api:auth_validate_pin"),
             data={
                 "email": user.email,
                 "pin": pin.pin,
@@ -225,7 +225,7 @@ class TestRefreshTokenEndpoint:
         refresh_token, token_obj = RefreshToken.objects.generate_token(user)
 
         response = client.post(
-            reverse("api-1:auth_refresh"),
+            reverse("mobile-api:auth_refresh"),
             data={"refresh_token": refresh_token},
             content_type="application/json",
         )
@@ -244,7 +244,7 @@ class TestRefreshTokenEndpoint:
     def test_refresh_token_invalid_token(self, client: Client, db):
         """Test refresh with invalid token."""
         response = client.post(
-            reverse("api-1:auth_refresh"),
+            reverse("mobile-api:auth_refresh"),
             data={"refresh_token": "invalid-token"},
             content_type="application/json",
         )
@@ -263,7 +263,7 @@ class TestRefreshTokenEndpoint:
         user.save()
 
         response = client.post(
-            reverse("api-1:auth_refresh"),
+            reverse("mobile-api:auth_refresh"),
             data={"refresh_token": refresh_token},
             content_type="application/json",
         )
@@ -286,7 +286,7 @@ class TestLogoutEndpoint:
         refresh_token, token_obj = RefreshToken.objects.generate_token(user)
 
         response = client.post(
-            reverse("api-1:auth_logout"),
+            reverse("mobile-api:auth_logout"),
             data={"refresh_token": refresh_token},
             content_type="application/json",
         )
@@ -302,7 +302,7 @@ class TestLogoutEndpoint:
     def test_logout_invalid_token(self, client: Client, db):
         """Test logout with invalid token."""
         response = client.post(
-            reverse("api-1:auth_logout"),
+            reverse("mobile-api:auth_logout"),
             data={"refresh_token": "invalid-token"},
             content_type="application/json",
         )
