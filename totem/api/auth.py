@@ -6,6 +6,7 @@ from django.conf import settings
 from django.utils import timezone
 from ninja import Router, Schema
 from ninja.errors import AuthenticationError
+from datetime import datetime
 
 from totem.email import emails
 from totem.email.emails import login_pin_email
@@ -57,11 +58,13 @@ class RefreshTokenSchema(Schema):
 
 
 # JWT Token Helpers
-def generate_jwt_token(user: User) -> str:
+def generate_jwt_token(user: User, expire_at: datetime | None = None) -> str:
     """Generate a JWT token for the user."""
+    if expire_at is None:
+        expire_at = timezone.now() + timedelta(minutes=60)
     payload = {
         "api_key": str(user.api_key),
-        "exp": timezone.now() + timedelta(minutes=60),
+        "exp": expire_at,
     }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
 

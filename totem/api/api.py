@@ -4,13 +4,15 @@ from ninja.files import UploadedFile
 
 from totem.circles.api import router as circles_router
 from totem.users.models import User
-from totem.users.schemas import ProfileAvatarTypeEnum, UserSchema
+from totem.users.schemas import ProfileAvatarTypeEnum, PublicUserSchema
 
 from .auth import router as auth_router
+from .mobile_api import router as mobile_router
 
 api = NinjaAPI(title="Totem API", version="1")
 api.add_router("/spaces/", circles_router)
 api.add_router("/auth/", auth_router)
+api.add_router("/mobile/", mobile_router)
 
 
 class InvalidToken(Exception):
@@ -21,7 +23,7 @@ class Message(Schema):
     message: str
 
 
-@api.get("/auth/currentuser", response={200: UserSchema, 404: Message})
+@api.get("/auth/currentuser", response={200: PublicUserSchema, 404: Message})
 def current_user(request: HttpRequest):
     if request.user.is_authenticated:
         return request.user
