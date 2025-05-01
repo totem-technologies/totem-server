@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 from django.conf import settings
+from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -75,7 +76,7 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
     email = EmailField(_("email address"), unique=True, validators=[validate_email_blocked])
     username = None  # type: ignore
     api_key = UUIDField(_("API Key"), db_index=True, default=uuid.uuid4)
-    ics_key = UUIDField(_("API Key"), db_index=True, default=uuid.uuid4)
+    ics_key = UUIDField(_("ICS Key"), db_index=True, default=uuid.uuid4)
     newsletter_consent = BooleanField(_("Receive updates from Totem"), default=False)
     profile_image = ProcessedImageField(
         blank=True,
@@ -208,12 +209,13 @@ class LoginPinManager(models.Manager):
         try:
             pin_obj = self.get(user=user, expires_at__gt=timezone.now())
             is_valid = pin_obj.is_valid() and pin_obj.pin == pin
-            if not is_valid and pin_obj.is_valid():
-                pin_obj.increment_failed_attempts()
             if is_valid:
                 # Valid PIN - mark as used
                 pin_obj.used = True
                 pin_obj.save()
+            else:
+                # Invalid PIN - increment failed attempts
+                pin_obj.increment_failed_attempts()
             return is_valid, pin_obj
         except self.model.DoesNotExist:
             return False, None
@@ -230,7 +232,13 @@ class LoginPin(models.Model):
     objects: LoginPinManager = LoginPinManager()
 
     def is_valid(self) -> bool:
-        return not self.used and timezone.now() < self.expires_at and self.failed_attempts < self.MAX_ATTEMPTS
+        return not self.used and not self.is_expired() and not self.has_too_many_attempts()
+
+    def is_expired(self) -> bool:
+        return timezone.now() > self.expires_at
+
+    def has_too_many_attempts(self) -> bool:
+        return self.failed_attempts >= self.MAX_ATTEMPTS
 
     def increment_failed_attempts(self):
         self.failed_attempts += 1
@@ -260,3 +268,65 @@ class ActionToken(models.Model):
     @classmethod
     def cleanup(cls):
         cls.objects.filter(expires_at__lt=timezone.now()).delete()
+
+
+class RefreshTokenManager(models.Manager):
+    def generate_token(self, user) -> tuple[str, "RefreshToken"]:
+        """Generate a new refresh token for a user on a specific device."""
+        # Generate a random 128-bit token
+        token_string = secrets.token_hex(16)  # 16 bytes = 128 bits
+
+        # Hash token for storage
+        token_hash = make_password(token_string)
+
+        # Create token in database
+        token_obj: RefreshToken = self.create(user=user, token_hash=token_hash)
+
+        # Check if user has too many tokens and remove oldest ones
+        MAX_TOKENS_PER_USER = 200  # Max 200 tokens per user
+        user_tokens = self.filter(user=user).order_by("-created_at")
+        if user_tokens.count() > MAX_TOKENS_PER_USER:
+            for token in user_tokens[MAX_TOKENS_PER_USER:]:
+                token.delete()
+
+        return token_string, token_obj
+
+    def validate_token(self, token_string):
+        """Validate a refresh token. Returns (user, token_obj) if valid."""
+        # Need to check all active tokens since we don't know which one matches
+        for token in self.filter(is_active=True):
+            if check_password(token_string, token.token_hash):
+                if not token.is_active:
+                    return None, None
+
+                # Update last used timestamp
+                token.last_used_at = timezone.now()
+                token.save(update_fields=["last_used_at"])
+                return token.user, token
+
+        return None, None
+
+
+class RefreshToken(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="refresh_tokens")
+    token_hash = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+
+    objects: RefreshTokenManager = RefreshTokenManager()
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["user", "token_hash", "created_at"]),
+        ]
+
+    def invalidate(self):
+        """Invalidate this token."""
+        self.is_active = False
+        self.save(update_fields=["is_active"])
+
+    @classmethod
+    def invalidate_all_for_user(cls, user):
+        """Invalidate all tokens for a user across all devices."""
+        cls.objects.filter(user=user).update(is_active=False)

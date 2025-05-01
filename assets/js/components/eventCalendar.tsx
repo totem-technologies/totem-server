@@ -1,7 +1,7 @@
 import { totemCirclesApiUpcomingEvents } from "@/client"
 import Calendar from "@rnwonder/solid-date-picker/calendar"
 import "@rnwonder/solid-date-picker/dist/style.css"
-import { createQuery } from "@tanstack/solid-query"
+import { useQuery } from "@tanstack/solid-query"
 import { type JSX, type JSXElement, Suspense, createSignal } from "solid-js"
 import "./eventCalendar.css"
 
@@ -32,7 +32,7 @@ const EventCalendar = (props: {
 }) => {
   const [month, setMonth] = createSignal(new Date().getMonth() + 1)
   const [year, setYear] = createSignal(new Date().getFullYear())
-  const query = createQuery(() => ({
+  const query = useQuery(() => ({
     queryKey: ["eventUpcoming"],
     queryFn: async () => {
       const response = await totemCirclesApiUpcomingEvents({

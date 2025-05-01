@@ -1,18 +1,18 @@
 import {
   type ProfileAvatarTypeEnum,
-  type UserSchema,
+  type PublicUserSchema,
   totemApiApiCurrentUser,
   totemApiApiUserAvatarUpdate,
   totemApiApiUserUploadProfileImage,
 } from "@/client"
-import { createQuery } from "@tanstack/solid-query"
+import { useQuery } from "@tanstack/solid-query"
 import { For, Show, Suspense, createEffect, createSignal } from "solid-js"
 import Avatar from "./avatar"
 const defaults = {}
 
 function EditAvatar() {
   let modalRef: HTMLDialogElement | undefined
-  const query = createQuery(() => ({
+  const query = useQuery(() => ({
     queryKey: ["userData"],
     queryFn: async () => {
       const response = await totemApiApiCurrentUser()
@@ -40,7 +40,7 @@ function EditAvatar() {
           url={user()?.profile_image || ""}
           type={user()?.profile_avatar_type}
         />
-        <div class="absolute bottom-2 right-2 rounded-full bg-white p-1">
+        <div class="absolute right-2 bottom-2 rounded-full bg-white p-1">
           {/* biome-ignore lint/a11y/noSvgWithoutTitle: <explanation> */}
           <svg
             width="20"
@@ -113,7 +113,7 @@ async function uploadProfileImage() {
 }
 
 function EditAvatarModal(props: {
-  user: UserSchema
+  user: PublicUserSchema
   closeModal: () => void
   refetch: () => void
 }) {
@@ -159,13 +159,13 @@ function EditAvatarModal(props: {
           url={props.user.profile_image || ""}
           type={avatarType()}
         />
-        <div class="absolute left-0 top-0 h-full w-full rounded-full bg-tcreme bg-opacity-70 opacity-0 transition-opacity hover:opacity-100">
-          <h3 class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transform">
+        <div class="bg-tcreme bg-opacity-70 absolute top-0 left-0 h-full w-full rounded-full opacity-0 transition-opacity hover:opacity-100">
+          <h3 class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transform">
             <Show when={avatarType() === "IM"}>Upload</Show>
             <Show when={avatarType() === "TD"}>Randomize</Show>
           </h3>
         </div>
-        <div class="absolute bottom-2 right-2 rounded-full bg-white p-1">
+        <div class="absolute right-2 bottom-2 rounded-full bg-white p-1">
           <Show when={avatarType() === "IM"}>
             <UploadIcon />
           </Show>
@@ -196,8 +196,7 @@ function EditAvatarModal(props: {
           class="btn btn-sm mt-5"
           type="button"
           onClick={() => {
-            // biome-ignore lint/correctness/noSelfAssign: assignment has side effects
-            globalThis.window.location = globalThis.window.location
+            globalThis.window.location.reload()
           }}>
           Close
         </button>
@@ -210,7 +209,7 @@ function UploadIcon() {
   return (
     <svg
       width="25"
-      class="absolute bottom-2 right-2 rounded-full bg-white p-1"
+      class="absolute right-2 bottom-2 rounded-full bg-white p-1"
       height="25"
       viewBox="0 0 24 24"
       xmlns="http://www.w3.org/2000/svg"
@@ -228,7 +227,7 @@ function RandomizeIcon() {
   return (
     <svg
       width="25"
-      class="absolute bottom-2 right-2 rounded-full bg-tcreme p-1"
+      class="bg-tcreme absolute right-2 bottom-2 rounded-full p-1"
       height="25"
       viewBox="0 0 512 512"
       aria-labelledby="randomizeIconTitle"

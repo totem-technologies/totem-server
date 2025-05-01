@@ -10,7 +10,7 @@ class ProfileAvatarTypeEnum(str, Enum):
     IMAGE = "IM"
 
 
-class UserSchema(ModelSchema):
+class PublicUserSchema(ModelSchema):
     profile_avatar_type: ProfileAvatarTypeEnum
 
     @staticmethod
@@ -22,3 +22,17 @@ class UserSchema(ModelSchema):
     class Meta:
         model = User
         fields = ["name", "is_staff", "profile_avatar_seed", "profile_image", "profile_avatar_type"]
+
+
+class UserSchema(ModelSchema):
+    profile_avatar_type: ProfileAvatarTypeEnum
+
+    @staticmethod
+    def resolve_profile_image(obj: User):
+        if obj.profile_image:
+            return obj.profile_image.url
+        return None
+
+    class Meta:
+        model = User
+        fields = ["name", "is_staff", "profile_avatar_seed", "profile_image", "profile_avatar_type", "email"]

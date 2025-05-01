@@ -7,7 +7,7 @@ from ninja import Field, FilterSchema, ModelSchema, Router, Schema
 from ninja.pagination import paginate
 from ninja.params.functions import Query
 
-from totem.users.schemas import UserSchema
+from totem.users.schemas import PublicUserSchema
 
 from .filters import all_upcoming_recommended_events, events_by_month, get_upcoming_events_for_spaces_list
 from .models import Circle, CircleEvent
@@ -16,7 +16,7 @@ router = Router()
 
 
 class SpaceSchema(ModelSchema):
-    author: UserSchema
+    author: PublicUserSchema
 
     class Meta:
         model = Circle
@@ -84,7 +84,7 @@ def filter_options(request):
 
 
 class EventSpaceSchema(ModelSchema):
-    author: UserSchema
+    author: PublicUserSchema
 
     def description(self, obj: Circle):
         return obj.content_html
@@ -264,7 +264,7 @@ class SpaceDetailSchema(Schema):
     title: str
     image_link: str | None
     description: str
-    author: UserSchema
+    author: PublicUserSchema
     nextEvent: NextEventSchema
     category: str | None
 
