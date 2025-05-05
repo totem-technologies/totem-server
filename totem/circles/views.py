@@ -254,6 +254,7 @@ def event_social_img(request: HttpRequest, event_slug: str, image_format: str):
         buffer, "JPEG", optimize=True
     )
     response = HttpResponse(content_type="image/jpeg")
+    response["Cache-Control"] = "max-age=600"  # Cache for 10 minutes (600 seconds)
     response.write(buffer.getvalue())
     return response
 
