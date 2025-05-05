@@ -11,7 +11,11 @@ from totem.circles.models import CircleEvent
 def get_date_range(period="last_quarter"):
     now = timezone.now()
 
-    if period == "last_quarter":
+    if period == "all_time":
+        # Use a very early date as the start date (Unix epoch)
+        start_date = datetime(1970, 1, 1, tzinfo=dttz.utc)
+        end_date = now
+    elif period == "last_quarter":
         # Calculate the start of the previous quarter
         current_quarter = (now.month - 1) // 3 + 1  # 1-4 for quarters
         previous_quarter = current_quarter - 1 if current_quarter > 1 else 4
@@ -53,7 +57,7 @@ class Command(BaseCommand):
         parser.add_argument(
             "--timeframe",
             default="last_quarter",
-            help="Timeframe for analytics: last_quarter, last_month, last_week, or specific dates (YYYY-MM-DD,YYYY-MM-DD)",
+            help="Timeframe for analytics: all_time, last_quarter, last_month, last_week, or specific dates (YYYY-MM-DD,YYYY-MM-DD)",
         )
         parser.add_argument("--circle-slug", type=int, help="Filter by specific circle slug")
         parser.add_argument("--event-slug", type=int, help="Filter by specific event slug")
