@@ -1,12 +1,16 @@
-from typing import Optional
+from typing import List, Optional
 
 import jwt
 from django.conf import settings
 from django.http import HttpRequest
 from django.utils import timezone
 from ninja import Router
+from ninja.errors import ValidationError
 from ninja.security import HttpBearer
 
+from totem.notifications.models import FCMDevice
+from totem.notifications.schemas import FCMTokenRegisterSchema, FCMTokenResponseSchema
+from totem.notifications.validators import validate_fcm_token
 from totem.users.models import User
 from totem.users.schemas import UserSchema
 
@@ -47,3 +51,45 @@ router = Router(auth=JWTAuth())
 @router.get("/currentuser", response={200: UserSchema}, url_name="current_user")
 def current_user(request: HttpRequest):
     return request.user
+
+
+@router.post("/fcm/register", response={201: FCMTokenResponseSchema}, url_name="register_fcm_token")
+def register_fcm_token(request: HttpRequest, payload: FCMTokenRegisterSchema):
+    """Register or update an FCM token for the current user"""
+    # Validate token format
+    valid = validate_fcm_token(payload.token)
+    if not valid:
+        raise ValidationError(errors=[{"token": "INVALID_TOKEN"}])
+
+    # Check for existing token with different user
+    existing = FCMDevice.objects.filter(token=payload.token).exclude(user=request.user).first()
+    if existing:
+        # Token already registered to another user - security issue
+        raise ValidationError(errors=[{"token": "INVALID_TOKEN"}])
+
+    device, created = FCMDevice.objects.update_or_create(
+        token=payload.token,
+        user=request.user,
+        defaults={"device_id": payload.device_id, "device_type": payload.device_type, "active": True},
+    )
+    if not created:
+        device.active = True
+        device.save()
+    return 201, device
+
+
+@router.delete("/fcm/unregister/{token}", response={204: None}, url_name="unregister_fcm_token")
+def unregister_fcm_token(request: HttpRequest, token: str):
+    """Mark an FCM token as inactive"""
+    device = FCMDevice.objects.filter(token=token, user=request.user).first()
+    if device:
+        device.active = False
+        device.save()
+    return 204, None
+
+
+@router.get("/fcm/devices", response={200: List[FCMTokenResponseSchema]}, url_name="list_fcm_devices")
+def list_fcm_devices(request: HttpRequest):
+    """List all FCM devices for the current user"""
+    devices = FCMDevice.objects.filter(user=request.user)
+    return 200, devices

@@ -37,6 +37,7 @@ dependencies = [
     "django-timezone-field<8",
     "django<5.2",
     "pyjwt>=2.10.1",
+    "firebase-admin>=6.8.0",
 ]
 
 [dependency-groups]
