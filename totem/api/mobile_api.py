@@ -21,7 +21,6 @@ class JWTAuth(HttpBearer):
             # Decode JWT token
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
 
-            # Extract user_id and device_id
             api_key = payload.get("api_key")
             exp = payload.get("exp")
 
@@ -65,16 +64,10 @@ def register_fcm_token(request: HttpRequest, payload: FCMTokenRegisterSchema):
     existing = FCMDevice.objects.filter(token=payload.token).exclude(user=request.user).first()
     if existing:
         # Token already registered to another user - security issue
+        # _Should_ never happen
         raise ValidationError(errors=[{"token": "INVALID_TOKEN"}])
 
-    device, created = FCMDevice.objects.update_or_create(
-        token=payload.token,
-        user=request.user,
-        defaults={"device_id": payload.device_id, "device_type": payload.device_type, "active": True},
-    )
-    if not created:
-        device.active = True
-        device.save()
+    device, created = FCMDevice.objects.update_or_create(token=payload.token, user=request.user, active=True)
     return 201, device
 
 

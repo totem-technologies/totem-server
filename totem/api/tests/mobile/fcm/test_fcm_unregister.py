@@ -26,8 +26,6 @@ def user_device(auth_user):
     return FCMDeviceFactory(
         user=auth_user,
         token="fcm_token_" + "a" * 140,
-        device_id="test_device_123",
-        device_type=FCMDevice.DEVICE_TYPE_IOS,
         active=True,
     )
 

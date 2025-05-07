@@ -17,13 +17,9 @@ class TestFCMDeviceModel:
             user=user,
             token="fcm_token_abcdefghijklmnopqrstuvwxyz1234567890fcm_token_abcdefghijklmnopqrstuvwxyz1234567890"
             "fcm_token_abcdefghijklmnopqrstuvwxyz1234567890fcm_token_abcdefghijklmnopqrstuvwxyz1234567890",
-            device_id="test_device_id",
-            device_type=FCMDevice.DEVICE_TYPE_IOS,
         )
         assert device.user == user
         assert device.token.startswith("fcm_token_")
-        assert device.device_id == "test_device_id"
-        assert device.device_type == FCMDevice.DEVICE_TYPE_IOS
         assert device.active is True
         assert device.created_at is not None
         assert device.updated_at is not None
@@ -31,7 +27,7 @@ class TestFCMDeviceModel:
     def test_device_str_representation(self):
         """Test the string representation of the FCMDevice model."""
         device = FCMDeviceFactory()
-        expected_str = f"{device.user.username} - {device.device_type} ({device.token[:10]}...)"
+        expected_str = f"{device.user.username} - ({device.token[:10]}...)"
         assert str(device) == expected_str
 
     def test_unique_together_constraint(self):
@@ -46,7 +42,6 @@ class TestFCMDeviceModel:
         FCMDevice.objects.create(
             user=user,
             token=token,
-            device_type=FCMDevice.DEVICE_TYPE_IOS,
         )
 
         # Try to create another device with the same token and user
@@ -54,7 +49,6 @@ class TestFCMDeviceModel:
             FCMDevice.objects.create(
                 user=user,
                 token=token,
-                device_type=FCMDevice.DEVICE_TYPE_ANDROID,
             )
 
     def test_same_token_different_users(self):
@@ -70,23 +64,13 @@ class TestFCMDeviceModel:
         device1 = FCMDevice.objects.create(
             user=user1,
             token=token,
-            device_type=FCMDevice.DEVICE_TYPE_IOS,
         )
 
         # Create device for second user with same token
         device2 = FCMDevice.objects.create(
             user=user2,
             token=token,
-            device_type=FCMDevice.DEVICE_TYPE_ANDROID,
         )
 
         assert device1.token == device2.token
         assert device1.user != device2.user
-
-    def test_device_type_choices(self):
-        """Test the device type choices."""
-        device_ios = FCMDeviceFactory(device_type=FCMDevice.DEVICE_TYPE_IOS)
-        device_android = FCMDeviceFactory(device_type=FCMDevice.DEVICE_TYPE_ANDROID)
-
-        assert device_ios.device_type == FCMDevice.DEVICE_TYPE_IOS
-        assert device_android.device_type == FCMDevice.DEVICE_TYPE_ANDROID

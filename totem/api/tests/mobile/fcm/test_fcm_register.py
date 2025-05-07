@@ -21,7 +21,7 @@ def auth_token(auth_user):
 
 
 @pytest.fixture
-def valid_fcm_token():
+def valid_fcm_token() -> str:
     """Generate a valid FCM token for testing."""
     return "fcm_token_" + "a" * 140  # Ensure token is long enough
 
@@ -35,7 +35,7 @@ class TestFCMRegistrationEndpoint:
         auth_header = f"Bearer {auth_token}"
 
         # Prepare payload
-        payload = {"token": valid_fcm_token, "device_id": "test_device_123", "device_type": "ios"}
+        payload = {"token": valid_fcm_token}
 
         # Make the request
         response = client.post(
@@ -49,29 +49,23 @@ class TestFCMRegistrationEndpoint:
         assert response.status_code == 201
         data = response.json()
         assert data["token"] == valid_fcm_token
-        assert data["device_id"] == "test_device_123"
-        assert data["device_type"] == "ios"
         assert data["active"] is True
 
         # Verify database state
         device = FCMDevice.objects.get(token=valid_fcm_token)
-        assert device.user.id == auth_user.id
-        assert device.device_id == "test_device_123"
-        assert device.device_type == "ios"
+        assert device.user == auth_user
         assert device.active is True
 
     def test_update_existing_token(self, client: Client, db, auth_user, auth_token, valid_fcm_token):
         """Test updating an existing token."""
         # Create an existing device
-        FCMDevice.objects.create(
-            user=auth_user, token=valid_fcm_token, device_id="old_device_id", device_type="android", active=True
-        )
+        FCMDevice.objects.create(user=auth_user, token=valid_fcm_token, active=True)
 
         # Construct the authorization header
         auth_header = f"Bearer {auth_token}"
 
         # Prepare payload with updated values
-        payload = {"token": valid_fcm_token, "device_id": "updated_device_id", "device_type": "ios"}
+        payload = {"token": valid_fcm_token}
 
         # Make the request
         response = client.post(
@@ -85,8 +79,6 @@ class TestFCMRegistrationEndpoint:
         assert response.status_code == 201
         data = response.json()
         assert data["token"] == valid_fcm_token
-        assert data["device_id"] == "updated_device_id"
-        assert data["device_type"] == "ios"
 
         # Verify database state (should update not create)
         devices = FCMDevice.objects.filter(token=valid_fcm_token)
@@ -94,8 +86,6 @@ class TestFCMRegistrationEndpoint:
         device = devices.first()
         assert device
         assert device.user == auth_user
-        assert device.device_id == "updated_device_id"
-        assert device.device_type == "ios"
 
     def test_register_invalid_token_format(self, client: Client, db, auth_user, auth_token):
         """Test registration with invalid token format."""
@@ -103,7 +93,7 @@ class TestFCMRegistrationEndpoint:
         auth_header = f"Bearer {auth_token}"
 
         # Prepare payload with invalid token (None)
-        payload = {"token": None, "device_id": "test_device_123", "device_type": "ios"}
+        payload = {"token": None}
 
         # Make the request
         response = client.post(
@@ -122,7 +112,7 @@ class TestFCMRegistrationEndpoint:
         auth_header = f"Bearer {auth_token}"
 
         # Prepare payload with short token
-        payload = {"token": "short_token", "device_id": "test_device_123", "device_type": "ios"}
+        payload = {"token": "short_token"}
 
         # Make the request
         response = client.post(
@@ -143,7 +133,7 @@ class TestFCMRegistrationEndpoint:
 
         # Prepare payload with invalid characters
         token_with_invalid_chars = "a" * 136 + "@#$%"
-        payload = {"token": token_with_invalid_chars, "device_id": "test_device_123", "device_type": "ios"}
+        payload = {"token": token_with_invalid_chars}
 
         # Make the request
         response = client.post(
@@ -161,13 +151,13 @@ class TestFCMRegistrationEndpoint:
         """Test registering a token that belongs to another user."""
         # Create another user with the same token
         other_user = UserFactory()
-        FCMDeviceFactory(user=other_user, token=valid_fcm_token, device_id="other_device", device_type="android")
+        FCMDeviceFactory(user=other_user, token=valid_fcm_token)
 
         # Construct the authorization header
         auth_header = f"Bearer {auth_token}"
 
         # Prepare payload
-        payload = {"token": valid_fcm_token, "device_id": "test_device_123", "device_type": "ios"}
+        payload = {"token": valid_fcm_token}
 
         # Make the request
         response = client.post(
@@ -186,7 +176,7 @@ class TestFCMRegistrationEndpoint:
     def test_register_without_authentication(self, client: Client, db, valid_fcm_token):
         """Test registration without authentication."""
         # Prepare payload
-        payload = {"token": valid_fcm_token, "device_id": "test_device_123", "device_type": "ios"}
+        payload = {"token": valid_fcm_token}
 
         # Make the request without auth header
         response = client.post(reverse("mobile-api:register_fcm_token"), payload, content_type="application/json")
