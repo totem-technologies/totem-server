@@ -40,7 +40,7 @@ def send_notification_to_user(user: User, title: str, body: str, data: Optional[
     Send notification to all active devices of a specific user
 
     Args:
-        user_id: The user ID to send notification to
+        user: The user to send notification to
         title: Notification title
         body: Notification body
         data: Additional data payload
