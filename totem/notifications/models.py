@@ -20,4 +20,4 @@ class FCMDevice(models.Model):
         unique_together = ("token", "user")
 
     def __str__(self):
-        return f"{self.user.username} - ({self.token[:10]}...)"
+        return f"{self.user.email} - ({self.token[:10]}...)"

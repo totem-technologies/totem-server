@@ -6,7 +6,7 @@ from .models import FCMDevice
 
 @admin.register(FCMDevice)
 class FCMDeviceAdmin(admin.ModelAdmin):
-    list_display = ("user", "token_truncated", "active", "last_used", "created_at")
+    list_display = ("user__email", "token_truncated", "active", "last_used", "created_at")
     list_filter = ("active", "created_at", "updated_at", "last_used")
     search_fields = ("user__username", "user__email", "token")
     readonly_fields = ("created_at", "updated_at")
