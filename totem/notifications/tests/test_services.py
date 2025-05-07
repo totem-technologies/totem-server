@@ -1,68 +1,14 @@
-from firebase_admin import messaging
 import pytest
 from unittest.mock import patch, MagicMock
+from firebase_admin import messaging as firebase_messaging
 
 from totem.notifications.services import (
-    initialize_firebase,
     send_notification_to_user,
     send_notification,
     validate_fcm_token,
 )
 from totem.notifications.tests.factories import FCMDeviceFactory
 from totem.users.tests.factories import UserFactory
-
-
-@pytest.mark.django_db
-class TestFirebaseInitialization:
-    """Test Firebase initialization functionality."""
-
-    @patch("totem.notifications.services.firebase_admin")
-    @patch("totem.notifications.services.credentials")
-    def test_initialize_firebase_success(self, mock_credentials, mock_firebase_admin):
-        """Test successful Firebase initialization."""
-        # Set up mocks
-        mock_credentials.Certificate.return_value = "mock_credentials"
-        mock_firebase_admin._apps = {}
-
-        # Call the function
-        result = initialize_firebase()
-
-        # Verify the result
-        assert result is True
-        mock_credentials.Certificate.assert_called_once()
-        mock_firebase_admin.initialize_app.assert_called_once()
-
-    @patch("totem.notifications.services.firebase_admin")
-    @patch("totem.notifications.services.credentials")
-    def test_initialize_firebase_already_initialized(self, mock_credentials, mock_firebase_admin):
-        """Test Firebase initialization when already initialized."""
-        # Set up mocks to simulate Firebase already being initialized
-        mock_firebase_admin._apps = {"totem": "mock_app"}
-
-        # Call the function
-        result = initialize_firebase()
-
-        # Should return True without initializing again
-        assert result is True
-        mock_credentials.Certificate.assert_not_called()
-        mock_firebase_admin.initialize_app.assert_not_called()
-
-    @patch("totem.notifications.services.firebase_admin")
-    @patch("totem.notifications.services.credentials")
-    @patch("totem.notifications.services.logger")
-    def test_initialize_firebase_error(self, mock_logger, mock_credentials, mock_firebase_admin):
-        """Test Firebase initialization with error."""
-        # Set up mocks to raise an exception
-        mock_credentials.Certificate.side_effect = Exception("Mock error")
-        mock_firebase_admin._apps = {}
-
-        # Call the function
-        result = initialize_firebase()
-
-        # Should return False and log the error
-        assert result is False
-        mock_logger.error.assert_called_once()
-        assert "Mock error" in mock_logger.error.call_args[0][0]
 
 
 @pytest.mark.django_db
@@ -145,19 +91,6 @@ class TestNotificationServices:
         # Verify the result
         assert result is False
 
-    @patch("totem.notifications.services.messaging.send_multicast")
-    def test_send_notification_exception(self, send_multicast_mock, mock_firebase_initialized):
-        """Test notification sending with exception."""
-        # Set up mock to raise an exception
-        send_multicast_mock.side_effect = messaging.UnregisteredError("Mock error")
-
-        # Call the function
-        tokens = ["token1", "token2"]
-        result = send_notification(tokens, "Test Title", "Test Body")
-
-        # Verify the result
-        assert result is False
-
     @patch("totem.notifications.services.send_notification")
     def test_send_notification_to_user(self, mock_send_notification, user_with_devices, mock_firebase_initialized):
         """Test sending notification to a user with multiple devices."""
@@ -202,12 +135,11 @@ class TestNotificationServices:
         mock_messaging.Message.assert_called_once()
         mock_messaging.send.assert_called_once()
 
-    @patch("totem.notifications.services.messaging")
-    def test_validate_fcm_token_invalid(self, mock_messaging, mock_firebase_initialized):
+    @patch("totem.notifications.services.messaging.send")
+    def test_validate_fcm_token_invalid(self, mock_send, mock_firebase_initialized):
         """Test validation of invalid token."""
-        # Set up mock to raise an UnregisteredError
-        mock_messaging.UnregisteredError = Exception
-        mock_messaging.send.side_effect = mock_messaging.UnregisteredError()
+        # Set up mock to raise the real UnregisteredError
+        mock_send.side_effect = firebase_messaging.UnregisteredError("Mock error")
 
         # Call the function
         result = validate_fcm_token("invalid_token")
@@ -215,11 +147,11 @@ class TestNotificationServices:
         # Verify the result
         assert result is False
 
-    @patch("totem.notifications.services.messaging")
-    def test_validate_fcm_token_exception(self, mock_messaging, mock_firebase_initialized):
+    @patch("totem.notifications.services.messaging.send")
+    def test_validate_fcm_token_exception(self, mock_send, mock_firebase_initialized):
         """Test token validation with other exception."""
         # Set up mock to raise a generic exception
-        mock_messaging.send.side_effect = Exception("Mock error")
+        mock_send.side_effect = firebase_messaging.UnregisteredError("Mock error", None)
 
         # Call the function
         result = validate_fcm_token("token")

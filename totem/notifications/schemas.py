@@ -1,3 +1,4 @@
+from datetime import datetime
 from enum import Enum
 from ninja import Schema
 from typing import Optional
@@ -17,6 +18,6 @@ class FCMTokenRegisterSchema(Schema):
 class FCMTokenResponseSchema(Schema):
     token: str
     device_id: Optional[str]
-    device_type: str
+    device_type: DeviceTypeEnum
     active: bool
-    created_at: str
+    created_at: datetime

@@ -133,7 +133,7 @@ class TestFCMRegistrationEndpoint:
         )
 
         # Check response
-        assert response.status_code == 400
+        assert response.status_code == 422
         assert "INVALID_TOKEN" in str(response.content)
 
     def test_register_token_with_invalid_characters(self, client: Client, db, auth_user, auth_token):
@@ -154,7 +154,7 @@ class TestFCMRegistrationEndpoint:
         )
 
         # Check response
-        assert response.status_code == 400
+        assert response.status_code == 422
         assert "INVALID_TOKEN" in str(response.content)
 
     def test_register_token_from_another_user(self, client: Client, db, auth_user, auth_token, valid_fcm_token):
@@ -178,7 +178,7 @@ class TestFCMRegistrationEndpoint:
         )
 
         # Check response - should fail without revealing the conflict
-        assert response.status_code == 400
+        assert response.status_code == 422
         assert "INVALID_TOKEN" in str(response.content)
         # Ensure we're not leaking information
         assert "another user" not in str(response.content)

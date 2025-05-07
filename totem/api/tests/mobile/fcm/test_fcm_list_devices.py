@@ -61,7 +61,6 @@ class TestFCMListDevicesEndpoint:
 
         # Verify response format for each device
         for device_data in data:
-            assert "id" in device_data
             assert "token" in device_data
             assert "device_id" in device_data
             assert "device_type" in device_data
@@ -92,11 +91,11 @@ class TestFCMListDevicesEndpoint:
     def test_list_devices_only_returns_users_own_devices(self, client: Client, db, auth_user, auth_token):
         """Test that the endpoint only returns the user's own devices."""
         # Create some devices for the auth user
-        own_devices = [FCMDeviceFactory(user=auth_user) for _ in range(2)]
+        own_devices: list[FCMDeviceFactory] = [FCMDeviceFactory(user=auth_user) for _ in range(2)]
 
         # Create devices for another user
         other_user = UserFactory()
-        other_devices = [FCMDeviceFactory(user=other_user) for _ in range(3)]
+        other_devices: list[FCMDeviceFactory] = [FCMDeviceFactory(user=other_user) for _ in range(3)]
 
         # Construct the authorization header
         auth_header = f"Bearer {auth_token}"
@@ -112,14 +111,14 @@ class TestFCMListDevicesEndpoint:
         assert len(data) == len(own_devices)
 
         # Extract IDs from response
-        device_ids = [d["id"] for d in data]
+        device_ids = [d["device_id"] for d in data]
 
         # Verify only the user's devices are returned
         for device in own_devices:
-            assert device.id in device_ids
+            assert device.device_id in device_ids
 
         for device in other_devices:
-            assert device.id not in device_ids
+            assert device.device_id not in device_ids
 
     def test_list_devices_without_authentication(self, client: Client, db):
         """Test listing devices without authentication."""
