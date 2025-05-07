@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 
 import jwt
 from django.conf import settings
@@ -86,10 +86,3 @@ def unregister_fcm_token(request: HttpRequest, token: str):
         device.active = False
         device.save()
     return 204, None
-
-
-@router.get("/fcm/devices", response={200: List[FCMTokenResponseSchema]}, url_name="list_fcm_devices")
-def list_fcm_devices(request: HttpRequest):
-    """List all FCM devices for the current user"""
-    devices = FCMDevice.objects.filter(user=request.user)
-    return 200, devices
