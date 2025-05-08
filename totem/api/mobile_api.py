@@ -5,8 +5,12 @@ from django.conf import settings
 from django.http import HttpRequest
 from django.utils import timezone
 from ninja import Router
+from ninja.errors import ValidationError
 from ninja.security import HttpBearer
 
+from totem.notifications.models import FCMDevice
+from totem.notifications.schemas import FCMTokenRegisterSchema, FCMTokenResponseSchema
+from totem.notifications.validators import validate_fcm_token
 from totem.users.models import User
 from totem.users.schemas import UserSchema
 
@@ -17,7 +21,6 @@ class JWTAuth(HttpBearer):
             # Decode JWT token
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
 
-            # Extract user_id and device_id
             api_key = payload.get("api_key")
             exp = payload.get("exp")
 
@@ -47,3 +50,32 @@ router = Router(auth=JWTAuth())
 @router.get("/currentuser", response={200: UserSchema}, url_name="current_user")
 def current_user(request: HttpRequest):
     return request.user
+
+
+@router.post("/fcm/register", response={201: FCMTokenResponseSchema}, url_name="register_fcm_token")
+def register_fcm_token(request: HttpRequest, payload: FCMTokenRegisterSchema):
+    """Register or update an FCM token for the current user"""
+    # Validate token format
+    valid = validate_fcm_token(payload.token)
+    if not valid:
+        raise ValidationError(errors=[{"token": "INVALID_TOKEN"}])
+
+    # Check for existing token with different user
+    existing = FCMDevice.objects.filter(token=payload.token).exclude(user=request.user).first()
+    if existing:
+        # Token already registered to another user - security issue
+        # _Should_ never happen
+        raise ValidationError(errors=[{"token": "INVALID_TOKEN"}])
+
+    device, created = FCMDevice.objects.update_or_create(token=payload.token, user=request.user, active=True)
+    return 201, device
+
+
+@router.delete("/fcm/unregister/{token}", response={204: None}, url_name="unregister_fcm_token")
+def unregister_fcm_token(request: HttpRequest, token: str):
+    """Mark an FCM token as inactive"""
+    device = FCMDevice.objects.filter(token=token, user=request.user).first()
+    if device:
+        device.active = False
+        device.save()
+    return 204, None

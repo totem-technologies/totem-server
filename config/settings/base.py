@@ -103,6 +103,7 @@ LOCAL_APPS = [
     "totem.uploads",
     "totem.users",
     "totem.utils",
+    "totem.notifications",
 ]
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
@@ -361,6 +362,11 @@ SOCIALACCOUNT_FORMS = {"signup": "totem.users.forms.UserSocialSignupForm"}
 
 # Your stuff...
 # ------------------------------------------------------------------------------
+
+# Firebase Cloud Messaging
+# ------------------------------------------------------------------------------
+
+FIREBASE_FCM_CREDENTIALS_JSON_B64 = b64_json_env("FIREBASE_FCM_CREDENTIALS_JSON_B64")
 
 # Custom
 # ------------------------------------------------------------------------------

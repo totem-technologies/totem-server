@@ -41,6 +41,7 @@ words = [
     "wght",
     "woff",
     "fieldsets",
+    "fcm"
 ]
 flag_words = []
 ignore_paths = []
