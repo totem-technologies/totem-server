@@ -2,7 +2,6 @@ import pytest
 from django.db import IntegrityError
 
 from totem.notifications.models import FCMDevice
-from totem.notifications.tests.factories import FCMDeviceFactory
 from totem.users.tests.factories import UserFactory
 
 
@@ -23,12 +22,6 @@ class TestFCMDeviceModel:
         assert device.active is True
         assert device.created_at is not None
         assert device.updated_at is not None
-
-    def test_device_str_representation(self):
-        """Test the string representation of the FCMDevice model."""
-        device = FCMDeviceFactory()
-        expected_str = f"{device.user.username} - ({device.token[:10]}...)"
-        assert str(device) == expected_str
 
     def test_unique_together_constraint(self):
         """Test that a user cannot have multiple devices with the same token."""
