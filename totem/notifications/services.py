@@ -21,16 +21,15 @@ def initialize_firebase():
     """
     global _firebase_initialized
     if not _firebase_initialized:
-        if hasattr(settings, "FIREBASE_CREDENTIALS_FILE"):
-            cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS_FILE)
-        elif hasattr(settings, "FIREBASE_CREDENTIALS"):
-            cred = credentials.Certificate(settings.FIREBASE_CREDENTIALS)
+        if settings.FIREBASE_FCM_CREDENTIALS_JSON_B64:
+            cred = credentials.Certificate(settings.FIREBASE_FCM_CREDENTIALS_JSON_B64)
         else:
             logger.error("No Firebase credentials configured")
             return False
 
-        firebase_admin.initialize_app(cred, name=getattr(settings, "FIREBASE_APP_NAME", "totem"))
+        firebase_admin.initialize_app(cred)
         _firebase_initialized = True
+        logger.info("Firebase initialized")
         return True
     return True
 
