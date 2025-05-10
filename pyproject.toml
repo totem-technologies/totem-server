@@ -24,7 +24,7 @@ dependencies = [
     "sentry-sdk[django]<3",
     "whitenoise<7",
     # Django dependencies
-    "django-allauth<0.64.0",
+    "django-allauth<66",
     "django-anymail<14",
     "django-auditlog<4",
     "django-cors-headers<5",
