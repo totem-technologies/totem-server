@@ -75,7 +75,7 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
     last_name = None  # type: ignore
     email = EmailField(_("email address"), unique=True, validators=[validate_email_blocked])
     username = None  # type: ignore
-    api_key = UUIDField(_("API Key"), db_index=True, default=uuid.uuid4)
+    api_key = UUIDField(_("API Key"), db_index=True, default=uuid.uuid4, unique=True)
     ics_key = UUIDField(_("ICS Key"), db_index=True, default=uuid.uuid4)
     newsletter_consent = BooleanField(_("Receive updates from Totem"), default=False)
     profile_image = ProcessedImageField(
