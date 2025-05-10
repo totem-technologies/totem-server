@@ -29,6 +29,12 @@ class AuthErrors(Enum):
 
 
 # Schemas
+class JWTSchema(Schema):
+    pk: int
+    api_key: str
+    exp: datetime
+
+
 class PinRequestSchema(Schema):
     email: str
     newsletter_consent: bool = False
@@ -62,11 +68,8 @@ def generate_jwt_token(user: User, expire_at: datetime | None = None) -> str:
     """Generate a JWT token for the user."""
     if expire_at is None:
         expire_at = timezone.now() + timedelta(minutes=60)
-    payload = {
-        "api_key": str(user.api_key),
-        "exp": expire_at,
-    }
-    return jwt.encode(payload, settings.SECRET_KEY, algorithm="HS256")
+    payload = JWTSchema(pk=user.pk, api_key=str(user.api_key), exp=expire_at)
+    return jwt.encode(payload.model_dump(), settings.SECRET_KEY, algorithm="HS256")
 
 
 # Check if account is deactivated

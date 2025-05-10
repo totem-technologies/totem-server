@@ -14,23 +14,23 @@ from totem.notifications.validators import validate_fcm_token
 from totem.users.models import User
 from totem.users.schemas import UserSchema
 
+from .auth import JWTSchema
+
 
 class JWTAuth(HttpBearer):
     def authenticate(self, request: HttpRequest, token: str) -> Optional[User]:
         try:
             # Decode JWT token
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-
-            api_key = payload.get("api_key")
-            exp = payload.get("exp")
+            data = JWTSchema(**payload)
 
             # Check if token is expired
-            if not exp or timezone.now().timestamp() > exp:
+            if not data.exp or timezone.now() > data.exp:
                 return None
 
             # Get user
             try:
-                user = User.objects.get(api_key=api_key)
+                user = User.objects.get(api_key=data.api_key, pk=data.pk)
 
                 # Check if user is active
                 if not user.is_active:
