@@ -12,10 +12,10 @@ dependencies = [
     "google-auth-oauthlib<2",
     "gunicorn<24",
     "lxml<6",
-    "markdown<3.8.0",
+    "markdown<3.9.0",
     "mrml<0.3.0",
     "Pillow<12",
-    "posthog<4.0.0",
+    "posthog<5.0.0",
     "psycopg[binary]<4",
     "python-dateutil<3",
     "pytz",
@@ -25,7 +25,7 @@ dependencies = [
     "whitenoise<7",
     # Django dependencies
     "django-allauth<0.64.0",
-    "django-anymail<13",
+    "django-anymail<14",
     "django-auditlog<4",
     "django-cors-headers<5",
     "django-environ==0.12.0",
@@ -35,7 +35,7 @@ dependencies = [
     "django-storages[s3]<2",
     "django-taggit<7",
     "django-timezone-field<8",
-    "django<5.2",
+    "django<5.3",
     "pyjwt>=2.10.1",
     "firebase-admin>=6.8.0",
 ]
@@ -62,7 +62,7 @@ dev = [
 
     # Django
     "django-debug-toolbar<6",
-    "django-extensions<4",
+    "django-extensions<5",
     "factory-boy<4",
     "pytest-cov<7",
     "pytest-django<5",
