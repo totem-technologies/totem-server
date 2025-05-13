@@ -58,7 +58,7 @@ class MarkdownMixin:
             return ""
         templatetags = "\n".join(["{% load image %}"]) + "\n"
         content = content or ""
-        md = markdown.Markdown(extensions=["toc", "sane_lists"]).convert(content)
+        md = markdown.Markdown(extensions=["toc", "sane_lists", "nl2br"]).convert(content)
         return Template(templatetags + md).render(Context())
 
     @property
