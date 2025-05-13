@@ -22,6 +22,7 @@ from .filters import (
 )
 from .img_gen import ImageParams, generate_image
 from .models import Circle, CircleEvent, CircleEventException
+from dataclasses import dataclass
 
 ICS_QUERY_PARAM = "key"
 AUTO_RSVP_SESSION_KEY = "auto_rsvp"
@@ -233,8 +234,18 @@ def event_social(request: HttpRequest, event_slug: str):
     )
 
 
+@dataclass
+class SocialImage:
+    height: int
+    width: int
+
+
 def event_social_img(request: HttpRequest, event_slug: str, image_format: str):
-    image_size = {"square": (1080, 1080), "2to1": (1280, 640), "4to5": (1080, 1350)}.get(image_format)
+    image_size = {
+        "square": SocialImage(height=1080, width=1080),
+        "2to1": SocialImage(width=1280, height=640),
+        "4to5": SocialImage(width=1080, height=1350),
+    }.get(image_format)
     if not image_size:
         raise Http404
 
@@ -259,7 +270,7 @@ def event_social_img(request: HttpRequest, event_slug: str, image_format: str):
     return response
 
 
-def _make_social_img(event: CircleEvent, start_day, start_time_pst, start_time_est, image_size: tuple):
+def _make_social_img(event: CircleEvent, start_day, start_time_pst, start_time_est, image_size: SocialImage):
     title = event.circle.title
     subtitle = event.circle.subtitle
     if event.title:
@@ -287,7 +298,7 @@ def _make_social_img(event: CircleEvent, start_day, start_time_pst, start_time_e
         day=start_day,
         time_pst=start_time_pst,
         time_est=start_time_est,
-        width=image_size[0],
-        height=image_size[1],
+        width=image_size.width,
+        height=image_size.height,
     )
     return generate_image(params)

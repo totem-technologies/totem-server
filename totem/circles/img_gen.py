@@ -115,8 +115,8 @@ def _wrap_text(text, width, font):
 
     for word in words:
         temp_line = f"{line} {word}" if line else word
-        bbox = draw.textbbox((0, 0), temp_line, font=font)
-        if bbox[2] <= width:
+        b_box = draw.textbbox((0, 0), temp_line, font=font)
+        if b_box[2] <= width - 50:  # 50 fudge factor to account for emoji
             line = temp_line
         else:
             lines.append(line)
@@ -137,16 +137,16 @@ def _draw_wrapped_text(
     lines = _wrap_text(text, wrap_width, font)
 
     for line in lines:
-        bbox = draw.textbbox((x, y), line, font=font)
+        b_box = draw.textbbox((x, y), line, font=font)
         # draw.text((x, y), line, font=font, fill=fill)
         draw_multiline_text_v2(draw, (x, y), line, (255, 255, 255), fonts, font_size, variation, align="left")
-        y += (bbox[3] - bbox[1]) + line_height
+        y += (b_box[3] - b_box[1]) + line_height
 
     return (x, y)
 
 
 def _draw_avatar(image: Image.Image, avatar_path: str):
-    avatar_size = image.height // 3
+    avatar_size = 400
     target_size = (avatar_size, avatar_size)
     border_color = (255, 255, 255)
     border_width = avatar_size // 50
@@ -206,7 +206,7 @@ def generate_image(params: ImageParams):
 
     # Set up text
     text_position = (PADDING, PADDING)  # (x, y) coordinates
-    scale_factor = (params.width * params.height) // 1000  # Factor is a ratio of width and height.
+    scale_factor = 800
     spacing = scale_factor // 30
 
     # Draw text on image
