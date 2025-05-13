@@ -150,30 +150,52 @@ def _draw_avatar(image: Image.Image, avatar_path: str):
     target_size = (avatar_size, avatar_size)
     border_color = (255, 255, 255)
     border_width = avatar_size // 50
-    canvas = Image.new("RGBA", target_size, border_color)
-    input_image = ImageOps.fit(
-        _load_img(avatar_path), target_size, centering=(0.5, 0.5), method=Image.Resampling.LANCZOS
+
+    # Use supersampling for smoother edges
+    scale_factor = 4  # 4x supersampling
+    hi_res_size = (avatar_size * scale_factor, avatar_size * scale_factor)
+
+    # Create high-resolution masks for anti-aliasing
+    # 1. Outer mask (full circle including border)
+    hi_res_outer_mask = Image.new("L", hi_res_size, 0)
+    draw_outer = ImageDraw.Draw(hi_res_outer_mask)
+    draw_outer.ellipse((0, 0, hi_res_size[0], hi_res_size[1]), fill=255)
+
+    # Downsample outer mask to target size using high-quality interpolation
+    outer_mask = hi_res_outer_mask.resize(target_size, resample=Image.Resampling.LANCZOS)
+
+    # Create a new transparent canvas
+    canvas = Image.new("RGBA", target_size, (0, 0, 0, 0))
+
+    # Create the white border circle (full white circle with the outer mask)
+    border_circle = Image.new("RGBA", target_size, border_color)
+    border_circle.putalpha(outer_mask)
+
+    # Add the border circle to the canvas
+    canvas.paste(border_circle, (0, 0), outer_mask)
+
+    # Load and fit the avatar image
+    avatar_img = _load_img(avatar_path)
+    avatar_size_inner = target_size[0] - border_width * 2
+    avatar_img = ImageOps.fit(
+        avatar_img, (avatar_size_inner, avatar_size_inner), centering=(0.5, 0.5), method=Image.Resampling.LANCZOS
     )
 
-    # Make mask
-    mask = Image.new("L", target_size, 0)
-    draw = ImageDraw.Draw(mask)
-    circle_radius = min(target_size[0], target_size[1]) // 2 - border_width
-    draw.ellipse(
-        (border_width, border_width, circle_radius * 2 + border_width, circle_radius * 2 + border_width), fill=255
-    )
+    # Create a mask specifically for the avatar image
+    avatar_mask_size = (avatar_size_inner, avatar_size_inner)
+    hi_res_avatar_mask = Image.new("L", (avatar_mask_size[0] * scale_factor, avatar_mask_size[1] * scale_factor), 0)
+    draw_avatar_mask = ImageDraw.Draw(hi_res_avatar_mask)
+    draw_avatar_mask.ellipse((0, 0, hi_res_avatar_mask.width, hi_res_avatar_mask.height), fill=255)
+    avatar_mask = hi_res_avatar_mask.resize(avatar_mask_size, resample=Image.Resampling.LANCZOS)
 
-    # Apply mask
-    input_image.putalpha(mask)
-    canvas.putalpha(mask)
+    # Create a properly sized and positioned avatar with mask
+    avatar_with_mask = Image.new("RGBA", target_size, (0, 0, 0, 0))
+    avatar_with_mask.paste(avatar_img, (border_width, border_width), avatar_mask)
 
-    # Composite images together
-    canvas.alpha_composite(
-        input_image.resize(
-            (target_size[0] - border_width * 2, target_size[1] - border_width * 2), resample=Image.Resampling.LANCZOS
-        ),
-        dest=(border_width, border_width),
-    )
+    # Combine the white border and the avatar
+    canvas.alpha_composite(avatar_with_mask)
+
+    # Add to main image
     image.alpha_composite(canvas, dest=(image.width - canvas.width - PADDING, image.height - canvas.width - PADDING))
     # Uncomment to see avatar render
     # canvas.save("circular_avatar.png")
