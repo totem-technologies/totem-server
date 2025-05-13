@@ -37,4 +37,17 @@
         alt="" />
     </a>
   </div>
+
+  <div class="m-auto max-w-5xl px-5 pt-10">
+    <h2>4:5 Post</h2>
+    <a
+      class="block h-[675px] w-[540px]"
+      download="{{ event.slug }}-tall.jpg"
+      href="{% url 'circles:event_social_img' event_slug=event.slug image_format="4to5" %}">
+      <img
+        class="h-[675px] w-[540px]"
+        src="{% url 'circles:event_social_img' event_slug=event.slug image_format="4to5" %}"
+        alt="" />
+    </a>
+  </div>
 {% endblock content %}

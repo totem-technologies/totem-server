@@ -234,7 +234,7 @@ def event_social(request: HttpRequest, event_slug: str):
 
 
 def event_social_img(request: HttpRequest, event_slug: str, image_format: str):
-    image_size = {"square": (1080, 1080), "2to1": (1280, 640)}.get(image_format)
+    image_size = {"square": (1080, 1080), "2to1": (1280, 640), "4to5": (1080, 1350)}.get(image_format)
     if not image_size:
         raise Http404
 
