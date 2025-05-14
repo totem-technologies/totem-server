@@ -3,7 +3,7 @@ from django.urls import reverse
 
 from totem.users.tests.factories import UserFactory
 
-from .models import Redirect
+from ..models import Redirect
 
 
 class TestPages:

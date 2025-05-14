@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Thank You for Voting{% endblock title %}
+{% block description %}
+  Thank you for voting and making your voice heard through Totem.
+{% endblock description %}
+{% block meta %}
+  <meta name="robots" content="noindex" />
+{% endblock meta %}
+{% block content %}
+  <section
+    class="relative flex min-h-screen items-center justify-center overflow-hidden">
+    <div class="section-prose m-auto text-center">
+      <div class="mx-auto max-w-2xl">
+        <div
+          class="tshadow m-auto mb-10 w-full max-w-lg rounded-xl bg-white p-5 text-center md:p-10">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="text-tpink mx-auto mt-5 h-20"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <h2 class="h2 mt-5 mb-4">Your vote has been recorded</h2>
+          <p class="mb-10 text-gray-600">
+            Your voice matters and we appreciate you participating in this
+            important process. Every vote helps us build a stronger community
+            together.
+          </p>
+          <a
+            class="btn btn-primary mb-5 no-underline"
+            href="{% url 'pages:home' %}"
+            >Return Home</a
+          >
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}

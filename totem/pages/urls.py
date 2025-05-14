@@ -62,6 +62,9 @@ urlpatterns = [
     path("team/pam/", TemplateView.as_view(template_name="pages/pam.html"), name="team-pam"),
     path("metrics/", TemplateView.as_view(template_name="pages/metrics.html"), name="metrics"),
     path(
+        "thank-you-voting/", TemplateView.as_view(template_name="pages/thank_you_voting.html"), name="thank-you-voting"
+    ),
+    path(
         "robots.txt", TemplateView.as_view(template_name="pages/robots.txt", content_type="text/plain"), name="robots"
     ),
     path("r/<slug:slug>/qr/", views.redirect_qr, name="redirect_qr"),
