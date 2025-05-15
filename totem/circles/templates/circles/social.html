@@ -1,9 +1,5 @@
 {% extends "base.html" %}
 {% load static %}
-{% load avatar %}
-{% load icons %}
-{% load avatar %}
-{% load icons %}
 {% block title %}{{ object.title }}{% endblock title %}
 {% block description %}{{ object.content_html|striptags|truncatewords:30 }}{% endblock description %}
 {% block meta %}
@@ -12,42 +8,36 @@
 {% block content %}
   <div class="h-2"></div>
 
-  <div class="m-auto max-w-5xl px-5 pt-10">
-    <h2>Square Post</h2>
-    <a
-      class="block h-[540px] w-[540px]"
-      download="{{ event.slug }}-square.jpg"
-      href="{% url 'circles:event_social_img' event_slug=event.slug image_format="square" %}">
-      <img
-        class="h-[540px] w-[540px]"
-        src="{% url 'circles:event_social_img' event_slug=event.slug image_format="square" %}"
-        alt="" />
-    </a>
-  </div>
-
-  <div class="m-auto max-w-5xl px-5 pt-10">
-    <h2>2:1 Post</h2>
-    <a
-      class="block h-[270px] w-[540px]"
-      download="{{ event.slug }}-wide.jpg"
-      href="{% url 'circles:event_social_img' event_slug=event.slug image_format="2to1" %}">
-      <img
-        class="h-[270px] w-[540px]"
-        src="{% url 'circles:event_social_img' event_slug=event.slug image_format="2to1" %}"
-        alt="" />
-    </a>
-  </div>
-
-  <div class="m-auto max-w-5xl px-5 pt-10">
-    <h2>4:5 Post</h2>
-    <a
-      class="block h-[675px] w-[540px]"
-      download="{{ event.slug }}-tall.jpg"
-      href="{% url 'circles:event_social_img' event_slug=event.slug image_format="4to5" %}">
-      <img
-        class="h-[675px] w-[540px]"
-        src="{% url 'circles:event_social_img' event_slug=event.slug image_format="4to5" %}"
-        alt="" />
-    </a>
+  <div class="m-auto flex max-w-3xl flex-col gap-10 px-5 pt-10">
+    <div>
+      <h2>Square Post</h2>
+      <a
+        download="{{ event.slug }}-square.jpg"
+        href="{% url 'circles:event_social_img' event_slug=event.slug image_format="square" %}">
+        <img
+          src="{% url 'circles:event_social_img' event_slug=event.slug image_format="square" %}"
+          alt="" />
+      </a>
+    </div>
+    <div>
+      <h2>2:1 Post</h2>
+      <a
+        download="{{ event.slug }}-wide.jpg"
+        href="{% url 'circles:event_social_img' event_slug=event.slug image_format="2to1" %}">
+        <img
+          src="{% url 'circles:event_social_img' event_slug=event.slug image_format="2to1" %}"
+          alt="" />
+      </a>
+    </div>
+    <div>
+      <h2>4:5 Post</h2>
+      <a
+        download="{{ event.slug }}-tall.jpg"
+        href="{% url 'circles:event_social_img' event_slug=event.slug image_format="4to5" %}">
+        <img
+          src="{% url 'circles:event_social_img' event_slug=event.slug image_format="4to5" %}"
+          alt="" />
+      </a>
+    </div>
   </div>
 {% endblock content %}

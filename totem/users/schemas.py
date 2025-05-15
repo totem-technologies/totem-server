@@ -35,4 +35,4 @@ class UserSchema(ModelSchema):
 
     class Meta:
         model = User
-        fields = ["name", "is_staff", "profile_avatar_seed", "profile_image", "profile_avatar_type", "email"]
+        fields = ["name", "is_staff", "api_key", "profile_avatar_seed", "profile_image", "profile_avatar_type", "email"]
