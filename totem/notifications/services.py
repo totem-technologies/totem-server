@@ -77,26 +77,39 @@ def send_notification(tokens: List[str], title: str, body: str, data: Optional[D
     if not initialize_firebase():
         return False
 
-    message = messaging.MulticastMessage(
-        notification=messaging.Notification(
-            title=title,
-            body=body,
-        ),
-        data=data or {},
-        tokens=tokens,
+    notification = messaging.Notification(
+        title=title,
+        body=body,
     )
+    data_payload = data or {}
 
-    response: messaging.BatchResponse = messaging.send_multicast(message)
+    success_count = 0
+    failed_tokens = []
+    successful_tokens = []
 
-    responses: list[messaging.SendResponse] = response.responses
-    for idx, result in enumerate(responses):
-        if result.success:
-            FCMDevice.objects.filter(token=tokens[idx]).update(last_used=timezone.now())
-        else:
-            # Mark failed tokens as inactive
-            FCMDevice.objects.filter(token=tokens[idx]).update(active=False)
+    for token in tokens:
+        message = messaging.Message(notification=notification, data=data_payload, token=token)
 
-    return response.success_count > 0
+        try:
+            messaging.send(message)
+            success_count += 1
+            successful_tokens.append(token)
+        except messaging.UnregisteredError:
+            # Token is no longer valid
+            failed_tokens.append(token)
+            logger.info(f"FCM token invalid and marked as inactive: {token}")
+        except Exception as e:
+            failed_tokens.append(token)
+            logger.error(f"Failed to send FCM notification: {str(e)}")
+
+    # Bulk update the device records to avoid individual DB queries
+    if successful_tokens:
+        FCMDevice.objects.filter(token__in=successful_tokens).update(last_used=timezone.now())
+
+    if failed_tokens:
+        FCMDevice.objects.filter(token__in=failed_tokens).update(active=False)
+
+    return success_count > 0
 
 
 def validate_fcm_token(token: str) -> bool:
