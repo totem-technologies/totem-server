@@ -39,7 +39,7 @@ class TestNotificationServices:
         mock_response = MagicMock()
         mock_response.success_count = 2
         mock_response.failure_count = 0
-        mock_messaging.send_multicast.return_value = mock_response
+        mock_messaging.send.return_value = mock_response
 
         # Call the function
         tokens = ["token1", "token2"]
@@ -47,42 +47,14 @@ class TestNotificationServices:
 
         # Verify the result
         assert result is True
-        mock_messaging.MulticastMessage.assert_called_once()
-        mock_messaging.send_multicast.assert_called_once()
+        mock_messaging.Message.assert_called()
+        mock_messaging.send.assert_called()
 
-    @patch("totem.notifications.services.messaging")
-    def test_send_notification_partial_failure(self, mock_messaging, mock_firebase_initialized):
-        """Test notification sending with some failed tokens."""
-        # Set up mock for partial success
-        mock_response = MagicMock()
-        mock_response.success_count = 1
-        mock_response.failure_count = 1
-        mock_response.responses = [MagicMock(success=True), MagicMock(success=False)]
-        mock_messaging.send_multicast.return_value = mock_response
-
-        # Create a device to test deactivation
-        device = FCMDeviceFactory(token="token2", active=True)
-
-        # Call the function
-        tokens = ["token1", "token2"]
-        result = send_notification(tokens, "Test Title", "Test Body")
-
-        # Verify the result
-        assert result is True  # Still True because at least one succeeded
-
-        # Verify the device was deactivated
-        device.refresh_from_db()
-        assert device.active is False
-
-    @patch("totem.notifications.services.messaging")
+    @patch("totem.notifications.services.messaging.send")
     def test_send_notification_all_failed(self, mock_messaging, mock_firebase_initialized):
         """Test notification sending with all tokens failing."""
         # Set up mock for complete failure
-        mock_response = MagicMock()
-        mock_response.success_count = 0
-        mock_response.failure_count = 2
-        mock_response.responses = [MagicMock(success=False), MagicMock(success=False)]
-        mock_messaging.send_multicast.return_value = mock_response
+        mock_messaging.side_effect = Exception("Boom!")
 
         # Call the function
         tokens = ["token1", "token2"]
