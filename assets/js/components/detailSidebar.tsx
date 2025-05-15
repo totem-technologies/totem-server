@@ -1,5 +1,6 @@
 import { postData } from "@/libs/postData"
 import { timestampToDateString, timestampToTimeString } from "@/libs/time"
+import { useKeyDownEvent } from "@solid-primitives/keyboard"
 import { useQuery } from "@tanstack/solid-query"
 import {
   type JSX,
@@ -24,6 +25,8 @@ function capitalize(str: string) {
 const spacesListLink = "/spaces/"
 
 const [showAttendingPopup, setShowAttendingPopup] = createSignal<boolean>(false)
+const [showLoginPopup, setShowLoginPopup] = createSignal<boolean>(false)
+const [loginRedirectUrl, setLoginRedirectUrl] = createSignal<string>("")
 
 function CopyToClipboard() {
   const [copied, setCopied] = createSignal(false)
@@ -57,12 +60,10 @@ function CopyToClipboard() {
   )
 }
 
-function AttendingPopup() {
+function LoginPopup() {
   createEffect(() => {
-    const modal = document.getElementById(
-      "attending_modal"
-    ) as HTMLDialogElement
-    if (showAttendingPopup()) {
+    const modal = document.getElementById("login_modal") as HTMLDialogElement
+    if (showLoginPopup()) {
       if (modal) {
         modal.showModal()
       }
@@ -73,7 +74,58 @@ function AttendingPopup() {
     }
   })
   return (
-    <dialog id="attending_modal" class="modal">
+    <dialog id="login_modal" class="modal">
+      <div class="modal-box">
+        <Show when={showLoginPopup()}>
+          <h3 class="m-auto text-center text-xl font-bold">
+            Welcome to Totem! 👋
+          </h3>
+          <p class="py-2">
+            To attend this session, you'll need to sign in or create an account
+            first.
+          </p>
+          <p class="py-2">
+            After signing in, you'll be brought back to this page where you can
+            finish reserving your spot.
+          </p>
+          <div class="flex justify-center">
+            <div class="modal-action">
+              <button
+                type="button"
+                class="btn btn-primary"
+                onClick={() => {
+                  const url = loginRedirectUrl()
+                  if (url) {
+                    window.location.href = url
+                  }
+                  setShowLoginPopup(false)
+                }}>
+                Sign in or Create Account
+              </button>
+            </div>
+          </div>
+        </Show>
+      </div>
+      <form method="dialog" class="modal-backdrop">
+        <button type="button" onClick={() => setShowLoginPopup(false)}>
+          close
+        </button>
+      </form>
+    </dialog>
+  )
+}
+
+function AttendingPopup() {
+  let modalRef: HTMLDialogElement | undefined
+  createEffect(() => {
+    if (showAttendingPopup()) {
+      modalRef?.showModal()
+    } else {
+      modalRef?.close()
+    }
+  })
+  return (
+    <dialog ref={modalRef} id="attending_modal" class="modal">
       <div class="modal-box">
         <Show when={showAttendingPopup()}>
           <video
@@ -159,7 +211,10 @@ function EventInfo(props: {
     e.preventDefault()
     const response = await postData(props.eventStore.rsvp_url)
     if (response.redirected) {
-      window.location.href = response.url
+      // Store the URL for later use in the login modal
+      setLoginRedirectUrl(response.url)
+      // Show the login modal instead of redirecting immediately
+      setShowLoginPopup(true)
       return
     }
     if (response.ok) {
@@ -358,6 +413,14 @@ interface DetailSidebarProps {
 }
 
 function DetailSidebar(props: DetailSidebarProps) {
+  const kEvent = useKeyDownEvent()
+  createEffect(() => {
+    const e = kEvent()
+    if (e?.key === "Escape") {
+      setShowLoginPopup(false)
+      setShowAttendingPopup(false)
+    }
+  })
   if (!props.eventid)
     return (
       <DetailBox>
@@ -384,6 +447,7 @@ function DetailSidebar(props: DetailSidebarProps) {
     <ErrorBoundary>
       <Suspense fallback={<Loading />}>
         <AttendingPopup />
+        <LoginPopup />
         <Switch fallback={<Loading />}>
           <Match when={query.isFetching}>
             <Loading />
