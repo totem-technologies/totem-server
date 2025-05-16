@@ -26,8 +26,8 @@ class _MarkdownWidget(widgets.Textarea):
 
         html = super().render(name, value, attrs, renderer=renderer)
 
-        # insert this style tag to fix the label from breaking into the toolbar
-        html += "<style>.field-%s label { float: none; }</style>" % name
+        # Fix for long lines (like long urls) from breaking layout on admin
+        html += "<style>.EasyMDEContainer { overflow:scroll; }</style>"
 
         return mark_safe(html)
 
