@@ -92,7 +92,7 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
         choices=ProfileChoices.choices,
     )
     verified = BooleanField(_("Verified"), default=False)
-    timezone = TimeZoneField(choices_display="WITH_GMT_OFFSET")
+    timezone = TimeZoneField(choices_display="WITH_GMT_OFFSET", blank=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
