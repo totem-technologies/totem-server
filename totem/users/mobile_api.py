@@ -23,9 +23,9 @@ def get_current_user(request: HttpRequest):
 def update_current_user(
     request: HttpRequest,
     payload: UserUpdateSchema,
-    profile_image: Optional[UploadedFile] = File(...),
+    profile_image: Optional[UploadedFile] = File(None),
 ):
-    user: User = request.user
+    user: User = request.user  # type: ignore
     update_fields = []
 
     if payload.name is not None:
@@ -58,7 +58,7 @@ def update_current_user(
         update_fields.append("profile_avatar_seed")
 
     if profile_image:
-        if profile_image.size > 5 * 1024 * 1024:  # 5MB limit
+        if profile_image.size is not None and profile_image.size > 5 * 1024 * 1024:  # 5MB limit
             raise ValidationError([{"profile_image": "Image too large. Max 5MB."}])
         user.profile_image = profile_image
         # If user had a tie-dye avatar, switch to image
