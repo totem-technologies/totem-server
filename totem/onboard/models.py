@@ -3,18 +3,19 @@ from django.core.validators import MaxLengthValidator
 from django.db import models
 
 
+class ReferralChoices(models.TextChoices):
+    DEFAULT = "default", "I'm not sure"
+    SEARCH = "search", "Search Results"
+    SOCIAL = "social", "Social Media"
+    KEEPER = "keeper", "A Keeper"
+    PAMPHLET = "pamphlet", "Pamphlet"
+    BLOG = "blog", "Blog"
+    NEWSLETTER = "newsletter", "Newsletter"
+    DREAM = "dream", "✨A Dream✨"
+    OTHER = "other", "Other"
+
+
 class OnboardModel(models.Model):
-    REFERRAL_CHOICES = [
-        ("default", "I'm not sure"),
-        ("search", "Search Results"),
-        ("social", "Social Media"),
-        ("keeper", "A Keeper"),
-        ("pamphlet", "Pamphlet"),
-        ("blog", "Blog"),
-        ("newsletter", "Newsletter"),
-        ("dream", "✨A Dream✨"),
-        ("other", "Other"),
-    ]
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -29,7 +30,7 @@ class OnboardModel(models.Model):
     internal_notes = models.TextField(blank=True, null=True, validators=[MaxLengthValidator(10000)])
     referral_source = models.CharField(
         max_length=20,
-        choices=REFERRAL_CHOICES,
+        choices=ReferralChoices.choices,
         default="default",
         verbose_name="How did you hear about us?",
         blank=True,  # Remove if you want to make it required

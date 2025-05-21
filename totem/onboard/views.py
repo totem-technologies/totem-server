@@ -10,7 +10,7 @@ from totem.users.models import User
 from totem.utils.slack import notify_slack
 from totem.utils.utils import full_url
 
-from .models import OnboardModel
+from .models import OnboardModel, ReferralChoices
 
 
 def current_year() -> int:
@@ -27,7 +27,7 @@ class OnboardForm(Form):
     age = IntegerField(required=True, initial=None, min_value=13, max_value=120, widget=TextInput())
     hopes = CharField(max_length=1000, required=False, widget=Textarea(attrs={"rows": 3}))
     referral_source = ChoiceField(
-        choices=OnboardModel.REFERRAL_CHOICES,
+        choices=ReferralChoices.choices,
         required=False,
         widget=Select(attrs={"class": "form-select", "onchange": "showOtherField(this.value)"}),
     )
