@@ -12,8 +12,8 @@ from totem.notifications.models import FCMDevice
 from totem.notifications.schemas import FCMTokenRegisterSchema, FCMTokenResponseSchema
 from totem.notifications.validators import validate_fcm_token
 from totem.users.models import User
-from totem.users.mobile_api import user_router  # Added for user sub-router
-
+from totem.users.mobile_api import user_router
+from totem.onboard.mobile_api import onboard_router
 from .auth import JWTSchema
 
 
@@ -45,7 +45,8 @@ class JWTAuth(HttpBearer):
 
 # Create router
 router = Router(auth=JWTAuth())
-router.add_router("/users", user_router)  # Register user sub-router
+router.add_router("/users", user_router)
+router.add_router("/onboard", onboard_router)
 
 
 @router.post("/fcm/register", response={201: FCMTokenResponseSchema}, url_name="register_fcm_token")

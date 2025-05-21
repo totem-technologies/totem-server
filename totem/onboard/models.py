@@ -30,12 +30,14 @@ class OnboardModel(models.Model):
     referral_source = models.CharField(
         max_length=20,
         choices=REFERRAL_CHOICES,
+        default="default",
         verbose_name="How did you hear about us?",
         blank=True,  # Remove if you want to make it required
     )
     referral_other = models.CharField(
         max_length=100,
         blank=True,
+        default="",
         verbose_name="If other, please specify",
         help_text="Please tell us more about how you found us",
     )

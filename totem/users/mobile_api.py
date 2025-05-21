@@ -67,7 +67,7 @@ def update_current_user(
 @user_router.post("/update_image", response={200: bool}, url_name="user_update_image")
 def update_current_user_image(
     request: HttpRequest,
-    profile_image: UploadedFile = File(...),
+    profile_image: UploadedFile = File(...),  # type: ignore
 ):
     user: User = request.user  # type: ignore
     if profile_image.size is not None and profile_image.size > 5 * 1024 * 1024:  # 5MB limit

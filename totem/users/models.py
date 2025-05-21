@@ -229,7 +229,7 @@ class LoginPin(models.Model):
     used = models.BooleanField(default=False)
     failed_attempts = models.IntegerField(default=0)
 
-    objects: LoginPinManager = LoginPinManager()
+    objects: LoginPinManager = LoginPinManager()  # type: ignore
 
     def is_valid(self) -> bool:
         return not self.used and not self.is_expired() and not self.has_too_many_attempts()
@@ -314,7 +314,7 @@ class RefreshToken(models.Model):
     last_used_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
 
-    objects: RefreshTokenManager = RefreshTokenManager()
+    objects: RefreshTokenManager = RefreshTokenManager()  # type: ignore
 
     class Meta:
         indexes = [
