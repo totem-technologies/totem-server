@@ -1,6 +1,7 @@
 from enum import Enum
+from typing import Optional
 
-from ninja import ModelSchema
+from ninja import Field, ModelSchema, Schema
 
 from .models import User
 
@@ -36,3 +37,15 @@ class UserSchema(ModelSchema):
     class Meta:
         model = User
         fields = ["name", "is_staff", "api_key", "profile_avatar_seed", "profile_image", "profile_avatar_type", "email"]
+
+
+# New schema for user updates
+class UserUpdateSchema(Schema):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    timezone: Optional[str] = None
+    newsletter_consent: Optional[bool] = None
+    profile_avatar_type: Optional[ProfileAvatarTypeEnum] = None
+    randomize_avatar_seed: Optional[bool] = Field(None, description="Set to true to generate a new random avatar seed.")
+    # Note: profile_image will be handled as a separate File(...) parameter in the endpoint
+    # to support multipart/form-data uploads.

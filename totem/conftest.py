@@ -1,8 +1,10 @@
 from unittest.mock import patch
 
 import pytest
+from django.test import Client
 from pytest_socket import disable_socket
 
+from totem.api.auth import generate_jwt_token
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
 
@@ -29,6 +31,27 @@ def webflow_mock(request):
         patched.__exit__(None, None, None)
 
     request.addfinalizer(unpatch)
+
+
+# API fixtures
+@pytest.fixture
+def auth_user():
+    """Create a user for testing authentication."""
+    return UserFactory(email="auth_test@example.com")
+
+
+@pytest.fixture
+def auth_token(auth_user):
+    """Generate a valid auth token for the test user."""
+    return generate_jwt_token(auth_user)
+
+
+@pytest.fixture
+def client_with_user():
+    """Generate a valid auth token for the test user."""
+    user = UserFactory()
+    token = generate_jwt_token(user)
+    return Client(HTTP_AUTHORIZATION=f"Bearer {token}"), user
 
 
 def pytest_runtest_setup():
