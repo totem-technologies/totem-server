@@ -15,19 +15,7 @@ class UserFactory(DjangoModelFactory, metaclass=BaseMetaFactory[User]):
 
     @post_generation
     def password(self, create: bool, extracted: Sequence[Any], **kwargs):
-        password = (
-            extracted
-            if extracted
-            else Faker(
-                "password",
-                length=42,
-                special_chars=True,
-                digits=True,
-                upper_case=True,
-                lower_case=True,
-            ).evaluate(None, None, extra={"locale": None})
-        )
-        self.set_password(password)  # type: ignore
+        self.set_unusable_password()
 
     @post_generation
     def post_save(self, create: bool, extracted: Sequence[Any], **kwargs):

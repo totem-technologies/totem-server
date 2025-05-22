@@ -58,7 +58,7 @@ def update_current_user(
     if payload.randomize_avatar_seed:
         user.profile_avatar_seed = uuid.uuid4()
 
-    user.full_clean(exclude="password")
+    user.full_clean()
     user.save()
 
     return user
