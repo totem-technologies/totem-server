@@ -215,9 +215,10 @@ class TestMobileUserAPI:
 
     def test_delete_user(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        user_id = user.id
+        user_id = user.pk
+        assert User.objects.filter(id=user_id).exists()
         url = reverse("mobile-api:user_delete")
-        response = client.post(url)
+        response = client.delete(url)
         assert response.status_code == 200
         data = response.json()
         assert data is True

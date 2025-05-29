@@ -84,7 +84,7 @@ def update_current_user_image(
     return True
 
 
-@user_router.post("/delete", response={200: bool}, url_name="user_delete")
+@user_router.delete("/delete", response={200: bool}, url_name="user_delete")
 def delete_current_user(request: HttpRequest):
     user: User = request.user  # type: ignore
     # make a log entry for the deletion
