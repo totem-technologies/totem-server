@@ -1,5 +1,3 @@
-import uuid
-
 import pytz
 from auditlog.context import disable_auditlog
 from auditlog.models import LogEntry
@@ -57,8 +55,8 @@ def update_current_user(
     if payload.profile_avatar_type is not None:
         user.profile_avatar_type = payload.profile_avatar_type.value
 
-    if payload.randomize_avatar_seed:
-        user.profile_avatar_seed = uuid.uuid4()
+    if payload.profile_avatar_seed:
+        user.profile_avatar_seed = payload.profile_avatar_seed
 
     user.full_clean()
     user.save()

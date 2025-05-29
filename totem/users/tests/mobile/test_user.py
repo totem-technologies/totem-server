@@ -1,4 +1,5 @@
 import pytest
+import uuid
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client
 from django.urls import reverse
@@ -106,12 +107,12 @@ class TestMobileUserAPI:
     def test_update_user_randomize_avatar_seed(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         url = reverse("mobile-api:user_update")
-        original_seed = user.profile_avatar_seed
-        payload = {"randomize_avatar_seed": True}
+        new_seed = uuid.uuid4()
+        payload = {"profile_avatar_seed": new_seed}
         response = client.post(url, data=payload, content_type="application/json")
         assert response.status_code == 200
         user.refresh_from_db()
-        assert user.profile_avatar_seed != original_seed
+        assert user.profile_avatar_seed == new_seed
 
     def test_update_user_profile_image(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -175,7 +176,7 @@ class TestMobileUserAPI:
             "timezone": "Europe/Paris",
             "newsletter_consent": True,
             "profile_avatar_type": User.ProfileChoices.TIEDYE.value,  # Explicitly set, will be overridden by image
-            "randomize_avatar_seed": True,
+            "profile_avatar_seed": uuid.uuid4(),
         }
 
         response = client.post(url, data=payload_data, content_type="application/json")

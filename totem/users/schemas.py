@@ -46,6 +46,6 @@ class UserUpdateSchema(Schema):
     timezone: Optional[str] = None
     newsletter_consent: Optional[bool] = None
     profile_avatar_type: Optional[ProfileAvatarTypeEnum] = None
-    randomize_avatar_seed: Optional[bool] = Field(None, description="Set to true to generate a new random avatar seed.")
+    profile_avatar_seed: Optional[str] = Field(None, description="Should be a random UUID")
     # Note: profile_image will be handled as a separate File(...) parameter in the endpoint
     # to support multipart/form-data uploads.
