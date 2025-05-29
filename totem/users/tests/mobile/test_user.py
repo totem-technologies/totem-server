@@ -212,3 +212,14 @@ class TestMobileUserAPI:
         data = response.json()
         assert "Input should be 'TD' or 'IM'" in data["detail"][0]["msg"]  # Pydantic enum error
         assert "profile_avatar_type" in data["detail"][0]["loc"]
+
+    def test_delete_user(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        user_id = user.id
+        url = reverse("mobile-api:user_delete")
+        response = client.post(url)
+        assert response.status_code == 200
+        data = response.json()
+        assert data is True
+        # Verify user is actually deleted
+        assert not User.objects.filter(id=user_id).exists()

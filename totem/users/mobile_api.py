@@ -1,6 +1,8 @@
 import uuid
 
 import pytz
+from auditlog.context import disable_auditlog
+from auditlog.models import LogEntry
 from django.http import HttpRequest
 from ninja import File, Router
 from ninja.errors import ValidationError
@@ -79,4 +81,14 @@ def update_current_user_image(
     user.full_clean()
     user.save(update_fields=["profile_image", "profile_avatar_type"])  # Ensure this is saved if changed
 
+    return True
+
+
+@user_router.post("/delete", response={200: bool}, url_name="user_delete")
+def delete_current_user(request: HttpRequest):
+    user: User = request.user  # type: ignore
+    # make a log entry for the deletion
+    LogEntry.objects.log_create(user, force_log=True, action=LogEntry.Action.DELETE).save()  # type: ignore
+    with disable_auditlog():
+        user.delete()
     return True

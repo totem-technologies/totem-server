@@ -38,7 +38,7 @@ class FCMDeviceAdmin(admin.ModelAdmin):
             return f"{obj.token[:15]}..."
         return "-"
 
-    token_truncated.short_description = _("Token")
+    token_truncated.short_description = _("Token")  # type: ignore
 
     @admin.action(description="Send FCM message to selected devices")
     def send_fcm_message_action(self, request, queryset: QuerySet):
