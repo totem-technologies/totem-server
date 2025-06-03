@@ -228,7 +228,7 @@ def generate_image(params: ImageParams):
 
     # Set up text
     text_position = (PADDING, PADDING)  # (x, y) coordinates
-    scale_factor = 800
+    scale_factor = 1000
     spacing = scale_factor // 30
 
     # Draw text on image
@@ -251,21 +251,21 @@ def generate_image(params: ImageParams):
         image,
         params.day,
         (text_position[0], text_position[1] + 30),
-        font_size=scale_factor // 23,
+        font_size=scale_factor // 18,
         variation="SemiBold",
     )
     text_position = _draw_wrapped_text(
         image,
         params.time_pst,
         (text_position[0], text_position[1] + 20),
-        font_size=scale_factor // 30,
+        font_size=scale_factor // 18,
         variation="SemiBold",
     )
     text_position = _draw_wrapped_text(
         image,
         params.time_est,
         (text_position[0], text_position[1] + 20),
-        font_size=scale_factor // 30,
+        font_size=scale_factor // 18,
         variation="SemiBold",
     )
 
