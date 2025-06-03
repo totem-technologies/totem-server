@@ -225,3 +225,13 @@ class TestMobileUserAPI:
         assert data is True
         # Verify user is actually deleted
         assert not User.objects.filter(id=user_id).exists()
+
+    def test_public_profile(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        url = reverse("mobile-api:user_profile", args=[user.slug])
+        response = client.get(url)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == user.name
+        assert "email" not in data
+        assert data["profile_avatar_type"] == user.profile_avatar_type.value

@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 import pytz
 from auditlog.context import disable_auditlog
 from auditlog.models import LogEntry
@@ -10,6 +11,7 @@ from pytz.exceptions import UnknownTimeZoneError
 from totem.email.utils import validate_email_blocked
 from totem.users.models import User
 from totem.users.schemas import UserSchema, UserUpdateSchema
+from totem.users.schemas import PublicUserSchema
 
 user_router = Router()
 
@@ -17,6 +19,12 @@ user_router = Router()
 @user_router.get("/current", response={200: UserSchema}, url_name="user_current")
 def get_current_user(request: HttpRequest):
     return request.user
+
+
+@user_router.get("/profile/{user_slug}", response={200: PublicUserSchema}, url_name="user_profile")
+def get_user_profile(request: HttpRequest, user_slug: str):
+    user = get_object_or_404(User, slug=user_slug)
+    return user
 
 
 @user_router.post("/update", response={200: UserSchema}, url_name="user_update")
