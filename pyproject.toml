@@ -5,7 +5,7 @@ description = ""
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "argon2-cffi==23.1.0",
+    "argon2-cffi<26",
     "cssselect<2",
     "fonttools>=4.55.3",
     "google-api-python-client<3",
@@ -101,7 +101,7 @@ skip_glob = ["**/migrations/*.py"]
 
 # ==== mypy ====
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.13"
 check_untyped_defs = true
 ignore_missing_imports = true
 warn_unused_ignores = true
