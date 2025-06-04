@@ -23,7 +23,7 @@
         {% for member in team %}
           <div class="w-full p-2 md:w-1/2 lg:w-1/3">
             {% if member.url %}
-              <a href="{{ member.url }}">
+              <a href="{{ member.url }}" {% if member.external %}target="_blank"{% endif %}>
             {% endif %}
               <div
                 class="flex h-full items-center rounded-lg border border-gray-200 bg-white p-4 transition-shadow duration-500 hover:shadow-md">
