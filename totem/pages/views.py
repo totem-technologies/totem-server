@@ -16,6 +16,7 @@ from ..users.models import User
 from .models import Redirect
 from .qrmaker import make_qr
 from .webflow import get_webflow_page
+from typing import Optional
 
 
 @dataclass
@@ -23,7 +24,7 @@ class Member:
     name: str
     title: str
     image: str
-    url: str
+    url: Optional[str]
 
     def imageurl(self):
         return f"images/team/{self.image}"
@@ -43,6 +44,24 @@ def team_view(request):
             title="User Research, Keeper",
             image="gabe.jpg",
             url=reverse("pages:keepers", kwargs={"name": "gabe"}),
+        ),
+        Member(
+            name="Claire Hopkins",
+            title="Keeper",
+            image="claire.webp",
+            url=reverse("pages:keepers", kwargs={"name": "claire"}),
+        ),
+        Member(
+            name="Adil Sakout",
+            title="Engineer",
+            image="adil.webp",
+            url="",
+        ),
+        Member(
+            name="Bruno D'Luka",
+            title="Engineer",
+            image="bruno.webp",
+            url="",
         ),
         Member(
             name="Heather Gressett",
