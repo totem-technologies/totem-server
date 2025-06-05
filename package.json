@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build:atcb": "bun build node_modules/add-to-calendar-button/dist/atcb-no-pro.js --drop=console --minify --outfile=totem/static/js/atcb.min.js && perl -pi -e s,add-to-calendar-pro.com,totem.org,g totem/static/js/atcb.min.js",
-    "build:js": "./build.ts",
+    "build:js": "bun run build.ts",
     "build:tailwind": "NODE_ENV=production bun run tw -- --minify",
     "build": "concurrently \"bun run build:tailwind\" \"bun run build:js\" \"bun run build:atcb\"",
     "dev": "concurrently --kill-others \"bun run dev:js\" \"bun run dev:tailwind\"",
@@ -13,7 +13,7 @@
     "openapi-ts": "openapi-ts",
     "start": "bun run dev",
     "tw": "tailwindcss -i ./assets/css/styles.css -o ./totem/static/js/bundles/styles.css",
-    "dev:js": "./build.ts dev",
+    "dev:js": "bun run build.ts dev",
     "dev:tailwind": "NODE_ENV=development bun run tw",
     "test": "vitest",
     "test:ci": "vitest run"

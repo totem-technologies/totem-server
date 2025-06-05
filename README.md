@@ -18,9 +18,11 @@ Requirements:
 
 - Docker Compose
 - Node.js
+- Bun
 
 Steps:
 
+- Run `bun install` to install the JavaScript dependencies.
 - Run `make` to bring up the dev environment. You may need to make a blank `.env` file in the root directory.
 - Run `make assets` to compile the assets.
 
