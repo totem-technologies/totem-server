@@ -58,7 +58,9 @@ def team_view(request):
         Member(
             name="Adil Sakout", title="Engineer", image="adil.webp", url="https://www.adilsakout.com/", external=True
         ),
-        Member(name="Bruno D'Luka", title="Engineer", image="bruno.webp", url="", external=False),
+        Member(
+            name="Bruno D'Luka", title="Engineer", image="bruno.webp", url="https://github.com/bdlukaa", external=True
+        ),
         Member(
             name="Heather Gressett",
             title="Content Curator, Keeper",
