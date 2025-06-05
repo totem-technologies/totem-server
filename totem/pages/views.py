@@ -16,6 +16,7 @@ from ..users.models import User
 from .models import Redirect
 from .qrmaker import make_qr
 from .webflow import get_webflow_page
+from typing import Optional
 
 
 @dataclass
@@ -23,7 +24,8 @@ class Member:
     name: str
     title: str
     image: str
-    url: str
+    url: Optional[str]
+    external: bool
 
     def imageurl(self):
         return f"images/team/{self.image}"
@@ -36,39 +38,62 @@ def team_view(request):
             title="Executive Director, Keeper",
             image="bo.jpg",
             url=reverse("pages:keepers", kwargs={"name": "bo"}),
+            external=False,
         ),
-        Member(name="Pam Lopker", title="Board Member", image="pam.jpg", url=reverse("pages:team-pam")),
+        Member(name="Pam Lopker", title="Board Member", image="pam.jpg", url=reverse("pages:team-pam"), external=False),
         Member(
             name="Gabe Kenny",
             title="User Research, Keeper",
             image="gabe.jpg",
             url=reverse("pages:keepers", kwargs={"name": "gabe"}),
+            external=False,
         ),
+        Member(
+            name="Claire Hopkins",
+            title="Keeper",
+            image="claire.webp",
+            url=reverse("pages:keepers", kwargs={"name": "claire"}),
+            external=False,
+        ),
+        Member(
+            name="Adil Sakout", title="Engineer", image="adil.webp", url="https://www.adilsakout.com/", external=True
+        ),
+        Member(name="Bruno D'Luka", title="Engineer", image="bruno.webp", url="", external=False),
         Member(
             name="Heather Gressett",
             title="Content Curator, Keeper",
             image="heather.jpg",
             url=reverse("pages:keepers", kwargs={"name": "heather"}),
+            external=False,
         ),
         Member(
             name="Vanessa Robinson",
             title="Webmaster, Keeper",
             image="vanessa.jpg",
             url=reverse("pages:keepers", kwargs={"name": "vanessa"}),
+            external=False,
         ),
         Member(
             name="Bob Lesser, MPP, LP",
             title="Psychotherapist Advisor",
             image="boblesser.webp",
             url="https://boblesser.com/",
+            external=True,
         ),
         Member(
             name="Steve Schalkhauser",
             title="Engineer, Phase 2",
             image="blank.jpg",
             url="https://phase2industries.com/",
+            external=True,
         ),
-        Member(name="Steve Ansell", title="Engineer, Phase 2", image="blank.jpg", url="https://phase2industries.com/"),
+        Member(
+            name="Steve Ansell",
+            title="Engineer, Phase 2",
+            image="blank.jpg",
+            url="https://phase2industries.com/",
+            external=True,
+        ),
     ]
     # randomly shuffle the team
     random.seed(str(uuid.uuid4()))

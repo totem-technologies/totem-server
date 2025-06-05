@@ -28,7 +28,7 @@
 }
 
 @utility section {
-  @apply mx-4 md:py-10;
+  @apply md:py-10;
 }
 
 @utility tprose {
