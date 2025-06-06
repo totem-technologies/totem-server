@@ -31,7 +31,7 @@ class BlogPostSchema(ModelSchema):
 
 blog_router = Router()
 
-@blog_router.get("/list", response={200: List[BlogPostSchema]}, tags=["blog"], url_name="list_posts")
+@blog_router.get("/posts", response={200: List[BlogPostSchema]}, tags=["blog"], url_name="list_posts")
 def list_posts(request):
     """List all blog posts"""
     
@@ -39,7 +39,7 @@ def list_posts(request):
         return BlogPost.objects.all()
     return BlogPost.objects.filter(publish=True)
 
-@blog_router.get("/{slug}", response=BlogPostSchema, tags=["blog"], url_name="get_post")
+@blog_router.get("/post/{slug}", response=BlogPostSchema, tags=["blog"], url_name="get_post")
 def post(request, slug: str):
     if request.user.is_staff:
         post = get_object_or_404(BlogPost, slug=slug)
