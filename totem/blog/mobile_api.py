@@ -31,7 +31,7 @@ class BlogPostSchema(ModelSchema):
 
 blog_router = Router()
 
-@blog_router.get("/", response={200: List[BlogPostSchema]}, tags=["blog"], url_name="list_posts")
+@blog_router.get("/list", response={200: List[BlogPostSchema]}, tags=["blog"], url_name="list_posts")
 def list_posts(request):
     """List all blog posts"""
     
