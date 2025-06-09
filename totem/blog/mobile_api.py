@@ -1,15 +1,12 @@
-from datetime import datetime
 from typing import List, Optional
-from django.http import Http404
+
 from django.shortcuts import get_object_or_404
-from ninja import Field, FilterSchema, ModelSchema, Router, Schema
+from ninja import ModelSchema, Router
 from ninja.pagination import paginate
 
-from totem.users.models import User
 from totem.users.schemas import PublicUserSchema
-from .models import BlogPost
 
-from ninja import ModelSchema
+from .models import BlogPost
 
 
 class BlogPostSchema(ModelSchema):

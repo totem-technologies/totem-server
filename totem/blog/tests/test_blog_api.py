@@ -3,7 +3,6 @@ from django.test import Client
 from django.urls import reverse
 
 from totem.blog.tests.factories import BlogPostFactory
-from totem.users.tests.factories import UserFactory
 
 pytestmark = pytest.mark.django_db
 
