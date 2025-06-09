@@ -17,7 +17,7 @@ class TestBlogAPI:
         BlogPostFactory(publish=False)
 
         client = Client()
-        url = reverse("api-1:list_posts")
+        url = reverse("mobile-api:list_posts")
         response = client.get(url)
 
         assert response.status_code == 200
@@ -38,7 +38,7 @@ class TestBlogAPI:
         """
         published_post = BlogPostFactory(publish=True, content="Test content")
         client = Client()
-        url = reverse("api-1:get_post", kwargs={"slug": published_post.slug})
+        url = reverse("mobile-api:get_post", kwargs={"slug": published_post.slug})
         response = client.get(url)
 
         assert response.status_code == 200
@@ -60,7 +60,7 @@ class TestBlogAPI:
         """
         unpublished_post = BlogPostFactory(publish=False)
         client = Client()
-        url = reverse("api-1:get_post", kwargs={"slug": unpublished_post.slug})
+        url = reverse("mobile-api:get_post", kwargs={"slug": unpublished_post.slug})
         response = client.get(url)
 
         assert response.status_code == 404
@@ -70,6 +70,6 @@ class TestBlogAPI:
         Requesting a slug that does not exist should return a 404 error.
         """
         client = Client()
-        url = reverse("api-1:get_post", kwargs={"slug": "this-slug-does-not-exist"})
+        url = reverse("mobile-api:get_post", kwargs={"slug": "this-slug-does-not-exist"})
         response = client.get(url)
         assert response.status_code == 404
