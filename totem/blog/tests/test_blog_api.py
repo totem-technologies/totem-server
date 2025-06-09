@@ -32,7 +32,6 @@ class TestBlogAPI:
         assert data["count"] == 1
         assert len(data["items"]) == 1
 
-
     def test_get_published_post_detail(self):
         """
         Any user should be able to retrieve a single published blog post.

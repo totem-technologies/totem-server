@@ -19,10 +19,10 @@ class BlogPostSchema(ModelSchema):
 
     @staticmethod
     def resolve_header_image_url(obj) -> Optional[str]:
-        if obj.header_image and hasattr(obj.header_image, 'url'):
+        if obj.header_image and hasattr(obj.header_image, "url"):
             return obj.header_image.url
         return None
-    
+
     @staticmethod
     def resolve_content_html(obj: BlogPost) -> str:
         return obj.content_html
@@ -38,7 +38,7 @@ class BlogPostListSchema(ModelSchema):
 
     @staticmethod
     def resolve_header_image_url(obj) -> Optional[str]:
-        if obj.header_image and hasattr(obj.header_image, 'url'):
+        if obj.header_image and hasattr(obj.header_image, "url"):
             return obj.header_image.url
         return None
 
@@ -54,7 +54,7 @@ blog_router = Router()
 @paginate
 def list_posts(request):
     """List all blog posts"""
-    
+
     if request.user.is_staff:
         return BlogPost.objects.all().select_related("author")
     return BlogPost.objects.filter(publish=True).order_by("-date_published").select_related("author")
@@ -66,5 +66,5 @@ def post(request, slug: str):
         post = get_object_or_404(BlogPost.objects.select_related("author"), slug=slug)
     else:
         post = get_object_or_404(BlogPost.objects.select_related("author"), slug=slug, publish=True)
-    
+
     return post
