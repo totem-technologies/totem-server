@@ -4,9 +4,8 @@ from django.urls import reverse
 
 from totem.blog.tests.factories import BlogPostFactory
 
-pytestmark = pytest.mark.django_db
 
-
+@pytest.mark.django_db
 class TestBlogAPI:
     def test_list_posts(self, client: Client, auth_token):
         """
