@@ -15,6 +15,7 @@ from totem.users.models import User
 from totem.users.mobile_api import user_router
 from totem.onboard.mobile_api import onboard_router
 from totem.circles.mobile_api import spaces_router
+from totem.blog.mobile_api import blog_router
 from .auth import JWTSchema
 
 
@@ -49,6 +50,7 @@ router = Router(auth=JWTAuth())
 router.add_router("/users", user_router)
 router.add_router("/onboard", onboard_router)
 router.add_router("/spaces", spaces_router)
+router.add_router("/blog", blog_router)
 
 
 @router.post("/fcm/register", response={201: FCMTokenResponseSchema}, url_name="register_fcm_token")
