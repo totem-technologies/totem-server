@@ -53,8 +53,10 @@ def list_posts(request):
     """List all blog posts"""
 
     if request.user.is_staff:
-        return BlogPost.objects.all().select_related("author")
-    return BlogPost.objects.filter(publish=True).order_by("-date_published").select_related("author")
+        posts = BlogPost.objects.all()
+    else:
+        posts = BlogPost.objects.filter(publish=True)
+    return posts.order_by("-date_published").select_related("author")
 
 
 @blog_router.get("/post/{slug}", response=BlogPostSchema, tags=["blog"], url_name="get_post")
