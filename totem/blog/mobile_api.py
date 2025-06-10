@@ -62,8 +62,8 @@ def list_posts(request):
 @blog_router.get("/post/{slug}", response=BlogPostSchema, tags=["blog"], url_name="get_post")
 def post(request, slug: str):
     if request.user.is_staff:
-        post = get_object_or_404(BlogPost.objects.select_related("author"), slug=slug)
+        post = BlogPost.objects.select_related("author")
     else:
-        post = get_object_or_404(BlogPost.objects.select_related("author"), slug=slug, publish=True)
+        post = BlogPost.objects.select_related("author").filter(publish=True)
 
-    return post
+    return get_object_or_404(post, slug=slug)
