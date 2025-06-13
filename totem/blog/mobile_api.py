@@ -20,13 +20,9 @@ class BlogPostSchema(ModelSchema):
             return obj.header_image.url
         return None
 
-    @staticmethod
-    def resolve_content_html(obj: BlogPost) -> str:
-        return obj.content_html
-
     class Meta:
         model = BlogPost
-        fields = ["title", "subtitle", "content", "date_published", "slug", "author", "publish"]
+        fields = ["title", "subtitle", "date_published", "slug", "author", "publish"]
 
 
 class BlogPostListSchema(ModelSchema):
