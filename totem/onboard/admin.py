@@ -30,6 +30,7 @@ class OnboardAdmin(ExportCsvMixin, admin.ModelAdmin):
     list_filter = (
         "created",
         "updated",
+        "onboarded",
         HasHopesFilter,
     )
     readonly_fields = ("user_name",)
