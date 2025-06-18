@@ -3,7 +3,7 @@ from typing import Optional
 
 from ninja import Field, ModelSchema, Schema
 
-from .models import User
+from .models import KeeperProfile, User
 
 
 class ProfileAvatarTypeEnum(str, Enum):
@@ -13,11 +13,18 @@ class ProfileAvatarTypeEnum(str, Enum):
 
 class PublicUserSchema(ModelSchema):
     profile_avatar_type: ProfileAvatarTypeEnum
+    keeper_profile_username: Optional[str] = None
 
     @staticmethod
     def resolve_profile_image(obj: User):
         if obj.profile_image:
             return obj.profile_image.url
+        return None
+
+    @staticmethod
+    def resolve_keeper_profile_username(obj: User) -> Optional[str]:
+        if obj.keeper_profile:
+            return obj.keeper_profile.username
         return None
 
     class Meta:
@@ -49,3 +56,25 @@ class UserUpdateSchema(Schema):
     profile_avatar_seed: Optional[str] = Field(None, description="Should be a random UUID")
     # Note: profile_image will be handled as a separate File(...) parameter in the endpoint
     # to support multipart/form-data uploads.
+
+
+class KeeperProfileSchema(ModelSchema):
+    user: Optional[PublicUserSchema]
+    circle_count: int = 0
+
+    @staticmethod
+    def resolve_circle_count(obj: KeeperProfile) -> int:
+        return obj.user.events_joined.count()
+
+    class Meta:
+        model = KeeperProfile
+        fields = [
+            "username",
+            "title",
+            "bio",
+            "location",
+            "instagram_username",
+            "website",
+            "x_username",
+            "user",
+        ]
