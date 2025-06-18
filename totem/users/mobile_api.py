@@ -1,17 +1,18 @@
-from django.shortcuts import get_object_or_404
+from typing import Optional
+
 import pytz
 from auditlog.context import disable_auditlog
 from auditlog.models import LogEntry
 from django.http import HttpRequest
-from ninja import File, Router
+from django.shortcuts import get_object_or_404
+from ninja import File, ModelSchema, Router
 from ninja.errors import ValidationError
 from ninja.files import UploadedFile
 from pytz.exceptions import UnknownTimeZoneError
 
 from totem.email.utils import validate_email_blocked
-from totem.users.models import User
-from totem.users.schemas import UserSchema, UserUpdateSchema
-from totem.users.schemas import PublicUserSchema
+from totem.users.models import KeeperProfile, User
+from totem.users.schemas import PublicUserSchema, UserSchema, UserUpdateSchema
 
 user_router = Router()
 
@@ -98,3 +99,30 @@ def delete_current_user(request: HttpRequest):
     with disable_auditlog():
         user.delete()
     return True
+
+
+class KeeperProfileSchema(ModelSchema):
+    user: Optional[PublicUserSchema]
+    circle_count: int = 0
+    
+    @staticmethod
+    def resolve_circle_count(obj: KeeperProfile) -> int:
+        return obj.user.events_joined.count()
+
+    class Meta:
+        model = KeeperProfile
+        fields = [
+            "username",
+            "title",
+            "bio",
+            "location",
+            "instagram_username",
+            "website",
+            "x_username",
+            "user",
+        ]
+
+
+@user_router.get("/keeper/{username}", response={200: KeeperProfileSchema}, url_name="user_keeper")
+def keeper(request: HttpRequest, username: str):
+    return get_object_or_404(KeeperProfile.objects, user__username=username)
