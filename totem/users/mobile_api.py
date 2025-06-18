@@ -104,7 +104,7 @@ def delete_current_user(request: HttpRequest):
 class KeeperProfileSchema(ModelSchema):
     user: Optional[PublicUserSchema]
     circle_count: int = 0
-    
+
     @staticmethod
     def resolve_circle_count(obj: KeeperProfile) -> int:
         return obj.user.events_joined.count()
@@ -123,6 +123,6 @@ class KeeperProfileSchema(ModelSchema):
         ]
 
 
-@user_router.get("/keeper/{username}", response={200: KeeperProfileSchema}, url_name="user_keeper")
+@user_router.get("/keeper/{username}", response={200: KeeperProfileSchema}, url_name="user_keeper_profile")
 def keeper(request: HttpRequest, username: str):
     return get_object_or_404(KeeperProfile.objects, user__username=username)
