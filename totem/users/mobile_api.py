@@ -101,4 +101,4 @@ def delete_current_user(request: HttpRequest):
 
 @user_router.get("/keeper/{username}", response={200: KeeperProfileSchema}, url_name="user_keeper_profile")
 def keeper(request: HttpRequest, username: str):
-    return get_object_or_404(KeeperProfile.objects, user__username=username)
+    return get_object_or_404(KeeperProfile, username=username)

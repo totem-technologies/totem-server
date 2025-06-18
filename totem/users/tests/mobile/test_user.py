@@ -1,11 +1,12 @@
-import pytest
 import uuid
+
+import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client
 from django.urls import reverse
 
 from totem.users.models import User
-from totem.users.tests.factories import UserFactory
+from totem.users.tests.factories import KeeperProfileFactory, UserFactory
 
 
 @pytest.mark.django_db
@@ -235,3 +236,35 @@ class TestMobileUserAPI:
         assert data["name"] == user.name
         assert "email" not in data
         assert data["profile_avatar_type"] == user.profile_avatar_type.value
+
+    def test_get_keeper_profile_success(self, client_with_user: tuple[Client, User]):
+        client = client_with_user[0]
+        keeper_profile = KeeperProfileFactory(username="test_keeper")
+
+        url = reverse("mobile-api:user_keeper_profile", kwargs={"username": "test_keeper"})
+        response = client.get(url)
+
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["username"] == keeper_profile.username
+        assert data["title"] == keeper_profile.title
+        assert data["bio"] == keeper_profile.bio
+        assert data["location"] == keeper_profile.location
+
+        assert data["user"]["name"] == keeper_profile.user.name
+
+        assert "circle_count" in data
+        assert data["circle_count"] == 0
+
+        assert "email" not in data["user"]
+        assert "api_key" not in data["user"]
+
+    def test_get_keeper_profile_not_found(self, client_with_user: tuple[Client, User]):
+        """
+        Tests that a 404 is returned for a non-existent keeper username.
+        """
+        client = client_with_user[0]
+        url = reverse("mobile-api:user_keeper_profile", kwargs={"username": "ghost_keeper"})
+        response = client.get(url)
+        assert response.status_code == 404
