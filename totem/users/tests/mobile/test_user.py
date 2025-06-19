@@ -257,7 +257,7 @@ class TestMobileUserAPI:
 
         assert "circle_count" in data
         assert data["circle_count"] == 0
-        
+
         assert "bio_html" in data
         assert bio in data["bio_html"]
         assert data["bio_html"] == "\n<p>Test content</p>"
