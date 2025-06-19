@@ -59,8 +59,8 @@ class UserUpdateSchema(Schema):
 
 
 class KeeperProfileSchema(ModelSchema):
-    user: Optional[PublicUserSchema]
-    circle_count: int = 0
+    user: PublicUserSchema
+    circle_count: int
     month_joined: str
     bio_html: Optional[str] = None
 
