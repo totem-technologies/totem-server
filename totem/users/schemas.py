@@ -71,7 +71,7 @@ class KeeperProfileSchema(ModelSchema):
     @staticmethod
     def resolve_month_joined(obj: KeeperProfile) -> str:
         return obj.user.month_joined()
-    
+
     @staticmethod
     def resolve_bio_html(obj: KeeperProfile) -> Optional[str]:
         if obj.bio:
