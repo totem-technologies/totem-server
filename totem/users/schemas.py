@@ -61,10 +61,15 @@ class UserUpdateSchema(Schema):
 class KeeperProfileSchema(ModelSchema):
     user: Optional[PublicUserSchema]
     circle_count: int = 0
+    month_joined: str
 
     @staticmethod
     def resolve_circle_count(obj: KeeperProfile) -> int:
         return obj.user.events_joined.count()
+
+    @staticmethod
+    def resolve_month_joined(obj: KeeperProfile) -> str:
+        return obj.user.month_joined()
 
     class Meta:
         model = KeeperProfile
@@ -73,6 +78,7 @@ class KeeperProfileSchema(ModelSchema):
             "title",
             "bio",
             "location",
+            "languages",
             "instagram_username",
             "website",
             "x_username",
