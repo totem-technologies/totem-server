@@ -62,6 +62,7 @@ class KeeperProfileSchema(ModelSchema):
     user: Optional[PublicUserSchema]
     circle_count: int = 0
     month_joined: str
+    bio_html: Optional[str] = None
 
     @staticmethod
     def resolve_circle_count(obj: KeeperProfile) -> int:
@@ -70,6 +71,12 @@ class KeeperProfileSchema(ModelSchema):
     @staticmethod
     def resolve_month_joined(obj: KeeperProfile) -> str:
         return obj.user.month_joined()
+    
+    @staticmethod
+    def resolve_bio_html(obj: KeeperProfile) -> Optional[str]:
+        if obj.bio:
+            return obj.render_markdown(obj.bio)
+        return None
 
     class Meta:
         model = KeeperProfile

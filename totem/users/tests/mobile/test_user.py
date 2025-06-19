@@ -239,7 +239,8 @@ class TestMobileUserAPI:
 
     def test_get_keeper_profile_success(self, client_with_user: tuple[Client, User]):
         client = client_with_user[0]
-        keeper_profile = KeeperProfileFactory(username="test_keeper")
+        bio = "Test content"
+        keeper_profile = KeeperProfileFactory(username="test_keeper", bio=bio)
 
         url = reverse("mobile-api:user_keeper_profile", kwargs={"username": "test_keeper"})
         response = client.get(url)
@@ -256,6 +257,10 @@ class TestMobileUserAPI:
 
         assert "circle_count" in data
         assert data["circle_count"] == 0
+        
+        assert "bio_html" in data
+        assert bio in data["bio_html"]
+        assert data["bio_html"] == "\n<p>Test content</p>"
 
         assert "email" not in data["user"]
         assert "api_key" not in data["user"]
