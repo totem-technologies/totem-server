@@ -13,7 +13,6 @@ class ProfileAvatarTypeEnum(str, Enum):
 
 class PublicUserSchema(ModelSchema):
     profile_avatar_type: ProfileAvatarTypeEnum
-    keeper_profile_username: Optional[str] = None
 
     @staticmethod
     def resolve_profile_image(obj: User):
@@ -21,15 +20,9 @@ class PublicUserSchema(ModelSchema):
             return obj.profile_image.url
         return None
 
-    @staticmethod
-    def resolve_keeper_profile_username(obj: User) -> Optional[str]:
-        if obj.keeper_profile:
-            return obj.keeper_profile.username
-        return None
-
     class Meta:
         model = User
-        fields = ["name", "is_staff", "profile_avatar_seed", "profile_image", "profile_avatar_type"]
+        fields = ["name", "slug", "is_staff", "profile_avatar_seed", "profile_image", "profile_avatar_type"]
 
 
 class UserSchema(ModelSchema):
@@ -89,5 +82,4 @@ class KeeperProfileSchema(ModelSchema):
             "instagram_username",
             "website",
             "x_username",
-            "user",
         ]

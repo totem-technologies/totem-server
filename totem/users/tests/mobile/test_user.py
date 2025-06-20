@@ -240,9 +240,9 @@ class TestMobileUserAPI:
     def test_get_keeper_profile_success(self, client_with_user: tuple[Client, User]):
         client = client_with_user[0]
         bio = "Test content"
-        keeper_profile = KeeperProfileFactory(username="test_keeper", bio=bio)
+        keeper_profile = KeeperProfileFactory(username="test_keeper", user__slug="test_user", bio=bio)
 
-        url = reverse("mobile-api:user_keeper_profile", kwargs={"username": "test_keeper"})
+        url = reverse("mobile-api:user_keeper_profile", kwargs={"slug": "test_user"})
         response = client.get(url)
 
         assert response.status_code == 200
@@ -270,6 +270,6 @@ class TestMobileUserAPI:
         Tests that a 404 is returned for a non-existent keeper username.
         """
         client = client_with_user[0]
-        url = reverse("mobile-api:user_keeper_profile", kwargs={"username": "ghost_keeper"})
+        url = reverse("mobile-api:user_keeper_profile", kwargs={"slug": "ghost_user"})
         response = client.get(url)
         assert response.status_code == 404
