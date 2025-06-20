@@ -30,7 +30,7 @@ class BlogPostListSchema(ModelSchema):
     header_image_url: Optional[str] = None
 
     @staticmethod
-    def resolve_header_image_url(obj) -> Optional[str]:
+    def resolve_header_image_url(obj: BlogPost) -> Optional[str]:
         if obj.header_image and hasattr(obj.header_image, "url"):
             return obj.header_image.url
         return None
