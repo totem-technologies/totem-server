@@ -1,6 +1,7 @@
 from django.http import HttpRequest
-from ninja import File, NinjaAPI, Schema
+from ninja import File, NinjaAPI, Schema, Router
 from ninja.files import UploadedFile
+import os
 
 from totem.circles.api import router as circles_router
 from totem.users.models import User
@@ -10,6 +11,8 @@ from .auth import router as auth_router
 from .mobile_api import router as mobile_router
 
 api = NinjaAPI(title="Totem API", version="1")
+dev_api = Router()
+api.add_router("/dev/", dev_api)
 api.add_router("/spaces/", circles_router)
 mobile_api = NinjaAPI(title="Totem Mobile API", version="1", urls_namespace="mobile-api")
 mobile_api.add_router("/protected/", mobile_router)
@@ -57,3 +60,9 @@ def user_upload_profile_image(request, file: UploadedFile = File(...)):  # type:
     user.profile_image.save(file.name, file)
     user.save()
     return None
+
+
+@dev_api.get("/version", response={200: str}, url_name="dev_version")
+def dev_version(request):
+    # returns GIT_REV environment variable, if present
+    return os.environ.get("GIT_REV", "unknown")
