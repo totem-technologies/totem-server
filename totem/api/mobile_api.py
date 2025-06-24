@@ -8,14 +8,15 @@ from ninja import Router
 from ninja.errors import ValidationError
 from ninja.security import HttpBearer
 
+from totem.blog.mobile_api import blog_router
+from totem.circles.mobile_api import spaces_router
 from totem.notifications.models import FCMDevice
 from totem.notifications.schemas import FCMTokenRegisterSchema, FCMTokenResponseSchema
 from totem.notifications.validators import validate_fcm_token
-from totem.users.models import User
-from totem.users.mobile_api import user_router
 from totem.onboard.mobile_api import onboard_router
-from totem.circles.mobile_api import spaces_router
-from totem.blog.mobile_api import blog_router
+from totem.users.mobile_api import user_router
+from totem.users.models import User
+
 from .auth import JWTSchema
 
 

@@ -235,7 +235,7 @@ class TestMobileUserAPI:
         data = response.json()
         assert data["name"] == user.name
         assert "email" not in data
-        assert data["profile_avatar_type"] == user.profile_avatar_type.value
+        assert data["profile_avatar_type"] == user.profile_avatar_type
 
     def test_get_keeper_profile_success(self, client_with_user: tuple[Client, User]):
         client = client_with_user[0]
