@@ -9,7 +9,7 @@ from ninja.params.functions import Query
 
 from totem.circles.filters import all_upcoming_recommended_events
 from totem.circles.models import Circle, CircleEvent
-from totem.circles.schemas import EventDetailSchema, EventsFilterSchema, EventSpaceSchema, SpaceSchema
+from totem.circles.schemas import EventDetailSchema, EventListSchema, EventsFilterSchema, EventSpaceSchema, SpaceSchema
 
 spaces_router = Router()
 
@@ -30,16 +30,18 @@ def unsubscribe_to_space(request: HttpRequest, space_slug: str):
 
 @spaces_router.get("/subscribe", response={200: List[SpaceSchema]}, tags=["spaces"], url_name="spaces_subscriptions")
 def list_subscriptions(request: HttpRequest):
-    return Circle.objects.select_related("subscribed").filter(pk=request.user.pk, published=True)
+    return Circle.objects.filter(subscribed=request.user, published=True)
 
 
-@spaces_router.get("/spaces", response={200: List[SpaceSchema]}, tags=["spaces"], url_name="spaces_list")
+@spaces_router.get("/spaces", response={200: List[EventListSchema]}, tags=["spaces"], url_name="mobile_spaces_list")
 @paginate
 def list_spaces(request, filters: EventsFilterSchema = Query()):
     return all_upcoming_recommended_events(request.user, category=filters.category, author=filters.author)
 
 
-@spaces_router.get("/spaces/event/{event_slug}", response={200: EventDetailSchema}, tags=["spaces"], url_name="spaces_detail")
+@spaces_router.get(
+    "/spaces/event/{event_slug}", response={200: EventDetailSchema}, tags=["spaces"], url_name="spaces_detail"
+)
 def get_space_detail(request: HttpRequest, event_slug: str):
     event = get_object_or_404(CircleEvent, slug=event_slug)
     space: Circle = event.circle
@@ -75,6 +77,8 @@ def get_space_detail(request: HttpRequest, event_slug: str):
     )
 
 
-@spaces_router.get("/keeper/{keeper_slug}/spaces", response={200: List[SpaceSchema]}, tags=["spaces"], url_name="keeper_spaces")
+@spaces_router.get(
+    "/keeper/{keeper_slug}/spaces", response={200: List[SpaceSchema]}, tags=["spaces"], url_name="keeper_spaces"
+)
 def get_keeper_spaces(request: HttpRequest, keeper_slug: str):
     return Circle.objects.filter(author__slug=keeper_slug, published=True)
