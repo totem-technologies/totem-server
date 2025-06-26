@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from totem.circles.models import CircleEvent
     from totem.users.models import User
 
-_posthog = Posthog(project_api_key=settings.POSTHOG_API_KEY, host="https://app.posthog.com")
+_posthog = Posthog(project_api_key=settings.POSTHOG_API_KEY, host="https://us.i.posthog.com")
 if settings.DEBUG or "test" in settings.POSTHOG_API_KEY:
     _posthog.debug = True
     _posthog.disabled = True
