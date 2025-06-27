@@ -16,7 +16,7 @@ spaces_router = Router()
 
 @spaces_router.post("/subscribe/{space_slug}", response={200: bool}, tags=["spaces"], url_name="spaces_subscribe")
 def subscribe_to_space(request: HttpRequest, space_slug: str):
-    space = get_object_or_404(Circle, slug=space_slug)
+    space = get_object_or_404(Circle, slug=space_slug, published=True)
     space.subscribe(request.user)
     return True
 
