@@ -30,7 +30,7 @@ def unsubscribe_to_space(request: HttpRequest, space_slug: str):
 
 @spaces_router.get("/subscribe", response={200: List[SpaceSchema]}, tags=["spaces"], url_name="spaces_subscriptions")
 def list_subscriptions(request: HttpRequest):
-    return Circle.objects.filter(subscribed=request.user, published=True)
+    return Circle.objects.filter(subscribed=request.user)
 
 
 @spaces_router.get("/spaces", response={200: List[EventListSchema]}, tags=["spaces"], url_name="mobile_spaces_list")
@@ -71,14 +71,14 @@ def get_space_detail(request: HttpRequest, event_slug: str):
         rsvp_url=reverse("circles:rsvp", kwargs={"event_slug": event.slug}),
         join_url=join_url,
         calLink=event.cal_link(),
-        subscribe_url=reverse("circles:subscribe", kwargs={"slug": space.slug}),
+        subscribe_url=reverse("spaces_subscribe", kwargs={"space_slug": space.slug}),
         subscribed=subscribed,
         user_timezone=str("UTC"),
     )
 
 
 @spaces_router.get(
-    "/keeper/{keeper_slug}/spaces", response={200: List[SpaceSchema]}, tags=["spaces"], url_name="keeper_spaces"
+    "/keeper/{slug}/", response={200: List[SpaceSchema]}, tags=["spaces"], url_name="keeper_spaces"
 )
-def get_keeper_spaces(request: HttpRequest, keeper_slug: str):
-    return Circle.objects.filter(author__slug=keeper_slug, published=True)
+def get_keeper_spaces(request: HttpRequest, slug: str):
+    return Circle.objects.filter(author__slug=slug, published=True)
