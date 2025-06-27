@@ -71,14 +71,12 @@ def get_space_detail(request: HttpRequest, event_slug: str):
         rsvp_url=reverse("circles:rsvp", kwargs={"event_slug": event.slug}),
         join_url=join_url,
         calLink=event.cal_link(),
-        subscribe_url=reverse("spaces_subscribe", kwargs={"space_slug": space.slug}),
+        subscribe_url=reverse("mobile-api:spaces_subscribe", kwargs={"space_slug": space.slug}),
         subscribed=subscribed,
         user_timezone=str("UTC"),
     )
 
 
-@spaces_router.get(
-    "/keeper/{slug}/", response={200: List[SpaceSchema]}, tags=["spaces"], url_name="keeper_spaces"
-)
+@spaces_router.get("/keeper/{slug}/", response={200: List[SpaceSchema]}, tags=["spaces"], url_name="keeper_spaces")
 def get_keeper_spaces(request: HttpRequest, slug: str):
     return Circle.objects.filter(author__slug=slug, published=True)
