@@ -158,8 +158,11 @@ class CircleEventAdmin(admin.ModelAdmin):
                 )
             },
         ),
-        ("Listing", {"fields": ("listed", "open", "cancelled")}),
-        ("Notifications", {"fields": ("notified", "notified_missed", "notified_tomorrow", "advertised")}),
+        ("Visibility", {"fields": ("listed", "open", "cancelled")}),
+        (
+            "Automated Sent Notifications (Advanced)",
+            {"fields": ("notified", "notified_missed", "notified_tomorrow", "advertised"), "classes": ("collapse",)},
+        ),
     )
 
     def save_model(self, request, obj: CircleEvent, form, change):
