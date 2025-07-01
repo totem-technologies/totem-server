@@ -5,12 +5,11 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from ninja import Router
 from ninja.pagination import paginate
-from ninja.params.functions import Query
 
 from totem.circles.api import NextEventSchema, SpaceDetailSchema
 from totem.circles.filters import get_upcoming_events_for_spaces_list
 from totem.circles.models import Circle, CircleEvent
-from totem.circles.schemas import EventDetailSchema, EventsFilterSchema, EventSpaceSchema, SpaceSchema
+from totem.circles.schemas import EventDetailSchema, EventSpaceSchema, SpaceSchema
 
 spaces_router = Router()
 
