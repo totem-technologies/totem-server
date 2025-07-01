@@ -1,4 +1,4 @@
-# define an alias for the specfic python version used in this file.
+# define an alias for the specific python version used in this file.
 FROM python:3.13-slim-bookworm AS python
 
 # Python build stage
@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     libpq-dev
 
 RUN pip install uv
+ENV UV_COMPILE_BYTECODE=1
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv
 RUN uv venv
 

@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     libpq-dev
 
 RUN pip install uv
+ENV UV_COMPILE_BYTECODE=1
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv
 RUN uv venv
 
