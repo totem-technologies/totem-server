@@ -200,12 +200,15 @@ function IconLine(props: {
   )
 }
 
+function plural(number: number) {
+  return number > 1 ? "s" : ""
+}
+
 function EventInfo(props: {
   eventStore: EventDetailSchema
   refetchEvent: () => void
 }) {
   const [error, setError] = createSignal("")
-  const plural = () => (props.eventStore.subscribers > 1 ? "s" : "")
   async function handleAttend(e: Event) {
     if (!props.eventStore.rsvp_url) return
     e.preventDefault()
@@ -241,7 +244,8 @@ function EventInfo(props: {
           <IconLine
             icon="star"
             tip="How many people are getting updates about this Space.">
-            {props.eventStore.subscribers} subscriber{plural()}
+            {props.eventStore.subscribers} subscriber
+            {plural(props.eventStore.subscribers)}
           </IconLine>
         </Show>
         <IconLine icon="dollar" tip="The cost of each session, if any.">
@@ -260,7 +264,8 @@ function EventInfo(props: {
         <IconLine
           icon="chair"
           tip="How many people are getting updates about this Space.">
-          {props.eventStore.seats_left} seat{plural()} left
+          {props.eventStore.seats_left} seat
+          {plural(props.eventStore.seats_left)} left
         </IconLine>
       </div>
       <div class="pt-2 pb-1">
@@ -380,7 +385,7 @@ function Subscribe(props: {
           </Match>
           <Match when={!props.event.subscribed}>
             <div>
-              Subscribe to this Space to notified about upcoming sessions.
+              Subscribe to this Space to be notified about upcoming sessions.
             </div>
             <button
               type="button"

@@ -10,6 +10,7 @@ from googleapiclient.discovery import build
 from googleapiclient.discovery_cache.base import Cache
 from googleapiclient.errors import HttpError
 from requests.auth import AuthBase
+from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
 
 
 @dataclass
@@ -136,6 +137,11 @@ def _to_gcal_id(s: str) -> str:
     return base64.b32hexencode(s.encode()).strip(b"=").lower().decode()
 
 
+@retry(
+    stop=stop_after_attempt(2),  # Total number of attempts (initial + 1 retry)
+    wait=wait_fixed(1),  # Wait 1 second between retries
+    retry=retry_if_exception_type(BrokenPipeError),
+)
 def save_event(event_id: str, start: str, end: str, summary: str, description: str) -> "CalendarEvent | None":
     if not settings.SAVE_TO_GOOGLE_CALENDAR:
         return
