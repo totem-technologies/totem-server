@@ -77,6 +77,7 @@ def list_spaces(request):
 
     return spaces
 
+
 @spaces_router.get(
     "/spaces/event/{event_slug}", response={200: EventDetailSchema}, tags=["spaces"], url_name="spaces_detail"
 )
