@@ -115,6 +115,35 @@ def get_space_detail(request: HttpRequest, event_slug: str):
     )
 
 
-@spaces_router.get("/keeper/{slug}/", response={200: List[SpaceSchema]}, tags=["spaces"], url_name="keeper_spaces")
+@spaces_router.get(
+    "/keeper/{slug}/", response={200: List[SpaceDetailSchema]}, tags=["spaces"], url_name="keeper_spaces"
+)
 def get_keeper_spaces(request: HttpRequest, slug: str):
-    return Circle.objects.filter(author__slug=slug, published=True)
+    circles = Circle.objects.filter(author__slug=slug, published=True)
+
+    spaces = []
+    for circle in circles:
+        category = circle.categories.first()
+        category_name = category.name if category else None
+
+        nextEvent = circle.next_event()
+        if nextEvent:
+            spaces.append(
+                SpaceDetailSchema(
+                    slug=circle.slug,
+                    title=circle.title,
+                    image_link=circle.image.url if circle.image else None,
+                    description=circle.short_description,
+                    author=circle.author,
+                    category=category_name,
+                    nextEvent=NextEventSchema(
+                        slug=nextEvent.slug,
+                        start=nextEvent.start.isoformat(),
+                        title=nextEvent.title,
+                        link=nextEvent.get_absolute_url(),
+                        seats_left=nextEvent.seats_left(),
+                    ),
+                )
+            )
+
+    return spaces
