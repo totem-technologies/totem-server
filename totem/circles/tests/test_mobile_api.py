@@ -80,11 +80,8 @@ class TestMobileApiSpaces:
         client, _ = client_with_user
 
         keeper1 = UserFactory(is_staff=True)
-        keeper2 = UserFactory(is_staff=True)
-
-        space1 = CircleFactory(author=keeper1, published=True)
-        CircleFactory(author=keeper1, published=False)
-        CircleFactory(author=keeper2, published=True)
+        circle = CircleFactory(author=keeper1, published=True)
+        CircleEventFactory(circle=circle)
 
         url = reverse("mobile-api:keeper_spaces", kwargs={"slug": keeper1.slug})
         response = client.get(url)
@@ -92,4 +89,4 @@ class TestMobileApiSpaces:
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 1
-        assert data[0]["slug"] == space1.slug
+        assert data[0]["slug"] == circle.slug
