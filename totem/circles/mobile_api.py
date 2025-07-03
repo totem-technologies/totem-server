@@ -53,9 +53,6 @@ def list_spaces(request):
         category = circle.categories.first()
         category_name = category.name if category else None
 
-        # Calculate seats left for this event
-        seats_left = max(0, event.seats - event.attendee_count)  # type: ignore
-
         spaces.append(
             {
                 "slug": circle.slug,
@@ -68,7 +65,7 @@ def list_spaces(request):
                     start=event.start.isoformat(),
                     title=event.title,
                     link=event.get_absolute_url(),
-                    seats_left=seats_left,  # Add seats_left to the event
+                    seats_left=event.seats_left(),  # Add seats_left to the event
                 ),
                 "category": category_name,
             }

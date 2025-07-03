@@ -2,7 +2,6 @@ import pytest
 from django.test import Client
 from django.urls import reverse
 
-from totem.circles.schemas import EventsFilterSchema
 from totem.circles.tests.factories import CircleEventFactory, CircleFactory
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
@@ -58,9 +57,18 @@ class TestMobileApiSpaces:
         event.save()
 
         url = reverse("mobile-api:mobile_spaces_list")
-        response = client.get(url, EventsFilterSchema(category="", author=""), format="json")
+        response = client.get(url)
 
         assert response.status_code == 200
+        assert response.status_code == 200
+        assert len(response.json()["items"]) == 1
+        assert response.json()["items"][0]["slug"] == event.circle.slug
+
+    def test_list_spaces_no_events(self, client_with_user: tuple[Client, User]):
+        client, _ = client_with_user
+        response = client.get(reverse("mobile-api:mobile_spaces_list"))
+        assert response.status_code == 200
+        assert response.json()["items"] == []
 
     def test_get_space_detail(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
