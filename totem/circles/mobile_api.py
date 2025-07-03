@@ -5,11 +5,11 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from ninja import Router
 from ninja.pagination import paginate
-from ninja.params.functions import Query
 
-from totem.circles.filters import all_upcoming_recommended_events
+from totem.circles.api import NextEventSchema, SpaceDetailSchema
+from totem.circles.filters import get_upcoming_events_for_spaces_list
 from totem.circles.models import Circle, CircleEvent
-from totem.circles.schemas import EventDetailSchema, EventListSchema, EventsFilterSchema, EventSpaceSchema, SpaceSchema
+from totem.circles.schemas import EventDetailSchema, EventSpaceSchema, SpaceSchema
 
 spaces_router = Router()
 
@@ -33,10 +33,45 @@ def list_subscriptions(request: HttpRequest):
     return Circle.objects.filter(subscribed=request.user)
 
 
-@spaces_router.get("/spaces", response={200: List[EventListSchema]}, tags=["spaces"], url_name="mobile_spaces_list")
+@spaces_router.get("/spaces", response={200: List[SpaceDetailSchema]}, tags=["spaces"], url_name="mobile_spaces_list")
 @paginate
-def list_spaces(request, filters: EventsFilterSchema = Query()):
-    return all_upcoming_recommended_events(request.user, category=filters.category, author=filters.author)
+def list_spaces(request):
+    # Get events with availability information
+    events = get_upcoming_events_for_spaces_list()
+
+    # Build spaces list
+    spaces_set = set()
+    spaces = []
+
+    for event in events:
+        if event.circle.slug in spaces_set:
+            continue
+
+        spaces_set.add(event.circle.slug)
+        circle = event.circle
+
+        category = circle.categories.first()
+        category_name = category.name if category else None
+
+        spaces.append(
+            {
+                "slug": circle.slug,
+                "title": circle.title,
+                "image_link": circle.image.url if circle.image else None,
+                "description": circle.short_description,
+                "author": circle.author,
+                "nextEvent": NextEventSchema(
+                    slug=event.slug,
+                    start=event.start.isoformat(),
+                    title=event.title,
+                    link=event.get_absolute_url(),
+                    seats_left=event.seats_left(),  # Add seats_left to the event
+                ),
+                "category": category_name,
+            }
+        )
+
+    return spaces
 
 
 @spaces_router.get(
@@ -77,6 +112,35 @@ def get_space_detail(request: HttpRequest, event_slug: str):
     )
 
 
-@spaces_router.get("/keeper/{slug}/", response={200: List[SpaceSchema]}, tags=["spaces"], url_name="keeper_spaces")
+@spaces_router.get(
+    "/keeper/{slug}/", response={200: List[SpaceDetailSchema]}, tags=["spaces"], url_name="keeper_spaces"
+)
 def get_keeper_spaces(request: HttpRequest, slug: str):
-    return Circle.objects.filter(author__slug=slug, published=True)
+    circles = Circle.objects.filter(author__slug=slug, published=True)
+
+    spaces = []
+    for circle in circles:
+        category = circle.categories.first()
+        category_name = category.name if category else None
+
+        nextEvent = circle.next_event()
+        if nextEvent:
+            spaces.append(
+                SpaceDetailSchema(
+                    slug=circle.slug,
+                    title=circle.title,
+                    image_link=circle.image.url if circle.image else None,
+                    description=circle.short_description,
+                    author=circle.author,
+                    category=category_name,
+                    nextEvent=NextEventSchema(
+                        slug=nextEvent.slug,
+                        start=nextEvent.start.isoformat(),
+                        title=nextEvent.title,
+                        link=nextEvent.get_absolute_url(),
+                        seats_left=nextEvent.seats_left(),
+                    ),
+                )
+            )
+
+    return spaces
