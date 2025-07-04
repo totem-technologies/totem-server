@@ -21,17 +21,15 @@
         discussion facilitator, known as the Keeper, will be your guide.
       {% endblock description %}" />
     {# djlint:on #}
-    {% block og_meta %}
-      {% comment %}Open Graph / Facebook{% endcomment %}
-      <meta property="og:type" content="website" />
-      <meta property="og:url" content="https://www.totem.org/" />
-      <meta
-        property="og:image"
-        content="{% block ogimage %}{% static 'images/ogimage.jpg' %}{% endblock ogimage %}" />
-      {% comment %}Twitter{% endcomment %}
-      <meta property="twitter:card" content="summary_large_image" />
-      <meta property="twitter:site" content="@totemcircles" />
-    {% endblock og_meta %}
+    {% comment %}Open Graph / Facebook{% endcomment %}
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.totem.org/" />
+    <meta
+      property="og:image"
+      content="{% block ogimage %}{% static 'images/ogimage.jpg' %}{% endblock ogimage %}" />
+    {% comment %}Twitter{% endcomment %}
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:site" content="@totemcircles" />
     <link rel="icon" href="{% static 'images/favicons/favicon.ico' %}" />
     <link
       rel="apple-touch-icon"
