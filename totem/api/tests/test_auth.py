@@ -310,3 +310,126 @@ class TestLogoutEndpoint:
         # Should still return success even for invalid token
         assert response.status_code == 200
         assert response.json() == {"message": "Successfully logged out"}
+
+
+class TestFixedPinEndpoint:
+    """Test the fixed PIN functionality."""
+
+    def test_fixed_pin_success(self, client: Client, db, setup_user):
+        """Test successful fixed PIN validation."""
+        user = setup_user
+        user.fixed_pin = "123456"
+        user.fixed_pin_enabled = True
+        user.save()
+
+        response = client.post(
+            reverse("mobile-api:auth_validate_pin"),
+            data={
+                "email": user.email,
+                "pin": "123456",
+            },
+            content_type="application/json",
+        )
+
+        # Check response
+        assert response.status_code == 200
+        data = response.json()
+        assert "access_token" in data
+        assert "refresh_token" in data
+        assert data["expires_in"] == 3600
+
+        # Decode and verify access token
+        payload = jwt.decode(data["access_token"], settings.SECRET_KEY, algorithms=["HS256"])
+        assert str(user.api_key) == payload["api_key"]
+
+    def test_fixed_pin_disabled(self, client: Client, db, setup_user):
+        """Test fixed PIN validation when disabled."""
+        user = setup_user
+        user.fixed_pin = "123456"
+        user.fixed_pin_enabled = False  # Disabled
+        user.save()
+
+        response = client.post(
+            reverse("mobile-api:auth_validate_pin"),
+            data={
+                "email": user.email,
+                "pin": "123456",
+            },
+            content_type="application/json",
+        )
+
+        assert response.status_code == 401
+        assert response.json() == {"detail": "PIN_EXPIRED"}
+
+    def test_fixed_pin_incorrect(self, client: Client, db, setup_user):
+        """Test fixed PIN validation with incorrect PIN."""
+        user = setup_user
+        user.fixed_pin = "123456"
+        user.fixed_pin_enabled = True
+        user.save()
+
+        response = client.post(
+            reverse("mobile-api:auth_validate_pin"),
+            data={
+                "email": user.email,
+                "pin": "000000",  # Wrong PIN
+            },
+            content_type="application/json",
+        )
+
+        assert response.status_code == 401
+        assert response.json() == {"detail": "INCORRECT_PIN"}
+
+    def test_fixed_pin_fallback_after_regular_pin(self, client: Client, db, setup_user):
+        """Test that fixed PIN works as fallback when regular PIN exists but is wrong."""
+        user = setup_user
+        user.fixed_pin = "123456"
+        user.fixed_pin_enabled = True
+        user.save()
+
+        # Create a regular PIN first
+        LoginPin.objects.generate_pin(user)
+
+        # Try with fixed PIN (should work as fallback)
+        response = client.post(
+            reverse("mobile-api:auth_validate_pin"),
+            data={
+                "email": user.email,
+                "pin": "123456",
+            },
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "access_token" in data
+
+    def test_fixed_pin_staff_user_validation(self, client: Client, db, setup_user):
+        """Test that staff users cannot enable fixed PIN."""
+        user = setup_user
+        user.is_staff = True
+        user.fixed_pin = "123456"
+        user.fixed_pin_enabled = True
+
+        # This should raise a ValidationError during model validation
+        with pytest.raises(Exception):  # ValidationError will be raised
+            user.full_clean()
+
+    def test_fixed_pin_empty_pin(self, client: Client, db, setup_user):
+        """Test fixed PIN validation with empty PIN."""
+        user = setup_user
+        user.fixed_pin = ""  # Empty PIN
+        user.fixed_pin_enabled = True
+        user.save()
+
+        response = client.post(
+            reverse("mobile-api:auth_validate_pin"),
+            data={
+                "email": user.email,
+                "pin": "123456",
+            },
+            content_type="application/json",
+        )
+
+        assert response.status_code == 401
+        assert response.json() == {"detail": "PIN_EXPIRED"}

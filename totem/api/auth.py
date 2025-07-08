@@ -129,7 +129,11 @@ def validate_pin(request, data: ValidatePinSchema):
         if pin_obj and pin_obj.has_too_many_attempts():
             raise AuthenticationError(message=AuthErrors.TOO_MANY_ATTEMPTS.value)
         elif pin_obj is None:
-            raise AuthenticationError(message=AuthErrors.PIN_EXPIRED.value)
+            # No active PIN found - check if fixed PIN is enabled to provide better error message
+            if user.fixed_pin_enabled and user.fixed_pin:
+                raise AuthenticationError(message=AuthErrors.INCORRECT_PIN.value)
+            else:
+                raise AuthenticationError(message=AuthErrors.PIN_EXPIRED.value)
         else:
             raise AuthenticationError(message=AuthErrors.INCORRECT_PIN.value)
 
