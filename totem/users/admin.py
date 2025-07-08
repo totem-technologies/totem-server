@@ -24,6 +24,10 @@ class UserAdmin(UserAdminImpersonateMixin, ExportCsvMixin, auth_admin.UserAdmin)
             {"fields": ("name", "profile_image", "profile_avatar_type", "timezone", "newsletter_consent")},
         ),
         (
+            _("Fixed PIN (App Store Review)"),
+            {"fields": ("fixed_pin", "fixed_pin_enabled")},
+        ),
+        (
             _("Permissions"),
             {
                 "fields": (
@@ -38,7 +42,7 @@ class UserAdmin(UserAdminImpersonateMixin, ExportCsvMixin, auth_admin.UserAdmin)
         (_("Important dates"), {"fields": ("last_login", "date_joined")}),
     )
     list_display = ["email", "name", "verified", "newsletter_consent", "date_joined"]
-    list_filter = ["is_active", "is_staff", "is_superuser", "verified", "newsletter_consent"]
+    list_filter = ["is_active", "is_staff", "is_superuser", "verified", "newsletter_consent", "fixed_pin_enabled"]
     search_fields = ["name", "email"]
     ordering = ["email"]
     add_fieldsets = (
