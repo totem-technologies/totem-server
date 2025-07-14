@@ -98,3 +98,75 @@ class TestMobileApiSpaces:
         data = response.json()
         assert len(data) == 1
         assert data[0]["slug"] == circle.slug
+
+    def test_get_sessions_history(self, client_with_user: tuple[Client, User]):
+        """
+        Tests that the endpoint returns a user's session history.
+        """
+        client, user = client_with_user
+        for _ in range(5):
+            event = CircleEventFactory(circle__published=True, cancelled=False)
+            # FIX: Use the standard ORM method to ensure the relationship is saved.
+            event.joined.add(user)
+
+        url = reverse("mobile-api:sessions_history")
+        response = client.get(url)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 5
+
+    def test_sessions_history_empty(self, client_with_user: tuple[Client, User]):
+        """
+        Tests that the endpoint returns an empty list for a user with no history.
+        """
+        client, _ = client_with_user
+        url = reverse("mobile-api:sessions_history")
+        response = client.get(url)
+
+        assert response.status_code == 200
+        assert response.json() == []
+
+    def test_sessions_history_filters_unpublished_and_cancelled(self, client_with_user: tuple[Client, User]):
+        """
+        Tests that the endpoint correctly filters out unpublished and cancelled events.
+        """
+        client, user = client_with_user
+
+        # This event should be returned
+        event1 = CircleEventFactory(circle__published=True, cancelled=False)
+        event1.joined.add(user)
+
+        # This unpublished event should be filtered out
+        event2 = CircleEventFactory(circle__published=False, cancelled=False)
+        event2.joined.add(user)
+
+        # FIX: Add user BEFORE cancelling the event.
+        event3 = CircleEventFactory(circle__published=True, cancelled=False)
+        event3.joined.add(user)
+        event3.cancelled = True
+        event3.save()
+
+        url = reverse("mobile-api:sessions_history")
+        response = client.get(url)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["slug"] == event1.slug
+
+    def test_sessions_history_limit(self, client_with_user: tuple[Client, User]):
+        """
+        Tests that the endpoint returns a maximum of 10 events.
+        """
+        client, user = client_with_user
+        for _ in range(12):
+            event = CircleEventFactory(circle__published=True, cancelled=False)
+            # FIX: Use the standard ORM method.
+            event.joined.add(user)
+
+        url = reverse("mobile-api:sessions_history")
+        response = client.get(url)
+
+        assert response.status_code == 200
+        assert len(response.json()) == 10

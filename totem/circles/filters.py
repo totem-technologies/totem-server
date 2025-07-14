@@ -1,8 +1,10 @@
 import datetime
 
 from django.db.models import Count, F, Q
+from django.urls import reverse
 from django.utils import timezone
 
+from totem.circles.schemas import EventDetailSchema, EventSpaceSchema
 from totem.users.models import User
 
 from .models import CircleEvent
@@ -107,3 +109,39 @@ def upcoming_events_by_author(user: User, author: User, exclude_event: CircleEve
 
     upcoming_events = upcoming_events.select_related("circle__author")
     return upcoming_events
+
+
+def event_detail_schema(event: CircleEvent, user: User):
+    space = event.circle
+    start = event.start
+    subscribed = space.subscribed.contains(user) if user.is_authenticated else None
+    ended = event.ended()
+
+    attending = event.attendees.filter(pk=user.pk).exists()
+    join_url = event.join_url(user) if attending else None
+
+    return EventDetailSchema(
+        slug=event.slug,
+        title=event.title,
+        space_title=space.title,
+        space=EventSpaceSchema.from_orm(space),
+        description=event.content_html,
+        price=space.price,
+        seats_left=event.seats_left(),
+        duration=event.duration_minutes,
+        recurring=space.recurring,
+        subscribers=space.subscribed.count(),
+        start=start,
+        attending=event.attendees.filter(pk=user.pk).exists(),
+        open=event.open,
+        started=event.started(),
+        cancelled=event.cancelled,
+        joinable=event.can_join(user),
+        ended=ended,
+        rsvp_url=reverse("circles:rsvp", kwargs={"event_slug": event.slug}),
+        join_url=join_url,
+        calLink=event.cal_link(),
+        subscribe_url=reverse("mobile-api:spaces_subscribe", kwargs={"space_slug": space.slug}),
+        subscribed=subscribed,
+        user_timezone=str("UTC"),
+    )
