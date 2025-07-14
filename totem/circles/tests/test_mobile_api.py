@@ -157,12 +157,12 @@ class TestMobileApiSpaces:
     def test_recommended_spaces(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         url = reverse("mobile-api:recommended_spaces")
-        
+
         CircleEventFactory(circle__published=True)
         CircleEventFactory(circle__published=True)
         CircleEventFactory(circle__published=True)
         CircleEventFactory(circle__published=True)
-        
+
         response = client.get(url)
 
         assert response.status_code == 200
