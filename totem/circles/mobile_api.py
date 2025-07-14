@@ -6,7 +6,11 @@ from ninja import Router
 from ninja.pagination import paginate
 
 from totem.circles.api import NextEventSchema, SpaceDetailSchema
-from totem.circles.filters import event_detail_schema, get_upcoming_events_for_spaces_list
+from totem.circles.filters import (
+    event_detail_schema,
+    get_upcoming_events_for_spaces_list,
+    upcoming_recommended_events,
+)
 from totem.circles.models import Circle, CircleEvent
 from totem.circles.schemas import EventDetailSchema, SpaceSchema
 from totem.users.models import User
@@ -128,6 +132,23 @@ def get_sessions_history(request: HttpRequest):
 
     events = [
         event_detail_schema(event, user) for event in circle_history if event.circle.published and not event.cancelled
+    ]
+
+    return events
+
+
+@spaces_router.get(
+    "/recommended", response={200: List[EventDetailSchema]}, tags=["spaces"], url_name="recommended_spaces"
+)
+def get_recommended_spaces(request: HttpRequest, limit: int = 3, categories: list[str] | None = None):
+    user: User = request.user  # type: ignore
+
+    recommended_events = upcoming_recommended_events(user, categories=categories)[:limit]
+
+    events = [
+        event_detail_schema(event, user)
+        for event in recommended_events
+        if event.circle.published and not event.cancelled
     ]
 
     return events

@@ -58,6 +58,25 @@ def all_upcoming_recommended_events(user: User | None, category: str | None = No
     return events
 
 
+def upcoming_recommended_events(user: User | None, categories: list[str] | None = None, author: str | None = None):
+    events = CircleEvent.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True)
+    events = events.order_by("start")
+    if not user or not user.is_staff:
+        events = events.filter(circle__published=True)
+    # are there any seats?
+    events = events.annotate(attendee_count=Count("attendees")).filter(attendee_count__lt=F("seats"))
+    # filter category
+    if categories:
+        events = events.filter(circle__categories__slug__in=categories) | events.filter(
+            circle__categories__name__in=categories
+        )
+    # filter author
+    if author:
+        events = events.filter(circle__author__slug=author)
+    events = events.prefetch_related("circle__author")
+    return events
+
+
 def get_upcoming_events_for_spaces_list():
     """Get all upcoming events for spaces listing, including spaces with full events.
 
