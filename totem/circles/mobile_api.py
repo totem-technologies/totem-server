@@ -171,15 +171,10 @@ def get_spaces_summary(request: HttpRequest):
     ]
 
     spaces = get_upcoming_events_for_spaces_list()
-    explore = [
-        space_detail_schema(space)
-        for space in spaces
-        if space.circle.published and not space.cancelled
-    ]
+    explore = [space_detail_schema(space) for space in spaces if space.circle.published and not space.cancelled]
 
     return SummarySpacesSchema(
         upcoming=upcoming,
         for_you=for_you,
         explore=explore,
     )
-    
