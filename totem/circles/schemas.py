@@ -97,3 +97,27 @@ class EventDetailSchema(Schema):
     calLink: str
     subscribed: bool | None
     user_timezone: str | None
+
+
+class NextEventSchema(Schema):
+    slug: str
+    start: str
+    link: str
+    title: str | None
+    seats_left: int
+
+
+class SpaceDetailSchema(Schema):
+    slug: str
+    title: str
+    image_link: str | None
+    description: str
+    author: PublicUserSchema
+    nextEvent: NextEventSchema
+    category: str | None
+
+
+class SummarySpacesSchema(Schema):
+    upcoming: List[EventDetailSchema]
+    for_you: List[SpaceDetailSchema]
+    explore: List[SpaceDetailSchema]

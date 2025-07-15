@@ -4,7 +4,7 @@ from django.db.models import Count, F, Q
 from django.urls import reverse
 from django.utils import timezone
 
-from totem.circles.schemas import EventDetailSchema, EventSpaceSchema
+from totem.circles.schemas import EventDetailSchema, EventSpaceSchema, NextEventSchema, SpaceDetailSchema
 from totem.users.models import User
 
 from .models import CircleEvent
@@ -163,4 +163,26 @@ def event_detail_schema(event: CircleEvent, user: User):
         subscribe_url=reverse("mobile-api:spaces_subscribe", kwargs={"space_slug": space.slug}),
         subscribed=subscribed,
         user_timezone=str("UTC"),
+    )
+
+
+def space_detail_schema(event: CircleEvent):
+    circle = event.circle
+    category = circle.categories.first()
+    category_name = category.name if category else None
+
+    return SpaceDetailSchema(
+        slug=circle.slug,
+        title=circle.title,
+        image_link=circle.image.url if circle.image else None,
+        description=circle.short_description,
+        author=circle.author,
+        category=category_name,
+        nextEvent=NextEventSchema(
+            slug=event.slug,
+            start=event.start.isoformat(),
+            title=event.title,
+            link=event.get_absolute_url(),
+            seats_left=event.seats_left(),
+        ),
     )

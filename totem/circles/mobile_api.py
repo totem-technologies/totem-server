@@ -9,10 +9,12 @@ from totem.circles.api import NextEventSchema, SpaceDetailSchema
 from totem.circles.filters import (
     event_detail_schema,
     get_upcoming_events_for_spaces_list,
+    space_detail_schema,
     upcoming_recommended_events,
 )
 from totem.circles.models import Circle, CircleEvent
-from totem.circles.schemas import EventDetailSchema, SpaceSchema
+from totem.circles.schemas import EventDetailSchema, SpaceSchema, SummarySpacesSchema
+from totem.onboard.models import OnboardModel
 from totem.users.models import User
 
 spaces_router = Router()
@@ -37,13 +39,11 @@ def list_subscriptions(request: HttpRequest):
     return Circle.objects.filter(subscribed=request.user)
 
 
-@spaces_router.get("/spaces", response={200: List[SpaceDetailSchema]}, tags=["spaces"], url_name="mobile_spaces_list")
+@spaces_router.get("/", response={200: List[SpaceDetailSchema]}, tags=["spaces"], url_name="mobile_spaces_list")
 @paginate
 def list_spaces(request):
-    # Get events with availability information
     events = get_upcoming_events_for_spaces_list()
 
-    # Build spaces list
     spaces_set = set()
     spaces = []
 
@@ -69,7 +69,7 @@ def list_spaces(request):
                     start=event.start.isoformat(),
                     title=event.title,
                     link=event.get_absolute_url(),
-                    seats_left=event.seats_left(),  # Add seats_left to the event
+                    seats_left=event.seats_left(),
                 ),
                 "category": category_name,
             }
@@ -95,28 +95,9 @@ def get_keeper_spaces(request: HttpRequest, slug: str):
 
     spaces = []
     for circle in circles:
-        category = circle.categories.first()
-        category_name = category.name if category else None
-
         nextEvent = circle.next_event()
         if nextEvent:
-            spaces.append(
-                SpaceDetailSchema(
-                    slug=circle.slug,
-                    title=circle.title,
-                    image_link=circle.image.url if circle.image else None,
-                    description=circle.short_description,
-                    author=circle.author,
-                    category=category_name,
-                    nextEvent=NextEventSchema(
-                        slug=nextEvent.slug,
-                        start=nextEvent.start.isoformat(),
-                        title=nextEvent.title,
-                        link=nextEvent.get_absolute_url(),
-                        seats_left=nextEvent.seats_left(),
-                    ),
-                )
-            )
+            spaces.append(space_detail_schema(nextEvent))
 
     return spaces
 
@@ -152,3 +133,53 @@ def get_recommended_spaces(request: HttpRequest, limit: int = 3, categories: lis
     ]
 
     return events
+
+
+@spaces_router.get(
+    "/summary",
+    response={200: SummarySpacesSchema},
+    tags=["spaces"],
+    url_name="spaces_summary",
+)
+def get_spaces_summary(request: HttpRequest):
+    user: User = request.user  # type: ignore
+
+    # The upcoming events that the user is subscribed to
+    upcoming_events = CircleEvent.objects.filter(
+        attendees=user,
+        circle__published=True,
+    ).order_by("start")
+    upcoming = [event_detail_schema(event, user) for event in upcoming_events]
+
+    # The recommended spaces based on the user's onboarding.
+    onboard_model = get_object_or_404(OnboardModel, user=user)
+    categories = []
+    if onboard_model.hopes:
+        print(onboard_model.hopes.split(", "))
+        for hope in onboard_model.hopes.split(", "):
+            categories.append(hope)
+    # Add categories from user's previously joined spaces
+    previous_spaces = Circle.objects.filter(subscribed=user, published=True).distinct()
+    for circle in previous_spaces:
+        category = circle.categories.first()
+        category_name = category.name if category else None
+        if category_name and category_name not in categories:
+            categories.append(category_name)
+    recommended_events = upcoming_recommended_events(user, categories=categories)
+    for_you = [
+        space_detail_schema(event) for event in recommended_events if event.circle.published and not event.cancelled
+    ]
+
+    spaces = get_upcoming_events_for_spaces_list()
+    explore = [
+        space_detail_schema(space)
+        for space in spaces
+        if space.circle.published and not space.cancelled
+    ]
+
+    return SummarySpacesSchema(
+        upcoming=upcoming,
+        for_you=for_you,
+        explore=explore,
+    )
+    

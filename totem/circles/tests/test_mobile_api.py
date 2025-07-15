@@ -1,8 +1,12 @@
+from datetime import timedelta
+
 import pytest
 from django.test import Client
 from django.urls import reverse
+from django.utils import timezone
 
-from totem.circles.tests.factories import CircleEventFactory, CircleFactory
+from totem.circles.tests.factories import CircleCategoryFactory, CircleEventFactory, CircleFactory
+from totem.onboard.tests.factories import OnboardModelFactory
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
 
@@ -168,3 +172,72 @@ class TestMobileApiSpaces:
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 3
+
+    def test_summary_upcoming_section(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        OnboardModelFactory(user=user)
+
+        # This event should appear in the 'upcoming' list
+        attending_event = CircleEventFactory(start=timezone.now() + timedelta(days=5))
+        attending_event.attendees.add(user)
+
+        # This event should NOT appear, as the user is not an attendee
+        CircleEventFactory(start=timezone.now() + timedelta(days=5))
+
+        url = reverse("mobile-api:spaces_summary")
+        response = client.get(url)
+        assert response.status_code == 200
+        data = response.json()
+
+        assert len(data["upcoming"]) == 1
+        assert data["upcoming"][0]["slug"] == attending_event.slug
+
+    def test_summary_for_you_section(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        OnboardModelFactory(user=user)
+        self_category = CircleCategoryFactory(name="self")
+        love_category = CircleCategoryFactory(name="love")
+
+        # Create a space the user is subscribed to with a different category
+        subscribed_circle = CircleFactory(categories=[self_category])
+        subscribed_circle.subscribed.add(user)
+        CircleEventFactory(circle=subscribed_circle, start=timezone.now() + timedelta(days=3))
+
+        # This event has a non-matching category and should not be recommended
+        non_matching_circle = CircleFactory(categories=[love_category])
+        CircleEventFactory(start=timezone.now() + timedelta(days=4), circle=non_matching_circle)
+
+        url = reverse("mobile-api:spaces_summary")
+        response = client.get(url)
+        assert response.status_code == 200
+        data = response.json()
+
+        assert len(data["for_you"]) == 1
+        for_you_slugs = {item["slug"] for item in data["for_you"]}
+        assert subscribed_circle.slug in for_you_slugs
+
+    def test_summary_explore_section(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        OnboardModelFactory(user=user)
+
+        # This circle has an upcoming event and should appear in 'explore'
+        explore_circle_1 = CircleFactory()
+        CircleEventFactory(circle=explore_circle_1, start=timezone.now() + timedelta(days=10))
+
+        # This circle only has past events and should NOT appear
+        past_event_circle = CircleFactory()
+        CircleEventFactory(circle=past_event_circle, start=timezone.now() - timedelta(days=1))
+
+        # This circle is unpublished and should NOT appear
+        unpublished_circle = CircleFactory(published=False)
+        CircleEventFactory(circle=unpublished_circle, start=timezone.now() + timedelta(days=5))
+
+        url = reverse("mobile-api:spaces_summary")
+        response = client.get(url)
+        assert response.status_code == 200
+        data = response.json()
+
+        explore_slugs = {item["slug"] for item in data["explore"]}
+        assert explore_circle_1.slug in explore_slugs
+        assert past_event_circle.slug not in explore_slugs
+        assert unpublished_circle.slug not in explore_slugs

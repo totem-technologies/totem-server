@@ -11,9 +11,10 @@ from totem.circles.schemas import (
     EventListSchema,
     EventsFilterSchema,
     FilterOptionsSchema,
+    NextEventSchema,
+    SpaceDetailSchema,
 )
 from totem.users.models import User
-from totem.users.schemas import PublicUserSchema
 
 from .filters import (
     all_upcoming_recommended_events,
@@ -140,24 +141,6 @@ def webflow_events_list(request, filters: WebflowEventsFilterSchema = Query()):
         )
 
     return results
-
-
-class NextEventSchema(Schema):
-    slug: str
-    start: str
-    link: str
-    title: str | None
-    seats_left: int
-
-
-class SpaceDetailSchema(Schema):
-    slug: str
-    title: str
-    image_link: str | None
-    description: str
-    author: PublicUserSchema
-    nextEvent: NextEventSchema
-    category: str | None
 
 
 @router.get("/list", response={200: List[SpaceDetailSchema]}, tags=["spaces"], url_name="spaces_list")
