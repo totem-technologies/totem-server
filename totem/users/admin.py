@@ -24,7 +24,7 @@ class UserAdmin(UserAdminImpersonateMixin, ExportCsvMixin, auth_admin.UserAdmin)
             {"fields": ("name", "profile_image", "profile_avatar_type", "timezone", "newsletter_consent")},
         ),
         (
-            _("Fixed PIN (App Store Review)"),
+            _("Fixed PIN for App Store Review. DANGER."),
             {"fields": ("fixed_pin", "fixed_pin_enabled")},
         ),
         (

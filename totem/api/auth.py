@@ -123,19 +123,10 @@ def validate_pin(request, data: ValidatePinSchema):
         raise AuthenticationError(message=AuthErrors.INCORRECT_PIN.value)
 
     # Validate PIN
-    is_valid, pin_obj = LoginPin.objects.validate_pin(user, data.pin)
+    is_valid, _ = LoginPin.objects.validate_pin(user, data.pin)
 
     if not is_valid:
-        if pin_obj and pin_obj.has_too_many_attempts():
-            raise AuthenticationError(message=AuthErrors.TOO_MANY_ATTEMPTS.value)
-        elif pin_obj is None:
-            # No active PIN found - check if fixed PIN is enabled to provide better error message
-            if user.fixed_pin_enabled and user.fixed_pin:
-                raise AuthenticationError(message=AuthErrors.INCORRECT_PIN.value)
-            else:
-                raise AuthenticationError(message=AuthErrors.PIN_EXPIRED.value)
-        else:
-            raise AuthenticationError(message=AuthErrors.INCORRECT_PIN.value)
+        raise AuthenticationError(message=AuthErrors.PIN_EXPIRED.value)
 
     # Check if account is deactivated
     if check_account_deactivated(user):

@@ -145,7 +145,7 @@ class TestPinValidationEndpoint:
         )
 
         assert response.status_code == 401
-        assert response.json() == {"detail": "INCORRECT_PIN"}
+        assert response.json() == {"detail": "PIN_EXPIRED"}
 
         # Check failed attempts counter
         pin.refresh_from_db()
@@ -191,7 +191,7 @@ class TestPinValidationEndpoint:
         )
 
         assert response.status_code == 401
-        assert response.json() == {"detail": "TOO_MANY_ATTEMPTS"}
+        assert response.json() == {"detail": "PIN_EXPIRED"}
 
     def test_validate_pin_deactivated_account(self, client: Client, db, setup_user):
         """Test PIN validation with deactivated account."""
@@ -378,7 +378,7 @@ class TestFixedPinEndpoint:
         )
 
         assert response.status_code == 401
-        assert response.json() == {"detail": "INCORRECT_PIN"}
+        assert response.json() == {"detail": "PIN_EXPIRED"}
 
     def test_fixed_pin_fallback_after_regular_pin(self, client: Client, db, setup_user):
         """Test that fixed PIN works as fallback when regular PIN exists but is wrong."""
