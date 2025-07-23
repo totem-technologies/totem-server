@@ -35,7 +35,7 @@ def team_view(request):
     team = [
         Member(
             name="Bo Lopker",
-            title="Executive Director, Keeper",
+            title="Executive Director, Keeper, Co-Founder",
             image="bo.jpg",
             url=reverse("pages:keepers", kwargs={"name": "bo"}),
             external=False,
@@ -43,7 +43,7 @@ def team_view(request):
         Member(name="Pam Lopker", title="Board Member", image="pam.jpg", url=reverse("pages:team-pam"), external=False),
         Member(
             name="Gabe Kenny",
-            title="User Research, Keeper",
+            title="User Research, Keeper, Co-Founder",
             image="gabe.jpg",
             url=reverse("pages:keepers", kwargs={"name": "gabe"}),
             external=False,
@@ -63,14 +63,14 @@ def team_view(request):
         ),
         Member(
             name="Heather Gressett",
-            title="Content Curator, Keeper",
+            title="Content Curator, Keeper, Co-Founder",
             image="heather.jpg",
             url=reverse("pages:keepers", kwargs={"name": "heather"}),
             external=False,
         ),
         Member(
             name="Vanessa Robinson",
-            title="Webmaster, Keeper",
+            title="Webmaster, Keeper, Co-Founder",
             image="vanessa.jpg",
             url=reverse("pages:keepers", kwargs={"name": "vanessa"}),
             external=False,
