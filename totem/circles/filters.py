@@ -1,8 +1,10 @@
 import datetime
 
 from django.db.models import Count, F, Q
+from django.urls import reverse
 from django.utils import timezone
 
+from totem.circles.schemas import EventDetailSchema, EventSpaceSchema, NextEventSchema, SpaceDetailSchema
 from totem.users.models import User
 
 from .models import CircleEvent
@@ -49,6 +51,25 @@ def all_upcoming_recommended_events(user: User | None, category: str | None = No
     # filter category
     if category:
         events = events.filter(circle__categories__slug=category) | events.filter(circle__categories__name=category)
+    # filter author
+    if author:
+        events = events.filter(circle__author__slug=author)
+    events = events.prefetch_related("circle__author")
+    return events
+
+
+def upcoming_recommended_events(user: User | None, categories: list[str] | None = None, author: str | None = None):
+    events = CircleEvent.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True)
+    events = events.order_by("start")
+    if not user or not user.is_staff:
+        events = events.filter(circle__published=True)
+    # are there any seats?
+    events = events.annotate(attendee_count=Count("attendees")).filter(attendee_count__lt=F("seats"))
+    # filter category
+    if categories:
+        events = events.filter(circle__categories__slug__in=categories) | events.filter(
+            circle__categories__name__in=categories
+        )
     # filter author
     if author:
         events = events.filter(circle__author__slug=author)
@@ -107,3 +128,61 @@ def upcoming_events_by_author(user: User, author: User, exclude_event: CircleEve
 
     upcoming_events = upcoming_events.select_related("circle__author")
     return upcoming_events
+
+
+def event_detail_schema(event: CircleEvent, user: User):
+    space = event.circle
+    start = event.start
+    subscribed = space.subscribed.contains(user) if user.is_authenticated else None
+    ended = event.ended()
+
+    attending = event.attendees.filter(pk=user.pk).exists()
+    join_url = event.join_url(user) if attending else None
+
+    return EventDetailSchema(
+        slug=event.slug,
+        title=event.title,
+        space_title=space.title,
+        space=EventSpaceSchema.from_orm(space),
+        description=event.content_html,
+        price=space.price,
+        seats_left=event.seats_left(),
+        duration=event.duration_minutes,
+        recurring=space.recurring,
+        subscribers=space.subscribed.count(),
+        start=start,
+        attending=event.attendees.filter(pk=user.pk).exists(),
+        open=event.open,
+        started=event.started(),
+        cancelled=event.cancelled,
+        joinable=event.can_join(user),
+        ended=ended,
+        rsvp_url=reverse("circles:rsvp", kwargs={"event_slug": event.slug}),
+        join_url=join_url,
+        calLink=event.cal_link(),
+        subscribe_url=reverse("mobile-api:spaces_subscribe", kwargs={"space_slug": space.slug}),
+        subscribed=subscribed,
+        user_timezone=str("UTC"),
+    )
+
+
+def space_detail_schema(event: CircleEvent):
+    circle = event.circle
+    category = circle.categories.first()
+    category_name = category.name if category else None
+
+    return SpaceDetailSchema(
+        slug=circle.slug,
+        title=circle.title,
+        image_link=circle.image.url if circle.image else None,
+        description=circle.short_description,
+        author=circle.author,
+        category=category_name,
+        nextEvent=NextEventSchema(
+            slug=event.slug,
+            start=event.start.isoformat(),
+            title=event.title,
+            link=event.get_absolute_url(),
+            seats_left=event.seats_left(),
+        ),
+    )

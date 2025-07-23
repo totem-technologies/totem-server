@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import List
 
 from django.shortcuts import get_object_or_404
-from django.urls import reverse
 from ninja import Field, FilterSchema, Router, Schema
 from ninja.pagination import paginate
 from ninja.params.functions import Query
@@ -11,13 +10,19 @@ from totem.circles.schemas import (
     EventDetailSchema,
     EventListSchema,
     EventsFilterSchema,
-    EventSpaceSchema,
     FilterOptionsSchema,
+    NextEventSchema,
+    SpaceDetailSchema,
 )
-from totem.users.schemas import PublicUserSchema
+from totem.users.models import User
 
-from .filters import all_upcoming_recommended_events, events_by_month, get_upcoming_events_for_spaces_list
-from .models import Circle, CircleEvent
+from .filters import (
+    all_upcoming_recommended_events,
+    event_detail_schema,
+    events_by_month,
+    get_upcoming_events_for_spaces_list,
+)
+from .models import CircleEvent
 
 router = Router()
 
@@ -53,37 +58,9 @@ def filter_options(request):
 )
 def event_detail(request, event_slug):
     event = get_object_or_404(CircleEvent, slug=event_slug)
-    space: Circle = event.circle
-    attending = event.attendees.filter(pk=request.user.pk).exists()
-    start = event.start
-    join_url = event.join_url(request.user) if attending else None
-    subscribed = space.subscribed.contains(request.user) if request.user.is_authenticated else None
-    ended = event.ended()
-    return EventDetailSchema(
-        slug=event.slug,
-        title=event.title,
-        space_title=space.title,
-        space=EventSpaceSchema.from_orm(space),
-        description=event.content_html,
-        price=space.price,
-        seats_left=event.seats_left(),
-        duration=event.duration_minutes,
-        recurring=space.recurring,
-        subscribers=space.subscribed.count(),
-        start=start,
-        attending=event.attendees.filter(pk=request.user.pk).exists(),
-        open=event.open,
-        started=event.started(),
-        cancelled=event.cancelled,
-        joinable=event.can_join(request.user),
-        ended=ended,
-        rsvp_url=reverse("circles:rsvp", kwargs={"event_slug": event.slug}),
-        join_url=join_url,
-        calLink=event.cal_link(),
-        subscribe_url=reverse("circles:subscribe", kwargs={"slug": space.slug}),
-        subscribed=subscribed,
-        user_timezone=str("UTC"),
-    )
+    user: User = request.user  # type: ignore
+
+    return event_detail_schema(event, user)
 
 
 class EventCalendarSchema(Schema):
@@ -164,24 +141,6 @@ def webflow_events_list(request, filters: WebflowEventsFilterSchema = Query()):
         )
 
     return results
-
-
-class NextEventSchema(Schema):
-    slug: str
-    start: str
-    link: str
-    title: str | None
-    seats_left: int
-
-
-class SpaceDetailSchema(Schema):
-    slug: str
-    title: str
-    image_link: str | None
-    description: str
-    author: PublicUserSchema
-    nextEvent: NextEventSchema
-    category: str | None
 
 
 @router.get("/list", response={200: List[SpaceDetailSchema]}, tags=["spaces"], url_name="spaces_list")
