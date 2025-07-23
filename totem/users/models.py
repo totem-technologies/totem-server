@@ -93,6 +93,18 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
     )
     verified = BooleanField(_("Verified"), default=False)
     timezone = TimeZoneField(choices_display="WITH_GMT_OFFSET", blank=True)
+    fixed_pin = CharField(
+        _("Fixed PIN"),
+        max_length=6,
+        blank=True,
+        default="",
+        help_text="Fixed PIN for app store review access. Must be enabled to work.",
+    )
+    fixed_pin_enabled = BooleanField(
+        _("Fixed PIN Enabled"),
+        default=False,
+        help_text="Enable fixed PIN login for app store reviews. Not allowed for staff users.",
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
@@ -134,6 +146,10 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
         super().clean()
         self.email = strip_tags(self.__class__.objects.normalize_email(self.email))
         self.name = html_escape(strip_tags(self.name.strip()))
+
+        # Prevent staff users from enabling fixed pin
+        if self.fixed_pin_enabled and self.is_staff:
+            raise ValidationError(_("Fixed PIN login is not allowed for staff users."))
 
 
 class KeeperProfile(AdminURLMixin, models.Model, MarkdownMixin):
@@ -205,6 +221,7 @@ class LoginPinManager(models.Manager):
         """
         Validate a PIN for a user. Returns (is_valid, pin_obj).
         PIN object is returned even if invalid to allow for attempt counting.
+        Supports fixed PIN as fallback for app store reviews.
         """
         try:
             pin_obj = self.get(user=user, expires_at__gt=timezone.now())
@@ -213,12 +230,21 @@ class LoginPinManager(models.Manager):
                 # Valid PIN - mark as used
                 pin_obj.used = True
                 pin_obj.save()
+                return True, pin_obj
             else:
-                # Invalid PIN - increment failed attempts
+                # Regular PIN didn't match - check fixed PIN as fallback
+                if self._validate_fixed_pin(user, pin):
+                    return True, None
+                # Neither regular nor fixed PIN matched - increment failed attempts
                 pin_obj.increment_failed_attempts()
-            return is_valid, pin_obj
+                return False, pin_obj
         except self.model.DoesNotExist:
+            if self._validate_fixed_pin(user, pin):
+                return True, None
             return False, None
+
+    def _validate_fixed_pin(self, user: User, pin: str) -> bool:
+        return not user.is_staff and user.fixed_pin_enabled and user.fixed_pin and user.fixed_pin == pin
 
 
 class LoginPin(models.Model):
