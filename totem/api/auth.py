@@ -12,6 +12,7 @@ from totem.email import emails
 from totem.email.emails import login_pin_email
 from totem.users import analytics
 from totem.users.models import LoginPin, RefreshToken, User
+from totem.email.exceptions import EmailBounced
 
 # Create router
 router = Router()
@@ -20,6 +21,7 @@ router = Router()
 # Enum for error messages
 class AuthErrors(Enum):
     RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED"
+    INVALID_EMAIL = "INVALID_EMAIL"
     PIN_EXPIRED = "PIN_EXPIRED"
     INCORRECT_PIN = "INCORRECT_PIN"
     TOO_MANY_ATTEMPTS = "TOO_MANY_ATTEMPTS"
@@ -95,16 +97,21 @@ def request_pin(request, data: PinRequestSchema):
         user.newsletter_consent = data.newsletter_consent
 
     user.save()
+    user.identify()
+
+    if user.fixed_pin_enabled:
+        return {"message": "PIN sent to your email"}
 
     # Generate and send PIN
     pin = LoginPin.objects.generate_pin(user)
-    login_pin_email(user.email, pin.pin).send()
+    try:
+        login_pin_email(user.email, pin.pin).send()
+    except EmailBounced:
+        raise AuthenticationError(message=AuthErrors.INVALID_EMAIL.value)
 
     if created:
         emails.welcome_email(user).send()
         analytics.user_signed_up(user)
-
-    user.identify()
 
     return {"message": "PIN sent to your email"}
 
