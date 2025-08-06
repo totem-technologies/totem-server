@@ -51,6 +51,12 @@ class UserSocialSignupForm(SocialSignupForm):
 class LoginForm(Form):
     form_url = reverse_lazy("users:login")
     email = EmailField(validators=[validate_email_blocked])
+    # Honeypot field - should remain empty
+    website = CharField(
+        required=False,
+        label="",  # Empty string for label
+        template_name="fields/honeypot.html",  # Custom template to hide the field
+    )
     # after_login_url removed, only 'next' is supported
     success_url = CharField(required=False, widget=HiddenInput())
 
