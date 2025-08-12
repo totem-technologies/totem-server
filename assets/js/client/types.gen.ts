@@ -15,6 +15,10 @@ export type PublicUserSchema = {
      */
     name?: string | null;
     /**
+     * Slug
+     */
+    slug?: string | null;
+    /**
      * Staff Status
      * Designates whether the user can log into this admin site.
      */
@@ -554,6 +558,23 @@ export type TotemApiApiUserUploadProfileImageResponses = {
      */
     200: unknown;
 };
+
+export type TotemApiApiDevVersionData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/dev/version';
+};
+
+export type TotemApiApiDevVersionResponses = {
+    /**
+     * Response
+     * OK
+     */
+    200: string;
+};
+
+export type TotemApiApiDevVersionResponse = TotemApiApiDevVersionResponses[keyof TotemApiApiDevVersionResponses];
 
 export type TotemCirclesApiListEventsData = {
     body?: never;
