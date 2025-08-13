@@ -14,12 +14,6 @@ class ProfileAvatarTypeEnum(str, Enum):
 class PublicUserSchema(ModelSchema):
     profile_avatar_type: ProfileAvatarTypeEnum
 
-    @staticmethod
-    def resolve_profile_image(obj: User):
-        if obj.profile_image:
-            return obj.profile_image.url
-        return None
-
     class Meta:
         model = User
         fields = ["name", "slug", "is_staff", "profile_avatar_seed", "profile_image", "profile_avatar_type"]
