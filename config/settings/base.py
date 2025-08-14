@@ -100,6 +100,7 @@ LOCAL_APPS = [
     "totem.pages",
     "totem.plans",
     "totem.repos",
+    "totem.series",
     "totem.uploads",
     "totem.users",
     "totem.utils",
