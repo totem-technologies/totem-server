@@ -30,9 +30,7 @@ def get_series(request, slug: str):
     This endpoint provides the full details of the series, including all its events.
     """
     series = get_object_or_404(
-        Series.objects.filter(published=True)
-        .select_related("author")
-        .prefetch_related("categories", "events"),
+        Series.objects.filter(published=True).select_related("author").prefetch_related("categories", "events"),
         slug=slug,
     )
     return series
