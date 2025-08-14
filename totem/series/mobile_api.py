@@ -1,5 +1,6 @@
 from typing import List
 
+from django.shortcuts import get_object_or_404
 from ninja import Router
 
 from .models import Series
@@ -17,7 +18,7 @@ def list_series(request):
         Series.objects.filter(published=True)
         .select_related("author")
         .prefetch_related("categories", "events")
-        .order_by("-created")
+        .order_by("-date_created")  # Corrected from "-created"
     )
     return series
 
@@ -28,10 +29,10 @@ def get_series(request, slug: str):
     Retrieve a single Series by its unique slug.
     This endpoint provides the full details of the series, including all its events.
     """
-    series = (
+    series = get_object_or_404(
         Series.objects.filter(published=True)
         .select_related("author")
-        .prefetch_related("categories", "events")
-        .get(slug=slug)
+        .prefetch_related("categories", "events"),
+        slug=slug,
     )
     return series
