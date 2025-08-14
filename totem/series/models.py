@@ -3,7 +3,6 @@ from __future__ import annotations
 import datetime
 import time
 from enum import Enum
-from typing import TYPE_CHECKING
 
 from django.conf import settings
 from django.db import models
@@ -19,9 +18,6 @@ from taggit.managers import TaggableManager
 from totem.utils.hash import basic_hash
 from totem.utils.md import MarkdownField, MarkdownMixin
 from totem.utils.models import AdminURLMixin, SluggedModel
-
-if TYPE_CHECKING:
-    from totem.users.models import User
 
 
 class SeriesEventState(Enum):
