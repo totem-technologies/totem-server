@@ -14,6 +14,7 @@ from totem.notifications.models import FCMDevice
 from totem.notifications.schemas import FCMTokenRegisterSchema, FCMTokenResponseSchema
 from totem.notifications.validators import validate_fcm_token
 from totem.onboard.mobile_api import onboard_router
+from totem.series.mobile_api import router as series_router
 from totem.users.mobile_api import user_router
 from totem.users.models import User
 
@@ -52,6 +53,7 @@ router.add_router("/users", user_router)
 router.add_router("/onboard", onboard_router)
 router.add_router("/spaces", spaces_router)
 router.add_router("/blog", blog_router)
+router.add_router("/series", series_router)
 
 
 @router.post("/fcm/register", response={201: FCMTokenResponseSchema}, url_name="register_fcm_token")
