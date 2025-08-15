@@ -13,6 +13,7 @@ BASE_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
 # totem/
 APPS_DIR = BASE_DIR / "totem"
 env = environ.Env()
+TEST = False
 
 
 def b64_json_env(key: str):
