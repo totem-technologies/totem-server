@@ -31,7 +31,7 @@ WORKDIR /app
 
 COPY package.json .
 COPY bun.lock .
-RUN bun install
+RUN bun install --frozen-lockfile
 
 COPY . .
 COPY assets ./assets
