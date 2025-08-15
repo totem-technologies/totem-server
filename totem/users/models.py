@@ -12,7 +12,6 @@ from django.db import models
 from django.db.models import BooleanField, CharField, EmailField, TextChoices, URLField, UUIDField
 from django.urls import Resolver404, resolve, reverse
 from django.utils import timezone
-from django.utils.html import escape as html_escape
 from django.utils.html import strip_tags
 from django.utils.translation import gettext_lazy as _
 from imagekit import ImageSpec
@@ -145,7 +144,7 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
     def clean(self):
         super().clean()
         self.email = strip_tags(self.__class__.objects.normalize_email(self.email))
-        self.name = html_escape(strip_tags(self.name.strip()))
+        self.name = strip_tags(self.name.strip())
 
         # Prevent staff users from enabling fixed pin
         if self.fixed_pin_enabled and self.is_staff:
