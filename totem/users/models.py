@@ -118,7 +118,7 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
         return reverse("users:detail", kwargs={"slug": self.slug})
 
     def get_keeper_url(self):
-        if self.keeper_profile.username:
+        if hasattr(self, "keeper_profile") and self.keeper_profile.username:
             return reverse("profiles", kwargs={"name": self.keeper_profile.username})
         return reverse("users:detail", kwargs={"slug": self.slug})
 
