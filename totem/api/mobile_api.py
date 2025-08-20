@@ -66,10 +66,12 @@ def register_fcm_token(request: HttpRequest, payload: FCMTokenRegisterSchema):
     existing = FCMDevice.objects.filter(token=payload.token).exclude(user=request.user).first()
     if existing:
         # Token already registered to another user - security issue
-        # _Should_ never happen
-        raise ValidationError(errors=[{"token": "INVALID_TOKEN"}])
+        # _Should_ never happen, trigger error tracking
+        raise Exception("Token already registered to another user")
 
-    device, created = FCMDevice.objects.update_or_create(token=payload.token, user=request.user, active=True)
+    device, created = FCMDevice.objects.update_or_create(
+        token=payload.token, user=request.user, defaults={"active": True}
+    )
     return 201, device
 
 
