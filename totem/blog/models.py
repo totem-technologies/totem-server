@@ -1,4 +1,5 @@
 import time
+import re
 
 from django.contrib.auth import get_user_model
 from django.db import models
@@ -47,6 +48,7 @@ class BlogPost(AdminURLMixin, MarkdownMixin, SluggedModel):
     )
     date_published = models.DateTimeField(default=timezone.now)
     publish = models.BooleanField(default=False)
+    read_time = models.PositiveIntegerField(default=1, help_text="Estimated reading time in minutes (auto-calculated)")
 
     def __str__(self):
         return self.title
@@ -54,6 +56,40 @@ class BlogPost(AdminURLMixin, MarkdownMixin, SluggedModel):
     def clean(self):
         super().clean()
         self.validate_markdown(self.content)  # Add markdown validation
+
+    def calculate_read_time(self):
+        """Calculate estimated reading time based on content."""
+        # Strip markdown formatting and HTML tags for accurate word count
+
+        # Remove markdown formatting
+        text = self.content
+        # Remove markdown links [text](url)
+        text = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", text)
+        # Remove markdown images ![alt](url)
+        text = re.sub(r"!\[([^\]]*)\]\([^\)]+\)", "", text)
+        # Remove HTML tags
+        text = re.sub(r"<[^>]+>", "", text)
+        # Remove markdown headers
+        text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
+        # Remove code blocks
+        text = re.sub(r"```[^`]*```", "", text)
+        text = re.sub(r"`[^`]+`", "", text)
+        # Remove special markdown characters
+        text = re.sub(r"[*_~>#\-\+\|]", "", text)
+
+        # Count words
+        words = len(text.split())
+
+        # Calculate read time (average reading speed: 225 words per minute)
+        # Minimum 1 minute
+        read_time = max(1, round(words / 225))
+
+        return read_time
+
+    def save(self, *args, **kwargs):
+        """Override save to auto-calculate read_time."""
+        self.read_time = self.calculate_read_time()
+        super().save(*args, **kwargs)
 
     def get_absolute_url(self) -> str:
         return reverse("blog:detail", kwargs={"slug": self.slug})

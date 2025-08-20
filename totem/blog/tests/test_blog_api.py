@@ -47,6 +47,7 @@ class TestBlogAPI:
         # Verify the correct post is returned
         assert data["slug"] == published_post.slug
         assert data["title"] == published_post.title
+        assert data["read_time"]
 
         # Verify the full schema is used
         # assert "content" in data

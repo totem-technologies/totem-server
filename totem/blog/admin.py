@@ -27,6 +27,7 @@ class BlogPostAdmin(admin.ModelAdmin):
     list_filter = [AuthorDropdownFilter]
     search_fields = ("title", "subtitle", "content")
     autocomplete_fields = ["author"]
+    readonly_fields = ["read_time"]
 
     def get_header_image(self, obj):
         if obj.header_image:
@@ -44,7 +45,7 @@ class BlogPostAdmin(admin.ModelAdmin):
         (
             "Header",
             {
-                "fields": ("author", "title", "subtitle", "header_image", "date_published", "publish"),
+                "fields": ("author", "title", "subtitle", "header_image", "date_published", "read_time", "publish"),
             },
         ),
         (

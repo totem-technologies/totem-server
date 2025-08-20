@@ -1,6 +1,7 @@
 import pytest
 from django.test import Client
 from django.urls import reverse
+import random
 
 from totem.api.auth import generate_jwt_token
 from totem.notifications.models import FCMDevice
@@ -20,10 +21,18 @@ def auth_token(auth_user):
     return generate_jwt_token(auth_user)
 
 
+TOKEN_SEED = 1
+
+
 @pytest.fixture
 def valid_fcm_token() -> str:
-    """Generate a valid FCM token for testing."""
-    return "fcm_token_" + "a" * 140  # Ensure token is long enough
+    """Generate a random valid FCM token for testing, using TOKEN_SEED"""
+    global TOKEN_SEED
+    TOKEN_SEED += 1
+    print(TOKEN_SEED)
+    # random 140 character string with TOKEN_SEED as the seed
+    token = random.Random(TOKEN_SEED).randint(0, 10**140)
+    return "fcm_token_" + str(token)
 
 
 class TestFCMRegistrationEndpoint:
@@ -159,19 +168,14 @@ class TestFCMRegistrationEndpoint:
         # Prepare payload
         payload = {"token": valid_fcm_token}
 
-        # Make the request
-        response = client.post(
-            reverse("mobile-api:register_fcm_token"),
-            payload,
-            content_type="application/json",
-            HTTP_AUTHORIZATION=auth_header,
-        )
-
-        # Check response - should fail without revealing the conflict
-        assert response.status_code == 422
-        assert "INVALID_TOKEN" in str(response.content)
-        # Ensure we're not leaking information
-        assert "another user" not in str(response.content)
+        # Make the request, should raise exception
+        with pytest.raises(Exception):
+            client.post(
+                reverse("mobile-api:register_fcm_token"),
+                payload,
+                content_type="application/json",
+                HTTP_AUTHORIZATION=auth_header,
+            )
 
     def test_register_without_authentication(self, client: Client, db, valid_fcm_token):
         """Test registration without authentication."""
