@@ -1,3 +1,4 @@
+from configparser import Error
 from typing import List
 
 from django.http import HttpRequest
@@ -178,3 +179,42 @@ def get_spaces_summary(request: HttpRequest):
         for_you=for_you,
         explore=explore,
     )
+
+
+@spaces_router.post(
+    "/rsvp/{event_slug}",
+    response={200: bool},
+    tags=["spaces"],
+    url_name="rsvp_confirm",
+)
+def rsvp_confirm(request: HttpRequest, event_slug: str):
+    user: User = request.user  # type: ignore
+    event = get_object_or_404(CircleEvent, slug=event_slug)
+
+    if event is None:
+        return False
+    elif not event.can_attend(user=user):
+        return False
+
+    event.add_attendee(user)
+    event.circle.subscribe(user)
+    return True
+
+
+@spaces_router.delete(
+    "/rsvp/{event_slug}",
+    response={200: bool},
+    tags=["spaces"],
+    url_name="rsvp_cancel",
+)
+def rsvp_cancel(request: HttpRequest, event_slug: str):
+    user: User = request.user  # type: ignore
+    event = get_object_or_404(CircleEvent, slug=event_slug)
+
+    if event is None:
+        return False
+    elif not event.can_attend(user=user):
+        return False
+
+    event.remove_attendee(user)
+    return True
