@@ -1,5 +1,4 @@
 import time
-import re
 
 from django.contrib.auth import get_user_model
 from django.db import models
@@ -63,19 +62,16 @@ class BlogPost(AdminURLMixin, MarkdownMixin, SluggedModel):
 
         # Remove markdown formatting
         text = self.content
-        # Remove markdown links [text](url)
-        text = re.sub(r"\[([^\]]+)\]\([^\)]+\)", r"\1", text)
-        # Remove markdown images ![alt](url)
-        text = re.sub(r"!\[([^\]]*)\]\([^\)]+\)", "", text)
-        # Remove HTML tags
-        text = re.sub(r"<[^>]+>", "", text)
-        # Remove markdown headers
-        text = re.sub(r"^#{1,6}\s+", "", text, flags=re.MULTILINE)
-        # Remove code blocks
-        text = re.sub(r"```[^`]*```", "", text)
-        text = re.sub(r"`[^`]+`", "", text)
-        # Remove special markdown characters
-        text = re.sub(r"[*_~>#\-\+\|]", "", text)
+        text = text.replace("#", "")
+        text = text.replace("-", "")
+        text = text.replace("*", "")
+        text = text.replace("`", "")
+        text = text.replace("<", "")
+        text = text.replace(">", "")
+        text = text.replace("|", "")
+        text = text.replace("{", "")
+        text = text.replace("%", "")
+        text = text.replace("}", "")
 
         # Count words
         words = len(text.split())
