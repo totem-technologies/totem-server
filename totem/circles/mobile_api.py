@@ -1,4 +1,3 @@
-from configparser import Error
 from typing import List
 
 from django.http import HttpRequest
@@ -193,7 +192,7 @@ def rsvp_confirm(request: HttpRequest, event_slug: str):
 
     if event is None:
         return False
-    elif not event.can_attend(user=user):
+    elif not event.can_attend(user=user, silent=True):
         return False
 
     event.add_attendee(user)
@@ -212,8 +211,6 @@ def rsvp_cancel(request: HttpRequest, event_slug: str):
     event = get_object_or_404(CircleEvent, slug=event_slug)
 
     if event is None:
-        return False
-    elif not event.can_attend(user=user):
         return False
 
     event.remove_attendee(user)

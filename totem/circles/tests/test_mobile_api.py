@@ -241,3 +241,37 @@ class TestMobileApiSpaces:
         assert explore_circle_1.slug in explore_slugs
         assert past_event_circle.slug not in explore_slugs
         assert unpublished_circle.slug not in explore_slugs
+
+    def test_rsvp_confirm(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory(circle__published=True)
+        url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
+
+        response = client.post(url)
+
+        assert response.status_code == 200
+        assert response.json() is True
+        assert event.attendees.filter(pk=user.pk).exists()
+        assert event.circle.subscribed.filter(pk=user.pk).exists()
+
+    def test_rsvp_cancel(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory(circle__published=True)
+        event.attendees.add(user)
+        url = reverse("mobile-api:rsvp_cancel", kwargs={"event_slug": event.slug})
+
+        response = client.delete(url)
+
+        assert response.status_code == 200
+        assert response.json() is True
+        assert not event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_confirm_cannot_attend(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory(circle__published=True, cancelled=True)
+        url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
+        response = client.post(url)
+
+        assert response.status_code == 200
+        assert response.json() is False
+        assert not event.attendees.filter(pk=user.pk).exists()
