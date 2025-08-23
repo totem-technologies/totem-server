@@ -1,7 +1,15 @@
 {% extends 'email/emails/button.mjml' %}
 {% block message %}
 <mj-text mj-class="p">
-  {{event_title}}, is starting tomorrow at <strong>{{start}}</strong>.
-  Click the button below to find the Add to Calendar button. Remember, if you are more than 5 minutes late, you may not be allowed to participate.
+  Your Space is starting tomorrow at <strong>{{start}}</strong>!
 </mj-text>
+<mj-spacer height="12px"></mj-spacer>
+<mj-text mj-class="p">
+  Use the button below to add this session to your calendar.
+</mj-text>
+<mj-spacer height="12px"></mj-spacer>
+<mj-text mj-class="p">
+    <strong>Can't make it?</strong> Please <a href="{{link}}">cancel your attendance</a> so others can join. Remember, it is not possible to join this session if you are more than 5 minues late.
+</mj-text>
+
 {% endblock message %}
