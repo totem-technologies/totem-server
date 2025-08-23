@@ -21,24 +21,12 @@ class PublicUserSchema(ModelSchema):
 
 class UserSchema(ModelSchema):
     profile_avatar_type: ProfileAvatarTypeEnum
-    sessions_joined: int
-    spaces_joined: int
 
     @staticmethod
     def resolve_profile_image(obj: User):
         if obj.profile_image:
             return obj.profile_image.url
         return None
-
-    @staticmethod
-    def resolve_sessions_joined(obj: User):
-        return obj.events_joined.count()
-
-    @staticmethod
-    def resolve_spaces_joined(obj: User):
-        events = obj.events_joined.all()
-        space_slugs = set(event.circle.slug for event in events if event.circle.published)
-        return len(space_slugs)
 
     class Meta:
         model = User
