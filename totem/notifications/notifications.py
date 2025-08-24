@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List
-
-from totem.notifications.utils import notify_users
-from totem.utils.models import BaseModel
-
-if TYPE_CHECKING:
-    from totem.circles.models import CircleEvent
-    from totem.users.models import User
 from enum import Enum
+from typing import List
+
+from pydantic import BaseModel
+
+import totem.circles.models as circle_models
+from totem.notifications.utils import notify_users
+from totem.users.models import User
 
 
 class NotificationType(str, Enum):
@@ -55,7 +54,7 @@ class MissedEventNotification(Notification):
     category: str = NotificationType.MISSED_EVENT
 
 
-def circle_starting_notification(event: CircleEvent, user: User) -> Notification:
+def circle_starting_notification(event: circle_models.CircleEvent, user: User) -> Notification:
     """Creates a notification that a Circle is starting soon."""
     return CircleStartingNotification(
         recipients=[user],
@@ -67,7 +66,7 @@ def circle_starting_notification(event: CircleEvent, user: User) -> Notification
     )
 
 
-def circle_advertisement_notification(event: CircleEvent, user: User) -> Notification:
+def circle_advertisement_notification(event: circle_models.CircleEvent, user: User) -> Notification:
     """Creates a notification to advertise a new Circle event."""
     title = event.title or event.circle.subtitle
     author_name = event.circle.author.name
@@ -84,7 +83,7 @@ def circle_advertisement_notification(event: CircleEvent, user: User) -> Notific
     )
 
 
-def missed_event_notification(event: CircleEvent, user: User) -> Notification:
+def missed_event_notification(event: circle_models.CircleEvent, user: User) -> Notification:
     """Creates a notification for a user who missed an event."""
     title = event.title or event.circle.title
     return MissedEventNotification(
