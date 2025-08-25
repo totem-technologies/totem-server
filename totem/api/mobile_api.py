@@ -77,9 +77,8 @@ def register_fcm_token(request: HttpRequest, payload: FCMTokenRegisterSchema):
 
 @router.delete("/fcm/unregister/{token}", response={204: None}, url_name="unregister_fcm_token")
 def unregister_fcm_token(request: HttpRequest, token: str):
-    """Mark an FCM token as inactive"""
+    """Delete an FCM token for the current user"""
     device = FCMDevice.objects.filter(token=token, user=request.user).first()
     if device:
-        device.active = False
-        device.save()
+        device.delete()
     return 204, None
