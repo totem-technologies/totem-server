@@ -402,6 +402,8 @@ if not DEBUG:
         traces_sample_rate=0.1,
         profiles_sample_rate=0.1,
         send_default_pii=True,
+        profile_lifecycle="trace",
+        enable_logs=True,
     )
 
 # posthog
