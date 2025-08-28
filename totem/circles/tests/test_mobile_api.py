@@ -271,7 +271,6 @@ class TestMobileApiSpaces:
         event = CircleEventFactory(circle__published=True, cancelled=True)
         url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
         response = client.post(url)
-
-        assert response.status_code == 200
-        assert response.json() is False
+        assert response.status_code == 403
+        assert response.json()["detail"]
         assert not event.attendees.filter(pk=user.pk).exists()

@@ -4,6 +4,8 @@ from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
 from ninja import Router
 from ninja.pagination import paginate
+from ninja.errors import AuthorizationError
+from django.db import transaction
 
 from totem.circles.api import NextEventSchema, SpaceDetailSchema
 from totem.circles.filters import (
@@ -16,6 +18,7 @@ from totem.circles.models import Circle, CircleEvent
 from totem.circles.schemas import EventDetailSchema, SpaceSchema, SummarySpacesSchema
 from totem.onboard.models import OnboardModel
 from totem.users.models import User
+from totem.circles.models import CircleEventException
 
 spaces_router = Router()
 
@@ -189,14 +192,12 @@ def get_spaces_summary(request: HttpRequest):
 def rsvp_confirm(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
     event = get_object_or_404(CircleEvent, slug=event_slug)
-
-    if event is None:
-        return False
-    elif not event.can_attend(user=user, silent=True):
-        return False
-
-    event.add_attendee(user)
-    event.circle.subscribe(user)
+    try:
+        with transaction.atomic():
+            event.add_attendee(user)
+            event.circle.subscribe(user)
+    except CircleEventException as e:
+        raise AuthorizationError(message=str(e))
     return True
 
 
@@ -209,9 +210,8 @@ def rsvp_confirm(request: HttpRequest, event_slug: str):
 def rsvp_cancel(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
     event = get_object_or_404(CircleEvent, slug=event_slug)
-
-    if event is None:
-        return False
-
-    event.remove_attendee(user)
+    try:
+        event.remove_attendee(user)
+    except CircleEventException as e:
+        raise AuthorizationError(message=str(e))
     return True
