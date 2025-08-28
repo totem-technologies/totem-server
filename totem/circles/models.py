@@ -25,6 +25,11 @@ from totem.email.emails import (
     notify_circle_tomorrow,
 )
 from totem.email.exceptions import EmailBounced
+from totem.notifications.notifications import (
+    circle_advertisement_notification,
+    circle_starting_notification,
+    missed_event_notification,
+)
 from totem.utils.hash import basic_hash, hmac
 from totem.utils.md import MarkdownField, MarkdownMixin
 from totem.utils.models import AdminURLMixin, SluggedModel
@@ -215,6 +220,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
             if self.notified and self.can_join(user):
                 # Send the user the join email if they are attending and the event is about to start
                 notify_circle_starting(self, user).send()
+                circle_starting_notification(self, user).send()
             else:
                 # Otherwise, send the user the signed up email
                 notify_circle_signup(self, user).send()
@@ -271,6 +277,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         self.save()
         for user in self.attendees.all():
             notify_circle_starting(self, user).send()
+            circle_starting_notification(self, user).send()
 
     def notify_tomorrow(self, force=False):
         # Notify users who are attending that the circle is starting tomorrow
@@ -294,6 +301,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
                 continue
             if user not in self.joined.all():
                 missed_event_email(self, user).send()
+                missed_event_notification(self, user).send()
 
     def advertise(self, force=False):
         # Notify users who are subscribed that a new event is available, if they aren't already attending.
@@ -305,6 +313,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
             if self.can_attend(silent=True) and user not in self.attendees.all():
                 try:
                     notify_circle_advertisement(self, user).send()
+                    circle_advertisement_notification(self, user).send()
                 except EmailBounced:
                     # If the email was blocked, remove the user from the circle
                     self.circle.unsubscribe(user)
