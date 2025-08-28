@@ -208,8 +208,8 @@ def notify_circle_tomorrow(event: CircleEvent, user: User) -> Email:
     start = _to_human_time(user, event.start)
     title = event.title or event.circle.title or event.circle.title
     return CircleTomorrowReminderEmail(
-        title=f"Tomorrow: {title}",
-        subject=f"Tomorrow: {title}",
+        title=f"Tomorrow - {title}",
+        subject=f"Tomorrow - {title}",
         recipient=user.email,
         start=start,
         event_title=event.circle.title,

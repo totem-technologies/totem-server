@@ -68,7 +68,8 @@ class TestFCMRegistrationEndpoint:
     def test_update_existing_token(self, client: Client, db, auth_user, auth_token, valid_fcm_token):
         """Test updating an existing token."""
         # Create an existing device
-        FCMDevice.objects.create(user=auth_user, token=valid_fcm_token, active=True)
+        existing_device = FCMDevice.objects.create(user=auth_user, token=valid_fcm_token, active=False)
+        original_updated_at = existing_device.updated_at
 
         # Construct the authorization header
         auth_header = f"Bearer {auth_token}"
@@ -88,6 +89,7 @@ class TestFCMRegistrationEndpoint:
         assert response.status_code == 201
         data = response.json()
         assert data["token"] == valid_fcm_token
+        assert data["active"] is True
 
         # Verify database state (should update not create)
         devices = FCMDevice.objects.filter(token=valid_fcm_token)
@@ -95,6 +97,8 @@ class TestFCMRegistrationEndpoint:
         device = devices.first()
         assert device
         assert device.user == auth_user
+        assert device.active is True
+        assert device.updated_at > original_updated_at  # Verify updated_at was updated
 
     def test_register_invalid_token_format(self, client: Client, db, auth_user, auth_token):
         """Test registration with invalid token format."""
@@ -157,10 +161,10 @@ class TestFCMRegistrationEndpoint:
         assert "INVALID_TOKEN" in str(response.content)
 
     def test_register_token_from_another_user(self, client: Client, db, auth_user, auth_token, valid_fcm_token):
-        """Test registering a token that belongs to another user."""
+        """Test registering a token that belongs to another user - should reassign to current user."""
         # Create another user with the same token
         other_user = UserFactory()
-        FCMDeviceFactory(user=other_user, token=valid_fcm_token)
+        existing_device = FCMDeviceFactory(user=other_user, token=valid_fcm_token, active=False)
 
         # Construct the authorization header
         auth_header = f"Bearer {auth_token}"
@@ -168,14 +172,70 @@ class TestFCMRegistrationEndpoint:
         # Prepare payload
         payload = {"token": valid_fcm_token}
 
-        # Make the request, should raise exception
-        with pytest.raises(Exception):
-            client.post(
-                reverse("mobile-api:register_fcm_token"),
-                payload,
-                content_type="application/json",
-                HTTP_AUTHORIZATION=auth_header,
-            )
+        # Make the request
+        response = client.post(
+            reverse("mobile-api:register_fcm_token"),
+            payload,
+            content_type="application/json",
+            HTTP_AUTHORIZATION=auth_header,
+        )
+
+        # Check response - should succeed
+        assert response.status_code == 201
+        data = response.json()
+        assert data["token"] == valid_fcm_token
+        assert data["active"] is True
+
+        # Verify database state - token reassigned to auth_user
+        devices = FCMDevice.objects.filter(token=valid_fcm_token)
+        assert devices.count() == 1
+        device = devices.first()
+        if device is None:
+            raise ValueError("Device not found")
+        assert device.user == auth_user  # Reassigned to current user
+        assert device.active is True
+        assert device.updated_at > existing_device.updated_at  # Updated timestamp
+
+    def test_register_duplicate_tokens(self, client: Client, db, auth_user, auth_token, valid_fcm_token):
+        """Test registering when multiple duplicate tokens exist - should delete all and create new."""
+        # Create multiple devices with the same token (simulating a bug scenario)
+        other_user1 = UserFactory()
+        other_user2 = UserFactory()
+        FCMDeviceFactory(user=other_user1, token=valid_fcm_token)
+        FCMDeviceFactory(user=other_user2, token=valid_fcm_token)
+        FCMDeviceFactory(user=auth_user, token=valid_fcm_token)
+
+        # Verify duplicates exist
+        assert FCMDevice.objects.filter(token=valid_fcm_token).count() == 3
+
+        # Construct the authorization header
+        auth_header = f"Bearer {auth_token}"
+
+        # Prepare payload
+        payload = {"token": valid_fcm_token}
+
+        # Make the request
+        response = client.post(
+            reverse("mobile-api:register_fcm_token"),
+            payload,
+            content_type="application/json",
+            HTTP_AUTHORIZATION=auth_header,
+        )
+
+        # Check response
+        assert response.status_code == 201
+        data = response.json()
+        assert data["token"] == valid_fcm_token
+        assert data["active"] is True
+
+        # Verify database state - all duplicates deleted, new one created
+        devices = FCMDevice.objects.filter(token=valid_fcm_token)
+        assert devices.count() == 1
+        device = devices.first()
+        if device is None:
+            raise ValueError("Device not found")
+        assert device.user == auth_user
+        assert device.active is True
 
     def test_register_without_authentication(self, client: Client, db, valid_fcm_token):
         """Test registration without authentication."""

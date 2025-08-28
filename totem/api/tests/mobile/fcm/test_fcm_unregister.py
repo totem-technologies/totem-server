@@ -34,9 +34,10 @@ class TestFCMUnregisterEndpoint:
     """Test the FCM token unregistration endpoint."""
 
     def test_unregister_token_success(self, client: Client, db, auth_user, auth_token, user_device):
-        """Test successfully unregistering (marking inactive) an FCM token."""
+        """Test successfully unregistering (deleting) an FCM token."""
         # Construct the authorization header
         auth_header = f"Bearer {auth_token}"
+        device_id = user_device.id
 
         # Make the request to unregister
         response = client.delete(
@@ -47,12 +48,8 @@ class TestFCMUnregisterEndpoint:
         # Check response
         assert response.status_code == 204
 
-        # Verify the device was marked as inactive
-        device = FCMDevice.objects.get(id=user_device.id)
-        assert device.active is False
-
-        # Verify it wasn't deleted
-        assert FCMDevice.objects.filter(id=user_device.id).exists()
+        # Verify the device was deleted
+        assert not FCMDevice.objects.filter(id=device_id).exists()
 
     def test_unregister_nonexistent_token(self, client: Client, db, auth_user, auth_token):
         """Test unregistering a token that doesn't exist."""
@@ -72,6 +69,7 @@ class TestFCMUnregisterEndpoint:
         """Test unregistering a token that's already inactive."""
         # Create an inactive device
         inactive_device = FCMDeviceFactory(user=auth_user, token="inactive_token_" + "a" * 140, active=False)
+        device_id = inactive_device.id
 
         # Construct the authorization header
         auth_header = f"Bearer {auth_token}"
@@ -85,9 +83,8 @@ class TestFCMUnregisterEndpoint:
         # Should return 204
         assert response.status_code == 204
 
-        # Device should still be inactive
-        inactive_device.refresh_from_db()
-        assert inactive_device.active is False
+        # Device should be deleted (even if it was inactive)
+        assert not FCMDevice.objects.filter(id=device_id).exists()
 
     def test_unregister_token_from_another_user(self, client: Client, db, auth_user, auth_token):
         """Test unregistering a token that belongs to another user."""
@@ -107,7 +104,8 @@ class TestFCMUnregisterEndpoint:
         # Should return 204 without revealing information about the token
         assert response.status_code == 204
 
-        # The other user's device should not be affected
+        # The other user's device should not be deleted
+        assert FCMDevice.objects.filter(id=other_device.id).exists()
         other_device.refresh_from_db()
         assert other_device.active is True
 
@@ -119,6 +117,7 @@ class TestFCMUnregisterEndpoint:
         # Should return 401 Unauthorized
         assert response.status_code == 401
 
-        # Device should still be active
+        # Device should still exist and be active
+        assert FCMDevice.objects.filter(id=user_device.id).exists()
         user_device.refresh_from_db()
         assert user_device.active is True

@@ -159,15 +159,14 @@ def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name
         form = form_class(request.POST)
         if form.is_valid():
             data = form.cleaned_data
-
+            ip_address = request.META.get("REMOTE_ADDR", "")
+            user_agent = request.META.get("HTTP_USER_AGENT", "")
+            form_type = form_class.__name__
             # Honeypot validation - check if bot filled the hidden field
             honeypot_value = data.get("website", "")
             if honeypot_value:
                 # Bot detected! Log it and save to database
                 email = data.get("email", "")
-                ip_address = request.META.get("REMOTE_ADDR", "")
-                user_agent = request.META.get("HTTP_USER_AGENT", "")
-                form_type = form_class.__name__
 
                 logger.warning(
                     "Honeypot triggered: Bot detected attempting to submit form",
@@ -185,6 +184,15 @@ def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name
                 return redirect(f"{reverse('users:verify-pin')}?email={quote(fake_email)}")
 
             email: str = data["email"].lower()
+            logger.info(
+                "User login attempt",
+                extra={
+                    "email": email,
+                    "ip_address": ip_address,
+                    "user_agent": user_agent,
+                    "form_type": form_type,
+                },
+            )
             # Only use 'next' as the post-auth redirect parameter
             create_params = {"newsletter_consent": data.get("newsletter_consent", False)}
 
