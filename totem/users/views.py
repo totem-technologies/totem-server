@@ -164,12 +164,13 @@ def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name
             form_type = form_class.__name__
             # Honeypot validation - check if bot filled the hidden field
             honeypot_value = data.get("website", "")
-            if honeypot_value:
-                # Bot detected! Log it and save to database
+            headless = "HeadlessChrome" in user_agent
+            if honeypot_value or headless:
+                # Bot detected! Log it.
                 email = data.get("email", "")
 
                 logger.warning(
-                    "Honeypot triggered: Bot detected attempting to submit form",
+                    "Bot detection triggered: Bot detected attempting to submit form",
                     extra={
                         "email": email,
                         "honeypot_field": "website",
