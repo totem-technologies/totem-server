@@ -70,6 +70,7 @@ class EventSpaceSchema(ModelSchema):
             "short_description",
             "recurring",
             "image",
+            "content",
         ]
 
 
