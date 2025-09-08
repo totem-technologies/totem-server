@@ -164,6 +164,7 @@ class KeeperProfile(AdminURLMixin, models.Model, MarkdownMixin):
     )
     instagram_username = CharField(max_length=255, blank=True, help_text="Your Instagram username, no @ symbol")
     x_username = CharField(max_length=255, blank=True, help_text="Your X username, no @ symbol")
+    bluesky_username = CharField(max_length=255, blank=True, help_text="Your Bluesky username, no @ symbol")
     website = URLField(max_length=255, blank=True, help_text="Your personal website.")
 
     def __str__(self):
