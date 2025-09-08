@@ -1,12 +1,11 @@
 {% load static %}
 {% load settings_value %}
 {% load icons %}
-<div class="mt-10 border-t-[1px] border-gray-300 bg-tslate px-5 pb-5">
+<div class="bg-tslate mt-10 border-t-[1px] border-gray-300 px-5 pb-5">
   <footer class="body-font container m-auto text-white">
     <div
       class="flex-col flex-wrap p-10 px-5 md:flex md:flex-row md:flex-nowrap md:items-center lg:items-start">
-      <div
-        class="m-auto max-w-64 shrink-0 text-center md:mx-0 md:text-left">
+      <div class="m-auto max-w-64 shrink-0 text-center md:mx-0 md:text-left">
         <a href="{% url "pages:home" %}">
           <img
             src="{% static 'images/totem-logo-creme.webp' %}"
@@ -27,13 +26,13 @@
           >Donate</a
         >
         <a
-          class="btn btn-outline mt-5 inline-flex items-center text-tmauve"
+          class="btn btn-outline text-tmauve mt-5 inline-flex items-center"
           href="{% url "users:feedback" %}"
           >Feedback</a
         >
       </div>
       <div
-        class="-mb-10 mt-5 flex grow flex-wrap text-center md:mt-0 md:pl-20 md:text-left">
+        class="mt-5 -mb-10 flex grow flex-wrap text-center md:mt-0 md:pl-20 md:text-left">
         <div class="grow"></div>
         <div class="w-full px-4 md:w-1/2 lg:w-1/4">
           <nav class="list-none md:mb-10">
@@ -76,33 +75,33 @@
           © 2021 - {% now "Y" %} Totem Technologies. All rights reserved.
         </p>
         <span
-          class="mt-2 inline-flex justify-center sm:ml-auto sm:mt-0 sm:justify-start">
+          class="mt-2 inline-flex justify-center sm:mt-0 sm:ml-auto sm:justify-start">
           <a
-            class="ml-3 hover:text-tblue"
-            href="{% settings_value 'SOCIAL_LINKS.twitter' %}"
+            class="hover:text-tblue ml-3"
+            href="{% settings_value 'SOCIAL_LINKS.bluesky' %}"
             target="_blank">
-            {% icons "x" size=20 %}
+            {% icons "bluesky" size=20 %}
           </a>
           <a
-            class="ml-3 hover:text-tblue"
+            class="hover:text-tblue ml-3"
             href="{% settings_value 'SOCIAL_LINKS.instagram' %}"
             target="_blank">
             {% icons "instagram" size=20 %}
           </a>
           <a
-            class="ml-3 hover:text-tblue"
+            class="hover:text-tblue ml-3"
             href="{% settings_value 'SOCIAL_LINKS.linkedin' %}"
             target="_blank">
             {% icons "linkedin" size=20 %}
           </a>
           <a
-            class="ml-3 hover:text-tblue"
+            class="hover:text-tblue ml-3"
             href="{% settings_value 'SOCIAL_LINKS.github' %}"
             target="_blank">
             {% icons "github" size=20 %}
           </a>
           <a
-            class="ml-3 hover:text-tblue"
+            class="hover:text-tblue ml-3"
             href="mailto:{% settings_value 'EMAIL_SUPPORT_ADDRESS' %}"
             target="_blank">
             {% icons "email" size=20 %}
