@@ -31,6 +31,11 @@ def upload_to_id_image(instance, filename: str):
 class BlogPost(AdminURLMixin, MarkdownMixin, SluggedModel):
     title = models.CharField(max_length=255)
     subtitle = models.CharField(max_length=2000, blank=True)
+    summary = models.CharField(
+        max_length=2000,
+        blank=True,
+        help_text="Short summary of the blog post to show in list pages. No Markdown allowed. Max 2000 characters.",
+    )
     author = models.ForeignKey(
         User, on_delete=models.DO_NOTHING, related_name="blog_posts", help_text="Author of the blog post", null=True
     )

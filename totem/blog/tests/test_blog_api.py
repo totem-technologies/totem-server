@@ -30,6 +30,7 @@ class TestBlogAPI:
         # Verify that only the published post is returned
         assert data["count"] == 1
         assert len(data["items"]) == 1
+        assert data["items"][0]["summary"] is not None
 
     def test_get_published_post_detail(self, client: Client, auth_token):
         """
@@ -48,6 +49,7 @@ class TestBlogAPI:
         assert data["slug"] == published_post.slug
         assert data["title"] == published_post.title
         assert data["read_time"]
+        assert data["summary"] == published_post.summary
 
         # Verify the full schema is used
         # assert "content" in data

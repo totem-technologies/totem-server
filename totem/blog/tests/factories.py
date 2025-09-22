@@ -12,6 +12,7 @@ class BlogPostFactory(DjangoModelFactory):
         model = BlogPost
 
     title = Faker("sentence")
+    summary = Faker("sentence")
     subtitle = Faker("sentence")
     author = SubFactory(UserFactory)
     content = Faker("paragraph")

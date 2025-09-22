@@ -177,7 +177,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         return reverse("circles:event_detail", kwargs={"event_slug": self.slug})
 
     def seats_left(self):
-        return self.seats - self.attendees.count()
+        return max(0, self.seats - self.attendees.count())
 
     def attendee_list(self):
         return ", ".join([str(attendee) for attendee in self.attendees.all()])
@@ -339,7 +339,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
     def password(self):
         return basic_hash(hmac(f"{self.slug}|{self.meeting_url}"))
 
-    def join_url(self, user):
+    def email_join_url(self, user):
         return JoinCircleAction(user=user, parameters={"event_slug": self.slug}).build_url()
 
     def jsonld(self):

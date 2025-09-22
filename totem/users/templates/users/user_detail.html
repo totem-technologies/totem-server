@@ -15,7 +15,7 @@
         <div>
           <h2 class="h2 pb-1">{{ user.name }}</h2>
           <div
-            class="flex gap-2 pb-1 text-sm font-semibold uppercase text-gray-600">
+            class="flex gap-2 pb-1 text-sm font-semibold text-gray-600 uppercase">
             {% icons "location" size=20 %} {{ profile.location }}
           </div>
           <div class="flex gap-2 pb-2 text-sm text-gray-600">
@@ -29,6 +29,14 @@
                 class="inline-block hover:text-blue-500"
                 target="_blank"
                 >{% icons "x" size=15 %}</a
+              >
+            {% endif %}
+            {% if profile.bluesky_username %}
+              <a
+                href="https://bsky.app/profile/{{ profile.bluesky_username }}"
+                class="inline-block hover:text-blue-500"
+                target="_blank"
+                >{% icons "bluesky" size=15 %}</a
               >
             {% endif %}
             {% if profile.instagram_username %}

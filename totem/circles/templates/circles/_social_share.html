@@ -3,7 +3,7 @@
 <div class="pt-3">
   <h3 class="font-bold">Share with friends and family</h3>
   {% comment %}
-    for facebook, messanger, whatsapp, twitter, linkedin, email, sms, and copy
+    for facebook, messanger, whatsapp, bluesky, linkedin, email, sms, and copy
     link
   {% endcomment %}
   <div class="grid grid-cols-2 gap-4 pt-5 text-left">
@@ -26,10 +26,10 @@
       {% icons "whatsapp" %} WhatsApp</a
     >
     <a
-      href="{% sharelink 'twitter' circle.get_absolute_url circle.title %}"
+      href="{% sharelink 'bluesky' circle.get_absolute_url circle.title %}"
       target="_blank"
       class="btn">
-      {% icons "x" %} X (Twitter)</a
+      {% icons "bluesky" %} Bluesky</a
     >
     <a
       href="{% sharelink 'linkedin' circle.get_absolute_url circle.title %}"

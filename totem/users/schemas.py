@@ -85,4 +85,5 @@ class KeeperProfileSchema(ModelSchema):
             "instagram_username",
             "website",
             "x_username",
+            "bluesky_username",
         ]

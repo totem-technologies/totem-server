@@ -461,7 +461,7 @@ WEBFLOW_BASE_URL = env("WEBFLOW_BASE_URL", default="https://wf.totem.org/")  # t
 # Social
 # ------------------------------------------------------------------------------
 SOCIAL_LINKS = {
-    "twitter": "https://twitter.com/totemcircles/",
+    "bluesky": "https://bsky.app/profile/totem.org",
     "instagram": "https://www.instagram.com/totemorg/",
     "github": "https://github.com/totem-technologies/",
     "linkedin": "https://www.linkedin.com/company/totemorg/",

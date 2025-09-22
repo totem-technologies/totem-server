@@ -1,4 +1,3 @@
-dictionaries = []
 words = [
     "allauth",
     "atcb",
@@ -13,9 +12,12 @@ words = [
     "errorlist",
     "eventcalendar",
     "favicons",
+    "fcm",
+    "fieldsets",
     "formset",
     "imagekit",
     "innerhtml",
+    "joinable",
     "lanczos",
     "lookups",
     "modeladmin",
@@ -36,12 +38,9 @@ words = [
     "truetype",
     "truncatewords",
     "tshadow",
+    "urlpatterns",
     "waitlist",
     "webflow",
     "wght",
     "woff",
-    "fieldsets",
-    "fcm"
 ]
-flag_words = []
-ignore_paths = []
