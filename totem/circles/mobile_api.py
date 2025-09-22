@@ -1,11 +1,11 @@
 from typing import List
 
+from django.db import transaction
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
 from ninja import Router
-from ninja.pagination import paginate
 from ninja.errors import AuthorizationError
-from django.db import transaction
+from ninja.pagination import paginate
 
 from totem.circles.api import NextEventSchema, SpaceDetailSchema
 from totem.circles.filters import (
@@ -14,11 +14,11 @@ from totem.circles.filters import (
     space_detail_schema,
     upcoming_recommended_events,
 )
-from totem.circles.models import Circle, CircleEvent
-from totem.circles.schemas import EventDetailSchema, SpaceSchema, SummarySpacesSchema
+from totem.circles.livekit import livekit_create_access_token
+from totem.circles.models import Circle, CircleEvent, CircleEventException
+from totem.circles.schemas import EventDetailSchema, LivekitTokenResponseSchema, SpaceSchema, SummarySpacesSchema
 from totem.onboard.models import OnboardModel
 from totem.users.models import User
-from totem.circles.models import CircleEventException
 
 spaces_router = Router()
 
@@ -215,3 +215,26 @@ def rsvp_cancel(request: HttpRequest, event_slug: str):
     except CircleEventException as e:
         raise AuthorizationError(message=str(e))
     return True
+
+
+@spaces_router.get(
+    "/event/{event_slug}/token",
+    response={200: LivekitTokenResponseSchema, 403: str, 404: str},
+    tags=["spaces"],
+    url_name="livekit_token",
+)
+def get_livekit_token(request, event_slug: str):
+    user: User = request.auth
+    event = get_object_or_404(CircleEvent, slug=event_slug)
+
+    if not event.joinable:
+        raise AuthorizationError(message="Event is not joinable at this time.")
+
+    if not event.attendees.filter(id=user.id).exists():
+        raise AuthorizationError(message="You have not RSVP'd for this event.")
+
+    try:
+        token = livekit_create_access_token(user, event)
+        return LivekitTokenResponseSchema(token=token)
+    except ValueError as e:
+        raise AuthorizationError(message=str(e))
