@@ -466,3 +466,9 @@ SOCIAL_LINKS = {
     "github": "https://github.com/totem-technologies/",
     "linkedin": "https://www.linkedin.com/company/totemorg/",
 }
+
+
+# LiveKit
+# ------------------------------------------------------------------------------
+LIVEKIT_API_KEY = env("LIVEKIT_API_KEY", default=None)
+LIVEKIT_API_SECRET = env("LIVEKIT_API_SECRET", default=None)
