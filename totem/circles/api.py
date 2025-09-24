@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import List
 
+from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
 from ninja import Field, FilterSchema, Router, Schema
 from ninja.pagination import paginate
@@ -22,7 +23,7 @@ from .filters import (
     events_by_month,
     get_upcoming_events_for_spaces_list,
 )
-from .models import CircleEvent
+from .models import Circle, CircleEvent
 
 router = Router()
 
@@ -56,7 +57,7 @@ def filter_options(request):
     tags=["events"],
     url_name="event_detail",
 )
-def event_detail(request, event_slug):
+def event_detail(request: HttpRequest, event_slug: str):
     event = get_object_or_404(CircleEvent, slug=event_slug)
     user: User = request.user  # type: ignore
 
@@ -157,30 +158,30 @@ def list_spaces(request):
             continue
 
         spaces_set.add(event.circle.slug)
-        circle = event.circle
+        circle: Circle = event.circle
 
         category = circle.categories.first()
         category_name = category.name if category else None
 
-        # Calculate seats left for this event
         seats_left = max(0, event.seats - event.attendee_count)  # type: ignore
 
         spaces.append(
-            {
-                "slug": circle.slug,
-                "title": circle.title,
-                "image_link": circle.image.url if circle.image else None,
-                "description": circle.short_description,
-                "author": circle.author,
-                "nextEvent": NextEventSchema(
+            SpaceDetailSchema(
+                slug=circle.slug,
+                title=circle.title,
+                image_link=circle.image.url if circle.image else None,
+                short_description=circle.short_description,
+                content=circle.content_html,
+                author=circle.author,
+                category=category_name,
+                nextEvent=NextEventSchema(
                     slug=event.slug,
                     start=event.start.isoformat(),
                     title=event.title,
                     link=event.get_absolute_url(),
-                    seats_left=seats_left,  # Add seats_left to the event
+                    seats_left=seats_left,
                 ),
-                "category": category_name,
-            }
+            ),
         )
 
     return spaces

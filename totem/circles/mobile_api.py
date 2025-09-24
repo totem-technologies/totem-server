@@ -57,23 +57,29 @@ def list_spaces(request):
 
         spaces_set.add(event.circle.slug)
         circle: Circle = event.circle
+        
+        category = circle.categories.first()
+        category_name = category.name if category else None
+
+        seats_left = max(0, event.seats - event.attendee_count)  # type: ignore
 
         spaces.append(
-            {
-                "slug": circle.slug,
-                "title": circle.title,
-                "image_link": circle.image.url if circle.image else None,
-                "description": circle.short_description,
-                "author": circle.author,
-                "nextEvent": NextEventSchema(
+            SpaceDetailSchema(
+                slug=circle.slug,
+                title=circle.title,
+                image_link=circle.image.url if circle.image else None,
+                short_description=circle.short_description,
+                content=circle.content_html,
+                author=circle.author,
+                category=category_name,
+                nextEvent=NextEventSchema(
                     slug=event.slug,
                     start=event.start.isoformat(),
                     title=event.title,
                     link=event.get_absolute_url(),
-                    seats_left=event.seats_left(),
+                    seats_left=seats_left,
                 ),
-                "category": event.first_category,  # type: ignore
-            }
+            ),
         )
 
     return spaces

@@ -13,7 +13,7 @@ class ProfileAvatarTypeEnum(str, Enum):
 
 class PublicUserSchema(ModelSchema):
     profile_avatar_type: ProfileAvatarTypeEnum
-    circle_count: int
+    circle_count: Optional[int] = None
 
     @staticmethod
     def resolve_circle_count(obj: User) -> int:
