@@ -14,14 +14,22 @@ class ProfileAvatarTypeEnum(str, Enum):
 class PublicUserSchema(ModelSchema):
     profile_avatar_type: ProfileAvatarTypeEnum
     circle_count: int
-    
+
     @staticmethod
     def resolve_circle_count(obj: User) -> int:
         return obj.events_joined.count()
 
     class Meta:
         model = User
-        fields = ["name", "slug", "is_staff", "profile_avatar_seed", "profile_image", "profile_avatar_type", "date_created"]
+        fields = [
+            "name",
+            "slug",
+            "is_staff",
+            "profile_avatar_seed",
+            "profile_image",
+            "profile_avatar_type",
+            "date_created",
+        ]
 
 
 class UserSchema(ModelSchema):
@@ -33,7 +41,7 @@ class UserSchema(ModelSchema):
         if obj.profile_image:
             return obj.profile_image.url
         return None
-    
+
     @staticmethod
     def resolve_circle_count(obj: User) -> int:
         return obj.events_joined.count()

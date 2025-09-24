@@ -1,13 +1,13 @@
 import datetime
 
-from django.db.models import Count, F, Q, OuterRef, Subquery
+from django.db.models import Count, F, OuterRef, Q, Subquery
 from django.urls import reverse
 from django.utils import timezone
 
 from totem.circles.schemas import EventDetailSchema, EventSpaceSchema, NextEventSchema, SpaceDetailSchema
 from totem.users.models import User
 
-from .models import CircleCategory, CircleEvent
+from .models import Circle, CircleCategory, CircleEvent
 
 
 def other_events_in_circle(user: User | None, event: CircleEvent, limit: int = 10):
@@ -141,7 +141,7 @@ def upcoming_events_by_author(user: User, author: User, exclude_event: CircleEve
 
 
 def event_detail_schema(event: CircleEvent, user: User):
-    space = event.circle
+    space: Circle = event.circle
     start = event.start
     subscribed = space.subscribed.contains(user) if user.is_authenticated else None
     ended = event.ended()
@@ -176,7 +176,7 @@ def event_detail_schema(event: CircleEvent, user: User):
 
 
 def space_detail_schema(event: CircleEvent):
-    circle = event.circle
+    circle: Circle = event.circle
     category = circle.categories.first()
     category_name = category.name if category else None
 
@@ -184,7 +184,8 @@ def space_detail_schema(event: CircleEvent):
         slug=circle.slug,
         title=circle.title,
         image_link=circle.image.url if circle.image else None,
-        description=circle.short_description,
+        short_description=circle.short_description,
+        content=circle.content_html,
         author=circle.author,
         category=category_name,
         nextEvent=NextEventSchema(
