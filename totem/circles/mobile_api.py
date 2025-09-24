@@ -1,13 +1,13 @@
 from typing import List
 
-from django.http import HttpRequest
-from django.shortcuts import get_object_or_404
-from ninja import Router
-from ninja.pagination import paginate
-from ninja.errors import AuthorizationError
 from django.db import transaction
 from django.db.models import Count
+from django.http import HttpRequest
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from ninja import Router
+from ninja.errors import AuthorizationError
+from ninja.pagination import paginate
 
 from totem.circles.api import NextEventSchema, SpaceDetailSchema
 from totem.circles.filters import (
@@ -16,11 +16,10 @@ from totem.circles.filters import (
     space_detail_schema,
     upcoming_recommended_events,
 )
-from totem.circles.models import Circle, CircleEvent
+from totem.circles.models import Circle, CircleEvent, CircleEventException
 from totem.circles.schemas import EventDetailSchema, SpaceSchema, SummarySpacesSchema
 from totem.onboard.models import OnboardModel
 from totem.users.models import User
-from totem.circles.models import CircleEventException
 
 spaces_router = Router()
 
@@ -59,22 +58,28 @@ def list_spaces(request):
         spaces_set.add(event.circle.slug)
         circle: Circle = event.circle
 
+        category = circle.categories.first()
+        category_name = category.name if category else None
+
+        seats_left = max(0, event.seats - event.attendee_count)  # type: ignore
+
         spaces.append(
-            {
-                "slug": circle.slug,
-                "title": circle.title,
-                "image_link": circle.image.url if circle.image else None,
-                "description": circle.short_description,
-                "author": circle.author,
-                "nextEvent": NextEventSchema(
+            SpaceDetailSchema(
+                slug=circle.slug,
+                title=circle.title,
+                image_link=circle.image.url if circle.image else None,
+                short_description=circle.short_description,
+                content=circle.content_html,
+                author=circle.author,
+                category=category_name,
+                nextEvent=NextEventSchema(
                     slug=event.slug,
                     start=event.start.isoformat(),
                     title=event.title,
                     link=event.get_absolute_url(),
-                    seats_left=event.seats_left(),
+                    seats_left=seats_left,
                 ),
-                "category": event.first_category,  # type: ignore
-            }
+            ),
         )
 
     return spaces
