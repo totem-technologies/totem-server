@@ -57,7 +57,7 @@ def list_spaces(request):
 
         spaces_set.add(event.circle.slug)
         circle: Circle = event.circle
-        
+
         category = circle.categories.first()
         category_name = category.name if category else None
 
