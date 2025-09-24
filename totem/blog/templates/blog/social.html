@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ post.title }}{% endblock title %}
+{% block description %}
+  {% if post.subtitle %}
+    {{ post.subtitle|striptags|truncatewords:30 }}
+  {% else %}
+    {{ post.content_html|striptags|truncatewords:30 }}
+  {% endif %}
+{% endblock description %}
+{% block meta %}
+  <meta name="robots" content="noindex" />
+{% endblock meta %}
+
+{% block content %}
+  <div class="m-auto flex max-w-3xl flex-col gap-10 px-5 pt-10">
+    <div>
+      <h2>Square Post</h2>
+      <a
+        download="{{ post.slug }}-square.jpg"
+        href="{% url 'blog:post_social_img' slug=post.slug image_format='square' %}">
+        <img
+          src="{% url 'blog:post_social_img' slug=post.slug image_format='square' %}"
+          alt="" />
+      </a>
+    </div>
+    <div>
+      <h2>2:1 Post</h2>
+      <a
+        download="{{ post.slug }}-wide.jpg"
+        href="{% url 'blog:post_social_img' slug=post.slug image_format='2to1' %}">
+        <img
+          src="{% url 'blog:post_social_img' slug=post.slug image_format='2to1' %}"
+          alt="" />
+      </a>
+    </div>
+    <div>
+      <h2>4:5 Post</h2>
+      <a
+        download="{{ post.slug }}-tall.jpg"
+        href="{% url 'blog:post_social_img' slug=post.slug image_format='4to5' %}">
+        <img
+          src="{% url 'blog:post_social_img' slug=post.slug image_format='4to5' %}"
+          alt="" />
+      </a>
+    </div>
+  </div>
+{% endblock content %}

@@ -47,6 +47,8 @@ class ImageParams:
     time_est: str
     width: int
     height: int
+    meta_line: str = ""
+    include_avatar: bool = True
 
     def cache_key(self) -> int:
         # It's important for this to be stable across instances
@@ -240,37 +242,50 @@ def generate_image(params: ImageParams):
         font_size=scale_factor // 20,
         variation="Regular",
     )
-    text_position = _draw_wrapped_text(
-        image,
-        f"with {params.author_name} @ totem.org",
-        (text_position[0], text_position[1] + 10),
-        font_size=scale_factor // 30,
-        variation="Regular",
-    )
-    text_position = _draw_wrapped_text(
-        image,
-        params.day,
-        (text_position[0], text_position[1] + 30),
-        font_size=scale_factor // 18,
-        variation="SemiBold",
-    )
-    text_position = _draw_wrapped_text(
-        image,
-        params.time_pst,
-        (text_position[0], text_position[1] + 20),
-        font_size=scale_factor // 18,
-        variation="SemiBold",
-    )
-    text_position = _draw_wrapped_text(
-        image,
-        params.time_est,
-        (text_position[0], text_position[1] + 20),
-        font_size=scale_factor // 18,
-        variation="SemiBold",
-    )
 
-    # Plop that cherry on top
-    _draw_avatar(image, params.author_img_path)
+    if params.meta_line:
+        # If meta_line provided (e.g., "By Author • Jan 1, 2025"), render that instead of event-specific lines
+        text_position = _draw_wrapped_text(
+            image,
+            params.meta_line,
+            (text_position[0], text_position[1] + 10),
+            font_size=scale_factor // 30,
+            variation="Regular",
+        )
+    else:
+        # Default event-specific rendering
+        text_position = _draw_wrapped_text(
+            image,
+            f"with {params.author_name} @ totem.org",
+            (text_position[0], text_position[1] + 10),
+            font_size=scale_factor // 30,
+            variation="Regular",
+        )
+        text_position = _draw_wrapped_text(
+            image,
+            params.day,
+            (text_position[0], text_position[1] + 30),
+            font_size=scale_factor // 18,
+            variation="SemiBold",
+        )
+        text_position = _draw_wrapped_text(
+            image,
+            params.time_pst,
+            (text_position[0], text_position[1] + 20),
+            font_size=scale_factor // 18,
+            variation="SemiBold",
+        )
+        text_position = _draw_wrapped_text(
+            image,
+            params.time_est,
+            (text_position[0], text_position[1] + 20),
+            font_size=scale_factor // 18,
+            variation="SemiBold",
+        )
+
+    # Plop that cherry on top (optional for blog)
+    if params.include_avatar:
+        _draw_avatar(image, params.author_img_path)
     # _draw_logo(image)
     return image.convert("RGB")
 
