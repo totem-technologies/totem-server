@@ -3,7 +3,7 @@ from livekit import api
 
 from totem.users.models import User
 
-from .models import CircleEvent
+from ..circles.models import CircleEvent
 
 
 def livekit_create_access_token(user: User, event: CircleEvent) -> str:

@@ -123,7 +123,3 @@ class SummarySpacesSchema(Schema):
     upcoming: List[EventDetailSchema]
     for_you: List[SpaceDetailSchema]
     explore: List[SpaceDetailSchema]
-
-
-class LivekitTokenResponseSchema(Schema):
-    token: str
