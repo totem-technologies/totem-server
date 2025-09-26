@@ -9,6 +9,7 @@ from totem.users.models import User
 
 meetings_router = Router()
 
+
 @meetings_router.get(
     "/event/{event_slug}/token",
     response={200: LivekitTokenResponseSchema, 403: str, 404: str},

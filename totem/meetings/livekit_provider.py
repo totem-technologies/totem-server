@@ -55,7 +55,7 @@ def livekit_create_access_token(user: User, event: CircleEvent) -> str:
         raise ValueError("LiveKit API key and secret are not configured.")
 
     participant_identity = user.slug
-    
+
     room = get_or_create_room(user, event)
 
     token = (

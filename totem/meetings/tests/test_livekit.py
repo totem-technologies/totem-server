@@ -74,4 +74,3 @@ class TestGetLiveKitToken:
         response = client.get(url, headers=user_auth_headers["headers"])
 
         assert response.status_code == 500
-
