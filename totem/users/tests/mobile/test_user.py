@@ -22,6 +22,8 @@ class TestMobileUserAPI:
         assert data["name"] == user.name
         assert "api_key" in data
         assert data["profile_avatar_type"] == user.profile_avatar_type
+        assert "circle_count" in data
+        assert data["circle_count"] == user.events_joined.count()
 
     def test_get_current_user_unauthenticated(self, client: Client):
         url = reverse("mobile-api:user_current")

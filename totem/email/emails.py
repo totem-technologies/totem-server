@@ -200,7 +200,7 @@ def notify_circle_starting(event: CircleEvent, user: User) -> Email:
         start=start,
         event_title=event.circle.title,
         event_link=_make_email_url(event.get_absolute_url()),
-        link=type_url(event.join_url(user)),
+        link=type_url(event.email_join_url(user)),
     )
 
 

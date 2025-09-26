@@ -70,6 +70,7 @@ class EventSpaceSchema(ModelSchema):
             "short_description",
             "recurring",
             "image",
+            "content",
         ]
 
 
@@ -111,7 +112,8 @@ class SpaceDetailSchema(Schema):
     slug: str
     title: str
     image_link: str | None
-    description: str
+    short_description: str
+    content: str
     author: PublicUserSchema
     nextEvent: NextEventSchema
     category: str | None

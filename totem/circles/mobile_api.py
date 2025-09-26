@@ -1,8 +1,10 @@
 from typing import List
 
 from django.db import transaction
+from django.db.models import Count
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from ninja import Router
 from ninja.errors import AuthorizationError
 from ninja.pagination import paginate
@@ -16,7 +18,12 @@ from totem.circles.filters import (
 )
 from totem.circles.livekit import livekit_create_access_token
 from totem.circles.models import Circle, CircleEvent, CircleEventException
-from totem.circles.schemas import EventDetailSchema, LivekitTokenResponseSchema, SpaceSchema, SummarySpacesSchema
+from totem.circles.schemas import (
+    EventDetailSchema,
+    LivekitTokenResponseSchema,
+    SpaceSchema,
+    SummarySpacesSchema,
+)
 from totem.onboard.models import OnboardModel
 from totem.users.models import User
 
@@ -55,27 +62,30 @@ def list_spaces(request):
             continue
 
         spaces_set.add(event.circle.slug)
-        circle = event.circle
+        circle: Circle = event.circle
 
         category = circle.categories.first()
         category_name = category.name if category else None
 
+        seats_left = max(0, event.seats - event.attendee_count)  # type: ignore
+
         spaces.append(
-            {
-                "slug": circle.slug,
-                "title": circle.title,
-                "image_link": circle.image.url if circle.image else None,
-                "description": circle.short_description,
-                "author": circle.author,
-                "nextEvent": NextEventSchema(
+            SpaceDetailSchema(
+                slug=circle.slug,
+                title=circle.title,
+                image_link=circle.image.url if circle.image else None,
+                short_description=circle.short_description,
+                content=circle.content_html,
+                author=circle.author,
+                category=category_name,
+                nextEvent=NextEventSchema(
                     slug=event.slug,
                     start=event.start.isoformat(),
                     title=event.title,
                     link=event.get_absolute_url(),
-                    seats_left=event.seats_left(),
+                    seats_left=seats_left,
                 ),
-                "category": category_name,
-            }
+            ),
         )
 
     return spaces
@@ -148,27 +158,36 @@ def get_spaces_summary(request: HttpRequest):
     user: User = request.user  # type: ignore
 
     # The upcoming events that the user is subscribed to
-    upcoming_events = CircleEvent.objects.filter(
-        attendees=user,
-        circle__published=True,
-    ).order_by("start")
+    upcoming_events = (
+        CircleEvent.objects.filter(
+            attendees=user,
+            circle__published=True,
+            cancelled=False,
+            start__gte=timezone.now(),
+        )
+        .select_related("circle")
+        .prefetch_related("circle__author", "circle__categories", "attendees")
+        .annotate(attendee_count=Count("attendees", distinct=True))
+        .order_by("start")
+    )
     upcoming = [event_detail_schema(event, user) for event in upcoming_events]
 
     # The recommended spaces based on the user's onboarding.
     onboard_model = get_object_or_404(OnboardModel, user=user)
-    categories = []
+    categories_set = set()
     if onboard_model.hopes:
-        print(onboard_model.hopes.split(", "))
-        for hope in onboard_model.hopes.split(", "):
-            categories.append(hope)
-    # Add categories from user's previously joined spaces
-    previous_spaces = Circle.objects.filter(subscribed=user, published=True).distinct()
-    for circle in previous_spaces:
-        category = circle.categories.first()
-        category_name = category.name if category else None
-        if category_name and category_name not in categories:
-            categories.append(category_name)
-    recommended_events = upcoming_recommended_events(user, categories=categories)
+        for hope in onboard_model.hopes.split(","):
+            name = hope.strip()
+            if name:
+                categories_set.add(name)
+    # Add categories from user's previously joined spaces (single query)
+    previous_category_names = (
+        Circle.objects.filter(subscribed=user, published=True).values_list("categories__name", flat=True).distinct()
+    )
+    for name in previous_category_names:
+        if name:
+            categories_set.add(name)
+    recommended_events = upcoming_recommended_events(user, categories=list(categories_set))
     for_you = [
         space_detail_schema(event) for event in recommended_events if event.circle.published and not event.cancelled
     ]
