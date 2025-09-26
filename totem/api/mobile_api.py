@@ -10,7 +10,7 @@ from ninja.security import HttpBearer
 
 from totem.blog.mobile_api import blog_router
 from totem.circles.mobile_api import spaces_router
-from totem.livekit.mobile_api import livekit_router
+from totem.meetings.mobile_api import meetings_router
 from totem.notifications.models import FCMDevice
 from totem.notifications.schemas import FCMTokenRegisterSchema, FCMTokenResponseSchema
 from totem.notifications.validators import validate_fcm_token
@@ -53,7 +53,7 @@ router.add_router("/users", user_router)
 router.add_router("/onboard", onboard_router)
 router.add_router("/spaces", spaces_router)
 router.add_router("/blog", blog_router)
-router.add_router("/livekit", livekit_router)
+router.add_router("/meetings", meetings_router)
 
 
 @router.post("/fcm/register", response={201: FCMTokenResponseSchema}, url_name="register_fcm_token")

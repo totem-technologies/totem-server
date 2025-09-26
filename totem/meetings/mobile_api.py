@@ -3,16 +3,16 @@ from ninja import Router
 from ninja.errors import AuthorizationError
 
 from totem.circles.models import CircleEvent, CircleEventState
-from totem.livekit.livekit import livekit_create_access_token
-from totem.livekit.schemas import LivekitTokenResponseSchema
+from totem.meetings.livekit_provider import livekit_create_access_token
+from totem.meetings.schemas import LivekitTokenResponseSchema
 from totem.users.models import User
 
-livekit_router = Router()
+meetings_router = Router()
 
-@livekit_router.get(
+@meetings_router.get(
     "/event/{event_slug}/token",
     response={200: LivekitTokenResponseSchema, 403: str, 404: str},
-    tags=["spaces"],
+    tags=["meetings"],
     url_name="livekit_token",
 )
 def get_livekit_token(request, event_slug: str):
