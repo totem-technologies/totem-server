@@ -169,6 +169,16 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
     seats = models.IntegerField(default=8)
     start = models.DateTimeField(default=timezone.now)
 
+    meeting_provider = models.CharField(
+        max_length=20,
+        choices=[
+            ("livekit", "LiveKit"),
+            ("google_meet", "Google Meet"),
+        ],
+        default="google_meet",
+        help_text="The video conferencing provider for this event.",
+    )
+
     class Meta:  # pyright: ignore [reportIncompatibleVariableOverride]
         ordering = ["start"]
         unique_together = [["circle", "start", "open", "title"]]
