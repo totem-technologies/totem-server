@@ -172,6 +172,7 @@ def event_detail_schema(event: CircleEvent, user: User):
         subscribe_url=reverse("mobile-api:spaces_subscribe", kwargs={"space_slug": space.slug}),
         subscribed=subscribed,
         user_timezone=str("UTC"),
+        meeting_provider=event.meeting_provider,
     )
 
 
