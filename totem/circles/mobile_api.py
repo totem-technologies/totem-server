@@ -161,14 +161,15 @@ def get_spaces_summary(request: HttpRequest):
             attendees=user,
             circle__published=True,
             cancelled=False,
-            start__gte=timezone.now(),
         )
         .select_related("circle")
         .prefetch_related("circle__author", "circle__categories", "attendees")
         .annotate(attendee_count=Count("attendees", distinct=True))
         .order_by("start")
     )
-    upcoming = [event_detail_schema(event, user) for event in upcoming_events]
+    upcoming = [
+        event_detail_schema(event, user) for event in upcoming_events if not event.ended()
+    ]
 
     # The recommended spaces based on the user's onboarding.
     onboard_model = get_object_or_404(OnboardModel, user=user)
