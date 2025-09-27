@@ -154,6 +154,7 @@ class CircleEventAdmin(admin.ModelAdmin):
                     "content",
                     "attendees",
                     "joined",
+                    "meeting_provider",
                     "meeting_url",
                 )
             },

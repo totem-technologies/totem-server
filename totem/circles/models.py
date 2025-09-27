@@ -168,14 +168,15 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
     open = models.BooleanField(default=True, help_text="Is this session open for more attendees?")
     seats = models.IntegerField(default=8)
     start = models.DateTimeField(default=timezone.now)
+    
+    class MeetingProviderChoices(models.TextChoices):
+        GOOGLE_MEET = "google_meet", _("Google Meet")
+        LIVEKIT = "livekit", _("LiveKit")
 
     meeting_provider = models.CharField(
         max_length=20,
-        choices=[
-            ("livekit", "LiveKit"),
-            ("google_meet", "Google Meet"),
-        ],
-        default="google_meet",
+        choices=MeetingProviderChoices.choices,
+        default=MeetingProviderChoices.GOOGLE_MEET,
         help_text="The video conferencing provider for this event.",
     )
 

@@ -1,4 +1,5 @@
 from datetime import datetime
+from enum import Enum
 from typing import List
 
 from ninja import FilterSchema, ModelSchema, Schema
@@ -74,6 +75,11 @@ class EventSpaceSchema(ModelSchema):
         ]
 
 
+class MeetingProviderEnum(str, Enum):
+    GOOGLE_MEET = "google_meet"
+    LIVEKIT = "livekit"
+
+
 class EventDetailSchema(Schema):
     slug: str
     title: str
@@ -98,6 +104,7 @@ class EventDetailSchema(Schema):
     calLink: str
     subscribed: bool | None
     user_timezone: str | None
+    meeting_provider: MeetingProviderEnum
 
 
 class NextEventSchema(Schema):
