@@ -9,7 +9,7 @@ from ..circles.models import CircleEvent
 def livekit_create_access_token(user: User, event: CircleEvent) -> str:
     """
     Create a LiveKit access token for a user to join a specific event room.
-    
+
     If the room doesn't exist, it will be created automatically when the user joins.
     """
     if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:

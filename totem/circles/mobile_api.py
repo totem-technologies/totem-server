@@ -4,7 +4,6 @@ from django.db import transaction
 from django.db.models import Count
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from ninja import Router
 from ninja.errors import AuthorizationError
 from ninja.pagination import paginate
@@ -167,9 +166,7 @@ def get_spaces_summary(request: HttpRequest):
         .annotate(attendee_count=Count("attendees", distinct=True))
         .order_by("start")
     )
-    upcoming = [
-        event_detail_schema(event, user) for event in upcoming_events if not event.ended()
-    ]
+    upcoming = [event_detail_schema(event, user) for event in upcoming_events if not event.ended()]
 
     # The recommended spaces based on the user's onboarding.
     onboard_model = get_object_or_404(OnboardModel, user=user)
