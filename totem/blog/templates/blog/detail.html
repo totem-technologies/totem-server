@@ -34,11 +34,9 @@
         {{ post.title }}
       </h1>
       <p>
+        {% if not post.publish %}[DRAFT]{% endif %}
         {% if post.subtitle %}
-          <span class="text-lg text-gray-600"
-            >{% if not post.publish %}[DRAFT]{% endif %}
-            {{ post.subtitle }}</span
-          >
+          <span class="text-lg text-gray-600">{{ post.subtitle }}</span>
         {% endif %}
       </p>
       {% if post.header_image %}
