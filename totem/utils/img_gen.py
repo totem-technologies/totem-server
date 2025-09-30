@@ -402,13 +402,13 @@ def generate_blog_image(params: BlogImageParams):
         image,
         label_text,
         text_position,
-        font_size=scale_factor // 20,
+        font_size=scale_factor // 25,
     )
     text_position = _draw_wrapped_text(
         image,
         params.title,
         (text_position[0], text_position[1] + spacing),
-        font_size=scale_factor // 12,
+        font_size=scale_factor // 13,
     )
 
     # Default event-specific rendering
