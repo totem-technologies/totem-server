@@ -6,7 +6,7 @@
 {# djlint:off #}
 {% block title %}{{ post.title }}{% endblock title %}
 {% block description %}{{ post.subtitle|striptags|truncatechars:140 }}{% endblock description %}
-{% block ogimage %}{% absurl 'blog:post_social_img' slug=post.slug image_format="2to1" %}{% endblock ogimage %}
+{% block ogimage %}{% absurl 'blog:post_social_img' slug=post.slug image_format="2to1" %}?new=false{% endblock ogimage %}
 {% block meta %}
   {% if post.publish %}
     <meta name="robots" content="index" />
@@ -30,19 +30,22 @@
         {% include "blog/_author_date.html" %}
       </address>
       <h1
-        class="mb-4 text-3xl leading-tight font-extrabold text-gray-900 lg:mb-6 lg:text-4xl">
-        {% if not post.publish %}[DRAFT]{% endif %}{{ post.title }}
+        class="mb-4 hidden text-3xl leading-tight font-extrabold text-gray-900 lg:mb-6 lg:text-4xl">
+        {{ post.title }}
       </h1>
       <p>
         {% if post.subtitle %}
-          <span class="text-lg text-gray-600">{{ post.subtitle }}</span>
+          <span class="text-lg text-gray-600"
+            >{% if not post.publish %}[DRAFT]{% endif %}
+            {{ post.subtitle }}</span
+          >
         {% endif %}
       </p>
       {% if post.header_image %}
         <div class="card mt-5 shadow-xl">
           <figure>
             <img
-              src="{{ post.header_image.url }}"
+              src="{% absurl 'blog:post_social_img' slug=post.slug image_format="2to1" %}?new=false"
               alt="{{ post.title }}"
               class="h-auto w-full rounded-lg"
               loading="lazy" />

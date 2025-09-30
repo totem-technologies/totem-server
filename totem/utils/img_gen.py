@@ -69,6 +69,7 @@ class BlogImageParams:
     title: str
     width: int
     height: int
+    show_new: bool
 
     @override
     def __hash__(self):
@@ -393,9 +394,13 @@ def generate_blog_image(params: BlogImageParams):
     spacing = scale_factor // 30
 
     # Draw text on image
+    if params.show_new:
+        label_text = "New on the Totem Blog"
+    else:
+        label_text = "Totem Blog"
     text_position = _draw_wrapped_text(
         image,
-        "New on the Totem Blog",
+        label_text,
         text_position,
         font_size=scale_factor // 20,
     )
