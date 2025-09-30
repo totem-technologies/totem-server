@@ -1,11 +1,12 @@
 {% extends "base.html" %}
 {% load markdown %}
 {% load avatar %}
+{% load absurl %}
 
 {# djlint:off #}
 {% block title %}{{ post.title }}{% endblock title %}
 {% block description %}{{ post.subtitle|striptags|truncatechars:140 }}{% endblock description %}
-{% block ogimage %}{% if post.header_image %}{{ post.header_image.url }}{% endif %}{% endblock ogimage %}
+{% block ogimage %}{% absurl 'blog:post_social_img' slug=post.slug image_format="2to1" %}{% endblock ogimage %}
 {% block meta %}
   {% if post.publish %}
     <meta name="robots" content="index" />

@@ -21,7 +21,7 @@ class AuthorDropdownFilter(admin.SimpleListFilter):
 
 
 @admin.register(BlogPost)
-class BlogPostAdmin(admin.ModelAdmin):
+class BlogPostAdmin(admin.ModelAdmin):  # pyright: ignore[reportMissingTypeArgument]
     save_on_top = True
     list_display = ("title", "author__email", "get_header_image", "date_published", "publish")
     list_filter = [AuthorDropdownFilter]
@@ -34,7 +34,7 @@ class BlogPostAdmin(admin.ModelAdmin):
             return mark_safe(f'<img src="{obj.header_image.url}" height="50" />')
         return "-"
 
-    get_header_image.short_description = "Header Image"  # type: ignore
+    get_header_image.short_description = "Header Image"  # type: ignore  # pyright: ignore[reportFunctionMemberAccess]
 
     def get_form(self, request, obj=None, change=False, **kwargs):
         form = super().get_form(request, obj, change, **kwargs)

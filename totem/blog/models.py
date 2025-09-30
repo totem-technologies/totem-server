@@ -95,5 +95,5 @@ class BlogPost(AdminURLMixin, MarkdownMixin, SluggedModel):
     def get_absolute_url(self) -> str:
         return reverse("blog:detail", kwargs={"slug": self.slug})
 
-    class Meta:  # type: ignore
+    class Meta:  # type: ignore  # pyright: ignore[reportIncompatibleVariableOverride]
         ordering = ["-date_published"]
