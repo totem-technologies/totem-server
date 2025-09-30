@@ -47,7 +47,7 @@ class TestGetLiveKitToken:
         client, user = client_with_user
         event: CircleEvent = CircleEventFactory()
         event.attendees.add(user)
-        event.start = timezone.now() + timezone.timedelta(hours=1)
+        event.start = timezone.now() - timezone.timedelta(hours=1)
         event.save()
 
         url = reverse("mobile-api:get_livekit_token", kwargs={"event_slug": event.slug})

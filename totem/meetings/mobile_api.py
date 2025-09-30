@@ -16,7 +16,7 @@ meetings_router = Router()
     "/event/{event_slug}/token",
     response={200: LivekitTokenResponseSchema, 403: str, 404: str},
     tags=["meetings"],
-    url_name="livekit_token",
+    url_name="get_livekit_token",
 )
 def get_livekit_token(request, event_slug: str):
     user: User = request.auth
@@ -32,7 +32,7 @@ def get_livekit_token(request, event_slug: str):
         logging.warning("User %s attempted to join non-joinable event %s", user.slug, event.slug)
         raise AuthorizationError(message="Event is not joinable at this time.")
 
-    if not event.attendees.filter(id=user.slug).exists():
+    if not event.attendees.filter(slug=user.slug).exists():
         logging.warning("User %s attempted to join event %s without RSVP", user.slug, event.slug)
         raise AuthorizationError(message="You have not RSVP'd for this event.")
 
