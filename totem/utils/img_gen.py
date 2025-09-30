@@ -1,16 +1,17 @@
+from collections.abc import Sequence
 import hashlib
 import os
 from dataclasses import asdict, dataclass
 from functools import lru_cache
 from io import BytesIO
-from math import floor
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from typing import Any, Literal, cast
 
 import requests
 from django.conf import settings
-from fontTools.ttLib import TTFont
+from fontTools.ttLib import TTFont  # pyright: ignore[reportMissingTypeStubs]
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from PIL.ImageFile import ImageFile
+from typing_extensions import override
 
 folder_path = os.path.dirname(os.path.realpath(__file__))
 font_path = f"{folder_path}/../static/fonts/Montserrat-VariableFont_wght.ttf"
@@ -21,7 +22,7 @@ client = requests.session()
 PADDING = 20
 
 
-def load_fonts(*font_paths: str) -> Dict[str, TTFont]:
+def load_fonts(*font_paths: str) -> dict[str, TTFont]:
     """
     Loads font files specified by paths into memory and returns a dictionary of font objects.
     """
@@ -29,14 +30,21 @@ def load_fonts(*font_paths: str) -> Dict[str, TTFont]:
     for path in font_paths:
         font = TTFont(path)
         fonts[path] = font
-    return fonts
+    return cast(dict[str, TTFont], fonts)
 
 
 fonts = load_fonts(font_path, font_fallback_path, font_emoji_path)
 
 
+def _generate_hash(data: dict[str, Any], version: int = 1) -> int:  # pyright: ignore[reportExplicitAny]
+    sha256_hash = hashlib.sha256()
+    input_string = f"{version}:{data}"
+    sha256_hash.update(input_string.encode("utf-8"))
+    return int.from_bytes(sha256_hash.digest())
+
+
 @dataclass
-class ImageParams:
+class CircleImageParams:
     background_path: str
     author_img_path: str
     author_name: str
@@ -47,30 +55,32 @@ class ImageParams:
     time_est: str
     width: int
     height: int
-    meta_line: str = ""
-    include_avatar: bool = True
 
-    def cache_key(self) -> int:
-        # It's important for this to be stable across instances
-        # in case it's sent to a shared cache.
-        VERSION = 1  # bump to invalidate all them cache
-        sha256_hash = hashlib.sha256()
-        data_dict = asdict(self)
-        input_string = f"{VERSION}:{data_dict}"
-        sha256_hash.update(input_string.encode("utf-8"))
-        return int.from_bytes(sha256_hash.digest())
-
+    @override
     def __hash__(self):
-        return self.cache_key()
+        return _generate_hash(asdict(self))
 
 
-def adjust_transparency(img: Image.Image, opacity=0.2):
+@dataclass
+class BlogImageParams:
+    background_path: str
+    author_img_path: str
+    author_name: str
+    title: str
+    width: int
+    height: int
+
+    @override
+    def __hash__(self):
+        return _generate_hash(asdict(self))
+
+
+def adjust_transparency(img: Image.Image, opacity: float = 0.2):
     # factor is a number between 0 and 1
     # Convert the image into RGBA (if not already) and get its pixels
     img = img.convert("RGBA")
-    pixels: Any = img.getdata()
-
-    new_pixels = []
+    pixels = cast(Sequence[tuple[int, int, int, int]], img.getdata())  # pyright: ignore[reportUnknownMemberType]
+    new_pixels: list[tuple[int, int, int, int]] = []
 
     for pixel in pixels:
         # Change the fourth value (alpha) in each pixel according to opacity percentage
@@ -78,11 +88,11 @@ def adjust_transparency(img: Image.Image, opacity=0.2):
         new_pixels.append(new_pixel)
 
     # Update the pixels of the image with our newly modified pixels and return it
-    img.putdata(new_pixels)
+    img.putdata(new_pixels)  # pyright: ignore[reportUnknownMemberType]
     return img
 
 
-def _make_gradient(image):
+def _make_gradient(image: Image.Image):
     gradient_overlay = Image.new("RGBA", image.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(gradient_overlay)
     for y in range(image.height):
@@ -91,23 +101,23 @@ def _make_gradient(image):
     return Image.alpha_composite(image, gradient_overlay)
 
 
-def _resize(original_image: ImageFile, target_width, target_height):
+def _resize(original_image: ImageFile, target_width: int, target_height: int):
     aspect_ratio = original_image.width / float(original_image.height)
     if target_width / target_height < aspect_ratio:
         new_width = int(target_height * aspect_ratio)
-        resized_image = original_image.resize((new_width, target_height), resample=Image.Resampling.LANCZOS)
+        resized_image = original_image.resize((new_width, target_height), resample=Image.Resampling.LANCZOS)  # pyright: ignore[reportUnknownMemberType]
         x0 = (new_width - target_width) // 2
         cropped_image = resized_image.crop((x0, 0, x0 + target_width, target_height))
     else:
         new_height = int(target_width / aspect_ratio)
-        resized_image = original_image.resize((target_width, new_height), resample=Image.Resampling.LANCZOS)
+        resized_image = original_image.resize((target_width, new_height), resample=Image.Resampling.LANCZOS)  # pyright: ignore[reportUnknownMemberType]
         y0 = (new_height - target_height) // 2
         cropped_image = resized_image.crop((0, y0, target_width, y0 + target_height))
     return cropped_image
 
 
-def _wrap_text(text, width, font):
-    lines = []
+def _wrap_text(text: str, width: int, font: ImageFont.FreeTypeFont) -> list[str]:
+    lines: list[str] = []
     if not text:
         return lines
 
@@ -118,7 +128,7 @@ def _wrap_text(text, width, font):
     for word in words:
         temp_line = f"{line} {word}" if line else word
         b_box = draw.textbbox((0, 0), temp_line, font=font)
-        if b_box[2] <= width - 50:  # 50 fudge factor to account for emoji
+        if b_box[2] <= width - 60:  # 50 fudge factor to account for emoji
             line = temp_line
         else:
             lines.append(line)
@@ -128,7 +138,11 @@ def _wrap_text(text, width, font):
 
 
 def _draw_wrapped_text(
-    image: Image.Image, text, position, font_size: int = 14, variation: str = "SemiBold", fill: str = "white"
+    image: Image.Image,
+    text: str,
+    position: tuple[int, int],
+    font_size: int = 14,
+    variation: str = "SemiBold",
 ):
     draw = ImageDraw.Draw(image)
     x, y = position
@@ -140,9 +154,18 @@ def _draw_wrapped_text(
 
     for line in lines:
         b_box = draw.textbbox((x, y), line, font=font)
-        # draw.text((x, y), line, font=font, fill=fill)
-        draw_multiline_text_v2(draw, (x, y), line, (255, 255, 255), fonts, font_size, variation, align="left")
-        y += (b_box[3] - b_box[1]) + line_height
+        draw_text(
+            draw,
+            xy=(x, y),
+            text=line,
+            color=(255, 255, 255),
+            fonts=fonts,
+            variation=variation,
+            size=font_size,
+            anchor=None,
+            align="left",
+        )
+        y += round((b_box[3] - b_box[1]) + line_height)
 
     return (x, y)
 
@@ -153,8 +176,8 @@ def _draw_avatar(image: Image.Image, avatar_path: str):
     border_color = (255, 255, 255)
     border_width = avatar_size // 50
 
-    # Use supersampling for smoother edges
-    scale_factor = 4  # 4x supersampling
+    # Use super sampling for smoother edges
+    scale_factor = 4  # 4x super sampling
     hi_res_size = (avatar_size * scale_factor, avatar_size * scale_factor)
 
     # Create high-resolution masks for anti-aliasing
@@ -163,8 +186,8 @@ def _draw_avatar(image: Image.Image, avatar_path: str):
     draw_outer = ImageDraw.Draw(hi_res_outer_mask)
     draw_outer.ellipse((0, 0, hi_res_size[0], hi_res_size[1]), fill=255)
 
-    # Downsample outer mask to target size using high-quality interpolation
-    outer_mask = hi_res_outer_mask.resize(target_size, resample=Image.Resampling.LANCZOS)
+    # Down sample outer mask to target size using high-quality interpolation
+    outer_mask = hi_res_outer_mask.resize(target_size, resample=Image.Resampling.LANCZOS)  # pyright: ignore[reportUnknownMemberType]
 
     # Create a new transparent canvas
     canvas = Image.new("RGBA", target_size, (0, 0, 0, 0))
@@ -188,7 +211,7 @@ def _draw_avatar(image: Image.Image, avatar_path: str):
     hi_res_avatar_mask = Image.new("L", (avatar_mask_size[0] * scale_factor, avatar_mask_size[1] * scale_factor), 0)
     draw_avatar_mask = ImageDraw.Draw(hi_res_avatar_mask)
     draw_avatar_mask.ellipse((0, 0, hi_res_avatar_mask.width, hi_res_avatar_mask.height), fill=255)
-    avatar_mask = hi_res_avatar_mask.resize(avatar_mask_size, resample=Image.Resampling.LANCZOS)
+    avatar_mask = hi_res_avatar_mask.resize(avatar_mask_size, resample=Image.Resampling.LANCZOS)  # pyright: ignore[reportUnknownMemberType]
 
     # Create a properly sized and positioned avatar with mask
     avatar_with_mask = Image.new("RGBA", target_size, (0, 0, 0, 0))
@@ -203,108 +226,33 @@ def _draw_avatar(image: Image.Image, avatar_path: str):
     # canvas.save("circular_avatar.png")
 
 
-def _draw_logo(image: Image.Image):
-    logo = Image.open(logo_path).convert("RGBA")
-    scale_factor = image.height / 10000
-    logo_size_height = floor(logo.height * scale_factor)
-    logo_size_width = floor(logo.width * scale_factor)
-    logo = logo.resize((logo_size_width, logo_size_height))
-    logo = adjust_transparency(logo)
-    image.alpha_composite(logo, dest=(PADDING, image.height - logo.height - PADDING))
-
-
 def _load_img(path: str):
     if path.startswith("http"):
-        resp = client.get(path, timeout=10, verify=not settings.DEBUG)
+        resp = client.get(path, timeout=10, verify=not settings.DEBUG)  # pyright: ignore[reportAny]
         img = Image.open(BytesIO(resp.content))
         return img
     else:
         return Image.open(path)
 
 
-@lru_cache(maxsize=100)
-def generate_image(params: ImageParams):
-    image = _load_img(params.background_path)  # Replace with your image path
-    image = _resize(image, params.width, params.height).convert("RGBA")
-    image = _make_gradient(image)
-
-    # Set up text
-    text_position = (PADDING, PADDING)  # (x, y) coordinates
-    scale_factor = 1000
-    spacing = scale_factor // 30
-
-    # Draw text on image
-    text_position = _draw_wrapped_text(image, params.title, text_position, font_size=scale_factor // 10)
-    text_position = _draw_wrapped_text(
-        image,
-        params.subtitle,
-        (text_position[0], text_position[1] + spacing),
-        font_size=scale_factor // 20,
-        variation="Regular",
-    )
-
-    if params.meta_line:
-        # If meta_line provided (e.g., "By Author • Jan 1, 2025"), render that instead of event-specific lines
-        text_position = _draw_wrapped_text(
-            image,
-            params.meta_line,
-            (text_position[0], text_position[1] + 10),
-            font_size=scale_factor // 30,
-            variation="Regular",
-        )
-    else:
-        # Default event-specific rendering
-        text_position = _draw_wrapped_text(
-            image,
-            f"with {params.author_name} @ totem.org",
-            (text_position[0], text_position[1] + 10),
-            font_size=scale_factor // 30,
-            variation="Regular",
-        )
-        text_position = _draw_wrapped_text(
-            image,
-            params.day,
-            (text_position[0], text_position[1] + 30),
-            font_size=scale_factor // 18,
-            variation="SemiBold",
-        )
-        text_position = _draw_wrapped_text(
-            image,
-            params.time_pst,
-            (text_position[0], text_position[1] + 20),
-            font_size=scale_factor // 18,
-            variation="SemiBold",
-        )
-        text_position = _draw_wrapped_text(
-            image,
-            params.time_est,
-            (text_position[0], text_position[1] + 20),
-            font_size=scale_factor // 18,
-            variation="SemiBold",
-        )
-
-    # Plop that cherry on top (optional for blog)
-    if params.include_avatar:
-        _draw_avatar(image, params.author_img_path)
-    # _draw_logo(image)
-    return image.convert("RGB")
-
-
 def has_glyph(font: TTFont, glyph: str) -> bool:
     """
     Checks if the given font contains a glyph for the specified character.
     """
-    for table in font["cmap"].tables:  # type: ignore
-        if table.cmap.get(ord(glyph)):
+    for table in font["cmap"].tables:  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType, reportUnknownVariableType]
+        if table.cmap.get(ord(glyph)):  # pyright: ignore[reportUnknownMemberType]
             return True
     return False
 
 
-def merge_chunks(text: str, fonts: Dict[str, TTFont]) -> List[List[str]]:
+def merge_chunks(text: str, fonts: dict[str, TTFont]) -> list[list[str]]:
     """
-    Merges consecutive characters with the same font into clusters, optimizing font lookup.
+    Merges consecutive characters with the same font into clusters,
+    optimizing font lookup.
+    Mostly used to switch to the emoji font when a emoji is detected to avoid
+    the dreaded empty square.
     """
-    chunks = []
+    chunks: list[list[str]] = []
 
     for char in text:
         for font_path, font in fonts.items():
@@ -323,19 +271,20 @@ def merge_chunks(text: str, fonts: Dict[str, TTFont]) -> List[List[str]]:
     return cluster
 
 
-def draw_text_v2(
+def draw_text(
     draw: ImageDraw.ImageDraw,
-    xy: Tuple[int, int],
+    xy: tuple[int, int],
     text: str,
-    color: Tuple[int, int, int],
-    fonts: Dict[str, TTFont],
+    color: tuple[int, int, int],
+    fonts: dict[str, TTFont],
     variation: str,
     size: int,
-    anchor: Optional[str] = None,
+    anchor: str | None = None,
     align: Literal["left", "center", "right"] = "left",
 ) -> None:
     """
-    Draws text on an image at given coordinates, using specified size, color, and fonts.
+    Draws text on an image at given coordinates,
+    using specified size, color, and fonts.
     """
 
     y_offset = 0
@@ -361,46 +310,109 @@ def draw_text_v2(
             embedded_color=True,
         )
 
-        draw.text
         box = font.getbbox(words[0])
         y_offset += box[2] - box[0]
 
 
-def draw_multiline_text_v2(
-    draw: ImageDraw.ImageDraw,
-    xy: Tuple[int, int],
-    text: str,
-    color: Tuple[int, int, int],
-    fonts: Dict[str, TTFont],
-    size: int,
-    variation: str,
-    anchor: Optional[str] = None,
-    align: Literal["left", "center", "right"] = "left",
-) -> None:
-    """
-    Draws multiple lines of text on an image, handling newline characters and adjusting spacing between lines.
-    """
-    spacing = xy[1]
-    lines = text.split("\n")
+@lru_cache(maxsize=100)
+def generate_circle_image(params: CircleImageParams):
+    image = _load_img(params.background_path)  # Replace with your image path
+    image = _resize(image, params.width, params.height).convert("RGBA")
+    image = _make_gradient(image)
 
-    for line in lines:
-        mod_cord = (xy[0], spacing)
-        draw_text_v2(
-            draw,
-            xy=mod_cord,
-            text=line,
-            color=color,
-            fonts=fonts,
-            variation=variation,
-            size=size,
-            anchor=anchor,
-            align=align,
-        )
-        spacing += size + 5
+    # Set up text
+    text_position = (PADDING, PADDING)  # (x, y) coordinates
+    scale_factor = 1000
+    spacing = scale_factor // 30
+
+    # Draw text on image
+    text_position = _draw_wrapped_text(image, params.title, text_position, font_size=scale_factor // 10)
+    text_position = _draw_wrapped_text(
+        image,
+        params.subtitle,
+        (text_position[0], text_position[1] + spacing),
+        font_size=scale_factor // 20,
+        variation="Regular",
+    )
+
+    # Default event-specific rendering
+    text_position = _draw_wrapped_text(
+        image,
+        f"with {params.author_name} @ totem.org",
+        (text_position[0], text_position[1] + 10),
+        font_size=scale_factor // 30,
+        variation="Regular",
+    )
+    text_position = _draw_wrapped_text(
+        image,
+        params.day,
+        (text_position[0], text_position[1] + 30),
+        font_size=scale_factor // 18,
+        variation="SemiBold",
+    )
+    text_position = _draw_wrapped_text(
+        image,
+        params.time_pst,
+        (text_position[0], text_position[1] + 20),
+        font_size=scale_factor // 18,
+        variation="SemiBold",
+    )
+    text_position = _draw_wrapped_text(
+        image,
+        params.time_est,
+        (text_position[0], text_position[1] + 20),
+        font_size=scale_factor // 18,
+        variation="SemiBold",
+    )
+
+    # Plop that cherry on top (optional for blog)
+    _draw_avatar(image, params.author_img_path)
+    # _draw_logo(image)
+    return image.convert("RGB")
+
+
+@lru_cache(maxsize=100)
+def generate_blog_image(params: BlogImageParams):
+    image = _load_img(params.background_path)  # Replace with your image path
+    image = _resize(image, params.width, params.height).convert("RGBA")
+    image = _make_gradient(image)
+
+    # Set up text
+    text_position = (PADDING, PADDING)  # (x, y) coordinates
+    scale_factor = 1000
+    spacing = scale_factor // 30
+
+    # Draw text on image
+    text_position = _draw_wrapped_text(
+        image,
+        "New on the Totem Blog",
+        text_position,
+        font_size=scale_factor // 20,
+        variation="Regular",
+    )
+    text_position = _draw_wrapped_text(
+        image,
+        params.title,
+        (text_position[0], text_position[1] + spacing),
+        font_size=scale_factor // 10,
+    )
+
+    # Default event-specific rendering
+    text_position = _draw_wrapped_text(
+        image,
+        f"by {params.author_name} @ totem.org",
+        (text_position[0], text_position[1] + 10),
+        font_size=scale_factor // 30,
+        variation="Regular",
+    )
+
+    # Plop that cherry on top
+    _draw_avatar(image, params.author_img_path)
+    return image.convert("RGB")
 
 
 def _test():
-    params = ImageParams(
+    params = CircleImageParams(
         background_path="tests/img_gen/background.jpg",
         author_img_path="tests/img_gen/me.jpg",
         author_name="Bo",
@@ -414,7 +426,7 @@ def _test():
         # width=1024,
         # height=512,
     )
-    image = generate_image(params)
+    image = generate_circle_image(params)
     # Save the result
     image.save(
         "tests/img_gen/output.jpg",

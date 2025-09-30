@@ -20,7 +20,7 @@ from .actions import JoinCircleAction, SubscribeAction
 from .filters import (
     upcoming_events_by_author,
 )
-from .img_gen import ImageParams, generate_image
+from totem.utils.img_gen import CircleImageParams, generate_circle_image
 from .models import Circle, CircleEvent, CircleEventException
 from dataclasses import dataclass
 
@@ -213,7 +213,7 @@ def calendar(request: HttpRequest, event_slug: str):
 
 def event_social(request: HttpRequest, event_slug: str):
     event = _get_circle_event(event_slug)
-    user = request.user
+    user: User = request.user
     # start time in pst
     start_time_pst = event.start.astimezone(pytz.timezone("US/Pacific")).strftime("%I:%M %p") + " PST"
     # start time in est
@@ -289,7 +289,7 @@ def _make_social_img(event: CircleEvent, start_day, start_time_pst, start_time_e
         if author_profile_url.startswith("/"):
             author_profile_url = f"totem/{author_profile_url}"
 
-    params = ImageParams(
+    params = CircleImageParams(
         background_path=background_url,
         author_img_path=author_profile_url,
         author_name=event.circle.author.name,
@@ -301,4 +301,4 @@ def _make_social_img(event: CircleEvent, start_day, start_time_pst, start_time_e
         width=image_size.width,
         height=image_size.height,
     )
-    return generate_image(params)
+    return generate_circle_image(params)
