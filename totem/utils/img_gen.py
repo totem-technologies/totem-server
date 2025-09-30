@@ -170,8 +170,7 @@ def _draw_wrapped_text(
     return (x, y)
 
 
-def _draw_avatar(image: Image.Image, avatar_path: str):
-    avatar_size = 400
+def _draw_avatar(image: Image.Image, avatar_path: str, avatar_size: int = 400):
     target_size = (avatar_size, avatar_size)
     border_color = (255, 255, 255)
     border_width = avatar_size // 50
@@ -245,28 +244,28 @@ def has_glyph(font: TTFont, glyph: str) -> bool:
     return False
 
 
-def merge_chunks(text: str, fonts: dict[str, TTFont]) -> list[list[str]]:
+def merge_chunks(text: str, fonts: dict[str, TTFont]) -> list[tuple[str, str]]:
     """
     Merges consecutive characters with the same font into clusters,
     optimizing font lookup.
     Mostly used to switch to the emoji font when a emoji is detected to avoid
     the dreaded empty square.
     """
-    chunks: list[list[str]] = []
+    chunks: list[tuple[str, str]] = []
 
     for char in text:
         for font_path, font in fonts.items():
             if has_glyph(font, char):
-                chunks.append([char, font_path])
+                chunks.append((char, font_path))
                 break
 
     cluster = chunks[:1]
 
     for char, font_path in chunks[1:]:
         if cluster[-1][1] == font_path:
-            cluster[-1][0] += char
+            cluster[-1] = (cluster[-1][0] + char, font_path)
         else:
-            cluster.append([char, font_path])
+            cluster.append((char, font_path))
 
     return cluster
 
@@ -299,6 +298,11 @@ def draw_text(
         except OSError:
             # Some fonts don't support variations, and that's OK.
             pass
+        stroke_width = 2
+        if size < 100:
+            stroke_width = 1
+        if words[1] == font_emoji_path:
+            stroke_width = 0
         draw.text(
             xy=xy_,
             text=words[0],
@@ -308,6 +312,12 @@ def draw_text(
             anchor=anchor,
             align=align,
             embedded_color=True,
+            stroke_width=stroke_width,
+            stroke_fill=(
+                0,
+                0,
+                0,
+            ),
         )
 
         box = font.getbbox(words[0])
@@ -331,8 +341,8 @@ def generate_circle_image(params: CircleImageParams):
         image,
         params.subtitle,
         (text_position[0], text_position[1] + spacing),
-        font_size=scale_factor // 20,
-        variation="Regular",
+        font_size=scale_factor // 25,
+        variation="SemiBold",
     )
 
     # Default event-specific rendering
@@ -340,8 +350,8 @@ def generate_circle_image(params: CircleImageParams):
         image,
         f"with {params.author_name} @ totem.org",
         (text_position[0], text_position[1] + 10),
-        font_size=scale_factor // 30,
-        variation="Regular",
+        font_size=scale_factor // 25,
+        variation="SemiBold",
     )
     text_position = _draw_wrapped_text(
         image,
@@ -366,7 +376,7 @@ def generate_circle_image(params: CircleImageParams):
     )
 
     # Plop that cherry on top (optional for blog)
-    _draw_avatar(image, params.author_img_path)
+    _draw_avatar(image, params.author_img_path, 300)
     # _draw_logo(image)
     return image.convert("RGB")
 
@@ -388,26 +398,24 @@ def generate_blog_image(params: BlogImageParams):
         "New on the Totem Blog",
         text_position,
         font_size=scale_factor // 20,
-        variation="Regular",
     )
     text_position = _draw_wrapped_text(
         image,
         params.title,
         (text_position[0], text_position[1] + spacing),
-        font_size=scale_factor // 10,
+        font_size=scale_factor // 12,
     )
 
     # Default event-specific rendering
     text_position = _draw_wrapped_text(
         image,
         f"by {params.author_name} @ totem.org",
-        (text_position[0], text_position[1] + 10),
-        font_size=scale_factor // 30,
-        variation="Regular",
+        (text_position[0], text_position[1] + spacing),
+        font_size=scale_factor // 25,
     )
-
+    avatar_size = min(params.height, params.width) // 4
     # Plop that cherry on top
-    _draw_avatar(image, params.author_img_path)
+    _draw_avatar(image, params.author_img_path, avatar_size)
     return image.convert("RGB")
 
 
