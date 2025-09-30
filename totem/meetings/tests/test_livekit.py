@@ -19,7 +19,6 @@ class TestGetLiveKitToken:
         event.start = timezone.now()  # Make it joinable
         event.save()
 
-        # Your patch path might be different, adjust if needed
         with patch("totem.meetings.mobile_api.livekit_create_access_token") as mock_create_token:
             mock_create_token.return_value = "fake-jwt-token"
             url = reverse("mobile-api:get_livekit_token", kwargs={"event_slug": event.slug})
