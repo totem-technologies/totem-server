@@ -361,8 +361,6 @@
 
 {% block content %}
   <div class="bulk-upload-container">
-    <h1>Bulk Image Upload</h1>
-
     <div class="upload-area" id="uploadArea">
       <h2>Drop images here or click to select</h2>
       <p>Upload multiple images at once. Each image must be under 10MB.</p>
@@ -501,7 +499,7 @@
               updateProgressItem(
                 progressItem,
                 "success",
-                `Uploaded successfully as "${data.title}" - <a href="${data.admin_url}" target="_blank">Edit</a>`
+                `"${file.name}" uploaded successfully as "${data.title}" - <a href="${data.admin_url}" target="_blank">Edit</a>`
               )
             } else {
               uploadStats.failed++
@@ -541,17 +539,15 @@
 
       function updateProgressItem(item, status, message) {
         const statusEl = item.querySelector(".progress-item-status")
-        const iconContainer =
-          item.querySelector(".progress-spinner").parentElement
+        const spinnerEl = item.querySelector(".progress-spinner")
 
         statusEl.innerHTML = message
         statusEl.className = `progress-item-status ${status}`
 
         if (status === "success") {
-          iconContainer.innerHTML =
-            '<span class="progress-icon success">✓</span>'
+          spinnerEl.outerHTML = '<span class="progress-icon success">✓</span>'
         } else if (status === "error") {
-          iconContainer.innerHTML = '<span class="progress-icon error">✗</span>'
+          spinnerEl.outerHTML = '<span class="progress-icon error">✗</span>'
         }
       }
 
