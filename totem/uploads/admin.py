@@ -9,6 +9,7 @@ from django.utils.safestring import mark_safe
 from .models import Image
 
 
+@final
 class ImageAdminForm(forms.ModelForm):
     class Meta:
         model = Image
@@ -48,7 +49,18 @@ class ImageAdmin(admin.ModelAdmin):
         return "No image uploaded yet."
 
     def markdown_code(self, obj: Image):
-        return f'{{% image slug="{obj.slug}" %}}'
+        code = f'{{% image slug="{obj.slug}" %}}'
+        return mark_safe(
+            f'<a href="#" style="text-decoration: underline; color: #0066cc;" '
+            f'onclick="event.preventDefault(); '
+            f"navigator.clipboard.writeText('{escape(code)}').then(() => {{ "
+            f"const originalText = this.innerHTML; "
+            f"this.innerHTML = 'Copied!'; "
+            f"setTimeout(() => {{ this.innerHTML = originalText; }}, 1500); "
+            f"}}).catch(err => console.error('Failed to copy:', err)); return false;\">"
+            f"<code>{escape(code)}</code></a> "
+            f'<span style="color: #666; font-size: 0.9em;">(Click to copy)</span>'
+        )
 
     def thumbnail_preview(self, obj: Image):
         if obj and obj.image:
@@ -64,3 +76,4 @@ class ImageAdmin(admin.ModelAdmin):
 
     thumbnail_preview.short_description = "Preview"  # pyright: ignore[reportFunctionMemberAccess]
     image_tag.short_description = "Image Preview"  # pyright: ignore[reportFunctionMemberAccess]
+    markdown_code.short_description = "Markdown Code"  # pyright: ignore[reportFunctionMemberAccess]
