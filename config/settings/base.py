@@ -16,7 +16,7 @@ env = environ.Env()
 TEST = False
 
 
-def b64_json_env(key: str):
+def b64_json_env(key: str) -> str:
     empty_json = "e30K"
     return json.loads(base64.b64decode(env(key, default=empty_json)))  # type: ignore
 
