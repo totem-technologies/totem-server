@@ -1,3 +1,4 @@
+import logging
 from typing import final
 import os
 from django import forms
@@ -112,8 +113,9 @@ class ImageAdmin(admin.ModelAdmin):
                     "admin_url": reverse("admin:uploads_image_change", args=[image.pk]),
                 }
             )
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
+        except Exception:
+            logging.error("Error occurred while saving image", exc_info=True)
+            return JsonResponse({"error": "A server error has occurred"}, status=500)
 
     def image_tag(self, obj: Image):
         if obj and obj.image:

@@ -499,14 +499,14 @@
               updateProgressItem(
                 progressItem,
                 "success",
-                `"${file.name}" uploaded successfully as "${data.title}" - <a href="${data.admin_url}" target="_blank">Edit</a>`
+                `"${escapeHtml(file.name)}" uploaded successfully as "${escapeHtml(data.title)}" - <a href="${escapeHtml(data.admin_url)}" target="_blank">Edit</a>`
               )
             } else {
               uploadStats.failed++
               updateProgressItem(
                 progressItem,
                 "error",
-                data.error || "Upload failed"
+                data.error ? escapeHtml(data.error) : "Upload failed"
               )
             }
           })
@@ -515,7 +515,7 @@
             updateProgressItem(
               progressItem,
               "error",
-              "Network error: " + error.message
+              "Network error: " + escapeHtml(error.message)
             )
           })
           .finally(() => {
