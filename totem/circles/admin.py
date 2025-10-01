@@ -1,8 +1,10 @@
 import datetime
-from typing import Any
+from typing import Any, final, override
 
 from django.contrib import admin, messages
 from django.db.models.query import QuerySet
+from django.forms import ModelForm
+from django.http import HttpRequest
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
@@ -12,40 +14,48 @@ from totem.users.models import User
 from .models import Circle, CircleCategory, CircleEvent
 
 
+@final
 class SpaceDropdownFilter(admin.SimpleListFilter):
     template = "admin/dropdown_filter.html"
     parameter_name = "circle"
     title = "circle"
 
+    @override
     def lookups(self, request, model_admin):
         return Circle.objects.values_list("slug", "title")
 
+    @override
     def queryset(self, request, queryset):
         if self.value():
             return queryset.filter(circle__slug=self.value())
         return queryset
 
 
+@final
 class AuthorDropdownFilter(admin.SimpleListFilter):
     template = "admin/dropdown_filter.html"
     parameter_name = "circle__author"
     title = "author"
 
+    @override
     def lookups(self, request, model_admin):
         return User.objects.filter(keeper_profile__isnull=False).values_list("slug", "name")
 
+    @override
     def queryset(self, request, queryset):
         if self.value():
             return queryset.filter(circle__author__slug=self.value())
         return queryset
 
 
+@final
 @admin.register(CircleCategory)
 class CircleCategoryAdmin(admin.ModelAdmin):
     list_display = ("name", "slug")
     search_fields = ("name", "description")
 
 
+@final
 class CircleEventInline(admin.StackedInline):
     model = CircleEvent
     extra = 0
@@ -76,17 +86,20 @@ class CircleEventInline(admin.StackedInline):
         ),
     ]
 
+    @override
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         now_minus_2_hour = timezone.now() - datetime.timedelta(hours=2)
         return qs.filter(start__gte=now_minus_2_hour).order_by("start").prefetch_related("attendees", "joined")
 
+    @override
     def get_formset(self, request, obj=None, **kwargs):
         formset = super().get_formset(request, obj, **kwargs)
         formset.form.base_fields["attendees"].initial = [request.user]  # type: ignore
         return formset
 
 
+@final
 @admin.register(Circle)
 class CircleAdmin(admin.ModelAdmin):
     save_on_top = True
@@ -103,7 +116,7 @@ class CircleAdmin(admin.ModelAdmin):
         form.base_fields["subscribed"].initial = [request.user]  # type: ignore
         return form
 
-    def save_formset(self, request: Any, form: Any, formset: Any, change: Any) -> None:
+    def save_formset(self, request: HttpRequest, form: Any, formset: Any, change: bool) -> None:
         if change:
             obj_list = formset.save(commit=False)
             for obj in obj_list:
@@ -134,6 +147,7 @@ def copy_event(modeladmin, request, queryset: QuerySet[CircleEvent]):
     return redirect(change_url)
 
 
+@final
 @admin.register(CircleEvent)
 class CircleEventAdmin(admin.ModelAdmin):
     list_display = ("start", "title", "circle", "slug")
@@ -165,6 +179,7 @@ class CircleEventAdmin(admin.ModelAdmin):
         ),
     )
 
-    def save_model(self, request, obj: CircleEvent, form, change):
+    @override
+    def save_model(self, request: HttpRequest, obj: CircleEvent, form: "ModelForm[CircleEvent]", change: bool):
         obj.save_to_calendar()
         super().save_model(request, obj, form, change)
