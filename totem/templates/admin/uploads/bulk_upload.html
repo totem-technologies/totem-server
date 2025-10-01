@@ -1,0 +1,402 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <style>
+    .bulk-upload-container {
+      max-width: 1000px;
+      margin: 20px auto;
+      padding: 20px;
+    }
+
+    .upload-area {
+      border: 3px dashed #ccc;
+      border-radius: 8px;
+      padding: 60px 40px;
+      text-align: center;
+      background-color: #f9f9f9;
+      transition: all 0.3s ease;
+      cursor: pointer;
+      margin-bottom: 30px;
+    }
+
+    .upload-area.drag-over {
+      border-color: #417690;
+      background-color: #e8f4f8;
+    }
+
+    .upload-area h2 {
+      margin-top: 0;
+      color: #666;
+      font-weight: normal;
+    }
+
+    .upload-area p {
+      color: #999;
+      margin: 10px 0;
+    }
+
+    .file-input {
+      display: none;
+    }
+
+    .select-files-btn {
+      background-color: #417690;
+      color: white;
+      padding: 12px 30px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 15px;
+      transition: background-color 0.2s;
+    }
+
+    .select-files-btn:hover {
+      background-color: #2e5266;
+    }
+
+    .upload-progress {
+      margin-top: 30px;
+      display: none;
+    }
+
+    .progress-item {
+      background-color: white;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 15px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .progress-item-info {
+      flex: 1;
+      margin-right: 20px;
+    }
+
+    .progress-item-filename {
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 5px;
+    }
+
+    .progress-item-status {
+      font-size: 13px;
+      color: #666;
+    }
+
+    .progress-item-status.success {
+      color: #2e7d32;
+    }
+
+    .progress-item-status.error {
+      color: #c62828;
+    }
+
+    .progress-spinner {
+      width: 20px;
+      height: 20px;
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #417690;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    .progress-icon {
+      font-size: 20px;
+    }
+
+    .progress-icon.success {
+      color: #2e7d32;
+    }
+
+    .progress-icon.error {
+      color: #c62828;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .upload-summary {
+      background-color: #e8f4f8;
+      border-left: 4px solid #417690;
+      padding: 15px;
+      margin-top: 20px;
+      border-radius: 4px;
+      display: none;
+    }
+
+    .upload-summary.error {
+      background-color: #ffebee;
+      border-left-color: #c62828;
+    }
+
+    .upload-summary h3 {
+      margin-top: 0;
+      color: #333;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-top: 20px;
+      color: #417690;
+      text-decoration: none;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+
+    .file-count {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 4px;
+      display: none;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <div class="bulk-upload-container">
+    <h1>Bulk Image Upload</h1>
+
+    <div class="upload-area" id="uploadArea">
+      <h2>Drop images here or click to select</h2>
+      <p>Upload multiple images at once. Each image must be under 10MB.</p>
+      <p>Supported formats: JPG, PNG, GIF, WEBP</p>
+      <button type="button" class="select-files-btn" id="selectFilesBtn">
+        Select Images
+      </button>
+      <input
+        type="file"
+        id="fileInput"
+        class="file-input"
+        multiple
+        accept="image/*" />
+    </div>
+
+    <div class="file-count" id="fileCount"></div>
+
+    <div class="upload-progress" id="uploadProgress"></div>
+
+    <div class="upload-summary" id="uploadSummary"></div>
+
+    <a href="{% url 'admin:uploads_image_changelist' %}" class="back-link"
+      >← Back to Image List</a
+    >
+  </div>
+
+  <script>
+    ;(function () {
+      const uploadArea = document.getElementById("uploadArea")
+      const fileInput = document.getElementById("fileInput")
+      const selectFilesBtn = document.getElementById("selectFilesBtn")
+      const uploadProgress = document.getElementById("uploadProgress")
+      const uploadSummary = document.getElementById("uploadSummary")
+      const fileCount = document.getElementById("fileCount")
+      const uploadUrl = '{% url "admin:uploads_image_bulk_upload_ajax" %}'
+      const csrfToken = "{{ csrf_token }}"
+
+      let uploadStats = {
+        total: 0,
+        success: 0,
+        failed: 0,
+      }
+
+      // Click handler for upload area and button
+      uploadArea.addEventListener("click", () => fileInput.click())
+      selectFilesBtn.addEventListener("click", (e) => {
+        e.stopPropagation()
+        fileInput.click()
+      })
+
+      // Drag and drop handlers
+      uploadArea.addEventListener("dragover", (e) => {
+        e.preventDefault()
+        uploadArea.classList.add("drag-over")
+      })
+
+      uploadArea.addEventListener("dragleave", () => {
+        uploadArea.classList.remove("drag-over")
+      })
+
+      uploadArea.addEventListener("drop", (e) => {
+        e.preventDefault()
+        uploadArea.classList.remove("drag-over")
+        const files = Array.from(e.dataTransfer.files).filter((file) =>
+          file.type.startsWith("image/")
+        )
+        if (files.length > 0) {
+          handleFiles(files)
+        }
+      })
+
+      // File input change handler
+      fileInput.addEventListener("change", (e) => {
+        const files = Array.from(e.target.files)
+        if (files.length > 0) {
+          handleFiles(files)
+        }
+      })
+
+      function handleFiles(files) {
+        uploadStats = {
+          total: files.length,
+          success: 0,
+          failed: 0,
+        }
+
+        fileCount.textContent = `Selected ${files.length} image${files.length !== 1 ? "s" : ""} for upload`
+        fileCount.style.display = "block"
+        uploadProgress.style.display = "block"
+        uploadProgress.innerHTML = ""
+        uploadSummary.style.display = "none"
+
+        // Upload files sequentially
+        uploadFilesSequentially(files, 0)
+      }
+
+      function uploadFilesSequentially(files, index) {
+        if (index >= files.length) {
+          showSummary()
+          return
+        }
+
+        const file = files[index]
+        uploadSingleFile(file, index, () => {
+          uploadFilesSequentially(files, index + 1)
+        })
+      }
+
+      function uploadSingleFile(file, index, callback) {
+        const progressItem = createProgressItem(file.name, index)
+        uploadProgress.appendChild(progressItem)
+
+        // Check file size
+        if (file.size > 10 * 1024 * 1024) {
+          updateProgressItem(progressItem, "error", "File exceeds 10MB limit")
+          uploadStats.failed++
+          callback()
+          return
+        }
+
+        const formData = new FormData()
+        formData.append("image", file)
+        formData.append("csrfmiddlewaretoken", csrfToken)
+
+        fetch(uploadUrl, {
+          method: "POST",
+          body: formData,
+          headers: {
+            "X-CSRFToken": csrfToken,
+          },
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              uploadStats.success++
+              updateProgressItem(
+                progressItem,
+                "success",
+                `Uploaded successfully as "${data.title}" - <a href="${data.admin_url}" target="_blank">Edit</a>`
+              )
+            } else {
+              uploadStats.failed++
+              updateProgressItem(
+                progressItem,
+                "error",
+                data.error || "Upload failed"
+              )
+            }
+          })
+          .catch((error) => {
+            uploadStats.failed++
+            updateProgressItem(
+              progressItem,
+              "error",
+              "Network error: " + error.message
+            )
+          })
+          .finally(() => {
+            callback()
+          })
+      }
+
+      function createProgressItem(filename, index) {
+        const item = document.createElement("div")
+        item.className = "progress-item"
+        item.id = `progress-${index}`
+        item.innerHTML = `
+            <div class="progress-item-info">
+                <div class="progress-item-filename">${escapeHtml(filename)}</div>
+                <div class="progress-item-status">Uploading...</div>
+            </div>
+            <div class="progress-spinner"></div>
+        `
+        return item
+      }
+
+      function updateProgressItem(item, status, message) {
+        const statusEl = item.querySelector(".progress-item-status")
+        const iconContainer =
+          item.querySelector(".progress-spinner").parentElement
+
+        statusEl.innerHTML = message
+        statusEl.className = `progress-item-status ${status}`
+
+        if (status === "success") {
+          iconContainer.innerHTML =
+            '<span class="progress-icon success">✓</span>'
+        } else if (status === "error") {
+          iconContainer.innerHTML = '<span class="progress-icon error">✗</span>'
+        }
+      }
+
+      function showSummary() {
+        uploadSummary.style.display = "block"
+
+        if (uploadStats.failed === 0) {
+          uploadSummary.className = "upload-summary"
+          uploadSummary.innerHTML = `
+                <h3>Upload Complete</h3>
+                <p>Successfully uploaded ${uploadStats.success} image${uploadStats.success !== 1 ? "s" : ""}.</p>
+            `
+        } else if (uploadStats.success === 0) {
+          uploadSummary.className = "upload-summary error"
+          uploadSummary.innerHTML = `
+                <h3>Upload Failed</h3>
+                <p>Failed to upload all ${uploadStats.failed} image${uploadStats.failed !== 1 ? "s" : ""}. Please check the errors above.</p>
+            `
+        } else {
+          uploadSummary.className = "upload-summary"
+          uploadSummary.innerHTML = `
+                <h3>Upload Complete with Errors</h3>
+                <p>Successfully uploaded ${uploadStats.success} image${uploadStats.success !== 1 ? "s" : ""}.</p>
+                <p>Failed to upload ${uploadStats.failed} image${uploadStats.failed !== 1 ? "s" : ""}. Please check the errors above.</p>
+            `
+        }
+
+        // Reset file input
+        fileInput.value = ""
+      }
+
+      function escapeHtml(text) {
+        const div = document.createElement("div")
+        div.textContent = text
+        return div.innerHTML
+      }
+    })()
+  </script>
+{% endblock %}
