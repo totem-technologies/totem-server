@@ -165,6 +165,197 @@
       border-radius: 4px;
       display: none;
     }
+
+    /* Dark mode support */
+    @media (prefers-color-scheme: dark) {
+      .upload-area {
+        background-color: #2d2d2d;
+        border-color: #555;
+      }
+
+      .upload-area.drag-over {
+        background-color: #1a3a4a;
+        border-color: #5a9fb8;
+      }
+
+      .upload-area h2 {
+        color: #b0b0b0;
+      }
+
+      .upload-area p {
+        color: #888;
+      }
+
+      .select-files-btn {
+        background-color: #5a9fb8;
+      }
+
+      .select-files-btn:hover {
+        background-color: #4a8fa8;
+      }
+
+      .progress-item {
+        background-color: #2d2d2d;
+        border-color: #444;
+      }
+
+      .progress-item-filename {
+        color: #e0e0e0;
+      }
+
+      .progress-item-status {
+        color: #aaa;
+      }
+
+      .progress-item-status.success {
+        color: #66bb6a;
+      }
+
+      .progress-item-status.error {
+        color: #ef5350;
+      }
+
+      .progress-spinner {
+        border-color: #444;
+        border-top-color: #5a9fb8;
+      }
+
+      .progress-icon.success {
+        color: #66bb6a;
+      }
+
+      .progress-icon.error {
+        color: #ef5350;
+      }
+
+      .upload-summary {
+        background-color: #1a3a4a;
+        border-left-color: #5a9fb8;
+      }
+
+      .upload-summary.error {
+        background-color: #4a1a1a;
+        border-left-color: #ef5350;
+      }
+
+      .upload-summary h3 {
+        color: #e0e0e0;
+      }
+
+      .back-link {
+        color: #79aec8;
+      }
+
+      .file-count {
+        background-color: #3a3a1a;
+        border-color: #6a6a1a;
+        color: #e0e0e0;
+      }
+    }
+
+    /* Django admin dark mode (when body has data-theme="dark" or similar) */
+    [data-theme="dark"] .upload-area,
+    body.theme-dark .upload-area {
+      background-color: #2d2d2d;
+      border-color: #555;
+    }
+
+    [data-theme="dark"] .upload-area.drag-over,
+    body.theme-dark .upload-area.drag-over {
+      background-color: #1a3a4a;
+      border-color: #5a9fb8;
+    }
+
+    [data-theme="dark"] .upload-area h2,
+    body.theme-dark .upload-area h2 {
+      color: #b0b0b0;
+    }
+
+    [data-theme="dark"] .upload-area p,
+    body.theme-dark .upload-area p {
+      color: #888;
+    }
+
+    [data-theme="dark"] .select-files-btn,
+    body.theme-dark .select-files-btn {
+      background-color: #5a9fb8;
+    }
+
+    [data-theme="dark"] .select-files-btn:hover,
+    body.theme-dark .select-files-btn:hover {
+      background-color: #4a8fa8;
+    }
+
+    [data-theme="dark"] .progress-item,
+    body.theme-dark .progress-item {
+      background-color: #2d2d2d;
+      border-color: #444;
+    }
+
+    [data-theme="dark"] .progress-item-filename,
+    body.theme-dark .progress-item-filename {
+      color: #e0e0e0;
+    }
+
+    [data-theme="dark"] .progress-item-status,
+    body.theme-dark .progress-item-status {
+      color: #aaa;
+    }
+
+    [data-theme="dark"] .progress-item-status.success,
+    body.theme-dark .progress-item-status.success {
+      color: #66bb6a;
+    }
+
+    [data-theme="dark"] .progress-item-status.error,
+    body.theme-dark .progress-item-status.error {
+      color: #ef5350;
+    }
+
+    [data-theme="dark"] .progress-spinner,
+    body.theme-dark .progress-spinner {
+      border-color: #444;
+      border-top-color: #5a9fb8;
+    }
+
+    [data-theme="dark"] .progress-icon.success,
+    body.theme-dark .progress-icon.success {
+      color: #66bb6a;
+    }
+
+    [data-theme="dark"] .progress-icon.error,
+    body.theme-dark .progress-icon.error {
+      color: #ef5350;
+    }
+
+    [data-theme="dark"] .upload-summary,
+    body.theme-dark .upload-summary {
+      background-color: #1a3a4a;
+      border-left-color: #5a9fb8;
+    }
+
+    [data-theme="dark"] .upload-summary.error,
+    body.theme-dark .upload-summary.error {
+      background-color: #4a1a1a;
+      border-left-color: #ef5350;
+    }
+
+    [data-theme="dark"] .upload-summary h3,
+    body.theme-dark .upload-summary h3 {
+      color: #e0e0e0;
+    }
+
+    [data-theme="dark"] .back-link,
+    body.theme-dark .back-link {
+      color: #79aec8;
+    }
+
+    [data-theme="dark"] .file-count,
+    body.theme-dark .file-count {
+      background-color: #3a3a1a;
+      border-color: #6a6a1a;
+      color: #e0e0e0;
+    }
   </style>
 {% endblock %}
 
