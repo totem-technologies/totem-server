@@ -1,3 +1,4 @@
+from typing import final
 from django import forms
 from django.contrib import admin
 from django.core.exceptions import ValidationError
@@ -8,6 +9,7 @@ from django.utils.safestring import mark_safe
 from .models import Image
 
 
+@final
 class ImageAdminForm(forms.ModelForm):
     class Meta:
         model = Image
@@ -21,21 +23,22 @@ class ImageAdminForm(forms.ModelForm):
         return image
 
 
+@final
 @admin.register(Image)
 class ImageAdmin(admin.ModelAdmin):
     form = ImageAdminForm
     list_display = ("title", "thumbnail_preview", "slug", "date_created")
     search_fields = ("title", "slug")
     list_filter = ("date_created",)
-    fields = ["title", "image", "slug", "image_tag", "date_created", "date_modified"]
-    readonly_fields = ("date_created", "date_modified", "image_tag", "slug")
+    fields = ["title", "image", "slug", "markdown_code", "image_tag", "date_created", "date_modified"]
+    readonly_fields = ("date_created", "date_modified", "image_tag", "slug", "markdown_code")
     ordering = ("-date_created",)
     date_hierarchy = "date_created"
     list_per_page = 20
     list_max_show_all = 200
     save_on_top = True
 
-    def image_tag(self, obj):
+    def image_tag(self, obj: Image):
         if obj and obj.image:
             return mark_safe(
                 f'<a href="{escape(obj.image.url)}" target="_blank">'
@@ -45,7 +48,21 @@ class ImageAdmin(admin.ModelAdmin):
             )
         return "No image uploaded yet."
 
-    def thumbnail_preview(self, obj):
+    def markdown_code(self, obj: Image):
+        code = f'{{% image slug="{obj.slug}" %}}'
+        return mark_safe(
+            f'<a href="#" style="text-decoration: underline; color: #0066cc;" '
+            f'onclick="event.preventDefault(); '
+            f"navigator.clipboard.writeText('{escape(code)}').then(() => {{ "
+            f"const originalText = this.innerHTML; "
+            f"this.innerHTML = 'Copied!'; "
+            f"setTimeout(() => {{ this.innerHTML = originalText; }}, 1500); "
+            f"}}).catch(err => console.error('Failed to copy:', err)); return false;\">"
+            f"<code>{escape(code)}</code></a> "
+            f'<span style="color: #666; font-size: 0.9em;">(Click to copy)</span>'
+        )
+
+    def thumbnail_preview(self, obj: Image):
         if obj and obj.image:
             # Link to the change page rather than the raw image
             change_url = reverse("admin:uploads_image_change", args=(obj.pk,))
@@ -57,5 +74,6 @@ class ImageAdmin(admin.ModelAdmin):
             )
         return "No image"
 
-    thumbnail_preview.short_description = "Preview"  # type: ignore
-    image_tag.short_description = "Image Preview"  # type: ignore
+    thumbnail_preview.short_description = "Preview"  # pyright: ignore[reportFunctionMemberAccess]
+    image_tag.short_description = "Image Preview"  # pyright: ignore[reportFunctionMemberAccess]
+    markdown_code.short_description = "Markdown Code"  # pyright: ignore[reportFunctionMemberAccess]

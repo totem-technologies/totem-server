@@ -22,20 +22,23 @@
     <div class="grow"></div>
     <div class="hidden md:block">
       <a
-        class="pr-5 text-sm hover:text-tblue"
+        class="hover:text-tblue pr-5 text-sm"
         href="{% url "pages:how-it-works" %}"
         >How it works</a
       >
-      <a class="pr-5 text-sm hover:text-tblue" href="{% url "pages:about" %}"
+      <a class="hover:text-tblue pr-5 text-sm" href="{% url "pages:about" %}"
         >About</a
       >
-      <a class="pr-5 text-sm hover:text-tblue" href="{% url "pages:team" %}"
+      <a class="hover:text-tblue pr-5 text-sm" href="{% url "blog:list" %}"
+        >Blog</a
+      >
+      <a class="hover:text-tblue pr-5 text-sm" href="{% url "pages:team" %}"
         >Team</a
       >
     </div>
     <div class="drawer-content flex items-center">
       {% if request.user.is_authenticated %}
-        <a class="pr-5 text-sm hover:text-tblue" href="{% url "circles:list" %}"
+        <a class="hover:text-tblue pr-5 text-sm" href="{% url "circles:list" %}"
           >Spaces</a
         >
         <label
@@ -81,7 +84,7 @@
         for="nav-bar-drawer"
         aria-label="close sidebar"
         class="drawer-overlay"></label>
-      <div class="min-h-full w-80 bg-tcreme p-4">
+      <div class="bg-tcreme min-h-full w-80 p-4">
         <div class="text-right">
           <label
             for="nav-bar-drawer"
@@ -106,24 +109,24 @@
         {% if request.user.is_authenticated %}
           <ul class="menu">
             <li>
-              <a class="pr-5 hover:text-tblue" href="{% url "users:redirect" %}"
+              <a class="hover:text-tblue pr-5" href="{% url "users:redirect" %}"
                 >My Home</a
               >
             </li>
             <li>
-              <a class="pr-5 hover:text-tblue" href="{% url "users:profile" %}"
+              <a class="hover:text-tblue pr-5" href="{% url "users:profile" %}"
                 >My Profile</a
               >
             </li>
             <li>
-              <a class="pr-5 hover:text-tblue" href="{% url "circles:list" %}"
+              <a class="hover:text-tblue pr-5" href="{% url "circles:list" %}"
                 >Spaces</a
               >
             </li>
             {% if request.user.is_staff %}
               <li>
                 <a
-                  class="pr-5 hover:text-tblue"
+                  class="hover:text-tblue pr-5"
                   href="{% url "admin:index" %}"
                   target="_blank"
                   >Admin</a
@@ -132,28 +135,33 @@
             {% endif %}
             <li>
               <a
-                class="pr-5 hover:text-tblue"
+                class="hover:text-tblue pr-5"
                 href="{% url "pages:how-it-works" %}"
                 >How it works</a
               >
             </li>
             <li>
-              <a class="pr-5 hover:text-tblue" href="{% url "pages:about" %}"
+              <a class="hover:text-tblue pr-5" href="{% url "pages:about" %}"
                 >About</a
               >
             </li>
             <li>
-              <a class="pr-5 hover:text-tblue" href="{% url "pages:team" %}"
+              <a class="hover:text-tblue pr-5" href="{% url "blog:list" %}"
+                >Blog</a
+              >
+            </li>
+            <li>
+              <a class="hover:text-tblue pr-5" href="{% url "pages:team" %}"
                 >Team</a
               >
             </li>
             <li>
-              <a class="pr-5 hover:text-tblue" href="{% url "users:feedback" %}"
+              <a class="hover:text-tblue pr-5" href="{% url "users:feedback" %}"
                 >Feedback</a
               >
             </li>
             <li>
-              <a class="pr-5 hover:text-tblue" href="{% url "account_logout" %}"
+              <a class="hover:text-tblue pr-5" href="{% url "account_logout" %}"
                 >Logout</a
               >
             </li>
@@ -161,29 +169,34 @@
         {% else %}
           <ul class="menu">
             <li>
-              <a class="pr-5 hover:text-tblue" href="{% url "pages:home" %}"
+              <a class="hover:text-tblue pr-5" href="{% url "pages:home" %}"
                 >Home</a
               >
             </li>
             <li>
               <a
-                class="pr-5 hover:text-tblue"
+                class="hover:text-tblue pr-5"
                 href="{% url "pages:how-it-works" %}"
                 >How it works</a
               >
             </li>
             <li>
-              <a class="pr-5 hover:text-tblue" href="{% url "pages:about" %}"
+              <a class="hover:text-tblue pr-5" href="{% url "pages:about" %}"
                 >About</a
               >
             </li>
             <li>
-              <a class="pr-5 hover:text-tblue" href="{% url "pages:team" %}"
+              <a class="hover:text-tblue pr-5" href="{% url "blog:list" %}"
+                >Blog</a
+              >
+            </li>
+            <li>
+              <a class="hover:text-tblue pr-5" href="{% url "pages:team" %}"
                 >Team</a
               >
             </li>
             <li>
-              <a class="pr-5 hover:text-tblue" href="{% url "users:feedback" %}"
+              <a class="hover:text-tblue pr-5" href="{% url "users:feedback" %}"
                 >Feedback</a
               >
             </li>
