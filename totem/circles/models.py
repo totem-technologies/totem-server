@@ -248,6 +248,8 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         return self.start + datetime.timedelta(minutes=self.duration_minutes)
 
     def can_join(self, user):
+        if self.cancelled or self.ended() or user not in self.attendees.all():
+            return False
         now = timezone.now()
         grace_before = datetime.timedelta(minutes=15)
         grace_after = _default_grace_period
@@ -255,8 +257,6 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
             # Come back any time if already joined.
             grace_before = datetime.timedelta(minutes=60)
             grace_after = datetime.timedelta(minutes=self.duration_minutes)
-        if user not in self.attendees.all():
-            return False
         return self.start - grace_before < now < self.start + grace_after
 
     def ended(self):
