@@ -1,3 +1,4 @@
+import datetime
 from typing import List
 
 from django.db import transaction
@@ -17,7 +18,11 @@ from totem.circles.filters import (
     upcoming_recommended_events,
 )
 from totem.circles.models import Circle, CircleEvent, CircleEventException
-from totem.circles.schemas import EventDetailSchema, SpaceSchema, SummarySpacesSchema
+from totem.circles.schemas import (
+    EventDetailSchema,
+    SpaceSchema,
+    SummarySpacesSchema,
+)
 from totem.onboard.models import OnboardModel
 from totem.users.models import User
 
@@ -152,12 +157,10 @@ def get_spaces_summary(request: HttpRequest):
     user: User = request.user  # type: ignore
 
     # The upcoming events that the user is subscribed to
+    time_tolerance = datetime.timedelta(minutes=60)
     upcoming_events = (
         CircleEvent.objects.filter(
-            attendees=user,
-            circle__published=True,
-            cancelled=False,
-            start__gte=timezone.now(),
+            attendees=user, circle__published=True, cancelled=False, start__gte=timezone.now() - time_tolerance
         )
         .select_related("circle")
         .prefetch_related("circle__author", "circle__categories", "attendees")

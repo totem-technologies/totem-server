@@ -169,6 +169,17 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
     seats = models.IntegerField(default=8)
     start = models.DateTimeField(default=timezone.now)
 
+    class MeetingProviderChoices(models.TextChoices):
+        GOOGLE_MEET = "google_meet", _("Google Meet")
+        LIVEKIT = "livekit", _("LiveKit")
+
+    meeting_provider = models.CharField(
+        max_length=20,
+        choices=MeetingProviderChoices.choices,
+        default=MeetingProviderChoices.GOOGLE_MEET,
+        help_text="The video conferencing provider for this event.",
+    )
+
     class Meta:  # pyright: ignore [reportIncompatibleVariableOverride]
         ordering = ["start"]
         unique_together = [["circle", "start", "open", "title"]]
@@ -237,6 +248,8 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         return self.start + datetime.timedelta(minutes=self.duration_minutes)
 
     def can_join(self, user):
+        if self.cancelled or self.ended() or user not in self.attendees.all():
+            return False
         now = timezone.now()
         grace_before = datetime.timedelta(minutes=15)
         grace_after = _default_grace_period
@@ -244,8 +257,6 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
             # Come back any time if already joined.
             grace_before = datetime.timedelta(minutes=60)
             grace_after = datetime.timedelta(minutes=self.duration_minutes)
-        if user not in self.attendees.all():
-            return False
         return self.start - grace_before < now < self.start + grace_after
 
     def ended(self):
