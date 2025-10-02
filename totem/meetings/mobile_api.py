@@ -27,6 +27,5 @@ def get_livekit_token(request, event_slug: str):
         logging.warning("User %s attempted to join non-joinable event %s", user.slug, event.slug)
         raise AuthorizationError(message="Event is not joinable at this time.")
 
-    
     token = livekit_create_access_token(user, event)
     return LivekitTokenResponseSchema(token=token)
