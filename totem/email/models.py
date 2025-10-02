@@ -146,7 +146,7 @@ def _get_activity_page(page: int, now: datetime):
 
 
 def _save_activity(activity: dict):
-    EmailActivity.objects.update_or_create(
+    _ = EmailActivity.objects.update_or_create(
         activity_id=activity["id"],
         defaults={
             "event_type": activity["type"],

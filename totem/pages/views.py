@@ -96,6 +96,13 @@ def team_view(request):
             url="https://phase2industries.com/",
             external=True,
         ),
+        Member(
+            name="Smita Agarwal",
+            title="Advisor",
+            image="smita.jpg",
+            url="https://www.linkedin.com/in/smita-agarwal-4012164/",
+            external=True,
+        ),
     ]
     # randomly shuffle the team
     random.seed(str(uuid.uuid4()))
