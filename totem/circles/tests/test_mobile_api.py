@@ -192,6 +192,38 @@ class TestMobileApiSpaces:
         assert len(data["upcoming"]) == 1
         assert data["upcoming"][0]["slug"] == attending_event.slug
 
+    def test_upcoming_events_includes_in_progress_and_future(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        now = timezone.now()
+
+        # 1. Event that started 30 minutes ago and lasts for 60 minutes (should be included)
+        in_progress_event = CircleEventFactory(start=now - timedelta(minutes=30), duration_minutes=60)
+        in_progress_event.attendees.add(user)
+
+        # 2. Event that will start in 1 day (should be included)
+        future_event = CircleEventFactory(start=now + timedelta(days=1))
+        future_event.attendees.add(user)
+
+        # 3. Event that ended 30 minutes ago (should NOT be included)
+        past_event = CircleEventFactory(start=now - timedelta(minutes=90), duration_minutes=60)
+        past_event.attendees.add(user)
+
+        # 4. A cancelled event that is upcoming (should NOT be included)
+        cancelled_event = CircleEventFactory(start=now + timedelta(hours=2), cancelled=True)
+        cancelled_event.attendees.add(user)
+
+        # 5. An event the user is not attending (should NOT be included)
+        CircleEventFactory(start=now + timedelta(hours=3))
+
+        response = client.get(reverse("mobile-api:spaces_summary"))
+
+        assert response.status_code == 200
+        data = response.json()
+
+        upcoming_events_context = data["upcoming"]
+
+        assert len(upcoming_events_context) == 2
+
     def test_summary_for_you_section(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         OnboardModelFactory(user=user)
