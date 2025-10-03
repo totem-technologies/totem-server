@@ -1,17 +1,17 @@
-import { postData } from "@/libs/postData"
-import { timestampToDateString, timestampToTimeString } from "@/libs/time"
 import { useKeyDownEvent } from "@solid-primitives/keyboard"
 import { useQuery } from "@tanstack/solid-query"
 import {
+  createEffect,
+  createSignal,
   type JSX,
   type JSXElement,
   Match,
   Show,
   Suspense,
   Switch,
-  createEffect,
-  createSignal,
 } from "solid-js"
+import { postData } from "@/libs/postData"
+import { timestampToDateString, timestampToTimeString } from "@/libs/time"
 import { type EventDetailSchema, totemCirclesApiEventDetail } from "../client"
 import AddToCalendarButton from "./AddToCalendarButton"
 import ErrorBoundary from "./errors"
@@ -27,38 +27,6 @@ const spacesListLink = "/spaces/"
 const [showAttendingPopup, setShowAttendingPopup] = createSignal<boolean>(false)
 const [showLoginPopup, setShowLoginPopup] = createSignal<boolean>(false)
 const [loginRedirectUrl, setLoginRedirectUrl] = createSignal<string>("")
-
-function CopyToClipboard() {
-  const [copied, setCopied] = createSignal(false)
-  const path = `${location.protocol}//${location.host}${location.pathname}?ref=modal`
-  async function copyTextToClipboard() {
-    await navigator.clipboard.writeText(path)
-    setCopied(true)
-    setTimeout(() => {
-      setCopied(false)
-    }, 1000)
-  }
-  return (
-    <>
-      <Show when={!copied()}>
-        <button
-          type="button"
-          onClick={() => void copyTextToClipboard()}
-          class="btn btn-primary btn-sm">
-          Copy Link
-        </button>
-      </Show>
-      <Show when={copied()}>
-        <button
-          type="button"
-          class="btn btn-primary btn-sm"
-          onClick={() => void copyTextToClipboard()}>
-          Copied!
-        </button>
-      </Show>
-    </>
-  )
-}
 
 function LoginPopup() {
   createEffect(() => {
@@ -115,7 +83,18 @@ function LoginPopup() {
   )
 }
 
-function AttendingPopup() {
+function createCalendarButton(eventStore: EventDetailSchema) {
+  return (
+    <AddToCalendarButton
+      name={`${eventStore.title} - ${eventStore.space_title}`}
+      calLink={eventStore.calLink}
+      start={eventStore.start}
+      durationMinutes={eventStore.duration}
+    />
+  )
+}
+
+function AttendingPopup(props: { eventStore: EventDetailSchema | undefined }) {
   let modalRef: HTMLDialogElement | undefined
   createEffect(() => {
     if (showAttendingPopup()) {
@@ -137,12 +116,17 @@ function AttendingPopup() {
           />
           <h3 class="m-auto text-center text-xl font-bold">You're going!</h3>
           <p class="py-2">
-            We'll send you a notification before the session starts with a link
-            to join.
+            <strong>Next step:</strong> Add this session to your calendar so you
+            don't miss it!
           </p>
-          <p class="py-2">
-            <strong>Totem is better with friends!</strong> Share this link with
-            your friends and they'll be able to join as well.
+          <Show when={props.eventStore}>
+            <div class="flex justify-center pb-2">
+              {createCalendarButton(props.eventStore!)}
+            </div>
+          </Show>
+          <p class="py-2 text-sm text-gray-600">
+            We'll also send you a notification before the session starts with a
+            link to join.
           </p>
           <p class="py-2">
             In the meantime, review our{" "}
@@ -155,10 +139,7 @@ function AttendingPopup() {
             </a>{" "}
             to learn more about how to participate.
           </p>
-          <div class="flex justify-between">
-            <div class="modal-action">
-              <CopyToClipboard />
-            </div>
+          <div class="flex justify-center">
             <div class="modal-action">
               <form method="dialog">
                 <button
@@ -200,12 +181,15 @@ function IconLine(props: {
   )
 }
 
+function plural(number: number) {
+  return number > 1 ? "s" : ""
+}
+
 function EventInfo(props: {
   eventStore: EventDetailSchema
   refetchEvent: () => void
 }) {
   const [error, setError] = createSignal("")
-  const plural = () => (props.eventStore.subscribers > 1 ? "s" : "")
   async function handleAttend(e: Event) {
     if (!props.eventStore.rsvp_url) return
     e.preventDefault()
@@ -241,7 +225,8 @@ function EventInfo(props: {
           <IconLine
             icon="star"
             tip="How many people are getting updates about this Space.">
-            {props.eventStore.subscribers} subscriber{plural()}
+            {props.eventStore.subscribers} subscriber
+            {plural(props.eventStore.subscribers)}
           </IconLine>
         </Show>
         <IconLine icon="dollar" tip="The cost of each session, if any.">
@@ -260,7 +245,8 @@ function EventInfo(props: {
         <IconLine
           icon="chair"
           tip="How many people are getting updates about this Space.">
-          {props.eventStore.seats_left} seat{plural()} left
+          {props.eventStore.seats_left} seat
+          {plural(props.eventStore.seats_left)} left
         </IconLine>
       </div>
       <div class="pt-2 pb-1">
@@ -316,12 +302,7 @@ function EventInfo(props: {
           </Match>
 
           <Match when={props.eventStore.attending}>
-            <AddToCalendarButton
-              name={`${props.eventStore.title} - ${props.eventStore.space_title}`}
-              calLink={props.eventStore.calLink}
-              start={props.eventStore.start}
-              durationMinutes={props.eventStore.duration}
-            />
+            {createCalendarButton(props.eventStore)}
             <button
               type="button"
               class="a pt-2 text-gray-400"
@@ -380,7 +361,7 @@ function Subscribe(props: {
           </Match>
           <Match when={!props.event.subscribed}>
             <div>
-              Subscribe to this Space to notified about upcoming sessions.
+              Subscribe to this Space to be notified about upcoming sessions.
             </div>
             <button
               type="button"
@@ -446,7 +427,7 @@ function DetailSidebar(props: DetailSidebarProps) {
   return (
     <ErrorBoundary>
       <Suspense fallback={<Loading />}>
-        <AttendingPopup />
+        <AttendingPopup eventStore={query.data} />
         <LoginPopup />
         <Switch fallback={<Loading />}>
           <Match when={query.isFetching}>

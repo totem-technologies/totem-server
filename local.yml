@@ -29,6 +29,8 @@ services:
       dockerfile: ./compose/local/postgres/Dockerfile
     image: totem_production_postgres
     container_name: totem_local_postgres
+    ports:
+      - "5432:5432"
     volumes:
       - totem_local_postgres_data:/var/lib/postgresql/data
       - totem_local_postgres_data_backups:/backups

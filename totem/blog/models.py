@@ -31,6 +31,11 @@ def upload_to_id_image(instance, filename: str):
 class BlogPost(AdminURLMixin, MarkdownMixin, SluggedModel):
     title = models.CharField(max_length=255)
     subtitle = models.CharField(max_length=2000, blank=True)
+    summary = models.CharField(
+        max_length=2000,
+        blank=True,
+        help_text="Short summary of the blog post to show in list pages. No Markdown allowed. Max 2000 characters.",
+    )
     author = models.ForeignKey(
         User, on_delete=models.DO_NOTHING, related_name="blog_posts", help_text="Author of the blog post", null=True
     )
@@ -47,6 +52,7 @@ class BlogPost(AdminURLMixin, MarkdownMixin, SluggedModel):
     )
     date_published = models.DateTimeField(default=timezone.now)
     publish = models.BooleanField(default=False)
+    read_time = models.PositiveIntegerField(default=1, help_text="Estimated reading time in minutes (auto-calculated)")
 
     def __str__(self):
         return self.title
@@ -55,8 +61,39 @@ class BlogPost(AdminURLMixin, MarkdownMixin, SluggedModel):
         super().clean()
         self.validate_markdown(self.content)  # Add markdown validation
 
+    def calculate_read_time(self):
+        """Calculate estimated reading time based on content."""
+        # Strip markdown formatting and HTML tags for accurate word count
+
+        # Remove markdown formatting
+        text = self.content
+        text = text.replace("#", "")
+        text = text.replace("-", "")
+        text = text.replace("*", "")
+        text = text.replace("`", "")
+        text = text.replace("<", "")
+        text = text.replace(">", "")
+        text = text.replace("|", "")
+        text = text.replace("{", "")
+        text = text.replace("%", "")
+        text = text.replace("}", "")
+
+        # Count words
+        words = len(text.split())
+
+        # Calculate read time (average reading speed: 225 words per minute)
+        # Minimum 1 minute
+        read_time = max(1, round(words / 225))
+
+        return read_time
+
+    def save(self, *args, **kwargs):
+        """Override save to auto-calculate read_time."""
+        self.read_time = self.calculate_read_time()
+        super().save(*args, **kwargs)
+
     def get_absolute_url(self) -> str:
         return reverse("blog:detail", kwargs={"slug": self.slug})
 
-    class Meta:  # type: ignore
+    class Meta:  # type: ignore  # pyright: ignore[reportIncompatibleVariableOverride]
         ordering = ["-date_published"]

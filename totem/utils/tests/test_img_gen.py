@@ -1,8 +1,8 @@
-from .. import img_gen
+from totem.utils import img_gen
 
 
 def test_cache_key():
-    params = img_gen.ImageParams(
+    params = img_gen.CircleImageParams(
         background_path="tests/img_gen/background.jpg",
         author_img_path="tests/img_gen/me.jpg",
         author_name="Bo",
@@ -17,17 +17,17 @@ def test_cache_key():
         # height=512,
     )
     gold = "902706648490049909"
-    assert params.cache_key() == params.cache_key()
-    assert gold in str(params.cache_key())
+    assert params.__hash__() == params.__hash__()
+    assert gold in str(params.__hash__())
     params.width = 200
-    assert gold not in str(params.cache_key())
+    assert gold not in str(params.__hash__())
 
 
 def test_gen():
     import os
 
     folder_path = os.path.dirname(os.path.realpath(__file__))
-    params = img_gen.ImageParams(
+    params = img_gen.CircleImageParams(
         background_path=f"{folder_path}/img_gen/background.jpg",
         author_img_path=f"{folder_path}/img_gen/me.jpg",
         author_name="Bo",
@@ -41,5 +41,5 @@ def test_gen():
         # width=1024,
         # height=512,
     )
-    image = img_gen.generate_image(params)
+    image = img_gen.generate_circle_image(params)
     assert image

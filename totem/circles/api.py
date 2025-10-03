@@ -1,63 +1,31 @@
 from datetime import datetime
 from typing import List
 
+from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
-from django.urls import reverse
-from ninja import Field, FilterSchema, ModelSchema, Router, Schema
+from ninja import Field, FilterSchema, Router, Schema
 from ninja.pagination import paginate
 from ninja.params.functions import Query
 
-from totem.users.schemas import PublicUserSchema
+from totem.circles.schemas import (
+    EventDetailSchema,
+    EventListSchema,
+    EventsFilterSchema,
+    FilterOptionsSchema,
+    NextEventSchema,
+    SpaceDetailSchema,
+)
+from totem.users.models import User
 
-from .filters import all_upcoming_recommended_events, events_by_month, get_upcoming_events_for_spaces_list
+from .filters import (
+    all_upcoming_recommended_events,
+    event_detail_schema,
+    events_by_month,
+    get_upcoming_events_for_spaces_list,
+)
 from .models import Circle, CircleEvent
 
 router = Router()
-
-
-class SpaceSchema(ModelSchema):
-    author: PublicUserSchema
-
-    class Meta:
-        model = Circle
-        fields = ["title", "slug", "date_created", "date_modified", "subtitle"]
-
-
-class EventListSchema(ModelSchema):
-    space: SpaceSchema
-    url: str
-
-    @staticmethod
-    def resolve_url(obj: CircleEvent):
-        return obj.get_absolute_url()
-
-    @staticmethod
-    def resolve_space(obj: CircleEvent):
-        return obj.circle
-
-    class Meta:
-        model = CircleEvent
-        fields = ["start", "slug", "date_created", "date_modified", "title"]
-
-
-class EventsFilterSchema(FilterSchema):
-    category: str | None
-    author: str | None
-
-
-class CategoryFilterSchema(Schema):
-    name: str
-    slug: str
-
-
-class AuthorFilterSchema(Schema):
-    name: str
-    slug: str
-
-
-class FilterOptionsSchema(Schema):
-    categories: List[CategoryFilterSchema]
-    authors: List[AuthorFilterSchema]
 
 
 @router.get("/", response={200: List[EventListSchema]}, tags=["events"], url_name="events_list")
@@ -83,92 +51,17 @@ def filter_options(request):
     return {"categories": categories, "authors": authors}
 
 
-class EventSpaceSchema(ModelSchema):
-    author: PublicUserSchema
-
-    def description(self, obj: Circle):
-        return obj.content_html
-
-    class Meta:
-        model = Circle
-        fields = [
-            "title",
-            "slug",
-            "date_created",
-            "date_modified",
-            "subtitle",
-            "categories",
-            "short_description",
-            "recurring",
-            "image",
-        ]
-
-
-class EventDetailSchema(Schema):
-    slug: str
-    title: str
-    space: EventSpaceSchema
-    space_title: str
-    description: str
-    price: int
-    seats_left: int
-    duration: int
-    recurring: str
-    subscribers: int
-    start: datetime
-    attending: bool
-    open: bool
-    started: bool
-    cancelled: bool
-    joinable: bool
-    ended: bool
-    rsvp_url: str
-    join_url: str | None
-    subscribe_url: str
-    calLink: str
-    subscribed: bool | None
-    user_timezone: str | None
-
-
 @router.get(
     "/event/{event_slug}",
     response={200: EventDetailSchema},
     tags=["events"],
     url_name="event_detail",
 )
-def event_detail(request, event_slug):
+def event_detail(request: HttpRequest, event_slug: str):
     event = get_object_or_404(CircleEvent, slug=event_slug)
-    space: Circle = event.circle
-    attending = event.attendees.filter(pk=request.user.pk).exists()
-    start = event.start
-    join_url = event.join_url(request.user) if attending else None
-    subscribed = space.subscribed.contains(request.user) if request.user.is_authenticated else None
-    ended = event.ended()
-    return EventDetailSchema(
-        slug=event.slug,
-        title=event.title,
-        space_title=space.title,
-        space=EventSpaceSchema.from_orm(space),
-        description=event.content_html,
-        price=space.price,
-        seats_left=event.seats_left(),
-        duration=event.duration_minutes,
-        recurring=space.recurring,
-        subscribers=space.subscribed.count(),
-        start=start,
-        attending=event.attendees.filter(pk=request.user.pk).exists(),
-        open=event.open,
-        started=event.started(),
-        cancelled=event.cancelled,
-        joinable=event.can_join(request.user),
-        ended=ended,
-        rsvp_url=reverse("circles:rsvp", kwargs={"event_slug": event.slug}),
-        join_url=join_url,
-        calLink=event.cal_link(),
-        subscribe_url=reverse("circles:subscribe", kwargs={"slug": space.slug}),
-        subscribed=subscribed,
-        user_timezone=str("UTC"),
-    )
+    user: User = request.user  # type: ignore
+
+    return event_detail_schema(event, user)
 
 
 class EventCalendarSchema(Schema):
@@ -251,24 +144,6 @@ def webflow_events_list(request, filters: WebflowEventsFilterSchema = Query()):
     return results
 
 
-class NextEventSchema(Schema):
-    slug: str
-    start: str
-    link: str
-    title: str | None
-    seats_left: int
-
-
-class SpaceDetailSchema(Schema):
-    slug: str
-    title: str
-    image_link: str | None
-    description: str
-    author: PublicUserSchema
-    nextEvent: NextEventSchema
-    category: str | None
-
-
 @router.get("/list", response={200: List[SpaceDetailSchema]}, tags=["spaces"], url_name="spaces_list")
 def list_spaces(request):
     # Get events with availability information
@@ -283,30 +158,30 @@ def list_spaces(request):
             continue
 
         spaces_set.add(event.circle.slug)
-        circle = event.circle
+        circle: Circle = event.circle
 
         category = circle.categories.first()
         category_name = category.name if category else None
 
-        # Calculate seats left for this event
         seats_left = max(0, event.seats - event.attendee_count)  # type: ignore
 
         spaces.append(
-            {
-                "slug": circle.slug,
-                "title": circle.title,
-                "image_link": circle.image.url if circle.image else None,
-                "description": circle.short_description,
-                "author": circle.author,
-                "nextEvent": NextEventSchema(
+            SpaceDetailSchema(
+                slug=circle.slug,
+                title=circle.title,
+                image_link=circle.image.url if circle.image else None,
+                short_description=circle.short_description,
+                content=circle.content_html,
+                author=circle.author,
+                category=category_name,
+                nextEvent=NextEventSchema(
                     slug=event.slug,
                     start=event.start.isoformat(),
                     title=event.title,
                     link=event.get_absolute_url(),
-                    seats_left=seats_left,  # Add seats_left to the event
+                    seats_left=seats_left,
                 ),
-                "category": category_name,
-            }
+            ),
         )
 
     return spaces

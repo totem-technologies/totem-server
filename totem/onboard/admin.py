@@ -27,9 +27,11 @@ class HasHopesFilter(admin.SimpleListFilter):
 class OnboardAdmin(ExportCsvMixin, admin.ModelAdmin):
     actions = ["export_as_csv"]
     list_display = ["user", "onboarded", "created", "updated"]
+    search_fields = ["user__email"]
     list_filter = (
         "created",
         "updated",
+        "onboarded",
         HasHopesFilter,
     )
     readonly_fields = ("user_name",)

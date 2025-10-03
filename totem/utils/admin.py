@@ -50,8 +50,8 @@ class LogEntryAdmin(admin.ModelAdmin):
             )
         return mark_safe(link)
 
-    object_link.admin_order_field = "object_repr"
-    object_link.short_description = "object"
+    object_link.admin_order_field = "object_repr"  # type: ignore
+    object_link.short_description = "object"  # type: ignore
 
 
 class ExportCsvMixin:
@@ -71,4 +71,4 @@ class ExportCsvMixin:
 
         return response
 
-    export_as_csv.short_description = "Export Selected"
+    export_as_csv.short_description = "Export Selected"  # type: ignore

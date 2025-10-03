@@ -20,13 +20,9 @@ class BlogPostSchema(ModelSchema):
             return obj.header_image.url
         return None
 
-    @staticmethod
-    def resolve_content_html(obj: BlogPost) -> str:
-        return obj.content_html
-
     class Meta:
         model = BlogPost
-        fields = ["title", "subtitle", "content", "date_published", "slug", "author", "publish"]
+        fields = ["title", "subtitle", "date_published", "slug", "author", "publish", "read_time", "summary"]
 
 
 class BlogPostListSchema(ModelSchema):
@@ -34,14 +30,14 @@ class BlogPostListSchema(ModelSchema):
     header_image_url: Optional[str] = None
 
     @staticmethod
-    def resolve_header_image_url(obj) -> Optional[str]:
+    def resolve_header_image_url(obj: BlogPost) -> Optional[str]:
         if obj.header_image and hasattr(obj.header_image, "url"):
             return obj.header_image.url
         return None
 
     class Meta:
         model = BlogPost
-        fields = ["title", "subtitle", "date_published", "slug", "author"]
+        fields = ["title", "subtitle", "date_published", "slug", "author", "read_time", "summary"]
 
 
 blog_router = Router()

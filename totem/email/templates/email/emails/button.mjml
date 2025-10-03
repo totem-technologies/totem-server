@@ -16,7 +16,7 @@
     </mj-button>
     <mj-spacer height="48px"></mj-spacer>
     <mj-text mj-class="sub">
-      Didn't request this link? You can safely ignore this email. If the
+      Didn't request this email? You can safely ignore it. If the
       button doesn't work, copy and paste the link below into your browser:
     </mj-text>
     <mj-spacer height="10px"></mj-spacer>

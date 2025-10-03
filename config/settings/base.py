@@ -13,9 +13,10 @@ BASE_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
 # totem/
 APPS_DIR = BASE_DIR / "totem"
 env = environ.Env()
+TEST = False
 
 
-def b64_json_env(key: str):
+def b64_json_env(key: str) -> str:
     empty_json = "e30K"
     return json.loads(base64.b64decode(env(key, default=empty_json)))  # type: ignore
 
@@ -401,6 +402,8 @@ if not DEBUG:
         traces_sample_rate=0.1,
         profiles_sample_rate=0.1,
         send_default_pii=True,
+        profile_lifecycle="trace",
+        enable_logs=True,
     )
 
 # posthog
@@ -433,7 +436,12 @@ IMPERSONATE = {
 
 # CORS
 # ------------------------------------------------------------------------------
-CORS_ALLOWED_ORIGINS = ["https://app.posthog.com", "https://js.sentry-cdn.com", "https://totem-technologies.github.io"]
+CORS_ALLOWED_ORIGINS = [
+    "https://app.posthog.com",
+    "https://us.i.posthog.com",
+    "https://js.sentry-cdn.com",
+    "https://totem-technologies.github.io",
+]
 if STATIC_HOST:
     CORS_ALLOWED_ORIGINS.append(f"https://{STATIC_HOST}")
 
@@ -453,8 +461,14 @@ WEBFLOW_BASE_URL = env("WEBFLOW_BASE_URL", default="https://wf.totem.org/")  # t
 # Social
 # ------------------------------------------------------------------------------
 SOCIAL_LINKS = {
-    "twitter": "https://twitter.com/totemcircles/",
+    "bluesky": "https://bsky.app/profile/totem.org",
     "instagram": "https://www.instagram.com/totemorg/",
     "github": "https://github.com/totem-technologies/",
     "linkedin": "https://www.linkedin.com/company/totemorg/",
 }
+
+
+# LiveKit
+# ------------------------------------------------------------------------------
+LIVEKIT_API_KEY = env("LIVEKIT_API_KEY", default=None)
+LIVEKIT_API_SECRET = env("LIVEKIT_API_SECRET", default=None)

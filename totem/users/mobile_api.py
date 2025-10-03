@@ -1,17 +1,16 @@
-from django.shortcuts import get_object_or_404
 import pytz
 from auditlog.context import disable_auditlog
 from auditlog.models import LogEntry
 from django.http import HttpRequest
+from django.shortcuts import get_object_or_404
 from ninja import File, Router
 from ninja.errors import ValidationError
 from ninja.files import UploadedFile
 from pytz.exceptions import UnknownTimeZoneError
 
 from totem.email.utils import validate_email_blocked
-from totem.users.models import User
-from totem.users.schemas import UserSchema, UserUpdateSchema
-from totem.users.schemas import PublicUserSchema
+from totem.users.models import KeeperProfile, User
+from totem.users.schemas import KeeperProfileSchema, PublicUserSchema, UserSchema, UserUpdateSchema
 
 user_router = Router()
 
@@ -98,3 +97,8 @@ def delete_current_user(request: HttpRequest):
     with disable_auditlog():
         user.delete()
     return True
+
+
+@user_router.get("/keeper/{slug}", response={200: KeeperProfileSchema}, url_name="user_keeper_profile")
+def keeper(request: HttpRequest, slug: str):
+    return get_object_or_404(KeeperProfile, user__slug=slug)

@@ -7,6 +7,7 @@ from .base import env
 
 del STORAGES  # noqa: F821
 
+TEST = True
 # GENERAL
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#secret-key

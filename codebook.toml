@@ -1,8 +1,8 @@
-dictionaries = []
 words = [
     "allauth",
     "atcb",
     "blockquote",
+    "cmap",
     "csrfmiddlewaretoken",
     "dataid",
     "dockerfile",
@@ -13,14 +13,18 @@ words = [
     "errorlist",
     "eventcalendar",
     "favicons",
+    "fcm",
+    "fieldsets",
     "formset",
     "imagekit",
     "innerhtml",
+    "joinable",
     "lanczos",
     "lookups",
     "modeladmin",
     "onboarded",
     "posthog",
+    "pyright",
     "queryset",
     "signup",
     "staticfiles",
@@ -36,12 +40,9 @@ words = [
     "truetype",
     "truncatewords",
     "tshadow",
+    "urlpatterns",
     "waitlist",
     "webflow",
     "wght",
     "woff",
-    "fieldsets",
-    "fcm"
 ]
-flag_words = []
-ignore_paths = []

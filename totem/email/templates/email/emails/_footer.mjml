@@ -4,7 +4,7 @@
   <mj-column>
     <mj-image align="center" href="{% settings_value 'SITE_BASE_URL' %}" padding-bottom="0px" padding-left="10px" padding-right="10px" padding-top="0px" padding="0px" src="{% static 'images/totem-symbol.png' %}" width="30px"></mj-image>
     <mj-social align="center" font-size="15px" icon-padding="0px" icon-size="20px" inner-padding="5px" mode="horizontal">
-      <mj-social-element src="{% static 'images/email/x.png' %}" alt="{% settings_value 'SOCIAL_LINKS.twitter' %}" href="{% settings_value 'SOCIAL_LINKS.twitter' %}" title="{% settings_value 'SOCIAL_LINKS.twitter' %}"></mj-social-element>
+      <mj-social-element src="{% static 'images/email/bluesky.png' %}" alt="{% settings_value 'SOCIAL_LINKS.bluesky' %}" href="{% settings_value 'SOCIAL_LINKS.bluesky' %}" title="{% settings_value 'SOCIAL_LINKS.bluesky' %}"></mj-social-element>
       <mj-social-element src="{% static 'images/email/instagram.png' %}" alt="{% settings_value 'SOCIAL_LINKS.instagram' %}" href="{% settings_value 'SOCIAL_LINKS.instagram' %}" title="{% settings_value 'SOCIAL_LINKS.instagram' %}"></mj-social-element>
       <mj-social-element src="{% static 'images/email/github.png' %}" alt="{% settings_value 'SOCIAL_LINKS.github' %}" href="{% settings_value 'SOCIAL_LINKS.github' %}" title="{% settings_value 'SOCIAL_LINKS.github' %}"></mj-social-element>
       <mj-social-element src="{% static 'images/email/linkedin.png' %}" alt="{% settings_value 'SOCIAL_LINKS.linkedin' %}" href="{% settings_value 'SOCIAL_LINKS.linkedin' %}" title="{% settings_value 'SOCIAL_LINKS.linkedin' %}"></mj-social-element>

@@ -169,7 +169,7 @@ function SpacesListInner() {
             </div>
             <a class="btn" href={eventCalendarURL}>
               <Calendar class="mr-1 h-4 w-4" />
-              All Events
+              All Sessions
             </a>
           </div>
 
@@ -236,7 +236,7 @@ function SpacesListInner() {
                           <div class="mt-auto flex flex-col justify-between md:flex-row md:items-center">
                             <div>
                               <p class="text-sm font-medium">
-                                Next event: {space.nextEvent.title}
+                                Next session: {space.nextEvent.title}
                               </p>
                               <div class="mt-2 flex gap-4">
                                 <div class="text-muted-foreground flex items-center text-xs">

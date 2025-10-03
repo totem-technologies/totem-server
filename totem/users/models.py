@@ -12,7 +12,6 @@ from django.db import models
 from django.db.models import BooleanField, CharField, EmailField, TextChoices, URLField, UUIDField
 from django.urls import Resolver404, resolve, reverse
 from django.utils import timezone
-from django.utils.html import escape as html_escape
 from django.utils.html import strip_tags
 from django.utils.translation import gettext_lazy as _
 from imagekit import ImageSpec
@@ -93,6 +92,18 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
     )
     verified = BooleanField(_("Verified"), default=False)
     timezone = TimeZoneField(choices_display="WITH_GMT_OFFSET", blank=True)
+    fixed_pin = CharField(
+        _("Fixed PIN"),
+        max_length=6,
+        blank=True,
+        default="",
+        help_text="Fixed PIN for app store review access. Must be enabled to work.",
+    )
+    fixed_pin_enabled = BooleanField(
+        _("Fixed PIN Enabled"),
+        default=False,
+        help_text="Enable fixed PIN login for app store reviews. Not allowed for staff users.",
+    )
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
@@ -107,7 +118,7 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
         return reverse("users:detail", kwargs={"slug": self.slug})
 
     def get_keeper_url(self):
-        if self.keeper_profile.username:
+        if hasattr(self, "keeper_profile") and self.keeper_profile.username:
             return reverse("profiles", kwargs={"name": self.keeper_profile.username})
         return reverse("users:detail", kwargs={"slug": self.slug})
 
@@ -133,7 +144,11 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
     def clean(self):
         super().clean()
         self.email = strip_tags(self.__class__.objects.normalize_email(self.email))
-        self.name = html_escape(strip_tags(self.name.strip()))
+        self.name = strip_tags(self.name.strip())
+
+        # Prevent staff users from enabling fixed pin
+        if self.fixed_pin_enabled and self.is_staff:
+            raise ValidationError(_("Fixed PIN login is not allowed for staff users."))
 
 
 class KeeperProfile(AdminURLMixin, models.Model, MarkdownMixin):
@@ -149,6 +164,7 @@ class KeeperProfile(AdminURLMixin, models.Model, MarkdownMixin):
     )
     instagram_username = CharField(max_length=255, blank=True, help_text="Your Instagram username, no @ symbol")
     x_username = CharField(max_length=255, blank=True, help_text="Your X username, no @ symbol")
+    bluesky_username = CharField(max_length=255, blank=True, help_text="Your Bluesky username, no @ symbol")
     website = URLField(max_length=255, blank=True, help_text="Your personal website.")
 
     def __str__(self):
@@ -205,6 +221,7 @@ class LoginPinManager(models.Manager):
         """
         Validate a PIN for a user. Returns (is_valid, pin_obj).
         PIN object is returned even if invalid to allow for attempt counting.
+        Supports fixed PIN as fallback for app store reviews.
         """
         try:
             pin_obj = self.get(user=user, expires_at__gt=timezone.now())
@@ -213,12 +230,21 @@ class LoginPinManager(models.Manager):
                 # Valid PIN - mark as used
                 pin_obj.used = True
                 pin_obj.save()
+                return True, pin_obj
             else:
-                # Invalid PIN - increment failed attempts
+                # Regular PIN didn't match - check fixed PIN as fallback
+                if self._validate_fixed_pin(user, pin):
+                    return True, None
+                # Neither regular nor fixed PIN matched - increment failed attempts
                 pin_obj.increment_failed_attempts()
-            return is_valid, pin_obj
+                return False, pin_obj
         except self.model.DoesNotExist:
+            if self._validate_fixed_pin(user, pin):
+                return True, None
             return False, None
+
+    def _validate_fixed_pin(self, user: User, pin: str) -> bool:
+        return not user.is_staff and user.fixed_pin_enabled and user.fixed_pin and user.fixed_pin == pin
 
 
 class LoginPin(models.Model):

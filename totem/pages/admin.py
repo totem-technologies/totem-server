@@ -7,7 +7,7 @@ from .models import Redirect
 
 @admin.register(Redirect)
 class RedirectAdmin(admin.ModelAdmin):
-    list_display = ("url", "slug", "count")
+    list_display = ("url", "slug", "count", "notes")
     ordering = ("url",)
     readonly_fields = ("count", "absolute_url", "alternate_url", "generate_qr_code")
 

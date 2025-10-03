@@ -335,7 +335,6 @@ class TestListSpaces:
             title_to_space["Some Seats Taken"]["nextEvent"]["seats_left"] == 7
         ), "Expected 7 seats left for 'Some Seats Taken'"
         assert title_to_space["Full Event"]["nextEvent"]["seats_left"] == 0, "Expected 0 seats left for 'Full Event'"
-
         # Verify other properties are present
         for space in data:
             assert "slug" in space

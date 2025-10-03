@@ -8,14 +8,16 @@ from ninja import Router
 from ninja.errors import ValidationError
 from ninja.security import HttpBearer
 
+from totem.blog.mobile_api import blog_router
+from totem.circles.mobile_api import spaces_router
+from totem.meetings.mobile_api import meetings_router
 from totem.notifications.models import FCMDevice
 from totem.notifications.schemas import FCMTokenRegisterSchema, FCMTokenResponseSchema
 from totem.notifications.validators import validate_fcm_token
-from totem.users.models import User
-from totem.users.mobile_api import user_router
 from totem.onboard.mobile_api import onboard_router
-from totem.circles.mobile_api import spaces_router
-from totem.blog.mobile_api import blog_router
+from totem.users.mobile_api import user_router
+from totem.users.models import User
+
 from .auth import JWTSchema
 
 
@@ -51,6 +53,7 @@ router.add_router("/users", user_router)
 router.add_router("/onboard", onboard_router)
 router.add_router("/spaces", spaces_router)
 router.add_router("/blog", blog_router)
+router.add_router("/meetings", meetings_router)
 
 
 @router.post("/fcm/register", response={201: FCMTokenResponseSchema}, url_name="register_fcm_token")
@@ -61,22 +64,30 @@ def register_fcm_token(request: HttpRequest, payload: FCMTokenRegisterSchema):
     if not valid:
         raise ValidationError(errors=[{"token": "INVALID_TOKEN"}])
 
-    # Check for existing token with different user
-    existing = FCMDevice.objects.filter(token=payload.token).exclude(user=request.user).first()
-    if existing:
-        # Token already registered to another user - security issue
-        # _Should_ never happen
-        raise ValidationError(errors=[{"token": "INVALID_TOKEN"}])
+    # Check for existing devices with this token
+    existing_devices = FCMDevice.objects.filter(token=payload.token)
 
-    device, created = FCMDevice.objects.update_or_create(token=payload.token, user=request.user, active=True)
+    if existing_devices.count() > 1:
+        # Multiple devices with same token - delete all and create new
+        existing_devices.delete()
+        device = FCMDevice.objects.create(token=payload.token, user=request.user, active=True)
+    elif device := existing_devices.first():
+        # Single existing device - update it
+        device.user = request.user
+        device.active = True
+        device.updated_at = timezone.now()
+        device.save()
+    else:
+        # No existing device - create new
+        device = FCMDevice.objects.create(token=payload.token, user=request.user, active=True)
+
     return 201, device
 
 
 @router.delete("/fcm/unregister/{token}", response={204: None}, url_name="unregister_fcm_token")
 def unregister_fcm_token(request: HttpRequest, token: str):
-    """Mark an FCM token as inactive"""
+    """Delete an FCM token for the current user"""
     device = FCMDevice.objects.filter(token=token, user=request.user).first()
     if device:
-        device.active = False
-        device.save()
+        device.delete()
     return 204, None

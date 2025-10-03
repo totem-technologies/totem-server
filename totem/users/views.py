@@ -1,3 +1,4 @@
+import logging
 from urllib.parse import quote
 
 from auditlog.context import disable_auditlog
@@ -20,6 +21,8 @@ from totem.utils.slack import notify_slack
 from . import analytics
 from .forms import LoginForm, SignupForm
 from .models import Feedback, KeeperProfile, LoginPin, User
+
+logger = logging.getLogger(__name__)
 
 
 def user_detail_view(request, slug):
@@ -156,7 +159,41 @@ def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name
         form = form_class(request.POST)
         if form.is_valid():
             data = form.cleaned_data
+            ip_address = request.META.get("REMOTE_ADDR", "")
+            user_agent = request.META.get("HTTP_USER_AGENT", "")
+            form_type = form_class.__name__
+            # Honeypot validation - check if bot filled the hidden field
+            honeypot_value = data.get("website", "")
+            headless = "HeadlessChrome" in user_agent
+            if honeypot_value or headless:
+                # Bot detected! Log it.
+                email = data.get("email", "")
+
+                logger.warning(
+                    "Bot detection triggered: Bot detected attempting to submit form",
+                    extra={
+                        "email": email,
+                        "honeypot_field": "website",
+                        "honeypot_value": honeypot_value[:100],
+                        "ip_address": ip_address,
+                        "user_agent": user_agent,
+                        "form_type": form_type,
+                    },
+                )
+                # Silently fail - appear successful to bot
+                fake_email = email or "bot@example.com"
+                return redirect(f"{reverse('users:verify-pin')}?email={quote(fake_email)}")
+
             email: str = data["email"].lower()
+            logger.info(
+                "User login attempt",
+                extra={
+                    "email": email,
+                    "ip_address": ip_address,
+                    "user_agent": user_agent,
+                    "form_type": form_type,
+                },
+            )
             # Only use 'next' as the post-auth redirect parameter
             create_params = {"newsletter_consent": data.get("newsletter_consent", False)}
 

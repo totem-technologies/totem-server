@@ -25,6 +25,11 @@ from totem.email.emails import (
     notify_circle_tomorrow,
 )
 from totem.email.exceptions import EmailBounced
+from totem.notifications.notifications import (
+    circle_advertisement_notification,
+    circle_starting_notification,
+    missed_event_notification,
+)
 from totem.utils.hash import basic_hash, hmac
 from totem.utils.md import MarkdownField, MarkdownMixin
 from totem.utils.models import AdminURLMixin, SluggedModel
@@ -164,6 +169,17 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
     seats = models.IntegerField(default=8)
     start = models.DateTimeField(default=timezone.now)
 
+    class MeetingProviderChoices(models.TextChoices):
+        GOOGLE_MEET = "google_meet", _("Google Meet")
+        LIVEKIT = "livekit", _("LiveKit")
+
+    meeting_provider = models.CharField(
+        max_length=20,
+        choices=MeetingProviderChoices.choices,
+        default=MeetingProviderChoices.GOOGLE_MEET,
+        help_text="The video conferencing provider for this event.",
+    )
+
     class Meta:  # pyright: ignore [reportIncompatibleVariableOverride]
         ordering = ["start"]
         unique_together = [["circle", "start", "open", "title"]]
@@ -172,7 +188,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         return reverse("circles:event_detail", kwargs={"event_slug": self.slug})
 
     def seats_left(self):
-        return self.seats - self.attendees.count()
+        return max(0, self.seats - self.attendees.count())
 
     def attendee_list(self):
         return ", ".join([str(attendee) for attendee in self.attendees.all()])
@@ -215,6 +231,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
             if self.notified and self.can_join(user):
                 # Send the user the join email if they are attending and the event is about to start
                 notify_circle_starting(self, user).send()
+                circle_starting_notification(self, user).send()
             else:
                 # Otherwise, send the user the signed up email
                 notify_circle_signup(self, user).send()
@@ -231,6 +248,8 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         return self.start + datetime.timedelta(minutes=self.duration_minutes)
 
     def can_join(self, user):
+        if self.cancelled or self.ended() or user not in self.attendees.all():
+            return False
         now = timezone.now()
         grace_before = datetime.timedelta(minutes=15)
         grace_after = _default_grace_period
@@ -238,8 +257,6 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
             # Come back any time if already joined.
             grace_before = datetime.timedelta(minutes=60)
             grace_after = datetime.timedelta(minutes=self.duration_minutes)
-        if user not in self.attendees.all():
-            return False
         return self.start - grace_before < now < self.start + grace_after
 
     def ended(self):
@@ -271,6 +288,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         self.save()
         for user in self.attendees.all():
             notify_circle_starting(self, user).send()
+            circle_starting_notification(self, user).send()
 
     def notify_tomorrow(self, force=False):
         # Notify users who are attending that the circle is starting tomorrow
@@ -294,6 +312,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
                 continue
             if user not in self.joined.all():
                 missed_event_email(self, user).send()
+                missed_event_notification(self, user).send()
 
     def advertise(self, force=False):
         # Notify users who are subscribed that a new event is available, if they aren't already attending.
@@ -305,6 +324,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
             if self.can_attend(silent=True) and user not in self.attendees.all():
                 try:
                     notify_circle_advertisement(self, user).send()
+                    circle_advertisement_notification(self, user).send()
                 except EmailBounced:
                     # If the email was blocked, remove the user from the circle
                     self.circle.unsubscribe(user)
@@ -330,7 +350,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
     def password(self):
         return basic_hash(hmac(f"{self.slug}|{self.meeting_url}"))
 
-    def join_url(self, user):
+    def email_join_url(self, user):
         return JoinCircleAction(user=user, parameters={"event_slug": self.slug}).build_url()
 
     def jsonld(self):

@@ -1,5 +1,5 @@
 import base64
-import os
+import logging
 from dataclasses import dataclass
 
 from django.conf import settings
@@ -10,6 +10,9 @@ from googleapiclient.discovery import build
 from googleapiclient.discovery_cache.base import Cache
 from googleapiclient.errors import HttpError
 from requests.auth import AuthBase
+from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -37,7 +40,7 @@ class ConferenceSolution:
 class CreateRequest:
     requestId: str
     conferenceSolutionKey: ConferenceSolutionKey
-    status: dict
+    status: dict  # pyright: ignore[reportMissingTypeArgument]
 
 
 @dataclass
@@ -85,7 +88,7 @@ class CalendarEvent:
     sequence: int
     hangoutLink: str
     conferenceData: ConferenceData
-    reminders: dict
+    reminders: dict  # pyright: ignore[reportMissingTypeArgument]
     eventType: str
 
 
@@ -136,12 +139,16 @@ def _to_gcal_id(s: str) -> str:
     return base64.b32hexencode(s.encode()).strip(b"=").lower().decode()
 
 
+@retry(
+    stop=stop_after_attempt(2),  # Total number of attempts (initial + 1 retry)
+    wait=wait_fixed(1),  # Wait 1 second between retries
+    retry=retry_if_exception_type(BrokenPipeError),
+)
 def save_event(event_id: str, start: str, end: str, summary: str, description: str) -> "CalendarEvent | None":
     if not settings.SAVE_TO_GOOGLE_CALENDAR:
         return
     service = get_service_client()
     event_id = _to_gcal_id(event_id)
-    random_string = _to_gcal_id(os.urandom(10).hex())
     event = {
         "id": event_id,
         "summary": summary,
@@ -156,17 +163,24 @@ def save_event(event_id: str, start: str, end: str, summary: str, description: s
         },
         "conferenceData": {
             "createRequest": {
-                "requestId": random_string,
+                # Set to a unique string to this event.
+                # If this event already has a previous request with this id, the request is ignored.
+                # We want it ignored in this case so the meeting link isn't updated every save.
+                "requestId": event_id,
                 "conferenceSolutionKey": {"type": "hangoutsMeet"},
             },
         },
     }
+
+    logger.info(f"Saving event {event_id} to Google Calendar")
     try:
         event = (
             service.events().update(eventId=event_id, calendarId=cal_id, body=event, conferenceDataVersion=1).execute()
         )
+        logger.info(f"Event {event_id} updated to Google Calendar")
     except HttpError:
         event = service.events().insert(calendarId=cal_id, body=event, conferenceDataVersion=1).execute()
+        logger.info(f"Event {event_id} created in Google Calendar")
     return CalendarEvent(**event)
 
 
