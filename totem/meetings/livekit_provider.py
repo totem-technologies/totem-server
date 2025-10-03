@@ -1,3 +1,4 @@
+import json
 from django.conf import settings
 from livekit import api
 
@@ -39,3 +40,23 @@ def livekit_create_access_token(user: User, event: CircleEvent) -> str:
     )
 
     return token.to_jwt()
+
+async def send_data(room_name: str, data: dict):
+    """
+    Sends data to all participants in a room.
+    """
+    if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
+        return
+    
+
+    lkapi = api.LiveKitAPI(settings.LIVEKIT_API_KEY, settings.LIVEKIT_API_SECRET)
+    payload = json.dumps(data).encode("utf-8")
+    try:
+        await lkapi.room.send_data(send=api.SendDataRequest(
+            room=room_name,
+            data=json.dumps(data).encode("utf-8"),
+            kind=api.DataPacket.Kind.RELIABLE,
+            topic="lk-session-state-topic",
+        ))
+    finally:
+        await lkapi.aclose()
