@@ -1,16 +1,23 @@
+import json
 import logging
 
+from asgiref.sync import sync_to_async
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404
 from ninja import Router
 from ninja.errors import AuthorizationError
 
 from totem.circles.models import CircleEvent
-from totem.meetings.livekit_provider import livekit_create_access_token
+from totem.meetings.livekit_provider import livekit_create_access_token, update_room_metadata
+from totem.meetings.room_state import SessionStatus
 from totem.meetings.schemas import LivekitTokenResponseSchema
 from totem.users.models import User
 
 meetings_router = Router()
 
+@sync_to_async
+def get_attendee_slugs(event: CircleEvent) -> list[str]:
+    return [attendee.slug for attendee in event.attendees.all()]
 
 @meetings_router.get(
     "/event/{event_slug}/token",
@@ -18,14 +25,56 @@ meetings_router = Router()
     tags=["meetings"],
     url_name="get_livekit_token",
 )
-def get_livekit_token(request, event_slug: str):
+async def get_livekit_token(request, event_slug: str):
+    user: User = request.auth
+
+    try:
+        event = await sync_to_async(CircleEvent.objects.get)(slug=event_slug)
+    except CircleEvent.DoesNotExist:
+        return 404, "Event not found"
+
+    is_joinable = await sync_to_async(event.can_join)(user=user)
+    if not is_joinable:
+        logging.warning("User %s attempted to join non-joinable event %s", user.slug, event.slug)
+        return 403, "Event is not joinable at this time."
+    
+    speaking_order = await get_attendee_slugs(event)
+
+    await update_room_metadata(
+        room_name=event.slug,
+        metadata={
+            "status": SessionStatus.STARTED,
+            "speakingOrder": speaking_order,
+            "speakingNow": None,
+        },
+    )
+
+    token = await livekit_create_access_token(user, event)
+    return LivekitTokenResponseSchema(token=token)
+
+
+@meetings_router.post(
+    "/event/{event_slug}/update-metadata",
+    tags=["meetings"],
+    url_name="update_room_metadata",
+)
+async def update_room_metadata_endpoint(request, event_slug: str):
     user: User = request.auth
     event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
 
-    is_joinable = event.can_join(user=user)
-    if not is_joinable:
-        logging.warning("User %s attempted to join non-joinable event %s", user.slug, event.slug)
-        raise AuthorizationError(message="Event is not joinable at this time.")
+    if not user.is_staff:
+        logging.warning("User %s attempted to update metadata for event %s", user.slug, event.slug)
+        raise AuthorizationError(message="Only staff can update room metadata.")
 
-    token = livekit_create_access_token(user, event)
-    return LivekitTokenResponseSchema(token=token)
+    if request.content_type == "application/json":
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+            await update_room_metadata(
+                room_name=event.slug,
+                metadata=data,
+            )
+            return HttpResponse()
+        except json.JSONDecodeError:
+            return HttpResponseBadRequest("Invalid body.")
+    else:
+        return HttpResponseBadRequest("Content-Type must be application/json")

@@ -471,5 +471,6 @@ SOCIAL_LINKS = {
 
 # LiveKit
 # ------------------------------------------------------------------------------
+LIVEKIT_URL = env("LIVEKIT_URL", default=None)
 LIVEKIT_API_KEY = env("LIVEKIT_API_KEY", default=None)
 LIVEKIT_API_SECRET = env("LIVEKIT_API_SECRET", default=None)
