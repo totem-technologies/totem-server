@@ -36,7 +36,7 @@ async def get_livekit_token(request, event_slug: str):
 
     # Initialize the room with the speaking order if not already done
     speaking_order = await sync_to_async(list)(event.attendees.all())
-    await livekit.initialize_room(event.slug, speaking_order)
+    await livekit.initialize_room(event.slug, [attendee.slug for attendee in speaking_order])
 
     # Create and return the access token
     token = await livekit.create_access_token(user, event)
