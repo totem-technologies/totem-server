@@ -75,3 +75,23 @@ async def start_room_endpoint(request, event_slug: str):
         return HttpResponse()
     except ValueError as e:
         raise AuthorizationError(message=str(e))
+
+
+@meetings_router.post(
+    "/event/{event_slug}/mute/{participant_identity}",
+    tags=["meetings"],
+    url_name="mute_participant",
+)
+async def mute_participant_endpoint(request, event_slug: str, participant_identity: str):
+    user: User = request.auth
+    event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
+
+    if not user.is_staff:
+        logging.warning("User %s attempted to update metadata for event %s", user.slug, event.slug)
+        raise AuthorizationError(message="Only staff can update room metadata.")
+
+    try:
+        await livekit.mute_participant(event.slug, participant_identity)
+        return HttpResponse()
+    except ValueError as e:
+        raise AuthorizationError(message=str(e))

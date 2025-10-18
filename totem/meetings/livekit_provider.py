@@ -194,3 +194,51 @@ async def start_room(room_name: str):
 
     finally:
         await lkapi.aclose()
+
+
+async def mute_participant(room_name: str, user_identity: str):
+    """
+    Mutes a participant in the room.
+    """
+
+    if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
+        return
+
+    lkapi = api.LiveKitAPI(
+        # url=settings.LIVEKIT_URL,
+        api_key=settings.LIVEKIT_API_KEY,
+        api_secret=settings.LIVEKIT_API_SECRET,
+    )
+
+    try:
+        room = await get_room(room_name)
+        if not room:
+            raise ValueError(f"Room {room_name} does not exist.")
+
+        participant = await lkapi.room.get_participant(
+            api.RoomParticipantIdentity(
+                room=room_name,
+                identity=user_identity,
+            )
+        )
+
+        if not participant:
+            raise ValueError(f"Participant {user_identity} not found in room {room_name}.")
+
+        track_sid = None
+        for track in participant.tracks:
+            if track.type == api.TrackType.AUDIO:
+                track_sid = track.sid
+                break
+
+        await lkapi.room.mute_published_track(
+            api.MuteRoomTrackRequest(
+                room=room_name,
+                identity=participant.identity,
+                track_sid=track_sid,
+                muted=True,
+            )
+        )
+
+    finally:
+        await lkapi.aclose()
