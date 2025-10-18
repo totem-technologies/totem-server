@@ -8,16 +8,13 @@ from ninja import Router
 from ninja.errors import AuthorizationError
 
 from totem.circles.models import CircleEvent
-from totem.meetings.livekit_provider import livekit_create_access_token, update_room_metadata
+from totem.meetings.livekit_provider import livekit_create_access_token, propagate_pass_totem, update_room_metadata
 from totem.meetings.room_state import SessionStatus
 from totem.meetings.schemas import LivekitTokenResponseSchema
 from totem.users.models import User
 
 meetings_router = Router()
 
-@sync_to_async
-def get_attendee_slugs(event: CircleEvent) -> list[str]:
-    return [attendee.slug for attendee in event.attendees.all()]
 
 @meetings_router.get(
     "/event/{event_slug}/token",
@@ -37,9 +34,8 @@ async def get_livekit_token(request, event_slug: str):
     if not is_joinable:
         logging.warning("User %s attempted to join non-joinable event %s", user.slug, event.slug)
         return 403, "Event is not joinable at this time."
-    
-    speaking_order = await get_attendee_slugs(event)
 
+    speaking_order = await sync_to_async(list)(event.attendees.all())
     await update_room_metadata(
         room_name=event.slug,
         metadata={
@@ -78,3 +74,18 @@ async def update_room_metadata_endpoint(request, event_slug: str):
             return HttpResponseBadRequest("Invalid body.")
     else:
         return HttpResponseBadRequest("Content-Type must be application/json")
+
+
+@meetings_router.post(
+    "/event/{event_slug}/pass-totem",
+    tags=["meetings"],
+    url_name="pass_totem",
+)
+async def pass_totem_endpoint(request, event_slug: str):
+    user: User = request.auth
+
+    try:
+        await propagate_pass_totem(event_slug, user.slug)
+        return HttpResponse()
+    except ValueError as e:
+        raise AuthorizationError(message=str(e))

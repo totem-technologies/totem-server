@@ -4,6 +4,7 @@ from asgiref.sync import sync_to_async
 from django.conf import settings
 from livekit import api
 
+from totem.meetings.room_state import SessionState
 from totem.users.models import User
 
 from ..circles.models import CircleEvent
@@ -103,5 +104,50 @@ async def update_room_metadata(room_name: str, metadata: dict):
                     metadata=json.dumps(metadata),
                 )
             )
+    finally:
+        await lkapi.aclose()
+
+
+async def propagate_pass_totem(room_name: str, user_identity: str):
+    """
+    Passes the totem to the next participant in the room.
+    """
+
+    if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
+        return
+
+    lkapi = api.LiveKitAPI(
+        # url=settings.LIVEKIT_URL,
+        api_key=settings.LIVEKIT_API_KEY,
+        api_secret=settings.LIVEKIT_API_SECRET,
+    )
+
+    try:
+        rooms = await lkapi.room.list_rooms(
+            list=api.ListRoomsRequest(
+                names=[room_name],
+            )
+        )
+
+        if not rooms.rooms:
+            raise ValueError(f"Room {room_name} does not exist.")
+
+        room = rooms.rooms[0]
+        current_state = json.loads(room.metadata) if room.metadata else {}
+        state = SessionState(**current_state)
+
+        if state.speakingNow != user_identity:
+            raise ValueError(f"User {user_identity} is not the current speaker. Cannot pass the totem.")
+
+        new_state = state.pass_totem()
+        if not new_state:
+            raise ValueError("Failed to pass the totem. Invalid session state.")
+
+        await lkapi.room.update_room_metadata(
+            update=api.UpdateRoomMetadataRequest(
+                room=room_name,
+                metadata=json.dumps(new_state.dict()),
+            )
+        )
     finally:
         await lkapi.aclose()
