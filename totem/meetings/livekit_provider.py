@@ -46,6 +46,31 @@ async def livekit_create_access_token(user: User, event: CircleEvent) -> str:
     return token.to_jwt()
 
 
+async def get_room(room_name: str) -> api.Room | None:
+    """
+    Retrieves room information.
+    """
+    if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
+        return None
+
+    lkapi = api.LiveKitAPI(
+        # url=settings.LIVEKIT_URL,
+        api_key=settings.LIVEKIT_API_KEY,
+        api_secret=settings.LIVEKIT_API_SECRET,
+    )
+    try:
+        rooms = await lkapi.room.list_rooms(
+            list=api.ListRoomsRequest(
+                names=[room_name],
+            )
+        )
+        if not rooms.rooms:
+            return None
+        return rooms.rooms[0]
+    finally:
+        await lkapi.aclose()
+
+
 async def send_data(room_name: str, data: dict):
     """
     Sends data to all participants in a room.
@@ -68,7 +93,8 @@ async def send_data(room_name: str, data: dict):
         )
     finally:
         await lkapi.aclose()
-        
+
+
 async def initialize_room(room_name: str, speaking_order: list[str]):
     """
     Initializes a room with default metadata if it doesn't exist.
@@ -82,15 +108,9 @@ async def initialize_room(room_name: str, speaking_order: list[str]):
         api_secret=settings.LIVEKIT_API_SECRET,
     )
     try:
-        rooms = await lkapi.room.list_rooms(
-            list=api.ListRoomsRequest(
-                names=[room_name],
-            )
-        )
-        if not rooms.rooms:
-            state = SessionState(
-                speakingOrder=speaking_order
-            )
+        room = await get_room(room_name)
+        if not room:
+            state = SessionState(speaking_order=speaking_order)
             await lkapi.room.create_room(
                 create=api.CreateRoomRequest(
                     name=room_name,
@@ -116,12 +136,8 @@ async def update_room_metadata(room_name: str, metadata: dict):
         api_secret=settings.LIVEKIT_API_SECRET,
     )
     try:
-        rooms = await lkapi.room.list_rooms(
-            list=api.ListRoomsRequest(
-                names=[room_name],
-            )
-        )
-        if not rooms.rooms:
+        room = await get_room(room_name)
+        if not room:
             await lkapi.room.create_room(
                 create=api.CreateRoomRequest(
                     name=room_name,
@@ -156,20 +172,14 @@ async def propagate_pass_totem(room_name: str, user_identity: str):
     )
 
     try:
-        rooms = await lkapi.room.list_rooms(
-            list=api.ListRoomsRequest(
-                names=[room_name],
-            )
-        )
-
-        if not rooms.rooms:
+        room = await get_room(room_name)
+        if not room:
             raise ValueError(f"Room {room_name} does not exist.")
 
-        room = rooms.rooms[0]
         current_state = json.loads(room.metadata) if room.metadata else {}
         state = SessionState(**current_state)
 
-        if state.speakingNow != user_identity:
+        if state.speaking_now != user_identity:
             raise ValueError(f"User {user_identity} is not the current speaker. Cannot pass the totem.")
 
         state.pass_totem()

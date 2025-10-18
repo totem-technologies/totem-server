@@ -11,15 +11,15 @@ class SessionStatus(str):
 
 class SessionState(Schema):
     status: str = SessionStatus.WAITING
-    speakingOrder: List[str]
-    speakingNow: Optional[str] = None
+    speaking_order: List[str]
+    speaking_now: Optional[str] = None
 
     def pass_totem(self):
         """
         Passes the totem to the next person and returns the new state.
         """
-        order = self.speakingOrder
-        current_speaker = self.speakingNow
+        order = self.speaking_order
+        current_speaker = self.speaking_now
 
         if current_speaker not in order:
             next_index = 0
@@ -27,4 +27,4 @@ class SessionState(Schema):
             current_index = order.index(current_speaker)
             next_index = (current_index + 1) % len(order)
 
-        self.speakingNow = order[next_index]
+        self.speaking_now = order[next_index]
