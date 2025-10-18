@@ -4,13 +4,13 @@ from asgiref.sync import sync_to_async
 from django.conf import settings
 from livekit import api
 
-from totem.meetings.room_state import SessionState
+from totem.meetings.room_state import SessionState, SessionStatus
 from totem.users.models import User
 
 from ..circles.models import CircleEvent
 
 
-async def livekit_create_access_token(user: User, event: CircleEvent) -> str:
+async def create_access_token(user: User, event: CircleEvent) -> str:
     """
     Create a LiveKit access token for a user to join a specific event room.
 
@@ -123,41 +123,7 @@ async def initialize_room(room_name: str, speaking_order: list[str]):
         await lkapi.aclose()
 
 
-async def update_room_metadata(room_name: str, metadata: dict):
-    """
-    Updates the metadata of a room.
-    """
-    if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
-        return
-
-    lkapi = api.LiveKitAPI(
-        # url=settings.LIVEKIT_URL,
-        api_key=settings.LIVEKIT_API_KEY,
-        api_secret=settings.LIVEKIT_API_SECRET,
-    )
-    try:
-        room = await get_room(room_name)
-        if not room:
-            await lkapi.room.create_room(
-                create=api.CreateRoomRequest(
-                    name=room_name,
-                    empty_timeout=60 * 60,  # 1 hour
-                    max_participants=20,
-                    metadata=json.dumps(metadata),
-                )
-            )
-        else:
-            await lkapi.room.update_room_metadata(
-                update=api.UpdateRoomMetadataRequest(
-                    room=room_name,
-                    metadata=json.dumps(metadata),
-                )
-            )
-    finally:
-        await lkapi.aclose()
-
-
-async def propagate_pass_totem(room_name: str, user_identity: str):
+async def pass_totem(room_name: str, user_identity: str):
     """
     Passes the totem to the next participant in the room.
     """
@@ -189,5 +155,42 @@ async def propagate_pass_totem(room_name: str, user_identity: str):
                 metadata=json.dumps(state.dict()),
             )
         )
+    finally:
+        await lkapi.aclose()
+
+
+async def start_room(room_name: str):
+    """
+    Starts the session in the room by updating its status to 'started'.
+    """
+
+    if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
+        return
+
+    lkapi = api.LiveKitAPI(
+        # url=settings.LIVEKIT_URL,
+        api_key=settings.LIVEKIT_API_KEY,
+        api_secret=settings.LIVEKIT_API_SECRET,
+    )
+
+    try:
+        room = await get_room(room_name)
+        if not room:
+            raise ValueError(f"Room {room_name} does not exist.")
+
+        current_state = json.loads(room.metadata) if room.metadata else {}
+        state = SessionState(**current_state)
+
+        if state.status == SessionStatus.STARTED:
+            raise ValueError(f"Room {room_name} has already been started.")
+
+        state.start()
+        await lkapi.room.update_room_metadata(
+            update=api.UpdateRoomMetadataRequest(
+                room=room_name,
+                metadata=json.dumps(state.dict()),
+            )
+        )
+
     finally:
         await lkapi.aclose()

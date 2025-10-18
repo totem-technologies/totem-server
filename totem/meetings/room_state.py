@@ -13,6 +13,14 @@ class SessionState(Schema):
     status: str = SessionStatus.WAITING
     speaking_order: List[str]
     speaking_now: Optional[str] = None
+    
+    def start(self):
+        """
+        Starts the session by setting the status to 'started' and the first speaker.
+        """
+        self.status = SessionStatus.STARTED
+        if self.speaking_order:
+            self.speaking_now = self.speaking_order[0]
 
     def pass_totem(self):
         """
