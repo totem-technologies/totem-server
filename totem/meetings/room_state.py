@@ -13,7 +13,7 @@ class SessionState(Schema):
     status: str = SessionStatus.WAITING
     speaking_order: List[str]
     speaking_now: Optional[str] = None
-    
+
     def start(self):
         """
         Starts the session by setting the status to 'started' and the first speaker.

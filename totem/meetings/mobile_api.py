@@ -9,6 +9,7 @@ from ninja.errors import AuthorizationError
 import totem.meetings.livekit_provider as livekit
 from totem.circles.models import CircleEvent
 from totem.meetings.schemas import LivekitTokenResponseSchema
+from totem.users import analytics
 from totem.users.models import User
 
 meetings_router = Router()
@@ -39,6 +40,11 @@ async def get_livekit_token(request, event_slug: str):
 
     # Create and return the access token
     token = await livekit.create_access_token(user, event)
+
+    # Record that the user has joined the event
+    await sync_to_async(event.joined.add)(user)
+    await sync_to_async(analytics.event_joined)(user, event)
+
     return LivekitTokenResponseSchema(token=token)
 
 
