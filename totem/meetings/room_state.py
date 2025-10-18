@@ -1,17 +1,20 @@
 from typing import List, Optional
 
+from ninja import Schema
+
 
 class SessionStatus(str):
+    WAITING = "waiting"
     STARTED = "started"
     ENDED = "ended"
 
 
-class SessionState(dict):
-    status: str = SessionStatus.STARTED
+class SessionState(Schema):
+    status: str = SessionStatus.WAITING
     speakingOrder: List[str]
     speakingNow: Optional[str] = None
 
-    def pass_totem(self) -> Optional["SessionState"]:
+    def pass_totem(self):
         """
         Passes the totem to the next person and returns the new state.
         """
@@ -25,11 +28,3 @@ class SessionState(dict):
             next_index = (current_index + 1) % len(order)
 
         self.speakingNow = order[next_index]
-        return self
-
-    def dict(self):
-        return {
-            "status": self.status,
-            "speakingOrder": self.speakingOrder,
-            "speakingNow": self.speakingNow,
-        }

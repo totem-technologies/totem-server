@@ -68,6 +68,39 @@ async def send_data(room_name: str, data: dict):
         )
     finally:
         await lkapi.aclose()
+        
+async def initialize_room(room_name: str, speaking_order: list[str]):
+    """
+    Initializes a room with default metadata if it doesn't exist.
+    """
+    if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
+        return
+
+    lkapi = api.LiveKitAPI(
+        # url=settings.LIVEKIT_URL,
+        api_key=settings.LIVEKIT_API_KEY,
+        api_secret=settings.LIVEKIT_API_SECRET,
+    )
+    try:
+        rooms = await lkapi.room.list_rooms(
+            list=api.ListRoomsRequest(
+                names=[room_name],
+            )
+        )
+        if not rooms.rooms:
+            state = SessionState(
+                speakingOrder=speaking_order
+            )
+            await lkapi.room.create_room(
+                create=api.CreateRoomRequest(
+                    name=room_name,
+                    empty_timeout=60 * 60,  # 1 hour
+                    max_participants=20,
+                    metadata=json.dumps(state.dict()),
+                )
+            )
+    finally:
+        await lkapi.aclose()
 
 
 async def update_room_metadata(room_name: str, metadata: dict):
@@ -139,14 +172,11 @@ async def propagate_pass_totem(room_name: str, user_identity: str):
         if state.speakingNow != user_identity:
             raise ValueError(f"User {user_identity} is not the current speaker. Cannot pass the totem.")
 
-        new_state = state.pass_totem()
-        if not new_state:
-            raise ValueError("Failed to pass the totem. Invalid session state.")
-
+        state.pass_totem()
         await lkapi.room.update_room_metadata(
             update=api.UpdateRoomMetadataRequest(
                 room=room_name,
-                metadata=json.dumps(new_state.dict()),
+                metadata=json.dumps(state.dict()),
             )
         )
     finally:

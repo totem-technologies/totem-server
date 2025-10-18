@@ -8,8 +8,12 @@ from ninja import Router
 from ninja.errors import AuthorizationError
 
 from totem.circles.models import CircleEvent
-from totem.meetings.livekit_provider import livekit_create_access_token, propagate_pass_totem, update_room_metadata
-from totem.meetings.room_state import SessionStatus
+from totem.meetings.livekit_provider import (
+    initialize_room,
+    livekit_create_access_token,
+    propagate_pass_totem,
+    update_room_metadata,
+)
 from totem.meetings.schemas import LivekitTokenResponseSchema
 from totem.users.models import User
 
@@ -28,23 +32,18 @@ async def get_livekit_token(request, event_slug: str):
     try:
         event = await sync_to_async(CircleEvent.objects.get)(slug=event_slug)
     except CircleEvent.DoesNotExist:
-        return 404, "Event not found"
+        return 404, "Session not found"
 
     is_joinable = await sync_to_async(event.can_join)(user=user)
     if not is_joinable:
         logging.warning("User %s attempted to join non-joinable event %s", user.slug, event.slug)
-        return 403, "Event is not joinable at this time."
+        return 403, "Session is not joinable at this time."
 
+    # Initialize the room with the speaking order if not already done
     speaking_order = await sync_to_async(list)(event.attendees.all())
-    await update_room_metadata(
-        room_name=event.slug,
-        metadata={
-            "status": SessionStatus.STARTED,
-            "speakingOrder": speaking_order,
-            "speakingNow": None,
-        },
-    )
+    await initialize_room(event.slug, speaking_order)
 
+    # Create and return the access token
     token = await livekit_create_access_token(user, event)
     return LivekitTokenResponseSchema(token=token)
 
