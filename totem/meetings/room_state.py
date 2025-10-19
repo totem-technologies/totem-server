@@ -1,9 +1,10 @@
+from enum import Enum
 from typing import List, Optional
 
 from ninja import Schema
 
 
-class SessionStatus(str):
+class SessionStatus(str, Enum):
     WAITING = "waiting"
     STARTED = "started"
     ENDED = "ended"

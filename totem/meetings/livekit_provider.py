@@ -1,4 +1,5 @@
 import json
+from contextlib import asynccontextmanager
 
 from asgiref.sync import async_to_sync
 from django.conf import settings
@@ -10,14 +11,29 @@ from totem.users.models import User
 from ..circles.models import CircleEvent
 
 
+@asynccontextmanager
+async def get_lk_api_client():
+    """Provides an initialized and automatically closed LiveKitAPI client."""
+    if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
+        raise ValueError("LiveKit API key and secret are not configured.")
+
+    lkapi = api.LiveKitAPI(
+        # url=settings.LIVEKIT_URL,
+        api_key=settings.LIVEKIT_API_KEY,
+        api_secret=settings.LIVEKIT_API_SECRET,
+    )
+    try:
+        yield lkapi
+    finally:
+        await lkapi.aclose()
+
+
 def create_access_token(user: User, event: CircleEvent) -> str:
     """
     Create a LiveKit access token for a user to join a specific event room.
 
     If the room doesn't exist, it will be created automatically when the user joins.
     """
-    if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
-        raise ValueError("LiveKit API key and secret are not configured.")
 
     participant_identity = user.slug
     room_name = event.slug
@@ -46,53 +62,18 @@ def create_access_token(user: User, event: CircleEvent) -> str:
     return token.to_jwt()
 
 
-async def get_room(room_name: str) -> api.Room | None:
+async def get_room(room_name: str, lkapi: api.LiveKitAPI) -> api.Room | None:
     """
     Retrieves room information.
     """
-    if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
+    rooms = await lkapi.room.list_rooms(
+        list=api.ListRoomsRequest(
+            names=[room_name],
+        )
+    )
+    if not rooms.rooms:
         return None
-
-    lkapi = api.LiveKitAPI(
-        # url=settings.LIVEKIT_URL,
-        api_key=settings.LIVEKIT_API_KEY,
-        api_secret=settings.LIVEKIT_API_SECRET,
-    )
-    try:
-        rooms = await lkapi.room.list_rooms(
-            list=api.ListRoomsRequest(
-                names=[room_name],
-            )
-        )
-        if not rooms.rooms:
-            return None
-        return rooms.rooms[0]
-    finally:
-        await lkapi.aclose()
-
-
-async def send_data(room_name: str, data: dict):
-    """
-    Sends data to all participants in a room.
-    """
-    if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
-        return
-
-    lkapi = api.LiveKitAPI(
-        url=settings.LIVEKIT_URL, api_key=settings.LIVEKIT_API_KEY, api_secret=settings.LIVEKIT_API_SECRET
-    )
-    try:
-        payload = json.dumps(data).encode("utf-8")
-        await lkapi.room.send_data(
-            send=api.SendDataRequest(
-                room=room_name,
-                data=payload,
-                kind=api.DataPacket.Kind.RELIABLE,
-                topic="lk-session-state-topic",
-            )
-        )
-    finally:
-        await lkapi.aclose()
+    return rooms.rooms[0]
 
 
 @async_to_sync
@@ -100,16 +81,8 @@ async def initialize_room(room_name: str, speaking_order: list[str]):
     """
     Initializes a room with default metadata if it doesn't exist.
     """
-    if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
-        return
-
-    lkapi = api.LiveKitAPI(
-        # url=settings.LIVEKIT_URL,
-        api_key=settings.LIVEKIT_API_KEY,
-        api_secret=settings.LIVEKIT_API_SECRET,
-    )
-    try:
-        room = await get_room(room_name)
+    async with get_lk_api_client() as lkapi:
+        room = await get_room(room_name, lkapi)
         if not room:
             state = SessionState(speaking_order=speaking_order)
             await lkapi.room.create_room(
@@ -120,8 +93,6 @@ async def initialize_room(room_name: str, speaking_order: list[str]):
                     metadata=json.dumps(state.dict()),
                 )
             )
-    finally:
-        await lkapi.aclose()
 
 
 @async_to_sync
@@ -133,14 +104,8 @@ async def pass_totem(room_name: str, user_identity: str):
     if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
         return
 
-    lkapi = api.LiveKitAPI(
-        # url=settings.LIVEKIT_URL,
-        api_key=settings.LIVEKIT_API_KEY,
-        api_secret=settings.LIVEKIT_API_SECRET,
-    )
-
-    try:
-        room = await get_room(room_name)
+    async with get_lk_api_client() as lkapi:
+        room = await get_room(room_name, lkapi)
         if not room:
             raise ValueError(f"Room {room_name} does not exist.")
 
@@ -157,8 +122,6 @@ async def pass_totem(room_name: str, user_identity: str):
                 metadata=json.dumps(state.dict()),
             )
         )
-    finally:
-        await lkapi.aclose()
 
 
 @async_to_sync
@@ -167,17 +130,8 @@ async def start_room(room_name: str):
     Starts the session in the room by updating its status to 'started'.
     """
 
-    if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
-        return
-
-    lkapi = api.LiveKitAPI(
-        # url=settings.LIVEKIT_URL,
-        api_key=settings.LIVEKIT_API_KEY,
-        api_secret=settings.LIVEKIT_API_SECRET,
-    )
-
-    try:
-        room = await get_room(room_name)
+    async with get_lk_api_client() as lkapi:
+        room = await get_room(room_name, lkapi)  # Pass the client in
         if not room:
             raise ValueError(f"Room {room_name} does not exist.")
 
@@ -195,9 +149,6 @@ async def start_room(room_name: str):
             )
         )
 
-    finally:
-        await lkapi.aclose()
-
 
 @async_to_sync
 async def mute_participant(room_name: str, user_identity: str):
@@ -205,17 +156,8 @@ async def mute_participant(room_name: str, user_identity: str):
     Mutes a participant in the room.
     """
 
-    if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
-        return
-
-    lkapi = api.LiveKitAPI(
-        # url=settings.LIVEKIT_URL,
-        api_key=settings.LIVEKIT_API_KEY,
-        api_secret=settings.LIVEKIT_API_SECRET,
-    )
-
-    try:
-        room = await get_room(room_name)
+    async with get_lk_api_client() as lkapi:
+        room = await get_room(room_name, lkapi)
         if not room:
             raise ValueError(f"Room {room_name} does not exist.")
 
@@ -243,6 +185,3 @@ async def mute_participant(room_name: str, user_identity: str):
                 muted=True,
             )
         )
-
-    finally:
-        await lkapi.aclose()
