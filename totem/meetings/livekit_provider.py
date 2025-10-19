@@ -1,6 +1,6 @@
 import json
 
-from asgiref.sync import sync_to_async
+from asgiref.sync import async_to_sync
 from django.conf import settings
 from livekit import api
 
@@ -10,7 +10,7 @@ from totem.users.models import User
 from ..circles.models import CircleEvent
 
 
-async def create_access_token(user: User, event: CircleEvent) -> str:
+def create_access_token(user: User, event: CircleEvent) -> str:
     """
     Create a LiveKit access token for a user to join a specific event room.
 
@@ -21,7 +21,7 @@ async def create_access_token(user: User, event: CircleEvent) -> str:
 
     participant_identity = user.slug
     room_name = event.slug
-    attendees_count = await sync_to_async(event.attendees.count)()
+    attendees_count = event.attendees.count()
 
     token = (
         api.AccessToken(settings.LIVEKIT_API_KEY, settings.LIVEKIT_API_SECRET)
@@ -95,6 +95,7 @@ async def send_data(room_name: str, data: dict):
         await lkapi.aclose()
 
 
+@async_to_sync
 async def initialize_room(room_name: str, speaking_order: list[str]):
     """
     Initializes a room with default metadata if it doesn't exist.
@@ -123,6 +124,7 @@ async def initialize_room(room_name: str, speaking_order: list[str]):
         await lkapi.aclose()
 
 
+@async_to_sync
 async def pass_totem(room_name: str, user_identity: str):
     """
     Passes the totem to the next participant in the room.
@@ -159,6 +161,7 @@ async def pass_totem(room_name: str, user_identity: str):
         await lkapi.aclose()
 
 
+@async_to_sync
 async def start_room(room_name: str):
     """
     Starts the session in the room by updating its status to 'started'.
@@ -196,6 +199,7 @@ async def start_room(room_name: str):
         await lkapi.aclose()
 
 
+@async_to_sync
 async def mute_participant(room_name: str, user_identity: str):
     """
     Mutes a participant in the room.

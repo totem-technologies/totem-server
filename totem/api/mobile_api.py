@@ -1,7 +1,6 @@
 from typing import Optional
 
 import jwt
-from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.http import HttpRequest
 from django.utils import timezone
@@ -23,7 +22,7 @@ from .auth import JWTSchema
 
 
 class JWTAuth(HttpBearer):
-    async def authenticate(self, request: HttpRequest, token: str) -> Optional[User]:
+    def authenticate(self, request: HttpRequest, token: str) -> Optional[User]:
         try:
             # Decode JWT token
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
@@ -35,7 +34,7 @@ class JWTAuth(HttpBearer):
 
             # Get user
             try:
-                user = await sync_to_async(User.objects.get)(api_key=data.api_key, pk=data.pk)
+                user = User.objects.get(api_key=data.api_key, pk=data.pk)
 
                 # Check if user is active
                 if not user.is_active:
