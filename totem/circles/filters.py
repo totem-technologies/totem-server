@@ -176,10 +176,21 @@ def event_detail_schema(event: CircleEvent, user: User):
     )
 
 
-def space_detail_schema(event: CircleEvent):
-    circle: Circle = event.circle
+def space_detail_schema(circle: Circle):
     category = circle.categories.first()
     category_name = category.name if category else None
+
+    next_event = circle.next_event()
+    next_event_schema: NextEventSchema | None = None
+    if next_event:
+        seats_left = next_event.seats_left()
+        next_event_schema = NextEventSchema(
+            slug=next_event.slug,
+            start=next_event.start.isoformat(),
+            title=next_event.title,
+            link=next_event.get_absolute_url(),
+            seats_left=seats_left,
+        )
 
     return SpaceDetailSchema(
         slug=circle.slug,
@@ -189,11 +200,5 @@ def space_detail_schema(event: CircleEvent):
         content=circle.content_html,
         author=circle.author,
         category=category_name,
-        nextEvent=NextEventSchema(
-            slug=event.slug,
-            start=event.start.isoformat(),
-            title=event.title,
-            link=event.get_absolute_url(),
-            seats_left=event.seats_left(),
-        ),
+        next_event=next_event_schema,
     )

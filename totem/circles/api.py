@@ -12,7 +12,6 @@ from totem.circles.schemas import (
     EventListSchema,
     EventsFilterSchema,
     FilterOptionsSchema,
-    NextEventSchema,
     SpaceDetailSchema,
 )
 from totem.users.models import User
@@ -22,6 +21,7 @@ from .filters import (
     event_detail_schema,
     events_by_month,
     get_upcoming_events_for_spaces_list,
+    space_detail_schema,
 )
 from .models import Circle, CircleEvent
 
@@ -160,28 +160,6 @@ def list_spaces(request):
         spaces_set.add(event.circle.slug)
         circle: Circle = event.circle
 
-        category = circle.categories.first()
-        category_name = category.name if category else None
-
-        seats_left = max(0, event.seats - event.attendee_count)  # type: ignore
-
-        spaces.append(
-            SpaceDetailSchema(
-                slug=circle.slug,
-                title=circle.title,
-                image_link=circle.image.url if circle.image else None,
-                short_description=circle.short_description,
-                content=circle.content_html,
-                author=circle.author,
-                category=category_name,
-                nextEvent=NextEventSchema(
-                    slug=event.slug,
-                    start=event.start.isoformat(),
-                    title=event.title,
-                    link=event.get_absolute_url(),
-                    seats_left=seats_left,
-                ),
-            ),
-        )
+        spaces.append(space_detail_schema(circle))
 
     return spaces

@@ -122,7 +122,7 @@ class SpaceDetailSchema(Schema):
     short_description: str
     content: str
     author: PublicUserSchema
-    nextEvent: NextEventSchema
+    next_event: NextEventSchema | None
     category: str | None
 
 

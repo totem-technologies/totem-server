@@ -10,7 +10,7 @@ from ninja import Router
 from ninja.errors import AuthorizationError
 from ninja.pagination import paginate
 
-from totem.circles.api import NextEventSchema, SpaceDetailSchema
+from totem.circles.api import SpaceDetailSchema
 from totem.circles.filters import (
     event_detail_schema,
     get_upcoming_events_for_spaces_list,
@@ -63,35 +63,13 @@ def list_spaces(request):
         spaces_set.add(event.circle.slug)
         circle: Circle = event.circle
 
-        category = circle.categories.first()
-        category_name = category.name if category else None
-
-        seats_left = max(0, event.seats - event.attendee_count)  # type: ignore
-
-        spaces.append(
-            SpaceDetailSchema(
-                slug=circle.slug,
-                title=circle.title,
-                image_link=circle.image.url if circle.image else None,
-                short_description=circle.short_description,
-                content=circle.content_html,
-                author=circle.author,
-                category=category_name,
-                nextEvent=NextEventSchema(
-                    slug=event.slug,
-                    start=event.start.isoformat(),
-                    title=event.title,
-                    link=event.get_absolute_url(),
-                    seats_left=seats_left,
-                ),
-            ),
-        )
+        spaces.append(space_detail_schema(circle))
 
     return spaces
 
 
 @spaces_router.get(
-    "/spaces/event/{event_slug}", response={200: EventDetailSchema}, tags=["spaces"], url_name="spaces_detail"
+    "/event/{event_slug}", response={200: EventDetailSchema}, tags=["spaces"], url_name="spaces_detail"
 )
 def get_space_detail(request: HttpRequest, event_slug: str):
     event = get_object_or_404(CircleEvent, slug=event_slug)
@@ -107,9 +85,8 @@ def get_keeper_spaces(request: HttpRequest, slug: str):
 
     spaces = []
     for circle in circles:
-        nextEvent = circle.next_event()
-        if nextEvent:
-            spaces.append(space_detail_schema(nextEvent))
+        if circle.next_event():
+            spaces.append(space_detail_schema(circle))
 
     return spaces
 
@@ -188,11 +165,11 @@ def get_spaces_summary(request: HttpRequest):
             categories_set.add(name)
     recommended_events = upcoming_recommended_events(user, categories=list(categories_set))
     for_you = [
-        space_detail_schema(event) for event in recommended_events if event.circle.published and not event.cancelled
+        space_detail_schema(event.circle) for event in recommended_events if event.circle.published and not event.cancelled
     ]
 
     spaces = get_upcoming_events_for_spaces_list()
-    explore = [space_detail_schema(space) for space in spaces if space.circle.published and not space.cancelled]
+    explore = [space_detail_schema(space.circle) for space in spaces if space.circle.published and not space.cancelled]
 
     return SummarySpacesSchema(
         upcoming=upcoming,
