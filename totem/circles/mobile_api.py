@@ -26,29 +26,29 @@ from totem.circles.schemas import (
 from totem.onboard.models import OnboardModel
 from totem.users.models import User
 
-spaces_router = Router()
+spaces_router = Router(tags=["spaces"])
 
 
-@spaces_router.post("/subscribe/{space_slug}", response={200: bool}, tags=["spaces"], url_name="spaces_subscribe")
+@spaces_router.post("/subscribe/{space_slug}", response={200: bool}, url_name="spaces_subscribe")
 def subscribe_to_space(request: HttpRequest, space_slug: str):
     space = get_object_or_404(Circle, slug=space_slug, published=True)
     space.subscribe(request.user)
     return True
 
 
-@spaces_router.delete("/subscribe/{space_slug}", response={200: bool}, tags=["spaces"], url_name="spaces_unsubscribe")
+@spaces_router.delete("/subscribe/{space_slug}", response={200: bool}, url_name="spaces_unsubscribe")
 def unsubscribe_to_space(request: HttpRequest, space_slug: str):
     space = get_object_or_404(Circle, slug=space_slug)
     space.unsubscribe(request.user)
     return True
 
 
-@spaces_router.get("/subscribe", response={200: List[SpaceSchema]}, tags=["spaces"], url_name="spaces_subscriptions")
+@spaces_router.get("/subscribe", response={200: List[SpaceSchema]}, url_name="spaces_subscriptions")
 def list_subscriptions(request: HttpRequest):
     return Circle.objects.filter(subscribed=request.user)
 
 
-@spaces_router.get("/", response={200: List[SpaceDetailSchema]}, tags=["spaces"], url_name="mobile_spaces_list")
+@spaces_router.get("/", response={200: List[SpaceDetailSchema]}, url_name="mobile_spaces_list")
 @paginate
 def list_spaces(request):
     events = get_upcoming_events_for_spaces_list()
@@ -68,18 +68,20 @@ def list_spaces(request):
     return spaces
 
 
-@spaces_router.get(
-    "/event/{event_slug}", response={200: EventDetailSchema}, tags=["spaces"], url_name="spaces_detail"
-)
-def get_space_detail(request: HttpRequest, event_slug: str):
+@spaces_router.get("/event/{event_slug}", response={200: EventDetailSchema}, url_name="event_detail")
+def get_event_detail(request: HttpRequest, event_slug: str):
     event = get_object_or_404(CircleEvent, slug=event_slug)
     user: User = request.user  # type: ignore
     return event_detail_schema(event, user)
 
 
-@spaces_router.get(
-    "/keeper/{slug}/", response={200: List[SpaceDetailSchema]}, tags=["spaces"], url_name="keeper_spaces"
-)
+@spaces_router.get("/space/{space_slug}", response={200: SpaceDetailSchema}, url_name="spaces_detail")
+def get_space_detail(request: HttpRequest, space_slug: str):
+    space = get_object_or_404(Circle, slug=space_slug)
+    return space_detail_schema(space)
+
+
+@spaces_router.get("/keeper/{slug}/", response={200: List[SpaceDetailSchema]}, url_name="keeper_spaces")
 def get_keeper_spaces(request: HttpRequest, slug: str):
     circles = Circle.objects.filter(author__slug=slug, published=True)
 
@@ -91,9 +93,7 @@ def get_keeper_spaces(request: HttpRequest, slug: str):
     return spaces
 
 
-@spaces_router.get(
-    "/sessions/history", response={200: List[EventDetailSchema]}, tags=["spaces"], url_name="sessions_history"
-)
+@spaces_router.get("/sessions/history", response={200: List[EventDetailSchema]}, url_name="sessions_history")
 def get_sessions_history(request: HttpRequest):
     user: User = request.user  # type: ignore
 
@@ -107,9 +107,7 @@ def get_sessions_history(request: HttpRequest):
     return events
 
 
-@spaces_router.get(
-    "/recommended", response={200: List[EventDetailSchema]}, tags=["spaces"], url_name="recommended_spaces"
-)
+@spaces_router.get("/recommended", response={200: List[EventDetailSchema]}, url_name="recommended_spaces")
 def get_recommended_spaces(request: HttpRequest, limit: int = 3, categories: list[str] | None = None):
     user: User = request.user  # type: ignore
 
@@ -165,7 +163,9 @@ def get_spaces_summary(request: HttpRequest):
             categories_set.add(name)
     recommended_events = upcoming_recommended_events(user, categories=list(categories_set))
     for_you = [
-        space_detail_schema(event.circle) for event in recommended_events if event.circle.published and not event.cancelled
+        space_detail_schema(event.circle)
+        for event in recommended_events
+        if event.circle.published and not event.cancelled
     ]
 
     spaces = get_upcoming_events_for_spaces_list()

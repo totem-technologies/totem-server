@@ -74,12 +74,12 @@ class TestMobileApiSpaces:
         assert response.status_code == 200
         assert response.json()["items"] == []
 
-    def test_get_space_detail(self, client_with_user: tuple[Client, User]):
+    def test_get_event_detail(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
         event = CircleEventFactory(circle__published=True)
         space = event.circle
 
-        url = reverse("mobile-api:spaces_detail", kwargs={"event_slug": event.slug})
+        url = reverse("mobile-api:event_detail", kwargs={"event_slug": event.slug})
         response = client.get(url)
 
         assert response.status_code == 200
@@ -87,6 +87,19 @@ class TestMobileApiSpaces:
         assert data["slug"] == event.slug
         assert data["space_title"] == space.title
         assert data["space"]["slug"] == space.slug
+
+    def test_get_space_detail(self, client_with_user: tuple[Client, User]):
+        client, _ = client_with_user
+        circle = CircleFactory(published=True)
+
+        url = reverse("mobile-api:spaces_detail", kwargs={"space_slug": circle.slug})
+        response = client.get(url)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["slug"] == circle.slug
+        assert data["title"] == circle.title
+        assert data["slug"] == circle.slug
 
     def test_get_keeper_spaces(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
