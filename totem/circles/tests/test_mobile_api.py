@@ -108,6 +108,10 @@ class TestMobileApiSpaces:
         circle = CircleFactory(author=keeper1, published=True)
         CircleEventFactory(circle=circle)
 
+        # This circle should not appear as it is unpublished
+        circle2 = CircleFactory(author=keeper1, published=False)
+        CircleEventFactory(circle=circle2)
+
         url = reverse("mobile-api:keeper_spaces", kwargs={"slug": keeper1.slug})
         response = client.get(url)
 

@@ -85,9 +85,9 @@ def get_space_detail(request: HttpRequest, space_slug: str):
 def get_keeper_spaces(request: HttpRequest, slug: str):
     circles = Circle.objects.filter(author__slug=slug, published=True)
 
-    spaces = []
+    spaces: list[SpaceDetailSchema] = []
     for circle in circles:
-        if circle.next_event():
+        if circle.published and circle.next_event():
             spaces.append(space_detail_schema(circle))
 
     return spaces
