@@ -5,7 +5,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client
 from django.urls import reverse
 
-from totem.users.models import User
+from totem.users.models import Feedback, User
 from totem.users.tests.factories import KeeperProfileFactory, UserFactory
 
 
@@ -275,3 +275,57 @@ class TestMobileUserAPI:
         url = reverse("mobile-api:user_keeper_profile", kwargs={"slug": "ghost_user"})
         response = client.get(url)
         assert response.status_code == 404
+
+    def test_submit_feedback_success(self, client_with_user: tuple[Client, User]):
+        """
+        Verify an authenticated user can submit feedback successfully.
+        """
+        client, user = client_with_user
+        url = reverse("mobile-api:submit_feedback")
+        payload = {"message": "This is some valuable feedback!"}
+
+        assert Feedback.objects.filter(user=user).count() == 0
+
+        response = client.post(url, data=payload, content_type="application/json")
+
+        assert response.status_code == 200
+        assert response.json() is True
+
+        feedback_entry = Feedback.objects.filter(user__pk=user.pk).first()
+        assert feedback_entry is not None
+        assert feedback_entry.message == payload["message"]
+        assert feedback_entry.user == user
+        assert Feedback.objects.filter(user__pk=user.pk).count() == 1
+
+    def test_submit_feedback_unauthenticated(self, client: Client):
+        """
+        Verify unauthenticated users receive a 401 Unauthorized response.
+        """
+        url = reverse("mobile-api:submit_feedback")
+        payload = {"message": "Trying to submit feedback without logging in."}
+        response = client.post(url, data=payload, content_type="application/json")
+
+        assert response.status_code == 401
+        assert Feedback.objects.count() == 0
+
+    def test_submit_feedback_invalid_payload(self, client_with_user: tuple[Client, User]):
+        """
+        Verify requests with invalid payloads (e.g., empty message) receive a 422 Unprocessable Entity.
+        """
+        client, user = client_with_user
+        url = reverse("mobile-api:submit_feedback")
+
+        payload_empty = {"message": ""}
+        payload_missing = {
+            # "message" field is missing
+        }
+
+        response_empty = client.post(url, data=payload_empty, content_type="application/json")
+        assert response_empty.status_code == 422
+        assert "message" in response_empty.json()["detail"][0]["loc"]
+
+        response_missing = client.post(url, data=payload_missing, content_type="application/json")
+        assert response_missing.status_code == 422
+        assert "message" in response_missing.json()["detail"][0]["loc"]
+
+        assert Feedback.objects.filter(user=user).count() == 0

@@ -9,10 +9,12 @@ from ninja.files import UploadedFile
 from pytz.exceptions import UnknownTimeZoneError
 
 from totem.email.utils import validate_email_blocked
-from totem.users.models import KeeperProfile, User
-from totem.users.schemas import KeeperProfileSchema, PublicUserSchema, UserSchema, UserUpdateSchema
+from totem.users.models import Feedback, KeeperProfile, User
+from totem.users.schemas import FeedbackSchema, KeeperProfileSchema, PublicUserSchema, UserSchema, UserUpdateSchema
+from totem.users.views import FeedbackForm
+from totem.utils.slack import notify_slack
 
-user_router = Router()
+user_router = Router(tags=["users"])
 
 
 @user_router.get("/current", response={200: UserSchema}, url_name="user_current")
@@ -102,3 +104,21 @@ def delete_current_user(request: HttpRequest):
 @user_router.get("/keeper/{slug}", response={200: KeeperProfileSchema}, url_name="user_keeper_profile")
 def keeper(request: HttpRequest, slug: str):
     return get_object_or_404(KeeperProfile, user__slug=slug)
+
+
+@user_router.post("/feedback", response={200: bool}, url_name="submit_feedback")
+def submit_feedback(request: HttpRequest, payload: FeedbackSchema):
+    user: User = request.user  # type: ignore
+
+    banned_words = ["USD"]
+    message_text = payload.message
+    form = FeedbackForm(data={"message": message_text})
+    if form.is_valid():
+        cleaned = form.cleaned_data
+        is_spam = any(word in cleaned["message"] for word in banned_words)
+        Feedback.objects.create(**cleaned, user=request.user)
+        if not is_spam:
+            notify_slack(f"Feedback from {user.name}! \nMessage: \n{form.cleaned_data['message']}")
+        return True
+
+    return False

@@ -74,12 +74,12 @@ class TestMobileApiSpaces:
         assert response.status_code == 200
         assert response.json()["items"] == []
 
-    def test_get_space_detail(self, client_with_user: tuple[Client, User]):
+    def test_get_event_detail(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
         event = CircleEventFactory(circle__published=True)
         space = event.circle
 
-        url = reverse("mobile-api:spaces_detail", kwargs={"event_slug": event.slug})
+        url = reverse("mobile-api:event_detail", kwargs={"event_slug": event.slug})
         response = client.get(url)
 
         assert response.status_code == 200
@@ -88,12 +88,29 @@ class TestMobileApiSpaces:
         assert data["space_title"] == space.title
         assert data["space"]["slug"] == space.slug
 
+    def test_get_space_detail(self, client_with_user: tuple[Client, User]):
+        client, _ = client_with_user
+        circle = CircleFactory(published=True)
+
+        url = reverse("mobile-api:spaces_detail", kwargs={"space_slug": circle.slug})
+        response = client.get(url)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["slug"] == circle.slug
+        assert data["title"] == circle.title
+        assert data["slug"] == circle.slug
+
     def test_get_keeper_spaces(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
 
         keeper1 = UserFactory(is_staff=True)
         circle = CircleFactory(author=keeper1, published=True)
         CircleEventFactory(circle=circle)
+
+        # This circle should not appear as it is unpublished
+        unpublished_circle = CircleFactory(author=keeper1, published=False)
+        CircleEventFactory(circle=unpublished_circle)
 
         url = reverse("mobile-api:keeper_spaces", kwargs={"slug": keeper1.slug})
         response = client.get(url)
@@ -282,7 +299,11 @@ class TestMobileApiSpaces:
         response = client.post(url)
 
         assert response.status_code == 200
-        assert response.json() is True
+
+        data = response.json()
+        assert data["slug"] == event.slug
+        assert data["attending"] is True
+
         assert event.attendees.filter(pk=user.pk).exists()
         assert event.circle.subscribed.filter(pk=user.pk).exists()
 
@@ -295,7 +316,11 @@ class TestMobileApiSpaces:
         response = client.delete(url)
 
         assert response.status_code == 200
-        assert response.json() is True
+
+        data = response.json()
+        assert data["slug"] == event.slug
+        assert data["attending"] is False
+
         assert not event.attendees.filter(pk=user.pk).exists()
 
     def test_rsvp_confirm_cannot_attend(self, client_with_user: tuple[Client, User]):

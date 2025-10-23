@@ -106,3 +106,7 @@ class KeeperProfileSchema(ModelSchema):
             "x_username",
             "bluesky_username",
         ]
+
+
+class FeedbackSchema(Schema):
+    message: str = Field(..., min_length=1)

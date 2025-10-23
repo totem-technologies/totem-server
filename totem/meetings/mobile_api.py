@@ -1,6 +1,6 @@
 import logging
 
-from django.http import HttpResponse
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404
 from ninja import Router
 from ninja.errors import AuthorizationError
@@ -11,17 +11,18 @@ from totem.meetings.schemas import LivekitTokenResponseSchema
 from totem.users import analytics
 from totem.users.models import User
 
-meetings_router = Router()
+meetings_router = Router(
+    tags=["meetings"],
+)
 
 
 @meetings_router.get(
     "/event/{event_slug}/token",
     response={200: LivekitTokenResponseSchema, 403: str, 404: str},
-    tags=["meetings"],
     url_name="get_livekit_token",
 )
-def get_livekit_token(request, event_slug: str):
-    user: User = request.auth
+def get_livekit_token(request: HttpRequest, event_slug: str):
+    user: User = request.user  # type: ignore
 
     try:
         event = CircleEvent.objects.get(slug=event_slug)
@@ -49,11 +50,10 @@ def get_livekit_token(request, event_slug: str):
 
 @meetings_router.post(
     "/event/{event_slug}/pass-totem",
-    tags=["meetings"],
     url_name="pass_totem",
 )
-def pass_totem_endpoint(request, event_slug: str):
-    user: User = request.auth
+def pass_totem_endpoint(request: HttpRequest, event_slug: str):
+    user: User = request.user  # type: ignore
 
     try:
         livekit.pass_totem(event_slug, user.slug)
@@ -63,12 +63,25 @@ def pass_totem_endpoint(request, event_slug: str):
 
 
 @meetings_router.post(
+    "/event/{event_slug}/accept-totem",
+    url_name="accept_totem",
+)
+def accept_totem_endpoint(request: HttpRequest, event_slug: str):
+    user: User = request.user  # type: ignore
+
+    try:
+        livekit.accept_totem(event_slug, user.slug)
+        return HttpResponse()
+    except ValueError as e:
+        raise AuthorizationError(message=str(e))
+
+
+@meetings_router.post(
     "/event/{event_slug}/start",
-    tags=["meetings"],
     url_name="start_room",
 )
-def start_room_endpoint(request, event_slug: str):
-    user: User = request.auth
+def start_room_endpoint(request: HttpRequest, event_slug: str):
+    user: User = request.user  # type: ignore
     event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
 
     if not user.is_staff:
@@ -84,11 +97,10 @@ def start_room_endpoint(request, event_slug: str):
 
 @meetings_router.post(
     "/event/{event_slug}/mute/{participant_identity}",
-    tags=["meetings"],
     url_name="mute_participant",
 )
-def mute_participant_endpoint(request, event_slug: str, participant_identity: str):
-    user: User = request.auth
+def mute_participant_endpoint(request: HttpRequest, event_slug: str, participant_identity: str):
+    user: User = request.user  # type: ignore
     event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
 
     if not user.is_staff:
