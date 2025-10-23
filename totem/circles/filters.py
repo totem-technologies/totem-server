@@ -60,7 +60,7 @@ def all_upcoming_recommended_events(user: User | None, category: str | None = No
 
 def upcoming_recommended_events(user: User | None, categories: list[str] | None = None, author: str | None = None):
     events = (
-        CircleEvent.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True)
+        CircleEvent.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True, circle__published=True)
         .select_related("circle")
         .prefetch_related("circle__author", "circle__categories", "circle__subscribed")
         .annotate(

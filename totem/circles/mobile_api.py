@@ -70,8 +70,8 @@ def list_spaces(request):
 
 @spaces_router.get("/event/{event_slug}", response={200: EventDetailSchema}, url_name="event_detail")
 def get_event_detail(request: HttpRequest, event_slug: str):
-    event = get_object_or_404(CircleEvent, slug=event_slug)
     user: User = request.user  # type: ignore
+    event = get_object_or_404(CircleEvent, slug=event_slug)
     return event_detail_schema(event, user)
 
 
@@ -87,7 +87,7 @@ def get_keeper_spaces(request: HttpRequest, slug: str):
 
     spaces: list[SpaceDetailSchema] = []
     for circle in circles:
-        if circle.published and circle.next_event():
+        if circle.next_event():
             spaces.append(space_detail_schema(circle))
 
     return spaces
@@ -97,12 +97,10 @@ def get_keeper_spaces(request: HttpRequest, slug: str):
 def get_sessions_history(request: HttpRequest):
     user: User = request.user  # type: ignore
 
-    circle_history_query = user.events_joined.order_by("-start")
+    circle_history_query = user.events_joined.filter(circle__published=True, cancelled=False).order_by("-start")
     circle_history = circle_history_query.all()[0:10]
 
-    events = [
-        event_detail_schema(event, user) for event in circle_history if event.circle.published and not event.cancelled
-    ]
+    events = [event_detail_schema(event, user) for event in circle_history]
 
     return events
 
@@ -113,11 +111,7 @@ def get_recommended_spaces(request: HttpRequest, limit: int = 3, categories: lis
 
     recommended_events = upcoming_recommended_events(user, categories=categories)[:limit]
 
-    events = [
-        event_detail_schema(event, user)
-        for event in recommended_events
-        if event.circle.published and not event.cancelled
-    ]
+    events = [event_detail_schema(event, user) for event in recommended_events]
 
     return events
 
@@ -162,14 +156,10 @@ def get_spaces_summary(request: HttpRequest):
         if name:
             categories_set.add(name)
     recommended_events = upcoming_recommended_events(user, categories=list(categories_set))
-    for_you = [
-        space_detail_schema(event.circle)
-        for event in recommended_events
-        if event.circle.published and not event.cancelled
-    ]
+    for_you = [space_detail_schema(event.circle) for event in recommended_events]
 
-    spaces = get_upcoming_events_for_spaces_list()
-    explore = [space_detail_schema(space.circle) for space in spaces if space.circle.published and not space.cancelled]
+    events = get_upcoming_events_for_spaces_list()
+    explore = [space_detail_schema(event.circle) for event in events]
 
     return SummarySpacesSchema(
         upcoming=upcoming,
