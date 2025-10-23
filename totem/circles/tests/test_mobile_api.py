@@ -299,7 +299,11 @@ class TestMobileApiSpaces:
         response = client.post(url)
 
         assert response.status_code == 200
-        assert response.json() is True
+
+        data = response.json()
+        assert data["slug"] == event.slug
+        assert data["attending"] is True
+
         assert event.attendees.filter(pk=user.pk).exists()
         assert event.circle.subscribed.filter(pk=user.pk).exists()
 
@@ -312,7 +316,11 @@ class TestMobileApiSpaces:
         response = client.delete(url)
 
         assert response.status_code == 200
-        assert response.json() is True
+
+        data = response.json()
+        assert data["slug"] == event.slug
+        assert data["attending"] is False
+
         assert not event.attendees.filter(pk=user.pk).exists()
 
     def test_rsvp_confirm_cannot_attend(self, client_with_user: tuple[Client, User]):

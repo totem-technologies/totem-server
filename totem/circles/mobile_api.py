@@ -170,7 +170,7 @@ def get_spaces_summary(request: HttpRequest):
 
 @spaces_router.post(
     "/rsvp/{event_slug}",
-    response={200: bool},
+    response={200: EventDetailSchema},
     tags=["spaces"],
     url_name="rsvp_confirm",
 )
@@ -181,14 +181,15 @@ def rsvp_confirm(request: HttpRequest, event_slug: str):
         with transaction.atomic():
             event.add_attendee(user)
             event.circle.subscribe(user)
+            event.save()
     except CircleEventException as e:
         raise AuthorizationError(message=str(e))
-    return True
+    return event_detail_schema(event, user)
 
 
 @spaces_router.delete(
     "/rsvp/{event_slug}",
-    response={200: bool},
+    response={200: EventDetailSchema},
     tags=["spaces"],
     url_name="rsvp_cancel",
 )
@@ -199,4 +200,4 @@ def rsvp_cancel(request: HttpRequest, event_slug: str):
         event.remove_attendee(user)
     except CircleEventException as e:
         raise AuthorizationError(message=str(e))
-    return True
+    return event_detail_schema(event, user)
