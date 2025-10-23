@@ -119,7 +119,6 @@ def submit_feedback(request: HttpRequest, payload: FeedbackSchema):
         Feedback.objects.create(**cleaned, user=request.user)
         if not is_spam:
             notify_slack(f"Feedback from {user.name}! \nMessage: \n{form.cleaned_data['message']}")
-        form = FeedbackForm()
         return True
 
     return False
