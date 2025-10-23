@@ -183,7 +183,6 @@ def rsvp_confirm(request: HttpRequest, event_slug: str):
         with transaction.atomic():
             event.add_attendee(user)
             event.circle.subscribe(user)
-            event.save()
     except CircleEventException as e:
         raise AuthorizationError(message=str(e))
     return event_detail_schema(event, user)
