@@ -176,11 +176,11 @@ def event_detail_schema(event: CircleEvent, user: User):
     )
 
 
-def space_detail_schema(circle: Circle, user: User):
+def space_detail_schema(circle: Circle, user: User, event: CircleEvent | None = None):
     category = circle.categories.first()
     category_name = category.name if category else None
 
-    next_event = circle.next_event()
+    next_event = event or circle.next_event()
     next_event_schema: NextEventSchema | None = None
     if next_event:
         seats_left = next_event.seats_left()
