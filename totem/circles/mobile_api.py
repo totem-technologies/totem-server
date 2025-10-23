@@ -63,7 +63,7 @@ def list_spaces(request):
         spaces_set.add(event.circle.slug)
         circle: Circle = event.circle
 
-        spaces.append(space_detail_schema(circle))
+        spaces.append(space_detail_schema(circle, request.user))
 
     return spaces
 
@@ -77,18 +77,20 @@ def get_event_detail(request: HttpRequest, event_slug: str):
 
 @spaces_router.get("/space/{space_slug}", response={200: SpaceDetailSchema}, url_name="spaces_detail")
 def get_space_detail(request: HttpRequest, space_slug: str):
+    user: User = request.user  # type: ignore
     space = get_object_or_404(Circle, slug=space_slug)
-    return space_detail_schema(space)
+    return space_detail_schema(space, user)
 
 
 @spaces_router.get("/keeper/{slug}/", response={200: List[SpaceDetailSchema]}, url_name="keeper_spaces")
 def get_keeper_spaces(request: HttpRequest, slug: str):
+    user: User = request.user  # type: ignore
     circles = Circle.objects.filter(author__slug=slug, published=True)
 
     spaces: list[SpaceDetailSchema] = []
     for circle in circles:
         if circle.next_event():
-            spaces.append(space_detail_schema(circle))
+            spaces.append(space_detail_schema(circle, user))
 
     return spaces
 
@@ -156,10 +158,10 @@ def get_spaces_summary(request: HttpRequest):
         if name:
             categories_set.add(name)
     recommended_events = upcoming_recommended_events(user, categories=list(categories_set))
-    for_you = [space_detail_schema(event.circle) for event in recommended_events]
+    for_you = [space_detail_schema(event.circle, user) for event in recommended_events]
 
     events = get_upcoming_events_for_spaces_list()
-    explore = [space_detail_schema(event.circle) for event in events]
+    explore = [space_detail_schema(event.circle, user) for event in events]
 
     return SummarySpacesSchema(
         upcoming=upcoming,

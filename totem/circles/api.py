@@ -160,6 +160,6 @@ def list_spaces(request):
         spaces_set.add(event.circle.slug)
         circle: Circle = event.circle
 
-        spaces.append(space_detail_schema(circle))
+        spaces.append(space_detail_schema(circle, request.user))
 
     return spaces

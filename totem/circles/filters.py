@@ -168,7 +168,7 @@ def event_detail_schema(event: CircleEvent, user: User):
         ended=ended,
         rsvp_url=reverse("circles:rsvp", kwargs={"event_slug": event.slug}),
         join_url=reverse("circles:join", kwargs={"event_slug": event.slug}),
-        calLink=event.cal_link(),
+        cal_link=event.cal_link(),
         subscribe_url=reverse("mobile-api:spaces_subscribe", kwargs={"space_slug": space.slug}),
         subscribed=subscribed,
         user_timezone=str("UTC"),
@@ -176,7 +176,7 @@ def event_detail_schema(event: CircleEvent, user: User):
     )
 
 
-def space_detail_schema(circle: Circle):
+def space_detail_schema(circle: Circle, user: User):
     category = circle.categories.first()
     category_name = category.name if category else None
 
@@ -186,12 +186,19 @@ def space_detail_schema(circle: Circle):
         seats_left = next_event.seats_left()
         next_event_schema = NextEventSchema(
             slug=next_event.slug,
-            start=next_event.start.isoformat(),
+            start=next_event.start,
             title=next_event.title,
             link=next_event.get_absolute_url(),
             seats_left=seats_left,
+            duration=next_event.duration_minutes,
+            meeting_provider=next_event.meeting_provider,
+            cal_link=next_event.cal_link(),
+            attending=next_event.attendees.filter(pk=user.pk).exists(),
+            cancelled=next_event.cancelled,
+            open=next_event.open,
+            joinable=next_event.can_join(user)
         )
-
+        
     return SpaceDetailSchema(
         slug=circle.slug,
         title=circle.title,
@@ -201,4 +208,7 @@ def space_detail_schema(circle: Circle):
         author=circle.author,
         category=category_name,
         next_event=next_event_schema,
+        subscribers=circle.subscribed.count(),
+        price=circle.price,
+        recurring=circle.recurring,
     )

@@ -101,7 +101,7 @@ class EventDetailSchema(Schema):
     rsvp_url: str
     join_url: str | None
     subscribe_url: str
-    calLink: str
+    cal_link: str
     subscribed: bool | None
     user_timezone: str | None
     meeting_provider: MeetingProviderEnum
@@ -109,10 +109,18 @@ class EventDetailSchema(Schema):
 
 class NextEventSchema(Schema):
     slug: str
-    start: str
+    start: datetime
     link: str
     title: str | None
     seats_left: int
+    duration: int
+    meeting_provider: MeetingProviderEnum
+    cal_link: str
+    
+    attending: bool
+    cancelled: bool
+    open: bool
+    joinable: bool
 
 
 class SpaceDetailSchema(Schema):
@@ -124,6 +132,9 @@ class SpaceDetailSchema(Schema):
     author: PublicUserSchema
     next_event: NextEventSchema | None
     category: str | None
+    subscribers: int
+    price: int
+    recurring: str | None
 
 
 class SummarySpacesSchema(Schema):
