@@ -67,7 +67,7 @@ def pass_totem_endpoint(request: HttpRequest, event_slug: str):
     url_name="accept_totem",
 )
 def accept_totem_endpoint(request: HttpRequest, event_slug: str):
-    user: User = request.auth  # type: ignore
+    user: User = request.user  # type: ignore
 
     try:
         livekit.accept_totem(event_slug, user.slug)

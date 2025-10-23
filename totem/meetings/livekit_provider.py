@@ -135,6 +135,8 @@ async def accept_totem(room_name: str, user_identity: str):
         current_state = json.loads(room.metadata) if room.metadata else {}
         state = SessionState(**current_state)
 
+        # The current speaker should already be the current user. If not, it's not their turn to speak.
+        # When accepting the totem, we mute all other participants.
         if state.speaking_now == user_identity:
             raise ValueError(f"User {user_identity} is not the current speaker. Cannot accept the totem.")
 
