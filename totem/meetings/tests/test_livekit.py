@@ -102,10 +102,8 @@ class TestGetLiveKitToken:
         assert response.status_code == 404
         assert response.json() == "Session not found"
 
-    def test_pass_totem_success_by_staff(self, client_with_user: tuple[Client, User]):
+    def test_pass_totem_success(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        user.is_staff = True
-        user.save()
         event = CircleEventFactory()
 
         with patch(f"{self.LIVEKIT_PROVIDER_PATH}.pass_totem", new_callable=Mock) as mock_pass_totem:
@@ -114,6 +112,17 @@ class TestGetLiveKitToken:
 
         assert response.status_code == 200
         mock_pass_totem.assert_called_once_with(event.slug, user.slug)
+
+    def test_accept_totem_success(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory()
+
+        with patch(f"{self.LIVEKIT_PROVIDER_PATH}.accept_totem", new_callable=Mock) as mock_accept_totem:
+            url = reverse("mobile-api:accept_totem", kwargs={"event_slug": event.slug})
+            response = client.post(url)
+
+        assert response.status_code == 200
+        mock_accept_totem.assert_called_once_with(event.slug, user.slug)
 
     def test_start_room_success_by_staff(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
