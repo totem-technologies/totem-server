@@ -132,8 +132,8 @@ class SpaceDetailSchema(Schema):
     next_event: NextEventSchema | None
     category: str | None
     subscribers: int
-    price: int
     recurring: str | None
+    price: int
 
 
 class SummarySpacesSchema(Schema):
