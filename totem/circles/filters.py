@@ -196,9 +196,9 @@ def space_detail_schema(circle: Circle, user: User):
             attending=next_event.attendees.filter(pk=user.pk).exists(),
             cancelled=next_event.cancelled,
             open=next_event.open,
-            joinable=next_event.can_join(user)
+            joinable=next_event.can_join(user),
         )
-        
+
     return SpaceDetailSchema(
         slug=circle.slug,
         title=circle.title,

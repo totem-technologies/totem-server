@@ -116,7 +116,6 @@ class NextEventSchema(Schema):
     duration: int
     meeting_provider: MeetingProviderEnum
     cal_link: str
-    
     attending: bool
     cancelled: bool
     open: bool
