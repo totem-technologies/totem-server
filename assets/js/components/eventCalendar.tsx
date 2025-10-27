@@ -1,8 +1,8 @@
-import { totemCirclesApiUpcomingEvents } from "@/client"
 import Calendar from "@rnwonder/solid-date-picker/calendar"
+import { totemCirclesApiUpcomingEvents } from "@/client"
 import "@rnwonder/solid-date-picker/dist/style.css"
 import { useQuery } from "@tanstack/solid-query"
-import { type JSX, type JSXElement, Suspense, createSignal } from "solid-js"
+import { createSignal, type JSX, type JSXElement, Suspense } from "solid-js"
 import "./eventCalendar.css"
 
 function DetailBox(props: { children: JSX.Element }) {

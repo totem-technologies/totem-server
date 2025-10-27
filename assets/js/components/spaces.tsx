@@ -1,27 +1,26 @@
-import { timestampToDateStringShort, timestampToTimeString } from "@/libs/time"
-import { eventCalendarURL } from "@/libs/urls"
 import {
   FaRegularCalendar as Calendar,
   FaSolidChevronRight as ChevronRight,
 } from "solid-icons/fa"
 import { FiClock as Clock } from "solid-icons/fi"
 import { TbArmchair } from "solid-icons/tb"
-import ErrorBoundary from "./errors"
-
-import { type SpaceDetailSchema, totemCirclesApiListSpaces } from "@/client"
 import {
   type Accessor,
-  For,
-  type JSXElement,
-  type Resource,
-  Show,
   createContext,
   createEffect,
   createResource,
   createSignal,
+  For,
+  type JSXElement,
+  type Resource,
+  Show,
   useContext,
 } from "solid-js"
+import { type SpaceDetailSchema, totemCirclesApiListSpaces } from "@/client"
+import { timestampToDateStringShort, timestampToTimeString } from "@/libs/time"
+import { eventCalendarURL } from "@/libs/urls"
 import Avatar from "./avatar"
+import ErrorBoundary from "./errors"
 
 const testCategories = [
   "Technology",
@@ -178,7 +177,7 @@ function SpacesListInner() {
               {(space, index) => (
                 <>
                   <a
-                    href={`${space.nextEvent.link}`}
+                    href={`${space.next_event?.link}`}
                     class="group block bg-white/80 text-left transition-colors hover:bg-white">
                     <div class="p-4 transition-colors md:p-6">
                       <div class="flex flex-col gap-4 md:flex-row md:gap-6">
@@ -229,34 +228,36 @@ function SpacesListInner() {
 
                           {/* Description */}
                           <p class="text-muted-foreground mb-3 line-clamp-2 text-sm">
-                            {space.description}
+                            {space.short_description}
                           </p>
 
                           {/* Next event info */}
                           <div class="mt-auto flex flex-col justify-between md:flex-row md:items-center">
                             <div>
                               <p class="text-sm font-medium">
-                                Next session: {space.nextEvent.title}
+                                Next session: {space.next_event?.title}
                               </p>
                               <div class="mt-2 flex gap-4">
                                 <div class="text-muted-foreground flex items-center text-xs">
                                   <Calendar class="mr-1 h-3.5 w-3.5" />
                                   {timestampToDateStringShort(
-                                    space.nextEvent.start
+                                    space.next_event?.start!
                                   )}
                                 </div>
                                 <div class="text-muted-foreground flex items-center text-xs">
                                   <Clock class="mr-1 h-3.5 w-3.5" />
-                                  {timestampToTimeString(space.nextEvent.start)}
+                                  {timestampToTimeString(
+                                    space.next_event?.start!
+                                  )}
                                 </div>
                                 {/* Add seats left info with armchair icon */}
                                 <div class="text-muted-foreground flex items-center text-xs">
                                   <TbArmchair class="mr-1 h-3.5 w-3.5" />
                                   <Show
-                                    when={space.nextEvent.seats_left > 0}
+                                    when={space.next_event?.seats_left! > 0}
                                     fallback="Full">
-                                    {space.nextEvent.seats_left}{" "}
-                                    {space.nextEvent.seats_left === 1
+                                    {space.next_event?.seats_left!}{" "}
+                                    {space.next_event?.seats_left === 1
                                       ? "seat"
                                       : "seats"}{" "}
                                     left

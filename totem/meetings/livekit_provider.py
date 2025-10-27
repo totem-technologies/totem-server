@@ -101,9 +101,6 @@ async def pass_totem(room_name: str, user_identity: str):
     Passes the totem to the next participant in the room.
     """
 
-    if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
-        return
-
     async with get_lk_api_client() as lkapi:
         room = await get_room(room_name, lkapi)
         if not room:
@@ -122,6 +119,38 @@ async def pass_totem(room_name: str, user_identity: str):
                 metadata=json.dumps(state.dict()),
             )
         )
+
+
+@async_to_sync
+async def accept_totem(room_name: str, user_identity: str):
+    """
+    Accepts the totem from the current speaker in the room.
+    """
+
+    async with get_lk_api_client() as lkapi:
+        room = await get_room(room_name, lkapi)
+        if not room:
+            raise ValueError(f"Room {room_name} does not exist.")
+
+        current_state = json.loads(room.metadata) if room.metadata else {}
+        state = SessionState(**current_state)
+
+        # The current speaker should already be the current user. If not, it's not their turn to speak.
+        # When accepting the totem, we mute all other participants.
+        if state.speaking_now != user_identity:
+            raise ValueError(f"User {user_identity} is not the current speaker. Cannot accept the totem.")
+
+        # Mute all other participants except the one accepting the totem
+        for participant in state.speaking_order:
+            if participant != user_identity:
+                await lkapi.room.mute_published_track(
+                    api.MuteRoomTrackRequest(
+                        room=room_name,
+                        identity=participant,
+                        track_sid="",  # Empty track_sid to mute all audio tracks
+                        muted=True,
+                    )
+                )
 
 
 @async_to_sync
