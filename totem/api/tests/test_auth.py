@@ -36,6 +36,7 @@ class TestPinRequestEndpoint:
         # Check user was created
         user = User.objects.get(email=email)
         assert user.newsletter_consent is True
+        assert not user.has_usable_password()
 
         # Check PIN was created and email sent
         pin = LoginPin.objects.get(user=user)
@@ -43,6 +44,24 @@ class TestPinRequestEndpoint:
         assert len(mail.outbox) == 1  # PIN email
         assert mail.outbox[0].to == [email]
         assert pin.pin in mail.outbox[0].body
+
+    def test_request_pin_existing_user_preserves_password(self, client: Client, db):
+        """Existing user requesting a PIN should keep their password (web sessions intact)."""
+        user = User.objects.create_user(email="existing@example.com", password="initial-pass")
+        original_password_hash = user.password
+
+        response = client.post(
+            reverse("mobile-api:auth_request_pin"),
+            data={"email": user.email},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        assert response.json() == {"message": "PIN sent to your email"}
+
+        user.refresh_from_db()
+        assert user.password == original_password_hash
+        assert user.check_password("initial-pass")
 
     def test_request_pin_existing_user(self, client: Client, db, setup_user):
         """Test requesting PIN for existing user."""
