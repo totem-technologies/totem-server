@@ -109,4 +109,4 @@ class KeeperProfileSchema(ModelSchema):
 
 
 class FeedbackSchema(Schema):
-    message: str = Field(..., min_length=1)
+    message: str = Field(..., min_length=1, max_length=4000)
