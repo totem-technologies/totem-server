@@ -1,21 +1,21 @@
-import { timestampToDateString, timestampToTimeString } from "@/libs/time"
 import { createViewportObserver } from "@solid-primitives/intersection-observer"
 import { createMediaQuery } from "@solid-primitives/media"
 import { Refs } from "@solid-primitives/refs"
 import {
   type Accessor,
+  createContext,
+  createEffect,
+  createResource,
+  createSignal,
   For,
   type JSXElement,
   Match,
   type Resource,
   Show,
   Switch,
-  createContext,
-  createEffect,
-  createResource,
-  createSignal,
   useContext,
 } from "solid-js"
+import { timestampToDateString, timestampToTimeString } from "@/libs/time"
 import {
   type CategoryFilterSchema,
   type EventListSchema,
@@ -176,7 +176,8 @@ function getQueryParams(): QueryParams {
   const urlParams = new URLSearchParams(window.location.search)
   return {
     limit: Number.parseInt(
-      urlParams.get("limit") ?? defaultParams.limit.toString()
+      urlParams.get("limit") ?? defaultParams.limit.toString(),
+      10
     ),
     category: urlParams.get("category") ?? defaultParams.category,
     author: urlParams.get("author") ?? defaultParams.author,

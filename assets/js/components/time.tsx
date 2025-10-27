@@ -1,4 +1,4 @@
-import { type JSXElement, Match, Switch, mergeProps } from "solid-js"
+import { type JSXElement, Match, mergeProps, Switch } from "solid-js"
 
 type TimeFormat = "short" | "at"
 

@@ -11,6 +11,10 @@ export type ProfileAvatarTypeEnum = 'TD' | 'IM';
 export type PublicUserSchema = {
     profile_avatar_type: ProfileAvatarTypeEnum;
     /**
+     * Circle Count
+     */
+    circle_count?: number | null;
+    /**
      * Name
      */
     name?: string | null;
@@ -32,6 +36,10 @@ export type PublicUserSchema = {
      * Profile image, must be under 5mb. Will be cropped to a square.
      */
     profile_image?: string | null;
+    /**
+     * Date Created
+     */
+    date_created: string;
 };
 
 /**
@@ -279,9 +287,9 @@ export type EventDetailSchema = {
      */
     subscribe_url: string;
     /**
-     * Callink
+     * Cal Link
      */
-    calLink: string;
+    cal_link: string;
     /**
      * Subscribed
      */
@@ -290,6 +298,7 @@ export type EventDetailSchema = {
      * User Timezone
      */
     user_timezone: string | null;
+    meeting_provider: MeetingProviderEnum;
 };
 
 /**
@@ -336,7 +345,16 @@ export type EventSpaceSchema = {
      * Image for the Space header, must be under 5mb
      */
     image?: string | null;
+    /**
+     * Content
+     */
+    content?: string;
 };
+
+/**
+ * MeetingProviderEnum
+ */
+export type MeetingProviderEnum = 'google_meet' | 'livekit';
 
 /**
  * EventCalendarFilterSchema
@@ -450,6 +468,31 @@ export type NextEventSchema = {
      * Seats Left
      */
     seats_left: number;
+    /**
+     * Duration
+     */
+    duration: number;
+    meeting_provider: MeetingProviderEnum;
+    /**
+     * Cal Link
+     */
+    cal_link: string;
+    /**
+     * Attending
+     */
+    attending: boolean;
+    /**
+     * Cancelled
+     */
+    cancelled: boolean;
+    /**
+     * Open
+     */
+    open: boolean;
+    /**
+     * Joinable
+     */
+    joinable: boolean;
 };
 
 /**
@@ -469,15 +512,31 @@ export type SpaceDetailSchema = {
      */
     image_link: string | null;
     /**
-     * Description
+     * Short Description
      */
-    description: string;
+    short_description: string;
+    /**
+     * Content
+     */
+    content: string;
     author: PublicUserSchema;
-    nextEvent: NextEventSchema;
+    next_event: NextEventSchema | null;
     /**
      * Category
      */
     category: string | null;
+    /**
+     * Subscribers
+     */
+    subscribers: number;
+    /**
+     * Recurring
+     */
+    recurring: string | null;
+    /**
+     * Price
+     */
+    price: number;
 };
 
 export type TotemApiApiCurrentUserData = {

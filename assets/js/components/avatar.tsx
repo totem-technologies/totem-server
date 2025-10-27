@@ -1,8 +1,7 @@
 import _Avatar from "@totem.org/solid-boring-avatars"
-import { type JSXElement, Show, mergeProps } from "solid-js"
-import { useTotemTip } from "./tooltip"
-
+import { type JSXElement, mergeProps, Show } from "solid-js"
 import type { ProfileAvatarTypeEnum } from "../client"
+import { useTotemTip } from "./tooltip"
 
 const defaults = {
   size: 50,

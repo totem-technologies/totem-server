@@ -87,7 +87,7 @@ function createCalendarButton(eventStore: EventDetailSchema) {
   return (
     <AddToCalendarButton
       name={`${eventStore.title} - ${eventStore.space_title}`}
-      calLink={eventStore.calLink}
+      calLink={eventStore.cal_link}
       start={eventStore.start}
       durationMinutes={eventStore.duration}
     />
