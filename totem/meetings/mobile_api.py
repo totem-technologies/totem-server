@@ -54,9 +54,11 @@ def get_livekit_token(request: HttpRequest, event_slug: str):
 )
 def pass_totem_endpoint(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
+    event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
 
     try:
-        livekit.pass_totem(event_slug, user.slug)
+        is_keeper = event.circle.author.slug == user.slug
+        livekit.pass_totem(event_slug, is_keeper, user.slug)
         return HttpResponse()
     except ValueError as e:
         raise AuthorizationError(message=str(e))

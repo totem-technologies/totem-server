@@ -97,7 +97,7 @@ async def initialize_room(room_name: str, speaking_order: list[str]):
 
 
 @async_to_sync
-async def pass_totem(room_name: str, user_identity: str):
+async def pass_totem(room_name: str, is_keeper: bool, user_identity: str):
     """
     Passes the totem to the next participant in the room.
     """
@@ -110,7 +110,7 @@ async def pass_totem(room_name: str, user_identity: str):
         current_state = json.loads(room.metadata) if room.metadata else {}
         state = SessionState(**current_state)
 
-        if state.speaking_now != user_identity:
+        if state.speaking_now != user_identity and not is_keeper:
             raise ValueError(f"User {user_identity} is not the current speaker. Cannot pass the totem.")
 
         state.pass_totem()
