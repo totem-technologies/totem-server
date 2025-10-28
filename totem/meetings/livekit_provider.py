@@ -214,3 +214,25 @@ async def mute_participant(room_name: str, user_identity: str):
                 muted=True,
             )
         )
+
+
+@async_to_sync
+async def remove_participant(room_name: str, user_identity: str):
+    """
+    Removes a participant from the room.
+    """
+
+    async with get_lk_api_client() as lkapi:
+        room = await get_room(room_name, lkapi)
+        if not room:
+            raise ValueError(f"Room {room_name} does not exist.")
+
+        participant = await lkapi.room.remove_participant(
+            api.RoomParticipantIdentity(
+                room=room_name,
+                identity=user_identity,
+            )
+        )
+
+        if not participant:
+            raise ValueError(f"Participant {user_identity} not found in room {room_name}.")

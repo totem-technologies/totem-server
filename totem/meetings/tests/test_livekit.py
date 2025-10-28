@@ -179,3 +179,50 @@ class TestGetLiveKitToken:
 
         assert response.status_code == 403
         mock_mute.assert_not_called()
+
+    def test_remove_participant_success_by_staff(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        user.is_staff = True
+        user.save()
+
+        event = CircleEventFactory()
+        participant_to_remove = "participant-slug-to-remove"
+
+        with patch(f"{self.LIVEKIT_PROVIDER_PATH}.remove_participant", new_callable=Mock) as mock_remove:
+            url = reverse(
+                "mobile-api:remove_participant",
+                kwargs={"event_slug": event.slug, "participant_identity": participant_to_remove},
+            )
+            response = client.post(url)
+
+        assert response.status_code == 200
+        mock_remove.assert_called_once_with(event.slug, participant_to_remove)
+
+    def test_remove_participant_forbidden_for_non_staff(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory()
+        participant_to_remove = "participant-slug-to-remove"
+
+        with patch(f"{self.LIVEKIT_PROVIDER_PATH}.remove_participant", new_callable=Mock) as mock_remove:
+            url = reverse(
+                "mobile-api:remove_participant",
+                kwargs={"event_slug": event.slug, "participant_identity": participant_to_remove},
+            )
+            response = client.post(url)
+
+        assert response.status_code == 403
+        mock_remove.assert_not_called()
+
+    def test_remove_participant_not_found(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        user.is_staff = True
+        user.save()
+        participant_to_remove = "participant-slug-to-remove"
+
+        url = reverse(
+            "mobile-api:remove_participant",
+            kwargs={"event_slug": "non-existent-slug", "participant_identity": participant_to_remove},
+        )
+        response = client.post(url)
+
+        assert response.status_code == 404
