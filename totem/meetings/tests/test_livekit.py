@@ -1,3 +1,4 @@
+import json
 from datetime import timedelta
 from unittest.mock import Mock, patch
 
@@ -226,3 +227,66 @@ class TestGetLiveKitToken:
         response = client.post(url)
 
         assert response.status_code == 404
+
+    def test_reorder_participants_success_by_staff(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        user.is_staff = True
+        user.save()
+
+        event = CircleEventFactory()
+        event.save()
+
+        new_order = ["participant1-slug", "participant2-slug", user.slug]
+        payload = {"order": new_order}
+
+        with patch(f"{self.LIVEKIT_PROVIDER_PATH}.reorder", new_callable=Mock, return_value=new_order) as mock_reorder:
+            url = reverse("mobile-api:reorder_participants", kwargs={"event_slug": event.slug})
+            response = client.post(url, data=json.dumps(payload), content_type="application/json")
+
+        assert response.status_code == 200
+        mock_reorder.assert_called_once_with(event.slug, new_order)
+
+    def test_reorder_participants_forbidden_for_non_staff(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory()
+        payload = {"order": ["some-slug"]}
+
+        with patch(
+            f"{self.LIVEKIT_PROVIDER_PATH}.reorder", new_callable=Mock, return_value=["some-slug"]
+        ) as mock_reorder:
+            url = reverse("mobile-api:reorder_participants", kwargs={"event_slug": event.slug})
+            response = client.post(url, data=json.dumps(payload), content_type="application/json")
+
+        assert response.status_code == 403
+        mock_reorder.assert_not_called()
+
+    def test_reorder_participants_event_not_found(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        user.is_staff = True
+        user.save()
+        non_existent_slug = "non-existent-reorder-slug"
+        payload = {"order": ["some-slug"]}
+
+        url = reverse("mobile-api:reorder_participants", kwargs={"event_slug": non_existent_slug})
+        response = client.post(url, data=json.dumps(payload), content_type="application/json")
+
+        assert response.status_code == 404
+
+    def test_reorder_participants_livekit_raises_error(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        user.is_staff = True
+        user.save()
+        event = CircleEventFactory()
+        new_order = ["invalid-slug"]
+        payload = {"order": new_order}
+
+        with patch(
+            f"{self.LIVEKIT_PROVIDER_PATH}.reorder",
+            side_effect=ValueError("Room has already ended."),
+            return_value=new_order,
+        ) as mock_reorder:
+            url = reverse("mobile-api:reorder_participants", kwargs={"event_slug": event.slug})
+            response = client.post(url, data=json.dumps(payload), content_type="application/json")
+
+        assert response.status_code == 404
+        mock_reorder.assert_called_once_with(event.slug, new_order)

@@ -1,5 +1,6 @@
 import json
 from contextlib import asynccontextmanager
+from typing import List
 
 from asgiref.sync import async_to_sync
 from django.conf import settings
@@ -177,6 +178,34 @@ async def start_room(room_name: str):
                 metadata=json.dumps(state.dict()),
             )
         )
+
+
+@async_to_sync
+async def reorder(room_name: str, new_order: List[str]) -> List[str]:
+    """
+    Reorders the participants in the room.
+    """
+
+    async with get_lk_api_client() as lkapi:
+        room = await get_room(room_name, lkapi)
+        if not room:
+            raise ValueError(f"Room {room_name} does not exist.")
+
+        current_state = json.loads(room.metadata) if room.metadata else {}
+        state = SessionState(**current_state)
+
+        if state.status == SessionStatus.ENDED:
+            raise ValueError(f"Room {room_name} has already ended.")
+
+        state.reorder(new_order)
+        await lkapi.room.update_room_metadata(
+            update=api.UpdateRoomMetadataRequest(
+                room=room_name,
+                metadata=json.dumps(state.dict()),
+            )
+        )
+        
+        return state.speaking_order
 
 
 @async_to_sync

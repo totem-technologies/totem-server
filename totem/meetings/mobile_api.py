@@ -7,7 +7,7 @@ from ninja.errors import AuthorizationError
 
 import totem.meetings.livekit_provider as livekit
 from totem.circles.models import CircleEvent
-from totem.meetings.schemas import LivekitTokenResponseSchema
+from totem.meetings.schemas import LivekitMuteParticipantSchema, LivekitTokenResponseSchema
 from totem.users import analytics
 from totem.users.models import User
 
@@ -131,3 +131,23 @@ def remove_participant_endpoint(request: HttpRequest, event_slug: str, participa
         return HttpResponse()
     except ValueError:
         raise Http404(f"Participant {participant_identity} not found.")
+
+
+@meetings_router.post(
+    "/event/{event_slug}/reorder",
+    response={200: LivekitMuteParticipantSchema, 404: str},
+    url_name="reorder_participants",
+)
+def reorder_participants_endpoint(request: HttpRequest, event_slug: str, order: LivekitMuteParticipantSchema):
+    user: User = request.user  # type: ignore
+
+    if not user.is_staff:
+        logging.warning("User %s attempted to update metadata for event %s", user.slug, event_slug)
+        raise AuthorizationError(message="Only staff can update room metadata.")
+
+    event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
+    try:
+        new_order = livekit.reorder(event.slug, order.order)
+        return LivekitMuteParticipantSchema(order=new_order)
+    except ValueError:
+        raise Http404(f"Event {event_slug} not found.")

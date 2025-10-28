@@ -37,3 +37,11 @@ class SessionState(Schema):
             next_index = (current_index + 1) % len(order)
 
         self.speaking_now = order[next_index]
+
+    def reorder(self, new_order: List[str]):
+        """
+        Reorders the speaking order.
+        """
+        self.speaking_order = new_order
+        if self.speaking_now not in new_order:
+            self.speaking_now = new_order[0] if new_order else None
