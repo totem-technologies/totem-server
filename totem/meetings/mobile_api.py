@@ -130,7 +130,7 @@ def remove_participant_endpoint(request: HttpRequest, event_slug: str, participa
         livekit.remove_participant(event.slug, participant_identity)
         return HttpResponse()
     except ValueError:
-        raise Http404(f"Participant {participant_identity} not found.")
+        raise Http404("Failed to remove participant")
 
 
 @meetings_router.post(
@@ -150,4 +150,4 @@ def reorder_participants_endpoint(request: HttpRequest, event_slug: str, order: 
         new_order = livekit.reorder(event.slug, order.order)
         return LivekitMuteParticipantSchema(order=new_order)
     except ValueError:
-        raise Http404(f"Event {event_slug} not found.")
+        raise Http404(f"Event {event_slug} not found or has already ended.")
