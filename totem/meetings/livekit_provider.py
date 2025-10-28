@@ -256,12 +256,14 @@ async def remove_participant(room_name: str, user_identity: str):
         if not room:
             raise ValueError(f"Room {room_name} does not exist.")
 
-        participant = await lkapi.room.remove_participant(
-            api.RoomParticipantIdentity(
-                room=room_name,
-                identity=user_identity,
+        try:
+            participant = await lkapi.room.remove_participant(
+                api.RoomParticipantIdentity(
+                    room=room_name,
+                    identity=user_identity,
+                )
             )
-        )
-
-        if not participant:
-            raise ValueError(f"Participant {user_identity} not found in room {room_name}.")
+            if not participant:
+                raise ValueError(f"Participant {user_identity} not found in room {room_name}.")
+        except Exception as e:
+            raise ValueError(f"Failed to remove participant {user_identity} from room {room_name}: {e}")
