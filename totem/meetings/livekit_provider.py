@@ -204,7 +204,7 @@ async def reorder(room_name: str, new_order: List[str]) -> List[str]:
                 metadata=json.dumps(state.dict()),
             )
         )
-        
+
         return state.speaking_order
 
 
