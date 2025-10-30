@@ -129,8 +129,8 @@ async def pass_totem(room_name: str, keeper_slug: str, user_identity: str):
 
         is_speaking_now = state.speaking_now == user_identity
         is_keeper = user_identity == keeper_slug
-        if is_speaking_now and not is_keeper:
-            raise ValueError(f"User {user_identity} is not the current speaker. Cannot pass the totem.")
+        if not is_speaking_now and not is_keeper:
+            raise ValueError(f"User {user_identity} is not the current speaker or keeper. Cannot pass the totem.")
 
         state.pass_totem()
         await lkapi.room.update_room_metadata(
