@@ -57,8 +57,7 @@ def pass_totem_endpoint(request: HttpRequest, event_slug: str):
     event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
 
     try:
-        is_keeper = event.circle.author.slug == user.slug
-        livekit.pass_totem(event_slug, is_keeper, user.slug)
+        livekit.pass_totem(event_slug, event.circle.author.slug, user.slug)
         return HttpResponse()
     except ValueError as e:
         raise AuthorizationError(message=str(e))
@@ -70,9 +69,14 @@ def pass_totem_endpoint(request: HttpRequest, event_slug: str):
 )
 def accept_totem_endpoint(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
+    event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
 
     try:
-        livekit.accept_totem(event_slug, user.slug)
+        livekit.accept_totem(
+            room_name=event_slug,
+            user_identity=user.slug,
+            keeper_slug=event.circle.author.slug,
+        )
         return HttpResponse()
     except ValueError as e:
         raise AuthorizationError(message=str(e))
@@ -91,7 +95,7 @@ def start_room_endpoint(request: HttpRequest, event_slug: str):
         raise AuthorizationError(message="Only staff can update room metadata.")
 
     try:
-        livekit.start_room(event.slug)
+        livekit.start_room(room_name=event.slug, keeper_slug=event.circle.author.slug)
         return HttpResponse()
     except ValueError as e:
         raise AuthorizationError(message=str(e))
@@ -113,7 +117,7 @@ def end_room_endpoint(request: HttpRequest, event_slug: str):
         livekit.end_room(event.slug)
         return HttpResponse()
     except ValueError as e:
-        raise AuthorizationError(message=str(e))
+        raise Http404(str(e))
 
 
 @meetings_router.post(
@@ -132,7 +136,7 @@ def mute_participant_endpoint(request: HttpRequest, event_slug: str, participant
         livekit.mute_participant(event.slug, participant_identity)
         return HttpResponse()
     except ValueError as e:
-        raise AuthorizationError(message=str(e))
+        raise Http404(str(e))
 
 
 @meetings_router.post(
@@ -147,6 +151,10 @@ def remove_participant_endpoint(request: HttpRequest, event_slug: str, participa
         raise AuthorizationError(message="Only staff can update room metadata.")
 
     event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
+
+    if event.circle.author.slug == participant_identity:
+        raise AuthorizationError(message="Cannot remove the keeper from the room.")
+
     try:
         livekit.remove_participant(event.slug, participant_identity)
         return HttpResponse()

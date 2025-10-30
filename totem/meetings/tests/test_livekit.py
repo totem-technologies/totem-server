@@ -112,7 +112,7 @@ class TestGetLiveKitToken:
             response = client.post(url)
 
         assert response.status_code == 200
-        mock_pass_totem.assert_called_once_with(event.slug, False, user.slug)
+        mock_pass_totem.assert_called_once_with(event.slug, event.circle.author.slug, user.slug)
 
     def test_accept_totem_success(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -123,7 +123,7 @@ class TestGetLiveKitToken:
             response = client.post(url)
 
         assert response.status_code == 200
-        mock_accept_totem.assert_called_once_with(event.slug, user.slug)
+        mock_accept_totem.assert_called_once_with(event.slug, event.circle.author.slug, user.slug)
 
     def test_start_room_success_by_staff(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -136,7 +136,7 @@ class TestGetLiveKitToken:
             response = client.post(url)
 
         assert response.status_code == 200
-        mock_start_room.assert_called_once_with(event.slug)
+        mock_start_room.assert_called_once_with(event.slug, event.circle.author.slug)
 
     def test_start_room_forbidden_for_non_staff(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -222,6 +222,23 @@ class TestGetLiveKitToken:
 
         assert response.status_code == 200
         mock_remove.assert_called_once_with(event.slug, participant_to_remove)
+
+    def test_remove_participant_cannot_remove_keeper(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        user.is_staff = True
+        user.save()
+
+        event = CircleEventFactory()
+        participant_to_remove = event.circle.author.slug
+
+        url = reverse(
+            "mobile-api:remove_participant",
+            kwargs={"event_slug": event.slug, "participant_identity": participant_to_remove},
+        )
+        response = client.post(url)
+
+        assert response.status_code == 403
+        assert response.json() == "Cannot remove the keeper from the room."
 
     def test_remove_participant_forbidden_for_non_staff(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
