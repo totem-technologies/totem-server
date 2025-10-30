@@ -134,7 +134,7 @@ def get_spaces_summary(request: HttpRequest):
     )
     upcoming_events = (
         CircleEvent.objects.annotate(end_time=end_time_expression)
-        .filter(attendees=user, circle__published=True, cancelled=False, end_time__gt=timezone.now())
+        .filter(attendees=user, cancelled=False, end_time__gt=timezone.now())
         .select_related("circle")
         .prefetch_related("circle__author", "circle__categories", "attendees")
         .annotate(attendee_count=Count("attendees", distinct=True))
