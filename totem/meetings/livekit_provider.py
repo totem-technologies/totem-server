@@ -1,6 +1,5 @@
 import json
 from contextlib import asynccontextmanager
-from typing import List
 
 from asgiref.sync import async_to_sync
 from django.conf import settings
@@ -228,7 +227,7 @@ async def end_room(room_name: str):
 
 
 @async_to_sync
-async def reorder(room_name: str, new_order: List[str]) -> List[str]:
+async def reorder(room_name: str, new_order: list[str]) -> list[str]:
     """
     Reorders the participants in the room.
     """

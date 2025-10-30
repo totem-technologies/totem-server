@@ -89,10 +89,11 @@ def accept_totem_endpoint(request: HttpRequest, event_slug: str):
 def start_room_endpoint(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
     event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
+    is_keeper = event.circle.author.slug == user.slug
 
-    if not user.is_staff:
+    if not is_keeper:
         logging.warning("User %s attempted to update metadata for event %s", user.slug, event.slug)
-        raise AuthorizationError(message="Only staff can update room metadata.")
+        raise AuthorizationError(message="Only the Keeper can update room metadata.")
 
     try:
         livekit.start_room(room_name=event.slug, keeper_slug=event.circle.author.slug)
@@ -108,10 +109,11 @@ def start_room_endpoint(request: HttpRequest, event_slug: str):
 def end_room_endpoint(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
     event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
+    is_keeper = event.circle.author.slug == user.slug
 
-    if not user.is_staff:
+    if not is_keeper:
         logging.warning("User %s attempted to update metadata for event %s", user.slug, event.slug)
-        raise AuthorizationError(message="Only staff can update room metadata.")
+        raise AuthorizationError(message="Only the Keeper can update room metadata.")
 
     try:
         livekit.end_room(event.slug)
@@ -126,12 +128,13 @@ def end_room_endpoint(request: HttpRequest, event_slug: str):
 )
 def mute_participant_endpoint(request: HttpRequest, event_slug: str, participant_identity: str):
     user: User = request.user  # type: ignore
-
-    if not user.is_staff:
-        logging.warning("User %s attempted to update metadata for event %s", user.slug, event_slug)
-        raise AuthorizationError(message="Only staff can update room metadata.")
-
     event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
+    is_keeper = event.circle.author.slug == user.slug
+
+    if not is_keeper:
+        logging.warning("User %s attempted to update metadata for event %s", user.slug, event_slug)
+        raise AuthorizationError(message="Only the Keeper can update room metadata.")
+
     try:
         livekit.mute_participant(event.slug, participant_identity)
         return HttpResponse()
@@ -145,12 +148,12 @@ def mute_participant_endpoint(request: HttpRequest, event_slug: str, participant
 )
 def remove_participant_endpoint(request: HttpRequest, event_slug: str, participant_identity: str):
     user: User = request.user  # type: ignore
-
-    if not user.is_staff:
-        logging.warning("User %s attempted to update metadata for event %s", user.slug, event_slug)
-        raise AuthorizationError(message="Only staff can update room metadata.")
-
     event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
+    is_keeper = event.circle.author.slug == user.slug
+
+    if not is_keeper:
+        logging.warning("User %s attempted to update metadata for event %s", user.slug, event_slug)
+        raise AuthorizationError(message="Only the Keeper can update room metadata.")
 
     if event.circle.author.slug == participant_identity:
         raise AuthorizationError(message="Cannot remove the keeper from the room.")
@@ -169,12 +172,13 @@ def remove_participant_endpoint(request: HttpRequest, event_slug: str, participa
 )
 def reorder_participants_endpoint(request: HttpRequest, event_slug: str, order: LivekitMuteParticipantSchema):
     user: User = request.user  # type: ignore
-
-    if not user.is_staff:
-        logging.warning("User %s attempted to update metadata for event %s", user.slug, event_slug)
-        raise AuthorizationError(message="Only staff can update room metadata.")
-
     event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
+    is_keeper = event.circle.author.slug == user.slug
+
+    if not is_keeper:
+        logging.warning("User %s attempted to update metadata for event %s", user.slug, event_slug)
+        raise AuthorizationError(message="Only the Keeper can update room metadata.")
+
     try:
         new_order = livekit.reorder(event.slug, order.order)
         return LivekitMuteParticipantSchema(order=new_order)
