@@ -112,7 +112,7 @@ class TestGetLiveKitToken:
             response = client.post(url)
 
         assert response.status_code == 200
-        mock_pass_totem.assert_called_once_with(event.slug, user.slug)
+        mock_pass_totem.assert_called_once_with(event.slug, False, user.slug)
 
     def test_accept_totem_success(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
