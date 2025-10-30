@@ -8,7 +8,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from totem.circles.models import CircleEvent
-from totem.circles.tests.factories import CircleEventFactory
+from totem.circles.tests.factories import CircleEventFactory, CircleFactory
 from totem.users.models import User
 
 
@@ -133,7 +133,9 @@ class TestGetLiveKitToken:
         client, user = client_with_user
         user.is_staff = True
         user.save()
-        event = CircleEventFactory()
+
+        circle = CircleFactory(author=user)
+        event = CircleEventFactory(circle=circle)
 
         with patch(f"{self.LIVEKIT_PROVIDER_PATH}.start_room", new_callable=Mock) as mock_start_room:
             url = reverse("mobile-api:start_room", kwargs={"event_slug": event.slug})
@@ -160,7 +162,9 @@ class TestGetLiveKitToken:
         client, user = client_with_user
         user.is_staff = True
         user.save()
-        event = CircleEventFactory()
+
+        circle = CircleFactory(author=user)
+        event = CircleEventFactory(circle=circle)
 
         with patch(f"{self.LIVEKIT_PROVIDER_PATH}.end_room", new_callable=Mock) as mock_end_room:
             url = reverse("mobile-api:end_room", kwargs={"event_slug": event.slug})
@@ -184,7 +188,9 @@ class TestGetLiveKitToken:
         client, user = client_with_user
         user.is_staff = True
         user.save()
-        event = CircleEventFactory()
+
+        circle = CircleFactory(author=user)
+        event = CircleEventFactory(circle=circle)
         participant_to_mute = "participant-slug-to-mute"
 
         with patch(f"{self.LIVEKIT_PROVIDER_PATH}.mute_participant", new_callable=Mock) as mock_mute:
@@ -217,7 +223,8 @@ class TestGetLiveKitToken:
         user.is_staff = True
         user.save()
 
-        event = CircleEventFactory()
+        circle = CircleFactory(author=user)
+        event = CircleEventFactory(circle=circle)
         participant_to_remove = "participant-slug-to-remove"
 
         with patch(f"{self.LIVEKIT_PROVIDER_PATH}.remove_participant", new_callable=Mock) as mock_remove:
@@ -235,7 +242,8 @@ class TestGetLiveKitToken:
         user.is_staff = True
         user.save()
 
-        event = CircleEventFactory()
+        circle = CircleFactory(author=user)
+        event = CircleEventFactory(circle=circle)
         participant_to_remove = event.circle.author.slug
 
         url = reverse(
@@ -281,7 +289,8 @@ class TestGetLiveKitToken:
         user.is_staff = True
         user.save()
 
-        event = CircleEventFactory()
+        circle = CircleFactory(author=user)
+        event = CircleEventFactory(circle=circle)
         event.save()
 
         new_order = ["participant1-slug", "participant2-slug", user.slug]
@@ -324,7 +333,9 @@ class TestGetLiveKitToken:
         client, user = client_with_user
         user.is_staff = True
         user.save()
-        event = CircleEventFactory()
+
+        circle = CircleFactory(author=user)
+        event = CircleEventFactory(circle=circle)
         new_order = ["invalid-slug"]
         payload = {"order": new_order}
 
