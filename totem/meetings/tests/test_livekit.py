@@ -245,7 +245,7 @@ class TestGetLiveKitToken:
         response = client.post(url)
 
         assert response.status_code == 403
-        assert response.json()['detail'] == "Cannot remove the keeper from the room."
+        assert response.json()["detail"] == "Cannot remove the keeper from the room."
 
     def test_remove_participant_forbidden_for_non_staff(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
