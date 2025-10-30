@@ -13,7 +13,7 @@ from ..circles.models import CircleEvent
 
 
 @asynccontextmanager
-async def get_lk_api_client():
+async def _get_lk_api_client():
     """Provides an initialized and automatically closed LiveKitAPI client."""
     if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
         raise ValueError("LiveKit API key and secret are not configured.")
@@ -81,7 +81,7 @@ async def _ensure_keeper_in_room(room_name: str, keeper_slug: str):
     """
     Ensures that the keeper is in the room.
     """
-    async with get_lk_api_client() as lkapi:
+    async with _get_lk_api_client() as lkapi:
         participant = await lkapi.room.get_participant(
             api.RoomParticipantIdentity(
                 room=room_name,
@@ -97,7 +97,7 @@ async def initialize_room(room_name: str, speaking_order: list[str]):
     """
     Initializes a room with default metadata if it doesn't exist.
     """
-    async with get_lk_api_client() as lkapi:
+    async with _get_lk_api_client() as lkapi:
         room = await get_room(room_name, lkapi)
         if not room:
             state = SessionState(speaking_order=speaking_order)
@@ -117,7 +117,7 @@ async def pass_totem(room_name: str, keeper_slug: str, user_identity: str):
     Passes the totem to the next participant in the room.
     """
 
-    async with get_lk_api_client() as lkapi:
+    async with _get_lk_api_client() as lkapi:
         room = await get_room(room_name, lkapi)
         if not room:
             raise ValueError(f"Room {room_name} does not exist.")
@@ -147,7 +147,7 @@ async def accept_totem(room_name: str, keeper_slug: str, user_identity: str):
     Accepts the totem from the current speaker in the room.
     """
 
-    async with get_lk_api_client() as lkapi:
+    async with _get_lk_api_client() as lkapi:
         room = await get_room(room_name, lkapi)
         if not room:
             raise ValueError(f"Room {room_name} does not exist.")
@@ -180,7 +180,7 @@ async def start_room(room_name: str, keeper_slug: str):
     Starts the session in the room by updating its status to 'started'.
     """
 
-    async with get_lk_api_client() as lkapi:
+    async with _get_lk_api_client() as lkapi:
         room = await get_room(room_name, lkapi)  # Pass the client in
         if not room:
             raise ValueError(f"Room {room_name} does not exist.")
@@ -207,7 +207,7 @@ async def end_room(room_name: str):
     Ends the session in the room by updating its status to 'ended'.
     """
 
-    async with get_lk_api_client() as lkapi:
+    async with _get_lk_api_client() as lkapi:
         room = await get_room(room_name, lkapi)
         if not room:
             raise ValueError(f"Room {room_name} does not exist.")
@@ -233,7 +233,7 @@ async def reorder(room_name: str, new_order: List[str]) -> List[str]:
     Reorders the participants in the room.
     """
 
-    async with get_lk_api_client() as lkapi:
+    async with _get_lk_api_client() as lkapi:
         room = await get_room(room_name, lkapi)
         if not room:
             raise ValueError(f"Room {room_name} does not exist.")
@@ -261,7 +261,7 @@ async def mute_participant(room_name: str, user_identity: str):
     Mutes a participant in the room.
     """
 
-    async with get_lk_api_client() as lkapi:
+    async with _get_lk_api_client() as lkapi:
         room = await get_room(room_name, lkapi)
         if not room:
             raise ValueError(f"Room {room_name} does not exist.")
@@ -298,7 +298,7 @@ async def remove_participant(room_name: str, user_identity: str):
     Removes a participant from the room.
     """
 
-    async with get_lk_api_client() as lkapi:
+    async with _get_lk_api_client() as lkapi:
         room = await get_room(room_name, lkapi)
         if not room:
             raise ValueError(f"Room {room_name} does not exist.")

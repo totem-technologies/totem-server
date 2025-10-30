@@ -123,7 +123,11 @@ class TestGetLiveKitToken:
             response = client.post(url)
 
         assert response.status_code == 200
-        mock_accept_totem.assert_called_once_with(event.slug, event.circle.author.slug, user.slug)
+        mock_accept_totem.assert_called_once_with(
+            room_name=event.slug,
+            user_identity=user.slug,
+            keeper_slug=event.circle.author.slug,
+        )
 
     def test_start_room_success_by_staff(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -136,7 +140,10 @@ class TestGetLiveKitToken:
             response = client.post(url)
 
         assert response.status_code == 200
-        mock_start_room.assert_called_once_with(event.slug, event.circle.author.slug)
+        mock_start_room.assert_called_once_with(
+            room_name=event.slug,
+            keeper_slug=event.circle.author.slug,
+        )
 
     def test_start_room_forbidden_for_non_staff(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -238,7 +245,7 @@ class TestGetLiveKitToken:
         response = client.post(url)
 
         assert response.status_code == 403
-        assert response.json() == "Cannot remove the keeper from the room."
+        assert response.json()['detail'] == "Cannot remove the keeper from the room."
 
     def test_remove_participant_forbidden_for_non_staff(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
