@@ -181,6 +181,32 @@ async def start_room(room_name: str):
 
 
 @async_to_sync
+async def end_room(room_name: str):
+    """
+    Ends the session in the room by updating its status to 'ended'.
+    """
+
+    async with get_lk_api_client() as lkapi:
+        room = await get_room(room_name, lkapi)
+        if not room:
+            raise ValueError(f"Room {room_name} does not exist.")
+
+        current_state = json.loads(room.metadata) if room.metadata else {}
+        state = SessionState(**current_state)
+
+        if state.status == SessionStatus.ENDED:
+            raise ValueError(f"Room {room_name} has already ended.")
+
+        state.end()
+        await lkapi.room.update_room_metadata(
+            update=api.UpdateRoomMetadataRequest(
+                room=room_name,
+                metadata=json.dumps(state.dict()),
+            )
+        )
+
+
+@async_to_sync
 async def reorder(room_name: str, new_order: List[str]) -> List[str]:
     """
     Reorders the participants in the room.
@@ -263,7 +289,8 @@ async def remove_participant(room_name: str, user_identity: str):
                     identity=user_identity,
                 )
             )
-            if not participant:
-                raise ValueError(f"Participant {user_identity} not found in room {room_name}.")
         except Exception as e:
             raise ValueError(f"Failed to remove participant {user_identity} from room {room_name}: {e}")
+
+        if not participant:
+            raise ValueError(f"Participant {user_identity} not found in room {room_name}.")

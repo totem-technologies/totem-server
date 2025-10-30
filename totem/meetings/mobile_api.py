@@ -98,6 +98,25 @@ def start_room_endpoint(request: HttpRequest, event_slug: str):
 
 
 @meetings_router.post(
+    "/event/{event_slug}/end",
+    url_name="end_room",
+)
+def end_room_endpoint(request: HttpRequest, event_slug: str):
+    user: User = request.user  # type: ignore
+    event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
+
+    if not user.is_staff:
+        logging.warning("User %s attempted to update metadata for event %s", user.slug, event.slug)
+        raise AuthorizationError(message="Only staff can update room metadata.")
+
+    try:
+        livekit.end_room(event.slug)
+        return HttpResponse()
+    except ValueError as e:
+        raise AuthorizationError(message=str(e))
+
+
+@meetings_router.post(
     "/event/{event_slug}/mute/{participant_identity}",
     url_name="mute_participant",
 )

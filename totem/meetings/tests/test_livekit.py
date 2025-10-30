@@ -149,6 +149,30 @@ class TestGetLiveKitToken:
         assert response.status_code == 403
         mock_start_room.assert_not_called()
 
+    def test_end_room_success_by_staff(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        user.is_staff = True
+        user.save()
+        event = CircleEventFactory()
+
+        with patch(f"{self.LIVEKIT_PROVIDER_PATH}.end_room", new_callable=Mock) as mock_end_room:
+            url = reverse("mobile-api:end_room", kwargs={"event_slug": event.slug})
+            response = client.post(url)
+
+        assert response.status_code == 200
+        mock_end_room.assert_called_once_with(event.slug)
+
+    def test_end_room_forbidden_for_non_staff(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory()
+
+        with patch(f"{self.LIVEKIT_PROVIDER_PATH}.end_room", new_callable=Mock) as mock_end_room:
+            url = reverse("mobile-api:end_room", kwargs={"event_slug": event.slug})
+            response = client.post(url)
+
+        assert response.status_code == 403
+        mock_end_room.assert_not_called()
+
     def test_mute_participant_success_by_staff(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         user.is_staff = True

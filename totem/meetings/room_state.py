@@ -23,6 +23,13 @@ class SessionState(Schema):
         if self.speaking_order:
             self.speaking_now = self.speaking_order[0]
 
+    def end(self):
+        """
+        Ends the session by setting the status to 'ended' and clearing the current speaker.
+        """
+        self.status = SessionStatus.ENDED
+        self.speaking_now = None
+
     def pass_totem(self):
         """
         Passes the totem to the next person and returns the new state.
