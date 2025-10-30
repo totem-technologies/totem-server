@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import List, Optional
 
 from ninja import Schema
 
@@ -12,8 +11,8 @@ class SessionStatus(str, Enum):
 
 class SessionState(Schema):
     status: str = SessionStatus.WAITING
-    speaking_order: List[str]
-    speaking_now: Optional[str] = None
+    speaking_order: list[str]
+    speaking_now: str | None = None
 
     def start(self):
         """
@@ -45,7 +44,7 @@ class SessionState(Schema):
 
         self.speaking_now = order[next_index]
 
-    def reorder(self, new_order: List[str]):
+    def reorder(self, new_order: list[str]):
         """
         Reorders the speaking order.
         """
