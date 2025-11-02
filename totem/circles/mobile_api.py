@@ -159,8 +159,8 @@ def get_spaces_summary(request: HttpRequest):
     recommended_events = upcoming_recommended_events(user, categories=list(categories_set))
     for_you = [space_detail_schema(event.circle, user, event) for event in recommended_events]
 
-    events = get_upcoming_events_for_spaces_list()
-    explore = [space_detail_schema(event.circle, user, event) for event in events]
+    spaces = Circle.objects.filter(published=True, open=True)
+    explore = [space_detail_schema(space, user) for space in spaces]
 
     return SummarySpacesSchema(
         upcoming=upcoming,

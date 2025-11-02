@@ -269,17 +269,8 @@ class TestMobileApiSpaces:
         client, user = client_with_user
         OnboardModelFactory(user=user)
 
-        # This circle has an upcoming event and should appear in 'explore'
-        explore_circle_1 = CircleFactory()
-        CircleEventFactory(circle=explore_circle_1, start=timezone.now() + timedelta(days=10))
-
-        # This circle only has past events and should NOT appear
-        past_event_circle = CircleFactory()
-        CircleEventFactory(circle=past_event_circle, start=timezone.now() - timedelta(days=1))
-
-        # This circle is unpublished and should NOT appear
+        circle = CircleFactory()
         unpublished_circle = CircleFactory(published=False)
-        CircleEventFactory(circle=unpublished_circle, start=timezone.now() + timedelta(days=5))
 
         url = reverse("mobile-api:spaces_summary")
         response = client.get(url)
@@ -287,8 +278,7 @@ class TestMobileApiSpaces:
         data = response.json()
 
         explore_slugs = {item["slug"] for item in data["explore"]}
-        assert explore_circle_1.slug in explore_slugs
-        assert past_event_circle.slug not in explore_slugs
+        assert circle.slug in explore_slugs
         assert unpublished_circle.slug not in explore_slugs
 
     def test_rsvp_confirm(self, client_with_user: tuple[Client, User]):
