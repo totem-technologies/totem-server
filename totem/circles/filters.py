@@ -199,6 +199,12 @@ def space_detail_schema(circle: Circle, user: User, event: CircleEvent | None = 
             joinable=next_event.can_join(user),
         )
 
+    past = timezone.now() - datetime.timedelta(minutes=60)
+    next_events = CircleEvent.objects.filter(circle=circle, start__gte=past, cancelled=False).order_by("start")
+    event_schemas: list[EventDetailSchema] = [
+        event_detail_schema(event, user) for event in next_events
+    ]
+
     return SpaceDetailSchema(
         slug=circle.slug,
         title=circle.title,
@@ -211,4 +217,5 @@ def space_detail_schema(circle: Circle, user: User, event: CircleEvent | None = 
         subscribers=circle.subscribed.count(),
         price=circle.price,
         recurring=circle.recurring,
+        next_events=event_schemas,
     )

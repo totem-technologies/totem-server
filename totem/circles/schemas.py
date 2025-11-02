@@ -134,9 +134,10 @@ class SpaceDetailSchema(Schema):
     subscribers: int
     recurring: str | None
     price: int
+    next_events: list[EventDetailSchema]
 
 
 class SummarySpacesSchema(Schema):
-    upcoming: List[EventDetailSchema]
-    for_you: List[SpaceDetailSchema]
-    explore: List[SpaceDetailSchema]
+    upcoming: list[EventDetailSchema]
+    for_you: list[SpaceDetailSchema]
+    explore: list[SpaceDetailSchema]
