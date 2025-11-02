@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List
 
 from pydantic import BaseModel
 
@@ -18,7 +17,7 @@ class NotificationType(str, Enum):
 
 
 class Notification(BaseModel):
-    recipients: List[User]
+    recipients: list[User]
     title: str
     message: str
     category: str

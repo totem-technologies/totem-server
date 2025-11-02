@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 from django.shortcuts import get_object_or_404
 from ninja import ModelSchema, Router
 from ninja.pagination import paginate
@@ -10,12 +8,12 @@ from .models import BlogPost
 
 
 class BlogPostSchema(ModelSchema):
-    author: Optional[PublicUserSchema] = None
-    header_image_url: Optional[str] = None
-    content_html: Optional[str] = None
+    author: PublicUserSchema | None = None
+    header_image_url: str | None = None
+    content_html: str | None = None
 
     @staticmethod
-    def resolve_header_image_url(obj) -> Optional[str]:
+    def resolve_header_image_url(obj) -> str | None:
         if obj.header_image and hasattr(obj.header_image, "url"):
             return obj.header_image.url
         return None
@@ -26,11 +24,11 @@ class BlogPostSchema(ModelSchema):
 
 
 class BlogPostListSchema(ModelSchema):
-    author: Optional[PublicUserSchema] = None
-    header_image_url: Optional[str] = None
+    author: PublicUserSchema | None = None
+    header_image_url: str | None = None
 
     @staticmethod
-    def resolve_header_image_url(obj: BlogPost) -> Optional[str]:
+    def resolve_header_image_url(obj: BlogPost) -> str | None:
         if obj.header_image and hasattr(obj.header_image, "url"):
             return obj.header_image.url
         return None
@@ -43,7 +41,7 @@ class BlogPostListSchema(ModelSchema):
 blog_router = Router()
 
 
-@blog_router.get("/posts", response={200: List[BlogPostListSchema]}, tags=["blog"], url_name="list_posts")
+@blog_router.get("/posts", response={200: list[BlogPostListSchema]}, tags=["blog"], url_name="list_posts")
 @paginate
 def list_posts(request):
     """List all blog posts"""

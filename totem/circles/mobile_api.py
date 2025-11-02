@@ -1,5 +1,4 @@
 import datetime
-from typing import List
 
 from django.db import transaction
 from django.db.models import Count, DateTimeField, ExpressionWrapper, F
@@ -43,12 +42,12 @@ def unsubscribe_to_space(request: HttpRequest, space_slug: str):
     return True
 
 
-@spaces_router.get("/subscribe", response={200: List[SpaceSchema]}, url_name="spaces_subscriptions")
+@spaces_router.get("/subscribe", response={200: list[SpaceSchema]}, url_name="spaces_subscriptions")
 def list_subscriptions(request: HttpRequest):
     return Circle.objects.filter(subscribed=request.user)
 
 
-@spaces_router.get("/", response={200: List[SpaceDetailSchema]}, url_name="mobile_spaces_list")
+@spaces_router.get("/", response={200: list[SpaceDetailSchema]}, url_name="mobile_spaces_list")
 @paginate
 def list_spaces(request):
     events = get_upcoming_events_for_spaces_list()
@@ -82,7 +81,7 @@ def get_space_detail(request: HttpRequest, space_slug: str):
     return space_detail_schema(space, user)
 
 
-@spaces_router.get("/keeper/{slug}/", response={200: List[SpaceDetailSchema]}, url_name="keeper_spaces")
+@spaces_router.get("/keeper/{slug}/", response={200: list[SpaceDetailSchema]}, url_name="keeper_spaces")
 def get_keeper_spaces(request: HttpRequest, slug: str):
     user: User = request.user  # type: ignore
     circles = Circle.objects.filter(author__slug=slug, published=True)
@@ -95,7 +94,7 @@ def get_keeper_spaces(request: HttpRequest, slug: str):
     return spaces
 
 
-@spaces_router.get("/sessions/history", response={200: List[EventDetailSchema]}, url_name="sessions_history")
+@spaces_router.get("/sessions/history", response={200: list[EventDetailSchema]}, url_name="sessions_history")
 def get_sessions_history(request: HttpRequest):
     user: User = request.user  # type: ignore
 
@@ -107,7 +106,7 @@ def get_sessions_history(request: HttpRequest):
     return events
 
 
-@spaces_router.get("/recommended", response={200: List[EventDetailSchema]}, url_name="recommended_spaces")
+@spaces_router.get("/recommended", response={200: list[EventDetailSchema]}, url_name="recommended_spaces")
 def get_recommended_spaces(request: HttpRequest, limit: int = 3, categories: list[str] | None = None):
     user: User = request.user  # type: ignore
 
