@@ -126,41 +126,48 @@ def get_recommended_spaces(request: HttpRequest, limit: int = 3, categories: lis
 def get_spaces_summary(request: HttpRequest):
     user: User = request.user  # type: ignore
 
-    # The upcoming events that the user is subscribed to
+    now = timezone.now()
+
+    onboard_model = OnboardModel.objects.filter(user=user).only("hopes").first()
+    categories_set = set()
+
+    if onboard_model and onboard_model.hopes:
+        categories_set.update(filter(None, (hope.strip() for hope in onboard_model.hopes.split(","))))
+    previous_category_names = (
+        Circle.objects.filter(subscribed=user, published=True).values_list("categories__name", flat=True).distinct()
+    )
+    categories_set.update(filter(None, previous_category_names))
+    categories_list = list(categories_set)
+
     end_time_expression = ExpressionWrapper(
         F("start") + F("duration_minutes") * datetime.timedelta(minutes=1),
         output_field=DateTimeField(),
     )
-    upcoming_events = (
+    upcoming_events_queryset = (
         CircleEvent.objects.annotate(end_time=end_time_expression)
-        .filter(attendees=user, cancelled=False, end_time__gt=timezone.now())
+        .filter(attendees=user, cancelled=False, end_time__gt=now)
         .select_related("circle")
         .prefetch_related("circle__author", "circle__categories", "attendees")
         .annotate(attendee_count=Count("attendees", distinct=True))
         .order_by("start")
     )
+    upcoming_events = list(upcoming_events_queryset)
+    upcoming_event_ids = {event.id for event in upcoming_events}
     upcoming = [event_detail_schema(event, user) for event in upcoming_events]
 
-    # The recommended spaces based on the user's onboarding.
-    onboard_model = get_object_or_404(OnboardModel, user=user)
-    categories_set = set()
-    if onboard_model.hopes:
-        for hope in onboard_model.hopes.split(","):
-            name = hope.strip()
-            if name:
-                categories_set.add(name)
-    # Add categories from user's previously joined spaces (single query)
-    previous_category_names = (
-        Circle.objects.filter(subscribed=user, published=True).values_list("categories__name", flat=True).distinct()
-    )
-    for name in previous_category_names:
-        if name:
-            categories_set.add(name)
-    recommended_events = upcoming_recommended_events(user, categories=list(categories_set))
-    for_you = [space_detail_schema(event.circle, user, event) for event in recommended_events]
+    recommended_events = upcoming_recommended_events(user, categories=categories_list)
+    for_you = [
+        space_detail_schema(event.circle, user, event)
+        for event in recommended_events
+        if event.id not in upcoming_event_ids
+    ]
 
-    spaces = Circle.objects.filter(published=True, open=True)
-    explore = [space_detail_schema(space, user) for space in spaces]
+    spaces_qs = (
+        Circle.objects.filter(published=True, open=True)
+        .select_related("author")
+        .prefetch_related("categories", "subscribed")
+    )
+    explore = [space_detail_schema(space, user) for space in spaces_qs]
 
     return SummarySpacesSchema(
         upcoming=upcoming,
