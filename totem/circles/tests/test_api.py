@@ -328,21 +328,21 @@ class TestListSpaces:
         title_to_space = {item["title"]: item for item in data}
 
         # Verify each space has the correct seats_left value
-        assert title_to_space["All Seats Available"]["next_events"][0]["seats_left"] == 10, (
-            "Expected 10 seats left for 'All Seats Available'"
-        )
-        assert title_to_space["Some Seats Taken"]["next_events"][0]["seats_left"] == 7, (
-            "Expected 7 seats left for 'Some Seats Taken'"
-        )
-        assert title_to_space["Full Event"]["next_events"][0]["seats_left"] == 0, (
-            "Expected 0 seats left for 'Full Event'"
-        )
+        assert (
+            title_to_space["All Seats Available"]["next_events"][0]["seats_left"] == 10
+        ), "Expected 10 seats left for 'All Seats Available'"
+        assert (
+            title_to_space["Some Seats Taken"]["next_events"][0]["seats_left"] == 7
+        ), "Expected 7 seats left for 'Some Seats Taken'"
+        assert (
+            title_to_space["Full Event"]["next_events"][0]["seats_left"] == 0
+        ), "Expected 0 seats left for 'Full Event'"
         # Verify other properties are present
         for space in data:
             assert "slug" in space
             assert "title" in space
             assert "author" in space
-            assert "next_events" in space
+            assert "next_event" in space
             assert "start" in space["next_events"][0]
             assert "link" in space["next_events"][0]
             assert "seats_left" in space["next_events"][0]

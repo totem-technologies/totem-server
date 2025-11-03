@@ -12,7 +12,6 @@ from ninja.pagination import paginate
 from totem.circles.api import SpaceDetailSchema
 from totem.circles.filters import (
     event_detail_schema,
-    get_upcoming_events_for_spaces_list,
     space_detail_schema,
     space_schema,
     upcoming_recommended_events,
