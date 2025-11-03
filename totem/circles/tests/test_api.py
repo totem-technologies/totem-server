@@ -342,7 +342,8 @@ class TestListSpaces:
             assert "slug" in space
             assert "title" in space
             assert "author" in space
-            assert "next_event" in space
-            assert "start" in space["next_events"][0]
-            assert "link" in space["next_events"][0]
-            assert "seats_left" in space["next_events"][0]
+            assert "next_events" in space
+            for event in space["next_events"]:
+                assert "start" in event
+                assert "link" in event
+                assert "seats_left" in event
