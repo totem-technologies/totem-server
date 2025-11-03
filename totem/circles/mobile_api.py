@@ -1,7 +1,7 @@
 import datetime
 
 from django.db import transaction
-from django.db.models import Count, DateTimeField, ExpressionWrapper, F
+from django.db.models import Count, DateTimeField, ExpressionWrapper, F, Prefetch
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -12,6 +12,7 @@ from ninja.pagination import paginate
 from totem.circles.api import SpaceDetailSchema
 from totem.circles.filters import (
     event_detail_schema,
+    get_upcoming_events_for_spaces_list,
     space_detail_schema,
     space_schema,
     upcoming_recommended_events,
@@ -44,7 +45,8 @@ def unsubscribe_to_space(request: HttpRequest, space_slug: str):
 
 @spaces_router.get("/subscribe", response={200: list[SpaceSchema]}, url_name="spaces_subscriptions")
 def list_subscriptions(request: HttpRequest):
-    return Circle.objects.filter(subscribed=request.user)
+    circles = Circle.objects.filter(subscribed=request.user).select_related("author").prefetch_related("categories")
+    return [space_schema(circle, request.user) for circle in circles]
 
 
 @spaces_router.get("/", response={200: list[SpaceSchema]}, url_name="mobile_spaces_list")
@@ -58,25 +60,47 @@ def list_spaces(request):
 @spaces_router.get("/event/{event_slug}", response={200: EventDetailSchema}, url_name="event_detail")
 def get_event_detail(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
-    event = get_object_or_404(CircleEvent, slug=event_slug)
+    event = get_object_or_404(
+        CircleEvent.objects.select_related("circle", "circle__author").prefetch_related(
+            "circle__categories", "circle__subscribed", "attendees"
+        ),
+        slug=event_slug,
+    )
     return event_detail_schema(event, user)
 
 
 @spaces_router.get("/space/{space_slug}", response={200: SpaceDetailSchema}, url_name="spaces_detail")
 def get_space_detail(request: HttpRequest, space_slug: str):
     user: User = request.user  # type: ignore
-    space = get_object_or_404(Circle, slug=space_slug)
+    space = get_object_or_404(
+        Circle.objects.select_related("author").prefetch_related("categories", "subscribed"), slug=space_slug
+    )
     return space_detail_schema(space, user)
 
 
 @spaces_router.get("/keeper/{slug}/", response={200: list[SpaceDetailSchema]}, url_name="keeper_spaces")
 def get_keeper_spaces(request: HttpRequest, slug: str):
     user: User = request.user  # type: ignore
-    circles = Circle.objects.filter(author__slug=slug, published=True)
+
+    # Prefetch upcoming events for each circle to avoid N+1 queries
+    grace_period = datetime.timedelta(minutes=60)
+    upcoming_events_prefetch = Prefetch(
+        "events",
+        queryset=CircleEvent.objects.filter(start__gte=timezone.now() - grace_period, cancelled=False)
+        .order_by("start")
+        .prefetch_related("attendees"),
+    )
+
+    circles = (
+        Circle.objects.filter(author__slug=slug, published=True)
+        .select_related("author")
+        .prefetch_related("categories", "subscribed", upcoming_events_prefetch)
+    )
 
     spaces: list[SpaceDetailSchema] = []
     for circle in circles:
-        if circle.next_event():
+        next_event = circle.next_event()
+        if next_event:
             spaces.append(space_detail_schema(circle, user))
 
     return spaces
@@ -86,7 +110,12 @@ def get_keeper_spaces(request: HttpRequest, slug: str):
 def get_sessions_history(request: HttpRequest):
     user: User = request.user  # type: ignore
 
-    circle_history_query = user.events_joined.filter(circle__published=True, cancelled=False).order_by("-start")
+    circle_history_query = (
+        user.events_joined.filter(circle__published=True, cancelled=False)
+        .select_related("circle", "circle__author")
+        .prefetch_related("circle__categories", "circle__subscribed", "attendees")
+        .order_by("-start")
+    )
     circle_history = circle_history_query.all()[0:10]
 
     events = [event_detail_schema(event, user) for event in circle_history]
@@ -114,46 +143,41 @@ def get_recommended_spaces(request: HttpRequest, limit: int = 3, categories: lis
 def get_spaces_summary(request: HttpRequest):
     user: User = request.user  # type: ignore
 
-    now = timezone.now()
-
-    onboard_model = OnboardModel.objects.filter(user=user).only("hopes").first()
-    categories_set = set()
-
-    if onboard_model and onboard_model.hopes:
-        categories_set.update(filter(None, (hope.strip() for hope in onboard_model.hopes.split(","))))
-    previous_category_names = (
-        Circle.objects.filter(subscribed=user, published=True).values_list("categories__name", flat=True).distinct()
-    )
-    categories_set.update(filter(None, previous_category_names))
-    categories_list = list(categories_set)
-
+    # The upcoming events that the user is subscribed to
     end_time_expression = ExpressionWrapper(
         F("start") + F("duration_minutes") * datetime.timedelta(minutes=1),
         output_field=DateTimeField(),
     )
-    upcoming_events_queryset = (
+    upcoming_events = (
         CircleEvent.objects.annotate(end_time=end_time_expression)
-        .filter(attendees=user, cancelled=False, end_time__gt=now)
-        .select_related("circle")
-        .prefetch_related("circle__author", "circle__categories", "attendees")
+        .filter(attendees=user, cancelled=False, end_time__gt=timezone.now())
+        .select_related("circle", "circle__author")
+        .prefetch_related("circle__categories", "circle__subscribed", "attendees")
         .annotate(attendee_count=Count("attendees", distinct=True))
         .order_by("start")
     )
-    upcoming_events = list(upcoming_events_queryset)
-    upcoming_event_ids = {event.id for event in upcoming_events}
-    upcoming: list[EventDetailSchema] = [event_detail_schema(event, user) for event in upcoming_events]
+    upcoming = [event_detail_schema(event, user) for event in upcoming_events]
 
-    recommended_events = upcoming_recommended_events(user, categories=categories_list)
-    for_you: list[SpaceSchema] = [
-        space_schema(event.circle, user) for event in recommended_events if event.id not in upcoming_event_ids
-    ]
-
-    spaces_qs = (
-        Circle.objects.filter(published=True, open=True)
-        .select_related("author")
-        .prefetch_related("categories", "subscribed")
+    # The recommended spaces based on the user's onboarding.
+    onboard_model = get_object_or_404(OnboardModel, user=user)
+    categories_set = set()
+    if onboard_model.hopes:
+        for hope in onboard_model.hopes.split(","):
+            name = hope.strip()
+            if name:
+                categories_set.add(name)
+    # Add categories from user's previously joined spaces (single query)
+    previous_category_names = (
+        Circle.objects.filter(subscribed=user, published=True).values_list("categories__name", flat=True).distinct()
     )
-    explore: list[SpaceSchema] = [space_schema(space, user) for space in spaces_qs]
+    for name in previous_category_names:
+        if name:
+            categories_set.add(name)
+    recommended_events = upcoming_recommended_events(user, categories=list(categories_set))
+    for_you = [space_detail_schema(event.circle, user, event) for event in recommended_events]
+
+    events = get_upcoming_events_for_spaces_list()
+    explore = [space_detail_schema(event.circle, user, event) for event in events]
 
     return SummarySpacesSchema(
         upcoming=upcoming,
@@ -177,6 +201,13 @@ def rsvp_confirm(request: HttpRequest, event_slug: str):
             event.circle.subscribe(user)
     except CircleEventException as e:
         raise AuthorizationError(message=str(e))
+
+    # Refetch with prefetched relations for the schema
+    event = (
+        CircleEvent.objects.select_related("circle", "circle__author")
+        .prefetch_related("circle__categories", "circle__subscribed", "attendees")
+        .get(pk=event.pk)
+    )
     return event_detail_schema(event, user)
 
 
@@ -193,4 +224,11 @@ def rsvp_cancel(request: HttpRequest, event_slug: str):
         event.remove_attendee(user)
     except CircleEventException as e:
         raise AuthorizationError(message=str(e))
+
+    # Refetch with prefetched relations for the schema
+    event = (
+        CircleEvent.objects.select_related("circle", "circle__author")
+        .prefetch_related("circle__categories", "circle__subscribed", "attendees")
+        .get(pk=event.pk)
+    )
     return event_detail_schema(event, user)

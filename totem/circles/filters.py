@@ -62,8 +62,8 @@ def all_upcoming_recommended_events(user: User | None, category: str | None = No
 def upcoming_recommended_events(user: User | None, categories: list[str] | None = None, author: str | None = None):
     events = (
         CircleEvent.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True)
-        .select_related("circle")
-        .prefetch_related("circle__author", "circle__categories", "circle__subscribed")
+        .select_related("circle", "circle__author")
+        .prefetch_related("circle__categories", "circle__subscribed", "attendees")
         .annotate(
             attendee_count=Count("attendees", distinct=True),
             subscriber_count=Count("circle__subscribed", distinct=True),
@@ -92,8 +92,8 @@ def get_upcoming_events_for_spaces_list():
     first_category_subquery = CircleCategory.objects.filter(circle=OuterRef("pk")).values("name")[:1]
     return (
         CircleEvent.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True, circle__published=True)
-        .select_related("circle")
-        .prefetch_related("circle__author", "circle__categories", "circle__subscribed")
+        .select_related("circle", "circle__author")
+        .prefetch_related("circle__categories", "circle__subscribed", "attendees")
         .annotate(
             attendee_count=Count("attendees", distinct=True),
             subscriber_count=Count("circle__subscribed", distinct=True),
@@ -144,10 +144,13 @@ def upcoming_events_by_author(user: User, author: User, exclude_event: CircleEve
 def event_detail_schema(event: CircleEvent, user: User):
     space: Circle = event.circle
     start = event.start
-    subscribed = space.subscribed.contains(user) if user.is_authenticated else None
+
+    subscribed = user in space.subscribed.all() if user.is_authenticated else None
     ended = event.ended()
 
-    attending = event.attendees.filter(pk=user.pk).exists()
+    attending = user in event.attendees.all()
+
+    subscribers_count = getattr(event, "subscriber_count", space.subscribed.count())
 
     return EventDetailSchema(
         slug=event.slug,
@@ -159,7 +162,7 @@ def event_detail_schema(event: CircleEvent, user: User):
         seats_left=event.seats_left(),
         duration=event.duration_minutes,
         recurring=space.recurring,
-        subscribers=space.subscribed.count(),
+        subscribers=subscribers_count,
         start=start,
         attending=attending,
         open=event.open,
@@ -181,7 +184,7 @@ def next_event_schema(next_event: CircleEvent | None, user: User | None) -> Next
     if next_event is None:
         return None
     seats_left = next_event.seats_left()
-    attending = next_event.attendees.filter(pk=user.pk).exists() if user else False
+    attending = user in next_event.attendees.all() if user else False
     return NextEventSchema(
         slug=next_event.slug,
         start=next_event.start,
@@ -203,7 +206,12 @@ def space_detail_schema(circle: Circle, user: User, event: CircleEvent | None = 
     category_name = category.name if category else None
 
     past = timezone.now() - datetime.timedelta(minutes=60)
-    next_events = CircleEvent.objects.filter(circle=circle, start__gte=past, cancelled=False).order_by("start")
+    next_events = (
+        CircleEvent.objects.filter(circle=circle, start__gte=past, cancelled=False)
+        .select_related("circle")
+        .prefetch_related("attendees")
+        .order_by("start")
+    )
     next_event_schemas: list[NextEventSchema] = [next_event_schema(event, user) for event in next_events]
 
     return SpaceDetailSchema(
