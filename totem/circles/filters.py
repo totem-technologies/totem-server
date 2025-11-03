@@ -4,8 +4,9 @@ from django.db.models import Count, F, OuterRef, Q, Subquery
 from django.urls import reverse
 from django.utils import timezone
 
-from totem.circles.schemas import EventDetailSchema, EventSpaceSchema, NextEventSchema, SpaceDetailSchema
+from totem.circles.schemas import EventDetailSchema, EventSpaceSchema, NextEventSchema, SpaceDetailSchema, SpaceSchema
 from totem.users.models import User
+from totem.users.schemas import PublicUserSchema
 
 from .models import Circle, CircleCategory, CircleEvent
 
@@ -176,32 +177,34 @@ def event_detail_schema(event: CircleEvent, user: User):
     )
 
 
+def next_event_schema(next_event: CircleEvent | None, user: User | None) -> NextEventSchema | None:
+    if next_event is None:
+        return None
+    seats_left = next_event.seats_left()
+    attending = next_event.attendees.filter(pk=user.pk).exists() if user else False
+    return NextEventSchema(
+        slug=next_event.slug,
+        start=next_event.start,
+        title=next_event.title,
+        link=next_event.get_absolute_url(),
+        seats_left=seats_left,
+        duration=next_event.duration_minutes,
+        meeting_provider=next_event.meeting_provider,
+        cal_link=next_event.cal_link(),
+        attending=attending,
+        cancelled=next_event.cancelled,
+        open=next_event.open,
+        joinable=next_event.can_join(user) if user else False,
+    )
+
+
 def space_detail_schema(circle: Circle, user: User, event: CircleEvent | None = None):
     category = circle.categories.first()
     category_name = category.name if category else None
 
-    next_event = event or circle.next_event()
-    next_event_schema: NextEventSchema | None = None
-    if next_event:
-        seats_left = next_event.seats_left()
-        next_event_schema = NextEventSchema(
-            slug=next_event.slug,
-            start=next_event.start,
-            title=next_event.title,
-            link=next_event.get_absolute_url(),
-            seats_left=seats_left,
-            duration=next_event.duration_minutes,
-            meeting_provider=next_event.meeting_provider,
-            cal_link=next_event.cal_link(),
-            attending=next_event.attendees.filter(pk=user.pk).exists(),
-            cancelled=next_event.cancelled,
-            open=next_event.open,
-            joinable=next_event.can_join(user),
-        )
-
     past = timezone.now() - datetime.timedelta(minutes=60)
     next_events = CircleEvent.objects.filter(circle=circle, start__gte=past, cancelled=False).order_by("start")
-    event_schemas: list[EventDetailSchema] = [event_detail_schema(event, user) for event in next_events]
+    next_event_schemas: list[NextEventSchema] = [next_event_schema(event, user) for event in next_events]
 
     return SpaceDetailSchema(
         slug=circle.slug,
@@ -211,9 +214,20 @@ def space_detail_schema(circle: Circle, user: User, event: CircleEvent | None = 
         content=circle.content_html,
         author=circle.author,
         category=category_name,
-        next_event=next_event_schema,
         subscribers=circle.subscribed.count(),
         price=circle.price,
         recurring=circle.recurring,
-        next_events=event_schemas,
+        next_events=next_event_schemas,
+    )
+
+
+def space_schema(circle: Circle, user: User | None) -> SpaceSchema:
+    return SpaceSchema(
+        title=circle.title,
+        slug=circle.slug,
+        date_created=circle.date_created,
+        date_modified=circle.date_modified,
+        subtitle=circle.subtitle,
+        author=PublicUserSchema.from_orm(circle.author),
+        next_event=next_event_schema(circle.next_event(), user),
     )

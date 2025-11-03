@@ -14,6 +14,7 @@ from totem.circles.filters import (
     event_detail_schema,
     get_upcoming_events_for_spaces_list,
     space_detail_schema,
+    space_schema,
     upcoming_recommended_events,
 )
 from totem.circles.models import Circle, CircleEvent, CircleEventException
@@ -47,23 +48,11 @@ def list_subscriptions(request: HttpRequest):
     return Circle.objects.filter(subscribed=request.user)
 
 
-@spaces_router.get("/", response={200: list[SpaceDetailSchema]}, url_name="mobile_spaces_list")
+@spaces_router.get("/", response={200: list[SpaceSchema]}, url_name="mobile_spaces_list")
 @paginate
 def list_spaces(request):
-    events = get_upcoming_events_for_spaces_list()
-
-    spaces_set = set()
-    spaces = []
-
-    for event in events:
-        if event.circle.slug in spaces_set:
-            continue
-
-        spaces_set.add(event.circle.slug)
-        circle: Circle = event.circle
-
-        spaces.append(space_detail_schema(circle, request.user))
-
+    circles = Circle.objects.filter(published=True, open=True)
+    spaces: list[SpaceSchema] = [space_schema(circle, request.user) for circle in circles]
     return spaces
 
 
@@ -153,13 +142,11 @@ def get_spaces_summary(request: HttpRequest):
     )
     upcoming_events = list(upcoming_events_queryset)
     upcoming_event_ids = {event.id for event in upcoming_events}
-    upcoming = [event_detail_schema(event, user) for event in upcoming_events]
+    upcoming: list[EventDetailSchema] = [event_detail_schema(event, user) for event in upcoming_events]
 
     recommended_events = upcoming_recommended_events(user, categories=categories_list)
-    for_you = [
-        space_detail_schema(event.circle, user, event)
-        for event in recommended_events
-        if event.id not in upcoming_event_ids
+    for_you: list[SpaceSchema] = [
+        space_schema(event.circle, user) for event in recommended_events if event.id not in upcoming_event_ids
     ]
 
     spaces_qs = (
@@ -167,7 +154,7 @@ def get_spaces_summary(request: HttpRequest):
         .select_related("author")
         .prefetch_related("categories", "subscribed")
     )
-    explore = [space_detail_schema(space, user) for space in spaces_qs]
+    explore: list[SpaceSchema] = [space_schema(space, user) for space in spaces_qs]
 
     return SummarySpacesSchema(
         upcoming=upcoming,

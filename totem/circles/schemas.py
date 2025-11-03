@@ -7,8 +7,29 @@ from totem.circles.models import Circle, CircleEvent
 from totem.users.schemas import PublicUserSchema
 
 
+class MeetingProviderEnum(str, Enum):
+    GOOGLE_MEET = "google_meet"
+    LIVEKIT = "livekit"
+
+
+class NextEventSchema(Schema):
+    slug: str
+    start: datetime
+    link: str
+    title: str | None
+    seats_left: int
+    duration: int
+    meeting_provider: MeetingProviderEnum
+    cal_link: str
+    attending: bool
+    cancelled: bool
+    open: bool
+    joinable: bool
+
+
 class SpaceSchema(ModelSchema):
     author: PublicUserSchema
+    next_event: NextEventSchema | None
 
     class Meta:
         model = Circle
@@ -24,8 +45,11 @@ class EventListSchema(ModelSchema):
         return obj.get_absolute_url()
 
     @staticmethod
-    def resolve_space(obj: CircleEvent):
-        return obj.circle
+    def resolve_space(obj: CircleEvent, context):
+        from totem.circles.filters import space_schema
+
+        user = context.get("request").user if context.get("request") else None
+        return space_schema(obj.circle, user)
 
     class Meta:
         model = CircleEvent
@@ -74,11 +98,6 @@ class EventSpaceSchema(ModelSchema):
         ]
 
 
-class MeetingProviderEnum(str, Enum):
-    GOOGLE_MEET = "google_meet"
-    LIVEKIT = "livekit"
-
-
 class EventDetailSchema(Schema):
     slug: str
     title: str
@@ -106,21 +125,6 @@ class EventDetailSchema(Schema):
     meeting_provider: MeetingProviderEnum
 
 
-class NextEventSchema(Schema):
-    slug: str
-    start: datetime
-    link: str
-    title: str | None
-    seats_left: int
-    duration: int
-    meeting_provider: MeetingProviderEnum
-    cal_link: str
-    attending: bool
-    cancelled: bool
-    open: bool
-    joinable: bool
-
-
 class SpaceDetailSchema(Schema):
     slug: str
     title: str
@@ -128,15 +132,14 @@ class SpaceDetailSchema(Schema):
     short_description: str
     content: str
     author: PublicUserSchema
-    next_event: NextEventSchema | None
     category: str | None
     subscribers: int
     recurring: str | None
     price: int
-    next_events: list[EventDetailSchema]
+    next_events: list[NextEventSchema]
 
 
 class SummarySpacesSchema(Schema):
     upcoming: list[EventDetailSchema]
-    for_you: list[SpaceDetailSchema]
-    explore: list[SpaceDetailSchema]
+    for_you: list[SpaceSchema]
+    explore: list[SpaceSchema]
