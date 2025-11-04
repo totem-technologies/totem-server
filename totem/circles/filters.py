@@ -145,10 +145,10 @@ def event_detail_schema(event: CircleEvent, user: User):
     space: Circle = event.circle
     start = event.start
 
-    subscribed = user in space.subscribed.all() if user.is_authenticated else None
+    subscribed = space.subscribed.filter(pk=user.pk).exists() if user.is_authenticated else None
     ended = event.ended()
 
-    attending = user in event.attendees.all()
+    attending = event.attendees.filter(pk=user.pk).exists()
 
     subscribers_count = getattr(event, "subscriber_count", space.subscribed.count())
 
@@ -184,7 +184,7 @@ def next_event_schema(next_event: CircleEvent | None, user: User | None) -> Next
     if next_event is None:
         return None
     seats_left = next_event.seats_left()
-    attending = user in next_event.attendees.all() if user else False
+    attending = next_event.attendees.filter(pk=user.pk).exists() if user else False
     return NextEventSchema(
         slug=next_event.slug,
         start=next_event.start,

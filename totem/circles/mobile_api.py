@@ -52,7 +52,7 @@ def list_subscriptions(request: HttpRequest):
 @spaces_router.get("/", response={200: list[SpaceSchema]}, url_name="mobile_spaces_list")
 @paginate
 def list_spaces(request):
-    circles = Circle.objects.filter(published=True, open=True)
+    circles = Circle.objects.filter(published=True, open=True).select_related("author").prefetch_related("categories")
     spaces: list[SpaceSchema] = [space_schema(circle, request.user) for circle in circles]
     return spaces
 
