@@ -78,32 +78,17 @@ def get_space_detail(request: HttpRequest, space_slug: str):
     return space_detail_schema(space, user)
 
 
-@spaces_router.get("/keeper/{slug}/", response={200: list[SpaceDetailSchema]}, url_name="keeper_spaces")
+@spaces_router.get("/keeper/{slug}/", response={200: list[SpaceSchema]}, url_name="keeper_spaces")
 def get_keeper_spaces(request: HttpRequest, slug: str):
     user: User = request.user  # type: ignore
-
-    # Prefetch upcoming events for each circle to avoid N+1 queries
-    grace_period = datetime.timedelta(minutes=60)
-    upcoming_events_prefetch = Prefetch(
-        "events",
-        queryset=CircleEvent.objects.filter(start__gte=timezone.now() - grace_period, cancelled=False)
-        .order_by("start")
-        .prefetch_related("attendees"),
-    )
 
     circles = (
         Circle.objects.filter(author__slug=slug, published=True)
         .select_related("author")
-        .prefetch_related("categories", "subscribed", upcoming_events_prefetch)
+        .prefetch_related("categories", "subscribed")
     )
 
-    spaces: list[SpaceDetailSchema] = []
-    for circle in circles:
-        next_event = circle.next_event()
-        if next_event:
-            spaces.append(space_detail_schema(circle, user))
-
-    return spaces
+    return [space_schema(circle, user) for circle in circles]
 
 
 @spaces_router.get("/sessions/history", response={200: list[EventDetailSchema]}, url_name="sessions_history")
