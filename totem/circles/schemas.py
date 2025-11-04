@@ -30,10 +30,20 @@ class NextEventSchema(Schema):
 class SpaceSchema(ModelSchema):
     author: PublicUserSchema
     next_event: NextEventSchema | None
+    image_url: str | None
+    categories: list[str]
+
+    @staticmethod
+    def resolve_image_url(obj: Circle):
+        return obj.image.url if obj.image else None
+
+    @staticmethod
+    def resolve_categories(obj: Circle):
+        return [category.name for category in obj.categories.all()]
 
     class Meta:
         model = Circle
-        fields = ["title", "slug", "date_created", "date_modified", "subtitle"]
+        fields = ["title", "slug", "date_created", "date_modified", "subtitle", "categories"]
 
 
 class EventListSchema(ModelSchema):
