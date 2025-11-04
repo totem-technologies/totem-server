@@ -270,7 +270,10 @@ class TestMobileApiSpaces:
         OnboardModelFactory(user=user)
 
         circle = CircleFactory()
+        CircleEventFactory(circle=circle, start=timezone.now() + timedelta(days=1))
+
         unpublished_circle = CircleFactory(published=False)
+        CircleEventFactory(circle=unpublished_circle, start=timezone.now() + timedelta(days=1))
 
         url = reverse("mobile-api:spaces_summary")
         response = client.get(url)
