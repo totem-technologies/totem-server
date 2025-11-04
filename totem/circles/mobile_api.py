@@ -1,7 +1,7 @@
 import datetime
 
 from django.db import transaction
-from django.db.models import Count, DateTimeField, ExpressionWrapper, F, Prefetch
+from django.db.models import Count, DateTimeField, ExpressionWrapper, F
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
