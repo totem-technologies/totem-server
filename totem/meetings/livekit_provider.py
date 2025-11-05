@@ -224,6 +224,7 @@ async def end_room(room_name: str):
                 metadata=json.dumps(state.dict()),
             )
         )
+        await _mute_everyone(room_name)
 
 
 @async_to_sync
@@ -289,6 +290,33 @@ async def mute_participant(room_name: str, user_identity: str):
                 muted=True,
             )
         )
+
+
+async def _mute_everyone(room_name: str):
+    """
+    Mutes everyone in the room.
+    """
+    async with _get_lk_api_client() as lkapi:
+        room = await get_room(room_name, lkapi)
+        if not room:
+            raise ValueError(f"Room {room_name} does not exist.")
+
+        participants = await lkapi.room.list_participants(
+            api.ListParticipantsRequest(
+                room=room_name,
+            )
+        )
+        for participant in participants.participants:
+            for track in participant.tracks:
+                if track.type == api.TrackType.AUDIO:
+                    await lkapi.room.mute_published_track(
+                        api.MuteRoomTrackRequest(
+                            room=room_name,
+                            identity=participant.identity,
+                            track_sid=track.sid,
+                            muted=True,
+                        )
+                    )
 
 
 @async_to_sync
