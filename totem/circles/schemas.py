@@ -43,7 +43,7 @@ class SpaceSchema(ModelSchema):
 
     class Meta:
         model = Circle
-        fields = ["title", "slug", "date_created", "date_modified", "subtitle", "categories"]
+        fields = ["title", "slug", "date_created", "date_modified", "subtitle"]
 
 
 class EventListSchema(ModelSchema):
@@ -100,7 +100,6 @@ class EventSpaceSchema(ModelSchema):
             "date_created",
             "date_modified",
             "subtitle",
-            "categories",
             "short_description",
             "recurring",
             "image",

@@ -238,4 +238,6 @@ def space_schema(circle: Circle, user: User | None) -> SpaceSchema:
         subtitle=circle.subtitle,
         author=PublicUserSchema.from_orm(circle.author),
         next_event=next_event_schema(circle.next_event(), user),
+        image_url=circle.image.url if circle.image else None,
+        categories=[category.name for category in circle.categories.all()],
     )
