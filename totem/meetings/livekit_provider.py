@@ -161,16 +161,12 @@ async def accept_totem(room_name: str, keeper_slug: str, user_identity: str):
             raise ValueError(f"User {user_identity} is not the current speaker. Cannot accept the totem.")
 
         # Mute all other participants except the one accepting the totem
-        for participant in state.speaking_order:
-            if participant != user_identity:
-                await lkapi.room.mute_published_track(
-                    api.MuteRoomTrackRequest(
-                        room=room_name,
-                        identity=participant,
-                        track_sid="",  # Empty track_sid to mute all audio tracks
-                        muted=True,
-                    )
-                )
+        participants = await lkapi.room.list_participants(
+            api.ListParticipantsRequest(room=room_name)
+        )
+        for participant in participants.participants:
+            if participant.identity != user_identity:
+                await mute_participant(room_name, participant.identity)
 
 
 @async_to_sync
