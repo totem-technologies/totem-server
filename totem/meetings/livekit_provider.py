@@ -1,4 +1,5 @@
 import json
+import logging
 from contextlib import asynccontextmanager
 
 from asgiref.sync import async_to_sync
@@ -292,14 +293,18 @@ async def _mute_everyone(room_name: str, lkapi: api.LiveKitAPI, except_identity:
             continue
         for track in participant.tracks:
             if track.type == api.TrackType.AUDIO:
-                await lkapi.room.mute_published_track(
-                    api.MuteRoomTrackRequest(
-                        room=room_name,
-                        identity=participant.identity,
-                        track_sid=track.sid,
-                        muted=True,
+                try:
+                    await lkapi.room.mute_published_track(
+                        api.MuteRoomTrackRequest(
+                            room=room_name,
+                            identity=participant.identity,
+                            track_sid=track.sid,
+                            muted=True,
+                        )
                     )
-                )
+                except api.TwirpError as e:
+                    logging.error(f"Failed to mute participant {participant.identity} in room {room_name}: {e}")
+                    continue
 
 
 @async_to_sync
