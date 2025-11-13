@@ -1,4 +1,5 @@
 import json
+import logging
 from contextlib import asynccontextmanager
 
 from asgiref.sync import async_to_sync
@@ -76,19 +77,18 @@ async def get_room(room_name: str, lkapi: api.LiveKitAPI) -> api.Room | None:
     return rooms.rooms[0]
 
 
-async def _ensure_keeper_in_room(room_name: str, keeper_slug: str):
+async def _ensure_keeper_in_room(room_name: str, keeper_slug: str, lkapi: api.LiveKitAPI):
     """
     Ensures that the keeper is in the room.
     """
-    async with _get_lk_api_client() as lkapi:
-        participant = await lkapi.room.get_participant(
-            api.RoomParticipantIdentity(
-                room=room_name,
-                identity=keeper_slug,
-            )
+    participant = await lkapi.room.get_participant(
+        api.RoomParticipantIdentity(
+            room=room_name,
+            identity=keeper_slug,
         )
-        if not participant:
-            raise ValueError(f"Keeper {keeper_slug} is not in room {room_name}.")
+    )
+    if not participant:
+        raise ValueError(f"Keeper {keeper_slug} is not in room {room_name}.")
 
 
 @async_to_sync
@@ -121,7 +121,7 @@ async def pass_totem(room_name: str, keeper_slug: str, user_identity: str):
         if not room:
             raise ValueError(f"Room {room_name} does not exist.")
 
-        await _ensure_keeper_in_room(room_name, keeper_slug)
+        await _ensure_keeper_in_room(room_name, keeper_slug, lkapi)
 
         current_state = json.loads(room.metadata) if room.metadata else {}
         state = SessionState(**current_state)
@@ -150,7 +150,7 @@ async def accept_totem(room_name: str, keeper_slug: str, user_identity: str):
         room = await get_room(room_name, lkapi)
         if not room:
             raise ValueError(f"Room {room_name} does not exist.")
-        await _ensure_keeper_in_room(room_name, keeper_slug)
+        await _ensure_keeper_in_room(room_name, keeper_slug, lkapi)
 
         current_state = json.loads(room.metadata) if room.metadata else {}
         state = SessionState(**current_state)
@@ -161,16 +161,7 @@ async def accept_totem(room_name: str, keeper_slug: str, user_identity: str):
             raise ValueError(f"User {user_identity} is not the current speaker. Cannot accept the totem.")
 
         # Mute all other participants except the one accepting the totem
-        for participant in state.speaking_order:
-            if participant != user_identity:
-                await lkapi.room.mute_published_track(
-                    api.MuteRoomTrackRequest(
-                        room=room_name,
-                        identity=participant,
-                        track_sid="",  # Empty track_sid to mute all audio tracks
-                        muted=True,
-                    )
-                )
+        await _mute_everyone(room_name=room_name, lkapi=lkapi, except_identity=user_identity)
 
 
 @async_to_sync
@@ -183,7 +174,7 @@ async def start_room(room_name: str, keeper_slug: str):
         room = await get_room(room_name, lkapi)  # Pass the client in
         if not room:
             raise ValueError(f"Room {room_name} does not exist.")
-        await _ensure_keeper_in_room(room_name, keeper_slug)
+        await _ensure_keeper_in_room(room_name, keeper_slug, lkapi)
 
         current_state = json.loads(room.metadata) if room.metadata else {}
         state = SessionState(**current_state)
@@ -224,6 +215,7 @@ async def end_room(room_name: str):
                 metadata=json.dumps(state.dict()),
             )
         )
+        await _mute_everyone(room_name=room_name, lkapi=lkapi)
 
 
 @async_to_sync
@@ -261,10 +253,6 @@ async def mute_participant(room_name: str, user_identity: str):
     """
 
     async with _get_lk_api_client() as lkapi:
-        room = await get_room(room_name, lkapi)
-        if not room:
-            raise ValueError(f"Room {room_name} does not exist.")
-
         participant = await lkapi.room.get_participant(
             api.RoomParticipantIdentity(
                 room=room_name,
@@ -291,6 +279,38 @@ async def mute_participant(room_name: str, user_identity: str):
         )
 
 
+async def _mute_everyone(room_name: str, lkapi: api.LiveKitAPI, except_identity: str | None = None):
+    """
+    Mutes everyone in the room.
+
+    If except_identity is provided, the participant with that identity is not muted.
+
+    If the participant is not found, it is not muted.
+    """
+    participants = await lkapi.room.list_participants(
+        api.ListParticipantsRequest(
+            room=room_name,
+        )
+    )
+    for participant in participants.participants:
+        if except_identity and participant.identity == except_identity:
+            continue
+        for track in participant.tracks:
+            if track.type == api.TrackType.AUDIO:
+                try:
+                    await lkapi.room.mute_published_track(
+                        api.MuteRoomTrackRequest(
+                            room=room_name,
+                            identity=participant.identity,
+                            track_sid=track.sid,
+                            muted=True,
+                        )
+                    )
+                except api.TwirpError as e:
+                    logging.error(f"Failed to mute participant {participant.identity} in room {room_name}: {e}")
+                    continue
+
+
 @async_to_sync
 async def remove_participant(room_name: str, user_identity: str):
     """
@@ -298,10 +318,6 @@ async def remove_participant(room_name: str, user_identity: str):
     """
 
     async with _get_lk_api_client() as lkapi:
-        room = await get_room(room_name, lkapi)
-        if not room:
-            raise ValueError(f"Room {room_name} does not exist.")
-
         try:
             participant = await lkapi.room.remove_participant(
                 api.RoomParticipantIdentity(
