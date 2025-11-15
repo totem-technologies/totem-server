@@ -1,9 +1,9 @@
 import uFuzzy from "@leeoniya/ufuzzy"
 import {
-  For,
-  type JSXElement,
   createEffect,
   createSignal,
+  For,
+  type JSXElement,
   onMount,
 } from "solid-js"
 
@@ -22,7 +22,7 @@ function Tag(props: TagProps) {
     <button
       onClick={() => props.onClick(props.tag)}
       type="button"
-      class="mr-2 mt-1 inline-flex items-center rounded-full bg-tyellow px-3 py-1 text-xs font-medium leading-4 text-gray-700 hover:opacity-70">
+      class="bg-tyellow mt-1 mr-2 inline-flex items-center rounded-full px-3 py-1 text-xs leading-4 font-medium text-gray-700 hover:opacity-70">
       {props.tag}
     </button>
   )
@@ -117,7 +117,7 @@ function PromptSearch(props: { dataid?: string; children?: JSXElement }) {
             onClick={() => setSearch("")}
             style={{ visibility: search() === "" ? "hidden" : "visible" }}
             type="button"
-            class="mt-2 rounded-full bg-gray-200 px-3 py-1 text-xs font-medium leading-4 text-gray-700 hover:opacity-70">
+            class="mt-2 rounded-full bg-gray-200 px-3 py-1 text-xs leading-4 font-medium text-gray-700 hover:opacity-70">
             X Clear search
           </button>
         </div>

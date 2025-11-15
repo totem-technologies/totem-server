@@ -10,7 +10,7 @@ from ninja import Router
 from ninja.errors import AuthorizationError
 from ninja.pagination import paginate
 
-from totem.circles.api import NextEventSchema, SpaceDetailSchema
+from totem.circles.api import SpaceDetailSchema
 from totem.circles.filters import (
     event_detail_schema,
     get_upcoming_events_for_spaces_list,
@@ -26,29 +26,29 @@ from totem.circles.schemas import (
 from totem.onboard.models import OnboardModel
 from totem.users.models import User
 
-spaces_router = Router()
+spaces_router = Router(tags=["spaces"])
 
 
-@spaces_router.post("/subscribe/{space_slug}", response={200: bool}, tags=["spaces"], url_name="spaces_subscribe")
+@spaces_router.post("/subscribe/{space_slug}", response={200: bool}, url_name="spaces_subscribe")
 def subscribe_to_space(request: HttpRequest, space_slug: str):
     space = get_object_or_404(Circle, slug=space_slug, published=True)
     space.subscribe(request.user)
     return True
 
 
-@spaces_router.delete("/subscribe/{space_slug}", response={200: bool}, tags=["spaces"], url_name="spaces_unsubscribe")
+@spaces_router.delete("/subscribe/{space_slug}", response={200: bool}, url_name="spaces_unsubscribe")
 def unsubscribe_to_space(request: HttpRequest, space_slug: str):
     space = get_object_or_404(Circle, slug=space_slug)
     space.unsubscribe(request.user)
     return True
 
 
-@spaces_router.get("/subscribe", response={200: List[SpaceSchema]}, tags=["spaces"], url_name="spaces_subscriptions")
+@spaces_router.get("/subscribe", response={200: List[SpaceSchema]}, url_name="spaces_subscriptions")
 def list_subscriptions(request: HttpRequest):
     return Circle.objects.filter(subscribed=request.user)
 
 
-@spaces_router.get("/", response={200: List[SpaceDetailSchema]}, tags=["spaces"], url_name="mobile_spaces_list")
+@spaces_router.get("/", response={200: List[SpaceDetailSchema]}, url_name="mobile_spaces_list")
 @paginate
 def list_spaces(request):
     events = get_upcoming_events_for_spaces_list()
@@ -63,86 +63,57 @@ def list_spaces(request):
         spaces_set.add(event.circle.slug)
         circle: Circle = event.circle
 
-        category = circle.categories.first()
-        category_name = category.name if category else None
-
-        seats_left = max(0, event.seats - event.attendee_count)  # type: ignore
-
-        spaces.append(
-            SpaceDetailSchema(
-                slug=circle.slug,
-                title=circle.title,
-                image_link=circle.image.url if circle.image else None,
-                short_description=circle.short_description,
-                content=circle.content_html,
-                author=circle.author,
-                category=category_name,
-                nextEvent=NextEventSchema(
-                    slug=event.slug,
-                    start=event.start.isoformat(),
-                    title=event.title,
-                    link=event.get_absolute_url(),
-                    seats_left=seats_left,
-                ),
-            ),
-        )
+        spaces.append(space_detail_schema(circle, request.user))
 
     return spaces
 
 
-@spaces_router.get(
-    "/spaces/event/{event_slug}", response={200: EventDetailSchema}, tags=["spaces"], url_name="spaces_detail"
-)
-def get_space_detail(request: HttpRequest, event_slug: str):
-    event = get_object_or_404(CircleEvent, slug=event_slug)
+@spaces_router.get("/event/{event_slug}", response={200: EventDetailSchema}, url_name="event_detail")
+def get_event_detail(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
+    event = get_object_or_404(CircleEvent, slug=event_slug)
     return event_detail_schema(event, user)
 
 
-@spaces_router.get(
-    "/keeper/{slug}/", response={200: List[SpaceDetailSchema]}, tags=["spaces"], url_name="keeper_spaces"
-)
+@spaces_router.get("/space/{space_slug}", response={200: SpaceDetailSchema}, url_name="spaces_detail")
+def get_space_detail(request: HttpRequest, space_slug: str):
+    user: User = request.user  # type: ignore
+    space = get_object_or_404(Circle, slug=space_slug)
+    return space_detail_schema(space, user)
+
+
+@spaces_router.get("/keeper/{slug}/", response={200: List[SpaceDetailSchema]}, url_name="keeper_spaces")
 def get_keeper_spaces(request: HttpRequest, slug: str):
+    user: User = request.user  # type: ignore
     circles = Circle.objects.filter(author__slug=slug, published=True)
 
-    spaces = []
+    spaces: list[SpaceDetailSchema] = []
     for circle in circles:
-        nextEvent = circle.next_event()
-        if nextEvent:
-            spaces.append(space_detail_schema(nextEvent))
+        if circle.next_event():
+            spaces.append(space_detail_schema(circle, user))
 
     return spaces
 
 
-@spaces_router.get(
-    "/sessions/history", response={200: List[EventDetailSchema]}, tags=["spaces"], url_name="sessions_history"
-)
+@spaces_router.get("/sessions/history", response={200: List[EventDetailSchema]}, url_name="sessions_history")
 def get_sessions_history(request: HttpRequest):
     user: User = request.user  # type: ignore
 
-    circle_history_query = user.events_joined.order_by("-start")
+    circle_history_query = user.events_joined.filter(circle__published=True, cancelled=False).order_by("-start")
     circle_history = circle_history_query.all()[0:10]
 
-    events = [
-        event_detail_schema(event, user) for event in circle_history if event.circle.published and not event.cancelled
-    ]
+    events = [event_detail_schema(event, user) for event in circle_history]
 
     return events
 
 
-@spaces_router.get(
-    "/recommended", response={200: List[EventDetailSchema]}, tags=["spaces"], url_name="recommended_spaces"
-)
+@spaces_router.get("/recommended", response={200: List[EventDetailSchema]}, url_name="recommended_spaces")
 def get_recommended_spaces(request: HttpRequest, limit: int = 3, categories: list[str] | None = None):
     user: User = request.user  # type: ignore
 
     recommended_events = upcoming_recommended_events(user, categories=categories)[:limit]
 
-    events = [
-        event_detail_schema(event, user)
-        for event in recommended_events
-        if event.circle.published and not event.cancelled
-    ]
+    events = [event_detail_schema(event, user) for event in recommended_events]
 
     return events
 
@@ -163,7 +134,7 @@ def get_spaces_summary(request: HttpRequest):
     )
     upcoming_events = (
         CircleEvent.objects.annotate(end_time=end_time_expression)
-        .filter(attendees=user, circle__published=True, cancelled=False, end_time__gt=timezone.now())
+        .filter(attendees=user, cancelled=False, end_time__gt=timezone.now())
         .select_related("circle")
         .prefetch_related("circle__author", "circle__categories", "attendees")
         .annotate(attendee_count=Count("attendees", distinct=True))
@@ -187,12 +158,10 @@ def get_spaces_summary(request: HttpRequest):
         if name:
             categories_set.add(name)
     recommended_events = upcoming_recommended_events(user, categories=list(categories_set))
-    for_you = [
-        space_detail_schema(event) for event in recommended_events if event.circle.published and not event.cancelled
-    ]
+    for_you = [space_detail_schema(event.circle, user, event) for event in recommended_events]
 
-    spaces = get_upcoming_events_for_spaces_list()
-    explore = [space_detail_schema(space) for space in spaces if space.circle.published and not space.cancelled]
+    events = get_upcoming_events_for_spaces_list()
+    explore = [space_detail_schema(event.circle, user, event) for event in events]
 
     return SummarySpacesSchema(
         upcoming=upcoming,
@@ -203,7 +172,7 @@ def get_spaces_summary(request: HttpRequest):
 
 @spaces_router.post(
     "/rsvp/{event_slug}",
-    response={200: bool},
+    response={200: EventDetailSchema},
     tags=["spaces"],
     url_name="rsvp_confirm",
 )
@@ -216,12 +185,12 @@ def rsvp_confirm(request: HttpRequest, event_slug: str):
             event.circle.subscribe(user)
     except CircleEventException as e:
         raise AuthorizationError(message=str(e))
-    return True
+    return event_detail_schema(event, user)
 
 
 @spaces_router.delete(
     "/rsvp/{event_slug}",
-    response={200: bool},
+    response={200: EventDetailSchema},
     tags=["spaces"],
     url_name="rsvp_cancel",
 )
@@ -232,4 +201,4 @@ def rsvp_cancel(request: HttpRequest, event_slug: str):
         event.remove_attendee(user)
     except CircleEventException as e:
         raise AuthorizationError(message=str(e))
-    return True
+    return event_detail_schema(event, user)

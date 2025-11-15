@@ -1,3 +1,5 @@
+import { useQuery } from "@tanstack/solid-query"
+import { createEffect, createSignal, For, Show, Suspense } from "solid-js"
 import {
   type ProfileAvatarTypeEnum,
   type PublicUserSchema,
@@ -5,9 +7,8 @@ import {
   totemApiApiUserAvatarUpdate,
   totemApiApiUserUploadProfileImage,
 } from "@/client"
-import { useQuery } from "@tanstack/solid-query"
-import { For, Show, Suspense, createEffect, createSignal } from "solid-js"
 import Avatar from "./avatar"
+
 const defaults = {}
 
 function EditAvatar() {
@@ -28,6 +29,7 @@ function EditAvatar() {
     modalRef?.close()
   }
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: <explanation>
     <div
       onClick={() => modalRef?.showModal()}
       onKeyDown={() => modalRef?.showModal()}
@@ -149,6 +151,7 @@ function EditAvatarModal(props: {
         </div>
       </Show>
       {/* biome-ignore lint/a11y/useKeyWithClickEvents: <explanation> */}
+      {/** biome-ignore lint/a11y/noStaticElementInteractions: <explanation> */}
       <div
         class="relative mb-5 inline-block cursor-pointer"
         onClick={clickHandler}>

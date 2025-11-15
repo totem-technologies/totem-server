@@ -1,6 +1,6 @@
-import { test, expect } from "vitest"
 import { render } from "@solidjs/testing-library"
 import userEvent from "@testing-library/user-event"
+import { expect, test } from "vitest"
 import { MobileEvent } from "./circles"
 
 const user = userEvent.setup()
@@ -17,6 +17,7 @@ test("increments value", async () => {
           author: {
             name: "Test User",
             profile_avatar_type: "TD",
+            date_created: "2023-01-01T00:00:00.000Z",
           },
           subtitle: "Test Subtitle",
         },

@@ -61,6 +61,7 @@ def circle_starting_notification(event: circle_models.CircleEvent, user: User) -
         title="🚨 Your Space is starting soon!",
         message=event.circle.title,
         extra_data={
+            "space_slug": event.circle.slug,
             "event_slug": event.slug,
         },
     )
@@ -77,6 +78,7 @@ def circle_advertisement_notification(event: circle_models.CircleEvent, user: Us
         title=f"New Space Available: {title}",
         message=f"A new session by {author_name} has been posted. Reserve a spot now!",
         extra_data={
+            "space_slug": event.circle.slug,
             "event_slug": event.slug,
             "image_url": image_url,
         },
@@ -91,6 +93,7 @@ def missed_event_notification(event: circle_models.CircleEvent, user: User) -> N
         title="We missed you!",
         message=f"We missed you at the {title} session.",
         extra_data={
+            "space_slug": event.circle.slug,
             "event_slug": event.slug,
         },
     )
