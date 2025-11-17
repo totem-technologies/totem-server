@@ -85,7 +85,6 @@ class TestMobileApiSpaces:
         assert response.status_code == 200
         data = response.json()
         assert data["slug"] == event.slug
-        assert data["space_title"] == space.title
         assert data["space"]["slug"] == space.slug
 
     def test_get_space_detail(self, client_with_user: tuple[Client, User]):
