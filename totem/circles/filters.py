@@ -1,13 +1,13 @@
 import datetime
 
-from django.db.models import Count, F, Q
+from django.db.models import Count, F, OuterRef, Q, Subquery
 from django.urls import reverse
 from django.utils import timezone
 
 from totem.circles.schemas import EventDetailSchema, EventSpaceSchema, NextEventSchema, SpaceDetailSchema
 from totem.users.models import User
 
-from .models import Circle, CircleEvent
+from .models import Circle, CircleCategory, CircleEvent
 
 
 def other_events_in_circle(user: User | None, event: CircleEvent, limit: int = 10):
@@ -80,6 +80,26 @@ def upcoming_recommended_events(user: User | None, categories: list[str] | None 
     if author:
         events = events.filter(circle__author__slug=author)
     return events
+
+
+def get_upcoming_events_for_spaces_list():
+    """Get all upcoming events for spaces listing, including spaces with full events.
+
+    Specifically designed for the spaces list API endpoint.
+    Does NOT filter by seat availability, ensuring all spaces with upcoming events are shown.
+    """
+    first_category_subquery = CircleCategory.objects.filter(circle=OuterRef("pk")).values("name")[:1]
+    return (
+        CircleEvent.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True, circle__published=True)
+        .select_related("circle")
+        .prefetch_related("circle__author", "circle__categories", "circle__subscribed")
+        .annotate(
+            attendee_count=Count("attendees", distinct=True),
+            subscriber_count=Count("circle__subscribed", distinct=True),
+            first_category=Subquery(first_category_subquery),
+        )
+        .order_by("start")
+    )
 
 
 def all_upcoming_recommended_circles(user: User | None, category: str | None = None):
