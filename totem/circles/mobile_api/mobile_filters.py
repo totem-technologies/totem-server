@@ -13,7 +13,12 @@ from totem.users.models import User
 
 
 def get_upcoming_spaces_list() -> QuerySet[Circle]:
-    return Circle.objects.filter(published=True, events__start__gte=timezone.now()).distinct()
+    return (
+        Circle.objects.filter(published=True, events__start__gte=timezone.now())
+        .distinct()
+        .prefetch_related("categories", "subscribed")
+        .annotate(subscriber_count=Count("subscribed", distinct=True))
+    )
 
 
 def upcoming_recommended_events(user: User | None, categories: list[str] | None = None, author: str | None = None):

@@ -108,6 +108,8 @@ def get_recommended_spaces(request: HttpRequest, limit: int = 3, categories: lis
 def get_spaces_summary(request: HttpRequest):
     user: User = request.user  # type: ignore
 
+    spaces_qs = get_upcoming_spaces_list()
+
     # The upcoming events that the user is subscribed to
     end_time_expression = ExpressionWrapper(
         F("start") + F("duration_minutes") * datetime.timedelta(minutes=1),
@@ -117,8 +119,11 @@ def get_spaces_summary(request: HttpRequest):
         CircleEvent.objects.annotate(end_time=end_time_expression)
         .filter(attendees=user, cancelled=False, end_time__gt=timezone.now())
         .select_related("circle")
-        .prefetch_related("circle__author", "circle__categories", "attendees")
-        .annotate(attendee_count=Count("attendees", distinct=True))
+        .prefetch_related("circle__author", "circle__categories", "attendees", "circle__subscribed")
+        .annotate(
+            attendee_count=Count("attendees", distinct=True),
+            subscriber_count=Count("circle__subscribed", distinct=True),
+        )
         .order_by("start")
     )
     upcoming = [event_detail_schema(event, user) for event in upcoming_events]
@@ -132,16 +137,14 @@ def get_spaces_summary(request: HttpRequest):
             if name:
                 categories_set.add(name)
     # Add categories from user's previously joined spaces (single query)
-    previous_category_names = (
-        get_upcoming_spaces_list().filter(subscribed=user).values_list("categories__name", flat=True).distinct()
-    )
+    previous_category_names = spaces_qs.filter(subscribed=user).values_list("categories__name", flat=True).distinct()
     for name in previous_category_names:
         if name:
             categories_set.add(name)
     recommended_events = upcoming_recommended_events(user, categories=list(categories_set))
     for_you = [space_detail_schema(event.circle, user, event) for event in recommended_events]
 
-    spaces = get_upcoming_spaces_list()
+    spaces = spaces_qs
     explore = [space_detail_schema(space, user) for space in spaces]
 
     return SummarySpacesSchema(
