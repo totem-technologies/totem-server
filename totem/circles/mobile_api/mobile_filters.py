@@ -21,6 +21,22 @@ def get_upcoming_spaces_list() -> QuerySet[Circle]:
     )
 
 
+def upcoming_recommended_spaces(user: User | None, categories: list[str] | None = None, author: str | None = None):
+    spaces = (
+        Circle.objects.filter(events__start__gte=timezone.now())
+        .distinct()
+        .prefetch_related("categories", "subscribed")
+        .annotate(subscriber_count=Count("subscribed", distinct=True))
+    )
+    if not user or not user.is_staff:
+        spaces = spaces.filter(published=True)
+    if categories:
+        spaces = spaces.filter(Q(categories__slug__in=categories) | Q(categories__name__in=categories))
+    if author:
+        spaces = spaces.filter(author__slug=author)
+    return spaces
+
+
 def upcoming_recommended_events(user: User | None, categories: list[str] | None = None, author: str | None = None):
     events = (
         CircleEvent.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True)

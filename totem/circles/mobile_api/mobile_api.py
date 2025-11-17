@@ -15,7 +15,7 @@ from totem.circles.filters import (
     space_detail_schema,
     upcoming_recommended_events,
 )
-from totem.circles.mobile_api.mobile_filters import get_upcoming_spaces_list
+from totem.circles.mobile_api.mobile_filters import get_upcoming_spaces_list, upcoming_recommended_spaces
 from totem.circles.mobile_api.mobile_schemas import (
     EventDetailSchema,
     SpaceDetailSchema,
@@ -138,11 +138,9 @@ def get_spaces_summary(request: HttpRequest):
                 categories_set.add(name)
     # Add categories from user's previously joined spaces (single query)
     previous_category_names = spaces_qs.filter(subscribed=user).values_list("categories__name", flat=True).distinct()
-    for name in previous_category_names:
-        if name:
-            categories_set.add(name)
-    recommended_events = upcoming_recommended_events(user, categories=list(categories_set))
-    for_you = [space_detail_schema(event.circle, user, event) for event in recommended_events]
+    categories_set.update(name for name in previous_category_names if name)
+    recommended_spaces = upcoming_recommended_spaces(user, categories=list(categories_set))
+    for_you = [space_detail_schema(space, user) for space in recommended_spaces]
 
     spaces = spaces_qs
     explore = [space_detail_schema(space, user) for space in spaces]
