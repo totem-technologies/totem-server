@@ -15,6 +15,7 @@ from totem.circles.filters import (
     space_detail_schema,
     upcoming_recommended_events,
 )
+from totem.circles.mobile_api.mobile_filters import get_upcoming_spaces_list
 from totem.circles.mobile_api.mobile_schemas import (
     EventDetailSchema,
     SpaceDetailSchema,
@@ -50,7 +51,7 @@ def list_subscriptions(request: HttpRequest):
 @spaces_router.get("/", response={200: List[SpaceDetailSchema]}, url_name="mobile_spaces_list")
 @paginate
 def list_spaces(request):
-    spaces = Circle.objects.filter(published=True)
+    spaces = get_upcoming_spaces_list()
     return [space_detail_schema(space, request.user) for space in spaces]
 
 
@@ -71,14 +72,8 @@ def get_space_detail(request: HttpRequest, space_slug: str):
 @spaces_router.get("/keeper/{slug}/", response={200: List[SpaceDetailSchema]}, url_name="keeper_spaces")
 def get_keeper_spaces(request: HttpRequest, slug: str):
     user: User = request.user  # type: ignore
-    circles = Circle.objects.filter(author__slug=slug, published=True)
-
-    spaces: list[SpaceDetailSchema] = []
-    for circle in circles:
-        if circle.next_event():
-            spaces.append(space_detail_schema(circle, user))
-
-    return spaces
+    circles = get_upcoming_spaces_list().filter(author__slug=slug)
+    return [space_detail_schema(circle, user) for circle in circles]
 
 
 @spaces_router.get("/sessions/history", response={200: List[EventDetailSchema]}, url_name="sessions_history")
@@ -138,7 +133,7 @@ def get_spaces_summary(request: HttpRequest):
                 categories_set.add(name)
     # Add categories from user's previously joined spaces (single query)
     previous_category_names = (
-        Circle.objects.filter(subscribed=user, published=True).values_list("categories__name", flat=True).distinct()
+        get_upcoming_spaces_list().filter(subscribed=user).values_list("categories__name", flat=True).distinct()
     )
     for name in previous_category_names:
         if name:
@@ -146,7 +141,7 @@ def get_spaces_summary(request: HttpRequest):
     recommended_events = upcoming_recommended_events(user, categories=list(categories_set))
     for_you = [space_detail_schema(event.circle, user, event) for event in recommended_events]
 
-    spaces = Circle.objects.filter(published=True)
+    spaces = get_upcoming_spaces_list()
     explore = [space_detail_schema(space, user) for space in spaces]
 
     return SummarySpacesSchema(

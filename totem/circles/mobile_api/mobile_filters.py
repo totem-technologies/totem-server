@@ -1,4 +1,4 @@
-from django.db.models import Count, F, OuterRef, Q, Subquery
+from django.db.models import Count, F, OuterRef, Q, QuerySet, Subquery
 from django.urls import reverse
 from django.utils import timezone
 
@@ -10,6 +10,10 @@ from totem.circles.mobile_api.mobile_schemas import (
 )
 from totem.circles.models import Circle, CircleCategory, CircleEvent
 from totem.users.models import User
+
+
+def get_upcoming_spaces_list() -> QuerySet[Circle]:
+    return Circle.objects.filter(published=True, events__start__gte=timezone.now()).distinct()
 
 
 def upcoming_recommended_events(user: User | None, categories: list[str] | None = None, author: str | None = None):
