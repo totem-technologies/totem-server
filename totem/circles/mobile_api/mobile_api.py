@@ -12,7 +12,6 @@ from ninja.pagination import paginate
 
 from totem.circles.filters import (
     event_detail_schema,
-    get_upcoming_events_for_spaces_list,
     space_detail_schema,
     upcoming_recommended_events,
 )
@@ -51,21 +50,8 @@ def list_subscriptions(request: HttpRequest):
 @spaces_router.get("/", response={200: List[SpaceDetailSchema]}, url_name="mobile_spaces_list")
 @paginate
 def list_spaces(request):
-    events = get_upcoming_events_for_spaces_list()
-
-    spaces_set = set()
-    spaces = []
-
-    for event in events:
-        if event.circle.slug in spaces_set:
-            continue
-
-        spaces_set.add(event.circle.slug)
-        circle: Circle = event.circle
-
-        spaces.append(space_detail_schema(circle, request.user))
-
-    return spaces
+    spaces = Circle.objects.filter(published=True)
+    return [space_detail_schema(space, request.user) for space in spaces]
 
 
 @spaces_router.get("/event/{event_slug}", response={200: EventDetailSchema}, url_name="event_detail")
@@ -160,8 +146,8 @@ def get_spaces_summary(request: HttpRequest):
     recommended_events = upcoming_recommended_events(user, categories=list(categories_set))
     for_you = [space_detail_schema(event.circle, user, event) for event in recommended_events]
 
-    events = get_upcoming_events_for_spaces_list()
-    explore = [space_detail_schema(event.circle, user, event) for event in events]
+    spaces = Circle.objects.filter(published=True)
+    explore = [space_detail_schema(space, user) for space in spaces]
 
     return SummarySpacesSchema(
         upcoming=upcoming,
