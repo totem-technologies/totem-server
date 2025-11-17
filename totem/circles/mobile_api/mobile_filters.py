@@ -4,7 +4,6 @@ from django.utils import timezone
 
 from totem.circles.mobile_api.mobile_schemas import (
     EventDetailSchema,
-    EventSpaceSchema,
     MobileSpaceDetailSchema,
     NextEventSchema,
 )
@@ -92,14 +91,10 @@ def event_detail_schema(event: CircleEvent, user: User):
     return EventDetailSchema(
         slug=event.slug,
         title=event.title,
-        space_title=space.title,
-        space=EventSpaceSchema.from_orm(space),
-        description=event.content_html,
-        price=space.price,
+        space=space_detail_schema(space, user),
+        content=event.content_html,
         seats_left=event.seats_left(),
         duration=event.duration_minutes,
-        recurring=space.recurring,
-        subscribers=space.subscribed.count(),
         start=start,
         attending=attending,
         open=event.open,
