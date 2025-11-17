@@ -5,8 +5,8 @@ from django.utils import timezone
 from totem.circles.mobile_api.mobile_schemas import (
     EventDetailSchema,
     EventSpaceSchema,
+    MobileSpaceDetailSchema,
     NextEventSchema,
-    SpaceDetailSchema,
 )
 from totem.circles.models import Circle, CircleCategory, CircleEvent
 from totem.users.models import User
@@ -117,30 +117,33 @@ def event_detail_schema(event: CircleEvent, user: User):
     )
 
 
+def next_event_schema(next_event: CircleEvent, user: User):
+    seats_left = next_event.seats_left()
+    return NextEventSchema(
+        slug=next_event.slug,
+        start=next_event.start,
+        title=next_event.title,
+        link=next_event.get_absolute_url(),
+        seats_left=seats_left,
+        duration=next_event.duration_minutes,
+        meeting_provider=next_event.meeting_provider,
+        cal_link=next_event.cal_link(),
+        attending=next_event.attendees.filter(pk=user.pk).exists(),
+        cancelled=next_event.cancelled,
+        open=next_event.open,
+        joinable=next_event.can_join(user),
+    )
+
+
 def space_detail_schema(circle: Circle, user: User, event: CircleEvent | None = None):
     category = circle.categories.first()
     category_name = category.name if category else None
 
-    next_event = event or circle.next_event()
-    next_event_schema: NextEventSchema | None = None
-    if next_event:
-        seats_left = next_event.seats_left()
-        next_event_schema = NextEventSchema(
-            slug=next_event.slug,
-            start=next_event.start,
-            title=next_event.title,
-            link=next_event.get_absolute_url(),
-            seats_left=seats_left,
-            duration=next_event.duration_minutes,
-            meeting_provider=next_event.meeting_provider,
-            cal_link=next_event.cal_link(),
-            attending=next_event.attendees.filter(pk=user.pk).exists(),
-            cancelled=next_event.cancelled,
-            open=next_event.open,
-            joinable=next_event.can_join(user),
-        )
+    next_events = [
+        next_event_schema(event, user) for event in circle.events.filter(start__gte=timezone.now()).order_by("start")
+    ]
 
-    return SpaceDetailSchema(
+    return MobileSpaceDetailSchema(
         slug=circle.slug,
         title=circle.title,
         image_link=circle.image.url if circle.image else None,
@@ -148,8 +151,8 @@ def space_detail_schema(circle: Circle, user: User, event: CircleEvent | None = 
         content=circle.content_html,
         author=circle.author,
         category=category_name,
-        next_event=next_event_schema,
         subscribers=circle.subscribed.count(),
         price=circle.price,
         recurring=circle.recurring,
+        next_events=next_events,
     )

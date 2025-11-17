@@ -10,15 +10,16 @@ from ninja import Router
 from ninja.errors import AuthorizationError
 from ninja.pagination import paginate
 
-from totem.circles.filters import (
+from totem.circles.mobile_api.mobile_filters import (
     event_detail_schema,
+    get_upcoming_spaces_list,
     space_detail_schema,
     upcoming_recommended_events,
+    upcoming_recommended_spaces,
 )
-from totem.circles.mobile_api.mobile_filters import get_upcoming_spaces_list, upcoming_recommended_spaces
 from totem.circles.mobile_api.mobile_schemas import (
     EventDetailSchema,
-    SpaceDetailSchema,
+    MobileSpaceDetailSchema,
     SpaceSchema,
     SummarySpacesSchema,
 )
@@ -48,7 +49,7 @@ def list_subscriptions(request: HttpRequest):
     return Circle.objects.filter(subscribed=request.user)
 
 
-@spaces_router.get("/", response={200: List[SpaceDetailSchema]}, url_name="mobile_spaces_list")
+@spaces_router.get("/", response={200: List[MobileSpaceDetailSchema]}, url_name="mobile_spaces_list")
 @paginate
 def list_spaces(request):
     spaces = get_upcoming_spaces_list()
@@ -62,14 +63,14 @@ def get_event_detail(request: HttpRequest, event_slug: str):
     return event_detail_schema(event, user)
 
 
-@spaces_router.get("/space/{space_slug}", response={200: SpaceDetailSchema}, url_name="spaces_detail")
+@spaces_router.get("/space/{space_slug}", response={200: MobileSpaceDetailSchema}, url_name="spaces_detail")
 def get_space_detail(request: HttpRequest, space_slug: str):
     user: User = request.user  # type: ignore
     space = get_object_or_404(Circle, slug=space_slug)
     return space_detail_schema(space, user)
 
 
-@spaces_router.get("/keeper/{slug}/", response={200: List[SpaceDetailSchema]}, url_name="keeper_spaces")
+@spaces_router.get("/keeper/{slug}/", response={200: List[MobileSpaceDetailSchema]}, url_name="keeper_spaces")
 def get_keeper_spaces(request: HttpRequest, slug: str):
     user: User = request.user  # type: ignore
     circles = get_upcoming_spaces_list().filter(author__slug=slug)

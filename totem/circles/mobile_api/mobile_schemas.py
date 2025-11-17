@@ -122,21 +122,21 @@ class NextEventSchema(Schema):
     joinable: bool
 
 
-class SpaceDetailSchema(Schema):
+class MobileSpaceDetailSchema(Schema):
     slug: str
     title: str
     image_link: str | None
     short_description: str
     content: str
     author: PublicUserSchema
-    next_event: NextEventSchema | None
     category: str | None
     subscribers: int
     recurring: str | None
     price: int
+    next_events: list[NextEventSchema]
 
 
 class SummarySpacesSchema(Schema):
-    upcoming: List[EventDetailSchema]
-    for_you: List[SpaceDetailSchema]
-    explore: List[SpaceDetailSchema]
+    upcoming: list[EventDetailSchema]
+    for_you: list[MobileSpaceDetailSchema]
+    explore: list[MobileSpaceDetailSchema]
