@@ -10,19 +10,19 @@ from ninja import Router
 from ninja.errors import AuthorizationError
 from ninja.pagination import paginate
 
-from totem.circles.api import SpaceDetailSchema
 from totem.circles.filters import (
     event_detail_schema,
     get_upcoming_events_for_spaces_list,
     space_detail_schema,
     upcoming_recommended_events,
 )
-from totem.circles.models import Circle, CircleEvent, CircleEventException
-from totem.circles.schemas import (
+from totem.circles.mobile_api.mobile_schemas import (
     EventDetailSchema,
+    SpaceDetailSchema,
     SpaceSchema,
     SummarySpacesSchema,
 )
+from totem.circles.models import Circle, CircleEvent, CircleEventException
 from totem.onboard.models import OnboardModel
 from totem.users.models import User
 
