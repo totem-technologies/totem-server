@@ -96,7 +96,6 @@ def get_recommended_spaces(request: HttpRequest, limit: int = 3, categories: lis
     recommended_events = upcoming_recommended_events(user, categories=categories)[:limit]
 
     events = [event_detail_schema(event, user) for event in recommended_events]
-
     return events
 
 
@@ -130,13 +129,17 @@ def get_spaces_summary(request: HttpRequest):
     upcoming = [event_detail_schema(event, user) for event in upcoming_events]
 
     # The recommended spaces based on the user's onboarding.
-    onboard_model = get_object_or_404(OnboardModel, user=user)
     categories_set = set()
-    if onboard_model.hopes:
-        for hope in onboard_model.hopes.split(","):
-            name = hope.strip()
-            if name:
-                categories_set.add(name)
+    try:
+        onboard_model = OnboardModel.objects.get(user=user)
+        if onboard_model.hopes:
+            for hope in onboard_model.hopes.split(","):
+                name = hope.strip()
+                if name:
+                    categories_set.add(name)
+    except OnboardModel.DoesNotExist:
+        # If no onboard model, just use empty categories set
+        pass
     # Add categories from user's previously joined spaces (single query)
     previous_category_names = spaces_qs.filter(subscribed=user).values_list("categories__name", flat=True).distinct()
     categories_set.update(name for name in previous_category_names if name)
