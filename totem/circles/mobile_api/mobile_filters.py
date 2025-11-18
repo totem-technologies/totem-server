@@ -106,7 +106,10 @@ def event_detail_schema(event: CircleEvent, user: User):
         subscribed = None
     ended = event.ended()
 
-    attending = event.attendees.filter(pk=user.pk).exists()
+    if hasattr(space, "_prefetched_objects_cache") and "attendees" in space._prefetched_objects_cache:
+        attending = any(attendee.pk == user.pk for attendee in event.attendees.all())
+    else:
+        attending = event.attendees.filter(pk=user.pk).exists()
 
     return EventDetailSchema(
         slug=event.slug,
