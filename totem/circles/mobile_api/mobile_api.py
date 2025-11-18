@@ -127,6 +127,7 @@ def get_spaces_summary(request: HttpRequest):
         .order_by("start")
     )
     upcoming = [event_detail_schema(event, user) for event in upcoming_events]
+    upcoming_circle_slugs = {event.circle.slug for event in upcoming_events}
 
     # The recommended spaces based on the user's onboarding.
     categories_set = set()
@@ -144,10 +145,12 @@ def get_spaces_summary(request: HttpRequest):
     previous_category_names = spaces_qs.filter(subscribed=user).values_list("categories__name", flat=True).distinct()
     categories_set.update(name for name in previous_category_names if name)
     recommended_spaces = upcoming_recommended_spaces(user, categories=list(categories_set))
-    for_you = [space_detail_schema(space, user) for space in recommended_spaces]
+    for_you = [
+        space_detail_schema(space, user) for space in recommended_spaces if space.slug not in upcoming_circle_slugs
+    ]
 
     spaces = spaces_qs
-    explore = [space_detail_schema(space, user) for space in spaces]
+    explore = [space_detail_schema(space, user) for space in spaces if space.slug not in upcoming_circle_slugs]
 
     return SummarySpacesSchema(
         upcoming=upcoming,

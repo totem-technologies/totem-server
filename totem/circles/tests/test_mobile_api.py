@@ -371,6 +371,44 @@ class TestMobileApiSpaces:
         assert "explore" in data
         assert "upcoming" in data
 
+    def test_summary_upcoming_circles_excluded_from_for_you_and_explore(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        OnboardModelFactory(user=user)
+        self_category = CircleCategoryFactory(name="self")
+
+        # Create a circle that would normally appear in for_you (user is subscribed and has matching category)
+        upcoming_circle = CircleFactory(categories=[self_category], published=True)
+        upcoming_circle.subscribed.add(user)
+
+        # Create an upcoming event for this circle that the user is attending
+        upcoming_event = CircleEventFactory(circle=upcoming_circle, start=timezone.now() + timedelta(days=5))
+        upcoming_event.attendees.add(user)
+
+        # Create another circle that should appear in for_you (to ensure for_you is not empty)
+        for_you_circle = CircleFactory(categories=[self_category], published=True)
+        for_you_circle.subscribed.add(user)
+        CircleEventFactory(circle=for_you_circle, start=timezone.now() + timedelta(days=10))
+
+        # Create another circle that should appear in explore (to ensure explore is not empty)
+        explore_circle = CircleFactory(published=True)
+        CircleEventFactory(circle=explore_circle, start=timezone.now() + timedelta(days=7))
+
+        url = reverse("mobile-api:spaces_summary")
+        response = client.get(url)
+        assert response.status_code == 200
+        data = response.json()
+
+        upcoming_slugs = {item["slug"] for item in data["upcoming"]}
+        assert upcoming_event.slug in upcoming_slugs
+
+        for_you_slugs = {item["slug"] for item in data["for_you"]}
+        assert upcoming_circle.slug not in for_you_slugs
+        assert for_you_circle.slug in for_you_slugs
+
+        explore_slugs = {item["slug"] for item in data["explore"]}
+        assert upcoming_circle.slug not in explore_slugs
+        assert explore_circle.slug in explore_slugs
+
     def test_rsvp_confirm(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         event = CircleEventFactory(circle__published=True)
