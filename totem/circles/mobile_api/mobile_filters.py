@@ -1,4 +1,4 @@
-from django.db.models import Count, F, OuterRef, Q, QuerySet, Subquery
+from django.db.models import Count, F, Q, QuerySet
 from django.urls import reverse
 from django.utils import timezone
 
@@ -7,7 +7,7 @@ from totem.circles.mobile_api.mobile_schemas import (
     MobileSpaceDetailSchema,
     NextEventSchema,
 )
-from totem.circles.models import Circle, CircleCategory, CircleEvent
+from totem.circles.models import Circle, CircleEvent
 from totem.users.models import User
 
 
@@ -15,7 +15,7 @@ def get_upcoming_spaces_list() -> QuerySet[Circle]:
     return (
         Circle.objects.filter(published=True, events__start__gte=timezone.now())
         .distinct()
-        .prefetch_related("categories", "subscribed")
+        .prefetch_related("categories", "subscribed", "events")
         .annotate(subscriber_count=Count("subscribed", distinct=True))
     )
 
@@ -24,7 +24,7 @@ def upcoming_recommended_spaces(user: User | None, categories: list[str] | None 
     spaces = (
         Circle.objects.filter(events__start__gte=timezone.now())
         .distinct()
-        .prefetch_related("categories", "subscribed")
+        .prefetch_related("categories", "subscribed", "events")
         .annotate(subscriber_count=Count("subscribed", distinct=True))
     )
     if not user or not user.is_staff:
@@ -58,26 +58,6 @@ def upcoming_recommended_events(user: User | None, categories: list[str] | None 
     if author:
         events = events.filter(circle__author__slug=author)
     return events
-
-
-def get_upcoming_events_for_spaces_list():
-    """Get all upcoming events for spaces listing, including spaces with full events.
-
-    Specifically designed for the spaces list API endpoint.
-    Does NOT filter by seat availability, ensuring all spaces with upcoming events are shown.
-    """
-    first_category_subquery = CircleCategory.objects.filter(circle=OuterRef("pk")).values("name")[:1]
-    return (
-        CircleEvent.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True, circle__published=True)
-        .select_related("circle")
-        .prefetch_related("circle__author", "circle__categories", "circle__subscribed")
-        .annotate(
-            attendee_count=Count("attendees", distinct=True),
-            subscriber_count=Count("circle__subscribed", distinct=True),
-            first_category=Subquery(first_category_subquery),
-        )
-        .order_by("start")
-    )
 
 
 def event_detail_schema(event: CircleEvent, user: User):
@@ -130,13 +110,18 @@ def next_event_schema(next_event: CircleEvent, user: User):
     )
 
 
-def space_detail_schema(circle: Circle, user: User, event: CircleEvent | None = None):
+def space_detail_schema(circle: Circle, user: User):
     category = circle.categories.first()
     category_name = category.name if category else None
 
     next_events = [
         next_event_schema(event, user) for event in circle.events.filter(start__gte=timezone.now()).order_by("start")
     ]
+
+    if getattr("subscriber_count"):
+        subscribers = getattr(circle, "subscriber_count")
+    else:
+        subscribers = circle.subscribed.count()
 
     return MobileSpaceDetailSchema(
         slug=circle.slug,
@@ -146,7 +131,7 @@ def space_detail_schema(circle: Circle, user: User, event: CircleEvent | None = 
         content=circle.content_html,
         author=circle.author,
         category=category_name,
-        subscribers=circle.subscribed.count(),
+        subscribers=subscribers,
         price=circle.price,
         recurring=circle.recurring,
         next_events=next_events,
