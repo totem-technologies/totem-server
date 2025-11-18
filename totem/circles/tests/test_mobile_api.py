@@ -24,6 +24,15 @@ class TestMobileApiSpaces:
         assert response.json() is True
         assert space.subscribed.filter(pk=user.pk).exists()
 
+    def test_subscribe_to_unpublished_space(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        space = CircleFactory(published=False)
+
+        url = reverse("mobile-api:spaces_subscribe", kwargs={"space_slug": space.slug})
+        response = client.post(url)
+
+        assert response.status_code == 404
+
     def test_unsubscribe_from_space(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         space = CircleFactory(published=True)
@@ -64,7 +73,6 @@ class TestMobileApiSpaces:
         response = client.get(url)
 
         assert response.status_code == 200
-        assert response.status_code == 200
         assert len(response.json()["items"]) == 1
         assert response.json()["items"][0]["slug"] == event.circle.slug
 
@@ -77,6 +85,19 @@ class TestMobileApiSpaces:
     def test_get_event_detail(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
         event = CircleEventFactory(circle__published=True)
+        space = event.circle
+
+        url = reverse("mobile-api:event_detail", kwargs={"event_slug": event.slug})
+        response = client.get(url)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["slug"] == event.slug
+        assert data["space"]["slug"] == space.slug
+
+    def test_get_event_detail_unpublished_circle(self, client_with_user: tuple[Client, User]):
+        client, _ = client_with_user
+        event = CircleEventFactory(circle__published=False)
         space = event.circle
 
         url = reverse("mobile-api:event_detail", kwargs={"event_slug": event.slug})
@@ -100,6 +121,17 @@ class TestMobileApiSpaces:
         assert data["title"] == circle.title
         assert data["slug"] == circle.slug
 
+    def test_get_space_detail_unpublished(self, client_with_user: tuple[Client, User]):
+        client, _ = client_with_user
+        circle = CircleFactory(published=False)
+
+        url = reverse("mobile-api:spaces_detail", kwargs={"space_slug": circle.slug})
+        response = client.get(url)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["slug"] == circle.slug
+
     def test_get_keeper_spaces(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
 
@@ -118,6 +150,25 @@ class TestMobileApiSpaces:
         data = response.json()
         assert len(data) == 1
         assert data[0]["slug"] == circle.slug
+
+    def test_get_keeper_spaces_no_spaces(self, client_with_user: tuple[Client, User]):
+        client, _ = client_with_user
+        keeper = UserFactory(is_staff=True)
+
+        url = reverse("mobile-api:keeper_spaces", kwargs={"slug": keeper.slug})
+        response = client.get(url)
+
+        assert response.status_code == 200
+        assert response.json() == []
+
+    def test_get_keeper_spaces_nonexistent(self, client_with_user: tuple[Client, User]):
+        client, _ = client_with_user
+
+        url = reverse("mobile-api:keeper_spaces", kwargs={"slug": "nonexistent-keeper"})
+        response = client.get(url)
+
+        assert response.status_code == 200
+        assert response.json() == []
 
     def test_get_sessions_history(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -188,6 +239,19 @@ class TestMobileApiSpaces:
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 3
+
+    def test_recommended_spaces_with_limit(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        url = reverse("mobile-api:recommended_spaces")
+
+        for _ in range(5):
+            CircleEventFactory(circle__published=True, cancelled=False, listed=True)
+
+        response = client.get(url, {"limit": 2})
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 2
 
     def test_summary_upcoming_section(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -290,6 +354,23 @@ class TestMobileApiSpaces:
         assert past_event_circle.slug not in explore_slugs
         assert unpublished_circle.slug not in explore_slugs
 
+    def test_summary_no_onboard_model(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        # Don't create OnboardModel
+        # Create some spaces to ensure we have something to return
+        circle = CircleFactory(published=True)
+        CircleEventFactory(circle=circle, start=timezone.now() + timedelta(days=5))
+
+        url = reverse("mobile-api:spaces_summary")
+        response = client.get(url)
+
+        assert response.status_code == 200
+        data = response.json()
+        # Should return empty for_you section but still have explore section
+        assert "for_you" in data
+        assert "explore" in data
+        assert "upcoming" in data
+
     def test_rsvp_confirm(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         event = CircleEventFactory(circle__published=True)
@@ -322,6 +403,30 @@ class TestMobileApiSpaces:
 
         assert not event.attendees.filter(pk=user.pk).exists()
 
+    def test_rsvp_cancel_event_started(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory(circle__published=True, cancelled=False, start=timezone.now() - timedelta(hours=1))
+        event.attendees.add(user)
+
+        url = reverse("mobile-api:rsvp_cancel", kwargs={"event_slug": event.slug})
+        response = client.delete(url)
+
+        assert response.status_code == 403
+        assert "already started" in response.json()["detail"].lower()
+        assert event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_cancel_event_cancelled(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory(circle__published=True, cancelled=True)
+        event.attendees.add(user)
+
+        url = reverse("mobile-api:rsvp_cancel", kwargs={"event_slug": event.slug})
+        response = client.delete(url)
+
+        assert response.status_code == 403
+        assert "cancelled" in response.json()["detail"].lower()
+        assert event.attendees.filter(pk=user.pk).exists()
+
     def test_rsvp_confirm_cannot_attend(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         event = CircleEventFactory(circle__published=True, cancelled=True)
@@ -329,4 +434,52 @@ class TestMobileApiSpaces:
         response = client.post(url)
         assert response.status_code == 403
         assert response.json()["detail"]
+        assert not event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_confirm_already_attending(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory(circle__published=True, cancelled=False)
+        event.attendees.add(user)
+
+        url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
+        response = client.post(url)
+
+        assert response.status_code == 403
+        assert "already attending" in response.json()["detail"].lower()
+
+    def test_rsvp_confirm_event_closed(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory(circle__published=True, cancelled=False, open=False)
+
+        url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
+        response = client.post(url)
+
+        assert response.status_code == 403
+        assert "not available" in response.json()["detail"].lower()
+        assert not event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_confirm_event_started(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory(circle__published=True, cancelled=False, start=timezone.now() - timedelta(hours=1))
+
+        url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
+        response = client.post(url)
+
+        assert response.status_code == 403
+        assert "already started" in response.json()["detail"].lower()
+        assert not event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_confirm_no_seats_left(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory(circle__published=True, cancelled=False, seats=2)
+        # Fill all seats
+        other_user1 = UserFactory()
+        other_user2 = UserFactory()
+        event.attendees.add(other_user1, other_user2)
+
+        url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
+        response = client.post(url)
+
+        assert response.status_code == 403
+        assert "no spots left" in response.json()["detail"].lower() or "spots" in response.json()["detail"].lower()
         assert not event.attendees.filter(pk=user.pk).exists()
