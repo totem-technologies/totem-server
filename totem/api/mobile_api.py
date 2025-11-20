@@ -9,7 +9,7 @@ from ninja.errors import ValidationError
 from ninja.security import HttpBearer
 
 from totem.blog.mobile_api import blog_router
-from totem.circles.mobile_api import spaces_router
+from totem.circles.mobile_api.mobile_api import spaces_router
 from totem.meetings.mobile_api import meetings_router
 from totem.notifications.models import FCMDevice
 from totem.notifications.schemas import FCMTokenRegisterSchema, FCMTokenResponseSchema

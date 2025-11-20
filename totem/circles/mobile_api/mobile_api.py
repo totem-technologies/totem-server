@@ -10,19 +10,21 @@ from ninja import Router
 from ninja.errors import AuthorizationError
 from ninja.pagination import paginate
 
-from totem.circles.api import SpaceDetailSchema
-from totem.circles.filters import (
+from totem.circles.mobile_api.mobile_filters import (
     event_detail_schema,
-    get_upcoming_events_for_spaces_list,
+    get_spaces_list,
+    get_upcoming_spaces_list,
     space_detail_schema,
     upcoming_recommended_events,
+    upcoming_recommended_spaces,
 )
-from totem.circles.models import Circle, CircleEvent, CircleEventException
-from totem.circles.schemas import (
+from totem.circles.mobile_api.mobile_schemas import (
     EventDetailSchema,
+    MobileSpaceDetailSchema,
     SpaceSchema,
     SummarySpacesSchema,
 )
+from totem.circles.models import Circle, CircleEvent, CircleEventException
 from totem.onboard.models import OnboardModel
 from totem.users.models import User
 
@@ -48,24 +50,11 @@ def list_subscriptions(request: HttpRequest):
     return Circle.objects.filter(subscribed=request.user)
 
 
-@spaces_router.get("/", response={200: List[SpaceDetailSchema]}, url_name="mobile_spaces_list")
+@spaces_router.get("/", response={200: List[MobileSpaceDetailSchema]}, url_name="mobile_spaces_list")
 @paginate
 def list_spaces(request):
-    events = get_upcoming_events_for_spaces_list()
-
-    spaces_set = set()
-    spaces = []
-
-    for event in events:
-        if event.circle.slug in spaces_set:
-            continue
-
-        spaces_set.add(event.circle.slug)
-        circle: Circle = event.circle
-
-        spaces.append(space_detail_schema(circle, request.user))
-
-    return spaces
+    spaces = get_spaces_list()
+    return [space_detail_schema(space, request.user) for space in spaces]
 
 
 @spaces_router.get("/event/{event_slug}", response={200: EventDetailSchema}, url_name="event_detail")
@@ -75,24 +64,18 @@ def get_event_detail(request: HttpRequest, event_slug: str):
     return event_detail_schema(event, user)
 
 
-@spaces_router.get("/space/{space_slug}", response={200: SpaceDetailSchema}, url_name="spaces_detail")
+@spaces_router.get("/space/{space_slug}", response={200: MobileSpaceDetailSchema}, url_name="spaces_detail")
 def get_space_detail(request: HttpRequest, space_slug: str):
     user: User = request.user  # type: ignore
     space = get_object_or_404(Circle, slug=space_slug)
     return space_detail_schema(space, user)
 
 
-@spaces_router.get("/keeper/{slug}/", response={200: List[SpaceDetailSchema]}, url_name="keeper_spaces")
+@spaces_router.get("/keeper/{slug}/", response={200: List[MobileSpaceDetailSchema]}, url_name="keeper_spaces")
 def get_keeper_spaces(request: HttpRequest, slug: str):
     user: User = request.user  # type: ignore
-    circles = Circle.objects.filter(author__slug=slug, published=True)
-
-    spaces: list[SpaceDetailSchema] = []
-    for circle in circles:
-        if circle.next_event():
-            spaces.append(space_detail_schema(circle, user))
-
-    return spaces
+    circles = get_upcoming_spaces_list().filter(author__slug=slug)
+    return [space_detail_schema(circle, user) for circle in circles]
 
 
 @spaces_router.get("/sessions/history", response={200: List[EventDetailSchema]}, url_name="sessions_history")
@@ -114,7 +97,6 @@ def get_recommended_spaces(request: HttpRequest, limit: int = 3, categories: lis
     recommended_events = upcoming_recommended_events(user, categories=categories)[:limit]
 
     events = [event_detail_schema(event, user) for event in recommended_events]
-
     return events
 
 
@@ -127,6 +109,8 @@ def get_recommended_spaces(request: HttpRequest, limit: int = 3, categories: lis
 def get_spaces_summary(request: HttpRequest):
     user: User = request.user  # type: ignore
 
+    spaces_qs = get_upcoming_spaces_list()
+
     # The upcoming events that the user is subscribed to
     end_time_expression = ExpressionWrapper(
         F("start") + F("duration_minutes") * datetime.timedelta(minutes=1),
@@ -136,32 +120,38 @@ def get_spaces_summary(request: HttpRequest):
         CircleEvent.objects.annotate(end_time=end_time_expression)
         .filter(attendees=user, cancelled=False, end_time__gt=timezone.now())
         .select_related("circle")
-        .prefetch_related("circle__author", "circle__categories", "attendees")
-        .annotate(attendee_count=Count("attendees", distinct=True))
+        .prefetch_related("circle__author", "circle__categories", "attendees", "circle__subscribed")
+        .annotate(
+            attendee_count=Count("attendees", distinct=True),
+            subscriber_count=Count("circle__subscribed", distinct=True),
+        )
         .order_by("start")
     )
     upcoming = [event_detail_schema(event, user) for event in upcoming_events]
+    upcoming_circle_slugs = {event.circle.slug for event in upcoming_events}
 
     # The recommended spaces based on the user's onboarding.
-    onboard_model = get_object_or_404(OnboardModel, user=user)
     categories_set = set()
-    if onboard_model.hopes:
-        for hope in onboard_model.hopes.split(","):
-            name = hope.strip()
-            if name:
-                categories_set.add(name)
+    try:
+        onboard_model = OnboardModel.objects.get(user=user)
+        if onboard_model.hopes:
+            for hope in onboard_model.hopes.split(","):
+                name = hope.strip()
+                if name:
+                    categories_set.add(name)
+    except OnboardModel.DoesNotExist:
+        # If no onboard model, just use empty categories set
+        pass
     # Add categories from user's previously joined spaces (single query)
-    previous_category_names = (
-        Circle.objects.filter(subscribed=user, published=True).values_list("categories__name", flat=True).distinct()
-    )
-    for name in previous_category_names:
-        if name:
-            categories_set.add(name)
-    recommended_events = upcoming_recommended_events(user, categories=list(categories_set))
-    for_you = [space_detail_schema(event.circle, user, event) for event in recommended_events]
+    previous_category_names = spaces_qs.filter(subscribed=user).values_list("categories__name", flat=True).distinct()
+    categories_set.update(name for name in previous_category_names if name)
+    recommended_spaces = upcoming_recommended_spaces(user, categories=list(categories_set))
+    for_you = [
+        space_detail_schema(space, user) for space in recommended_spaces if space.slug not in upcoming_circle_slugs
+    ]
 
-    events = get_upcoming_events_for_spaces_list()
-    explore = [space_detail_schema(event.circle, user, event) for event in events]
+    spaces = spaces_qs
+    explore = [space_detail_schema(space, user) for space in spaces if space.slug not in upcoming_circle_slugs]
 
     return SummarySpacesSchema(
         upcoming=upcoming,
