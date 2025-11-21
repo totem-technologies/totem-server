@@ -317,6 +317,9 @@ async def accept_totem(room_name: str, keeper_slug: str, user_identity: str) -> 
         if state.speaking_now != user_identity:
             raise NotCurrentSpeakerError(f"User {user_identity} is not the current speaker. Cannot accept the totem.")
 
+        state.accept_totem()
+        await _update_room_metadata(room_name, state, lkapi)
+
         # Mute all other participants except the one accepting the totem
         await _mute_everyone(room_name=room_name, lkapi=lkapi, except_identity=user_identity)
 

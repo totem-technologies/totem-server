@@ -9,10 +9,17 @@ class SessionStatus(str, Enum):
     ENDED = "ended"
 
 
+class TotemStatus(str, Enum):
+    NONE = "none"
+    ACCEPTED = "accepted"
+    PASSING = "passing"
+
+
 class SessionState(Schema):
     status: str = SessionStatus.WAITING
     speaking_order: list[str]
     speaking_now: str | None = None
+    totem_status: TotemStatus = TotemStatus.NONE
 
     def start(self):
         """
@@ -43,6 +50,13 @@ class SessionState(Schema):
             next_index = (current_index + 1) % len(order)
 
         self.speaking_now = order[next_index]
+        self.totem_status = TotemStatus.PASSING
+
+    def accept_totem(self):
+        """
+        Accepts the totem by setting the totem status to 'accepted'.
+        """
+        self.totem_status = TotemStatus.ACCEPTED
 
     def reorder(self, new_order: list[str]):
         """

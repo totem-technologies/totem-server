@@ -29,7 +29,12 @@ meetings_router = Router(
 
 @meetings_router.get(
     "/event/{event_slug}/token",
-    response={200: LivekitTokenResponseSchema, 403: ErrorResponseSchema, 404: ErrorResponseSchema, 500: ErrorResponseSchema},
+    response={
+        200: LivekitTokenResponseSchema,
+        403: ErrorResponseSchema,
+        404: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+    },
     url_name="get_livekit_token",
 )
 def get_livekit_token(request: HttpRequest, event_slug: str):
@@ -71,7 +76,13 @@ def get_livekit_token(request: HttpRequest, event_slug: str):
 
 @meetings_router.post(
     "/event/{event_slug}/pass-totem",
-    response={200: None, 400: ErrorResponseSchema, 403: ErrorResponseSchema, 404: ErrorResponseSchema, 500: ErrorResponseSchema},
+    response={
+        200: None,
+        400: ErrorResponseSchema,
+        403: ErrorResponseSchema,
+        404: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+    },
     url_name="pass_totem",
 )
 def pass_totem_endpoint(request: HttpRequest, event_slug: str):
@@ -94,7 +105,13 @@ def pass_totem_endpoint(request: HttpRequest, event_slug: str):
 
 @meetings_router.post(
     "/event/{event_slug}/accept-totem",
-    response={200: None, 400: ErrorResponseSchema, 403: ErrorResponseSchema, 404: ErrorResponseSchema, 500: ErrorResponseSchema},
+    response={
+        200: None,
+        400: ErrorResponseSchema,
+        403: ErrorResponseSchema,
+        404: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+    },
     url_name="accept_totem",
 )
 def accept_totem_endpoint(request: HttpRequest, event_slug: str):
@@ -121,7 +138,13 @@ def accept_totem_endpoint(request: HttpRequest, event_slug: str):
 
 @meetings_router.post(
     "/event/{event_slug}/start",
-    response={200: None, 400: ErrorResponseSchema, 403: ErrorResponseSchema, 404: ErrorResponseSchema, 500: ErrorResponseSchema},
+    response={
+        200: None,
+        400: ErrorResponseSchema,
+        403: ErrorResponseSchema,
+        404: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+    },
     url_name="start_room",
 )
 def start_room_endpoint(request: HttpRequest, event_slug: str):
@@ -149,7 +172,13 @@ def start_room_endpoint(request: HttpRequest, event_slug: str):
 
 @meetings_router.post(
     "/event/{event_slug}/end",
-    response={200: None, 400: ErrorResponseSchema, 403: ErrorResponseSchema, 404: ErrorResponseSchema, 500: ErrorResponseSchema},
+    response={
+        200: None,
+        400: ErrorResponseSchema,
+        403: ErrorResponseSchema,
+        404: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+    },
     url_name="end_room",
 )
 def end_room_endpoint(request: HttpRequest, event_slug: str):
@@ -175,7 +204,13 @@ def end_room_endpoint(request: HttpRequest, event_slug: str):
 
 @meetings_router.post(
     "/event/{event_slug}/mute/{participant_identity}",
-    response={200: None, 400: ErrorResponseSchema, 403: ErrorResponseSchema, 404: ErrorResponseSchema, 500: ErrorResponseSchema},
+    response={
+        200: None,
+        400: ErrorResponseSchema,
+        403: ErrorResponseSchema,
+        404: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+    },
     url_name="mute_participant",
 )
 def mute_participant_endpoint(request: HttpRequest, event_slug: str, participant_identity: str):
@@ -201,7 +236,13 @@ def mute_participant_endpoint(request: HttpRequest, event_slug: str, participant
 
 @meetings_router.post(
     "/event/{event_slug}/remove/{participant_identity}",
-    response={200: None, 400: ErrorResponseSchema, 403: ErrorResponseSchema, 404: ErrorResponseSchema, 500: ErrorResponseSchema},
+    response={
+        200: None,
+        400: ErrorResponseSchema,
+        403: ErrorResponseSchema,
+        404: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+    },
     url_name="remove_participant",
 )
 def remove_participant_endpoint(request: HttpRequest, event_slug: str, participant_identity: str):
@@ -228,7 +269,13 @@ def remove_participant_endpoint(request: HttpRequest, event_slug: str, participa
 
 @meetings_router.post(
     "/event/{event_slug}/reorder",
-    response={200: LivekitMuteParticipantSchema, 400: ErrorResponseSchema, 403: ErrorResponseSchema, 404: ErrorResponseSchema, 500: ErrorResponseSchema},
+    response={
+        200: LivekitMuteParticipantSchema,
+        400: ErrorResponseSchema,
+        403: ErrorResponseSchema,
+        404: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+    },
     url_name="reorder_participants",
 )
 def reorder_participants_endpoint(request: HttpRequest, event_slug: str, order: LivekitMuteParticipantSchema):

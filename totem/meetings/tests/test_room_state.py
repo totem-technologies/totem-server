@@ -1,6 +1,6 @@
 import pytest
 
-from totem.meetings.room_state import SessionState, SessionStatus
+from totem.meetings.room_state import SessionState, SessionStatus, TotemStatus
 
 
 class TestSessionState:
@@ -10,6 +10,7 @@ class TestSessionState:
         assert state.status == SessionStatus.WAITING
         assert state.speaking_order == ["user1", "user2", "user3"]
         assert state.speaking_now is None
+        assert state.totem_status == TotemStatus.NONE
 
     def test_start_with_order(self):
         """Test starting a session with a speaking order."""
@@ -61,6 +62,87 @@ class TestSessionState:
         state.speaking_now = "user1"
         with pytest.raises(IndexError):
             state.pass_totem()
+
+    def test_pass_totem_sets_status_to_passing(self):
+        """Test that pass_totem sets totem_status to PASSING."""
+        state = SessionState(speaking_order=["user1", "user2", "user3"])
+        state.speaking_now = "user1"
+        assert state.totem_status == TotemStatus.NONE
+        state.pass_totem()
+        assert state.totem_status == TotemStatus.PASSING
+
+    def test_accept_totem_sets_status_to_accepted(self):
+        """Test that accept_totem sets totem_status to ACCEPTED."""
+        state = SessionState(speaking_order=["user1", "user2", "user3"])
+        assert state.totem_status == TotemStatus.NONE
+        state.accept_totem()
+        assert state.totem_status == TotemStatus.ACCEPTED
+
+    def test_accept_totem_from_passing_status(self):
+        """Test that accept_totem can be called when status is already PASSING."""
+        state = SessionState(speaking_order=["user1", "user2", "user3"])
+        state.speaking_now = "user1"
+        state.pass_totem()
+        assert state.totem_status == TotemStatus.PASSING
+        state.accept_totem()
+        assert state.totem_status == TotemStatus.ACCEPTED
+
+    def test_accept_totem_from_none_status(self):
+        """Test that accept_totem can be called from NONE status."""
+        state = SessionState(speaking_order=["user1", "user2", "user3"])
+        assert state.totem_status == TotemStatus.NONE
+        state.accept_totem()
+        assert state.totem_status == TotemStatus.ACCEPTED
+
+    def test_accept_totem_from_accepted_status(self):
+        """Test that accept_totem can be called multiple times (idempotent)."""
+        state = SessionState(speaking_order=["user1", "user2", "user3"])
+        state.accept_totem()
+        assert state.totem_status == TotemStatus.ACCEPTED
+        state.accept_totem()
+        assert state.totem_status == TotemStatus.ACCEPTED
+
+    def test_totem_status_cycle(self):
+        """Test the complete cycle: NONE -> PASSING -> ACCEPTED -> PASSING -> ACCEPTED."""
+        state = SessionState(speaking_order=["user1", "user2", "user3"])
+        state.speaking_now = "user1"
+
+        # Initial state
+        assert state.totem_status == TotemStatus.NONE
+
+        # Pass totem
+        state.pass_totem()
+        assert state.totem_status == TotemStatus.PASSING
+
+        # Accept totem
+        state.accept_totem()
+        assert state.totem_status == TotemStatus.ACCEPTED
+
+        # Pass totem again
+        state.pass_totem()
+        assert state.totem_status == TotemStatus.PASSING
+
+        # Accept totem again
+        state.accept_totem()
+        assert state.totem_status == TotemStatus.ACCEPTED
+
+    def test_totem_status_with_session_start(self):
+        """Test that starting a session doesn't affect totem_status."""
+        state = SessionState(speaking_order=["user1", "user2", "user3"])
+        assert state.totem_status == TotemStatus.NONE
+        state.start()
+        assert state.totem_status == TotemStatus.NONE
+        assert state.speaking_now == "user1"
+
+    def test_totem_status_with_session_end(self):
+        """Test that ending a session doesn't reset totem_status."""
+        state = SessionState(speaking_order=["user1", "user2", "user3"])
+        state.speaking_now = "user1"
+        state.pass_totem()
+        assert state.totem_status == TotemStatus.PASSING
+        state.end()
+        assert state.totem_status == TotemStatus.PASSING
+        assert state.speaking_now is None
 
     def test_reorder(self):
         """Test reordering the speaking order."""
