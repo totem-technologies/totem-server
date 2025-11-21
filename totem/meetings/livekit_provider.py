@@ -14,14 +14,74 @@ from ..circles.models import CircleEvent
 # Constants
 ROOM_EMPTY_TIMEOUT_SECONDS = 60 * 60  # 1 hour
 DEFAULT_MAX_PARTICIPANTS = 20
-EXTRA_PARTICIPANT_BUFFER = 5  # Additional participants beyond attendees count
+EXTRA_PARTICIPANT_BUFFER = 5
+
+
+class LiveKitException(Exception):
+    """Base exception for LiveKit-related errors."""
+
+    pass
+
+
+class LiveKitConfigurationError(LiveKitException):
+    """Raised when LiveKit is not properly configured."""
+
+    pass
+
+
+class RoomNotFoundError(LiveKitException):
+    """Raised when a room does not exist."""
+
+    pass
+
+
+class ParticipantNotFoundError(LiveKitException):
+    """Raised when a participant is not found in a room."""
+
+    pass
+
+
+class KeeperNotInRoomError(LiveKitException):
+    """Raised when the keeper is not in the room."""
+
+    pass
+
+
+class UnauthorizedError(LiveKitException):
+    """Raised when a user is not authorized to perform an action."""
+
+    pass
+
+
+class NotCurrentSpeakerError(LiveKitException):
+    """Raised when a user is not the current speaker."""
+
+    pass
+
+
+class RoomAlreadyStartedError(LiveKitException):
+    """Raised when attempting to start a room that has already been started."""
+
+    pass
+
+
+class RoomAlreadyEndedError(LiveKitException):
+    """Raised when attempting to perform an action on a room that has already ended."""
+
+    pass
+
+
+class NoAudioTrackError(LiveKitException):
+    """Raised when a participant has no audio track."""
+
+    pass
 
 
 @asynccontextmanager
 async def _get_lk_api_client():
     """Provides an initialized and automatically closed LiveKitAPI client."""
     if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
-        raise ValueError("LiveKit API key and secret are not configured.")
+        raise LiveKitConfigurationError("LiveKit API key and secret are not configured.")
 
     lkapi = api.LiveKitAPI(
         # url=settings.LIVEKIT_URL,
@@ -101,11 +161,11 @@ async def _get_room_or_raise(room_name: str, lkapi: api.LiveKitAPI) -> api.Room:
         The room object.
 
     Raises:
-        ValueError: If the room does not exist.
+        RoomNotFoundError: If the room does not exist.
     """
     room = await _get_room(room_name, lkapi)
     if not room:
-        raise ValueError(f"Room {room_name} does not exist.")
+        raise RoomNotFoundError(f"Room {room_name} does not exist.")
     return room
 
 
@@ -164,7 +224,7 @@ async def _ensure_keeper_in_room(room_name: str, keeper_slug: str, lkapi: api.Li
         lkapi: The LiveKit API client.
 
     Raises:
-        ValueError: If the keeper is not in the room.
+        KeeperNotInRoomError: If the keeper is not in the room.
     """
     participant = await lkapi.room.get_participant(
         api.RoomParticipantIdentity(
@@ -173,7 +233,7 @@ async def _ensure_keeper_in_room(room_name: str, keeper_slug: str, lkapi: api.Li
         )
     )
     if not participant:
-        raise ValueError(f"Keeper {keeper_slug} is not in room {room_name}.")
+        raise KeeperNotInRoomError(f"Keeper {keeper_slug} is not in room {room_name}.")
 
 
 @async_to_sync
@@ -210,7 +270,9 @@ async def pass_totem(room_name: str, keeper_slug: str, user_identity: str) -> No
         user_identity: The identity of the user attempting to pass the totem.
 
     Raises:
-        ValueError: If the room doesn't exist, keeper is not in room, or user is not authorized.
+        RoomNotFoundError: If the room doesn't exist.
+        KeeperNotInRoomError: If the keeper is not in room.
+        UnauthorizedError: If user is not authorized to pass the totem.
     """
     async with _get_lk_api_client() as lkapi:
         room = await _get_room_or_raise(room_name, lkapi)
@@ -221,7 +283,9 @@ async def pass_totem(room_name: str, keeper_slug: str, user_identity: str) -> No
         is_speaking_now = state.speaking_now == user_identity
         is_keeper = user_identity == keeper_slug
         if not is_speaking_now and not is_keeper:
-            raise ValueError(f"User {user_identity} is not the current speaker or keeper. Cannot pass the totem.")
+            raise UnauthorizedError(
+                f"User {user_identity} is not the current speaker or keeper. Cannot pass the totem."
+            )
 
         state.pass_totem()
         await _update_room_metadata(room_name, state, lkapi)
@@ -240,7 +304,9 @@ async def accept_totem(room_name: str, keeper_slug: str, user_identity: str) -> 
         user_identity: The identity of the user accepting the totem.
 
     Raises:
-        ValueError: If the room doesn't exist, keeper is not in room, or user is not the current speaker.
+        RoomNotFoundError: If the room doesn't exist.
+        KeeperNotInRoomError: If the keeper is not in room.
+        NotCurrentSpeakerError: If user is not the current speaker.
     """
     async with _get_lk_api_client() as lkapi:
         room = await _get_room_or_raise(room_name, lkapi)
@@ -249,7 +315,7 @@ async def accept_totem(room_name: str, keeper_slug: str, user_identity: str) -> 
         state = await _parse_room_state(room)
 
         if state.speaking_now != user_identity:
-            raise ValueError(f"User {user_identity} is not the current speaker. Cannot accept the totem.")
+            raise NotCurrentSpeakerError(f"User {user_identity} is not the current speaker. Cannot accept the totem.")
 
         # Mute all other participants except the one accepting the totem
         await _mute_everyone(room_name=room_name, lkapi=lkapi, except_identity=user_identity)
@@ -267,7 +333,9 @@ async def start_room(room_name: str, keeper_slug: str) -> None:
         keeper_slug: The slug of the keeper.
 
     Raises:
-        ValueError: If the room doesn't exist, keeper is not in room, or room has already been started.
+        RoomNotFoundError: If the room doesn't exist.
+        KeeperNotInRoomError: If the keeper is not in room.
+        RoomAlreadyStartedError: If the room has already been started.
     """
     async with _get_lk_api_client() as lkapi:
         room = await _get_room_or_raise(room_name, lkapi)
@@ -276,7 +344,7 @@ async def start_room(room_name: str, keeper_slug: str) -> None:
         state = await _parse_room_state(room)
 
         if state.status == SessionStatus.STARTED:
-            raise ValueError(f"Room {room_name} has already been started.")
+            raise RoomAlreadyStartedError(f"Room {room_name} has already been started.")
 
         participants = await lkapi.room.list_participants(
             api.ListParticipantsRequest(
@@ -299,7 +367,8 @@ async def end_room(room_name: str) -> None:
         room_name: The name of the room to end.
 
     Raises:
-        ValueError: If the room doesn't exist or has already ended.
+        RoomNotFoundError: If the room doesn't exist.
+        RoomAlreadyEndedError: If the room has already ended.
     """
     async with _get_lk_api_client() as lkapi:
         room = await _get_room_or_raise(room_name, lkapi)
@@ -307,7 +376,7 @@ async def end_room(room_name: str) -> None:
         state = await _parse_room_state(room)
 
         if state.status == SessionStatus.ENDED:
-            raise ValueError(f"Room {room_name} has already ended.")
+            raise RoomAlreadyEndedError(f"Room {room_name} has already ended.")
 
         state.end()
         await _update_room_metadata(room_name, state, lkapi)
@@ -327,7 +396,8 @@ async def reorder(room_name: str, new_order: list[str]) -> list[str]:
         The updated speaking order.
 
     Raises:
-        ValueError: If the room doesn't exist or has already ended.
+        RoomNotFoundError: If the room doesn't exist.
+        RoomAlreadyEndedError: If the room has already ended.
     """
     async with _get_lk_api_client() as lkapi:
         room = await _get_room_or_raise(room_name, lkapi)
@@ -335,7 +405,7 @@ async def reorder(room_name: str, new_order: list[str]) -> list[str]:
         state = await _parse_room_state(room)
 
         if state.status == SessionStatus.ENDED:
-            raise ValueError(f"Room {room_name} has already ended.")
+            raise RoomAlreadyEndedError(f"Room {room_name} has already ended.")
 
         state.reorder(new_order)
         await _update_room_metadata(room_name, state, lkapi)
@@ -353,7 +423,8 @@ async def mute_participant(room_name: str, user_identity: str) -> None:
         user_identity: The identity of the participant to mute.
 
     Raises:
-        ValueError: If the participant is not found or has no audio track.
+        ParticipantNotFoundError: If the participant is not found.
+        NoAudioTrackError: If the participant has no audio track.
         api.TwirpError: If the API call fails.
     """
     async with _get_lk_api_client() as lkapi:
@@ -365,7 +436,7 @@ async def mute_participant(room_name: str, user_identity: str) -> None:
         )
 
         if not participant:
-            raise ValueError(f"Participant {user_identity} not found in room {room_name}.")
+            raise ParticipantNotFoundError(f"Participant {user_identity} not found in room {room_name}.")
 
         track_sid = None
         for track in participant.tracks:
@@ -374,7 +445,7 @@ async def mute_participant(room_name: str, user_identity: str) -> None:
                 break
 
         if track_sid is None:
-            raise ValueError(f"Participant {user_identity} has no audio track to mute in room {room_name}.")
+            raise NoAudioTrackError(f"Participant {user_identity} has no audio track to mute in room {room_name}.")
 
         await lkapi.room.mute_published_track(
             api.MuteRoomTrackRequest(
@@ -428,7 +499,7 @@ async def remove_participant(room_name: str, user_identity: str) -> None:
         user_identity: The identity of the participant to remove.
 
     Raises:
-        ValueError: If the participant removal fails or participant is not found.
+        ParticipantNotFoundError: If the participant removal fails or participant is not found.
         api.TwirpError: If the API call fails.
     """
     async with _get_lk_api_client() as lkapi:
@@ -440,7 +511,9 @@ async def remove_participant(room_name: str, user_identity: str) -> None:
                 )
             )
         except api.TwirpError as e:
-            raise ValueError(f"Failed to remove participant {user_identity} from room {room_name}: {e}") from e
+            raise ParticipantNotFoundError(
+                f"Failed to remove participant {user_identity} from room {room_name}: {e}"
+            ) from e
 
         if not participant:
-            raise ValueError(f"Participant {user_identity} not found in room {room_name}.")
+            raise ParticipantNotFoundError(f"Participant {user_identity} not found in room {room_name}.")
