@@ -13,6 +13,7 @@ from totem.meetings.livekit_provider import (
     RoomAlreadyEndedError,
     RoomNotFoundError,
 )
+from totem.meetings.room_state import SessionState, SessionStatus, TotemStatus
 from totem.users.models import User
 
 
@@ -374,3 +375,89 @@ class TestGetLiveKitToken:
         assert response.status_code == 404
         assert response.json() == {"error": f"Room {event.slug} does not exist."}
         mock_reorder.assert_called_once_with(event.slug, new_order)
+
+    def test_get_room_state_success(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory()
+
+        mock_state = SessionState(
+            speaking_order=["user1", "user2", "user3"],
+            speaking_now="user1",
+            status=SessionStatus.STARTED,
+            totem_status=TotemStatus.ACCEPTED,
+        )
+
+        with patch(f"{self.LIVEKIT_PROVIDER_PATH}.get_room_state", return_value=mock_state) as mock_get_state:
+            url = reverse("mobile-api:get_room_state", kwargs={"event_slug": event.slug})
+            response = client.get(url)
+
+        assert response.status_code == 200
+        response_data = response.json()
+        assert response_data["speaking_order"] == ["user1", "user2", "user3"]
+        assert response_data["speaking_now"] == "user1"
+        assert response_data["status"] == SessionStatus.STARTED
+        assert response_data["totem_status"] == TotemStatus.ACCEPTED
+        mock_get_state.assert_called_once_with(event.slug)
+
+    def test_get_room_state_empty_state(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory()
+
+        mock_state = SessionState(
+            speaking_order=[],
+            speaking_now=None,
+            status=SessionStatus.WAITING,
+            totem_status=TotemStatus.NONE,
+        )
+
+        with patch(f"{self.LIVEKIT_PROVIDER_PATH}.get_room_state", return_value=mock_state) as mock_get_state:
+            url = reverse("mobile-api:get_room_state", kwargs={"event_slug": event.slug})
+            response = client.get(url)
+
+        assert response.status_code == 200
+        response_data = response.json()
+        assert response_data["speaking_order"] == []
+        assert response_data["speaking_now"] is None
+        assert response_data["status"] == SessionStatus.WAITING
+        assert response_data["totem_status"] == TotemStatus.NONE
+        mock_get_state.assert_called_once_with(event.slug)
+
+    def test_get_room_state_event_not_found(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+
+        url = reverse("mobile-api:get_room_state", kwargs={"event_slug": "non-existent-slug"})
+        response = client.get(url)
+
+        assert response.status_code == 404
+
+    def test_get_room_state_room_not_found(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory()
+
+        with patch(
+            f"{self.LIVEKIT_PROVIDER_PATH}.get_room_state",
+            side_effect=RoomNotFoundError(f"Room {event.slug} does not exist."),
+        ) as mock_get_state:
+            url = reverse("mobile-api:get_room_state", kwargs={"event_slug": event.slug})
+            response = client.get(url)
+
+        assert response.status_code == 404
+        assert response.json() == {"error": f"Room {event.slug} does not exist."}
+        mock_get_state.assert_called_once_with(event.slug)
+
+    def test_get_room_state_livekit_api_error(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory()
+
+        from livekit import api
+
+        with patch(
+            f"{self.LIVEKIT_PROVIDER_PATH}.get_room_state",
+            side_effect=api.TwirpError(code=500, status=1, msg="LiveKit API error"),
+        ) as mock_get_state:
+            url = reverse("mobile-api:get_room_state", kwargs={"event_slug": event.slug})
+            response = client.get(url)
+
+        assert response.status_code == 500
+        assert "Failed to retrieve room state" in response.json()["error"]
+        mock_get_state.assert_called_once_with(event.slug)

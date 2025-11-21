@@ -18,6 +18,7 @@ from totem.meetings.livekit_provider import (
     RoomNotFoundError,
     UnauthorizedError,
 )
+from totem.meetings.room_state import SessionState
 from totem.meetings.schemas import ErrorResponseSchema, LivekitMuteParticipantSchema, LivekitTokenResponseSchema
 from totem.users import analytics
 from totem.users.models import User
@@ -297,3 +298,27 @@ def reorder_participants_endpoint(request: HttpRequest, event_slug: str, order: 
     except api.TwirpError as e:
         logging.error(f"LiveKit API error in reorder: {e}")
         return 500, ErrorResponseSchema(error=f"Failed to reorder participants: {str(e)}")
+
+
+@meetings_router.get(
+    "/event/{event_slug}/room-state",
+    response={200: SessionState, 404: ErrorResponseSchema, 500: ErrorResponseSchema},
+    url_name="get_room_state",
+)
+def get_room_state_endpoint(request: HttpRequest, event_slug: str):
+    """
+    Retrieves the current session state for a room.
+
+    This endpoint exposes the SessionState schema and its enums (SessionStatus, TotemStatus)
+    in the OpenAPI documentation for client-side usage.
+    """
+    event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
+
+    try:
+        state = livekit.get_room_state(event.slug)
+        return state
+    except RoomNotFoundError as e:
+        return 404, ErrorResponseSchema(error=str(e))
+    except api.TwirpError as e:
+        logging.error(f"LiveKit API error in get_room_state: {e}")
+        return 500, ErrorResponseSchema(error=f"Failed to retrieve room state: {str(e)}")

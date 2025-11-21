@@ -38,7 +38,8 @@ class SessionState(Schema):
 
     def pass_totem(self):
         """
-        Passes the totem to the next person and returns the new state.
+        Passes the totem to the next person in the speaking order.
+        Sets totem_status to PASSING.
         """
         order = self.speaking_order
         current_speaker = self.speaking_now

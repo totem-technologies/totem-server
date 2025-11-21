@@ -169,6 +169,25 @@ async def _get_room_or_raise(room_name: str, lkapi: api.LiveKitAPI) -> api.Room:
     return room
 
 
+@async_to_sync
+async def get_room_state(room_name: str) -> SessionState:
+    """
+    Retrieves the current session state for a room.
+
+    Args:
+        room_name: The name of the room.
+
+    Returns:
+        The current SessionState for the room.
+
+    Raises:
+        RoomNotFoundError: If the room does not exist.
+    """
+    async with _get_lk_api_client() as lkapi:
+        room = await _get_room_or_raise(room_name, lkapi)
+        return await _parse_room_state(room)
+
+
 async def _parse_room_state(room: api.Room) -> SessionState:
     """
     Parses the session state from room metadata.
