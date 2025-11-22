@@ -208,7 +208,7 @@ async def _parse_room_state(room: api.Room) -> SessionState:
         current_state = json.loads(room.metadata)
         return SessionState(**current_state)
     except (json.JSONDecodeError, TypeError, ValueError) as e:
-        logging.error(f"Failed to parse room metadata for room {room.name}: {e}")
+        logging.error("Failed to parse room metadata for room %s: %s", room.name, e)
         # Return a default state if parsing fails
         return SessionState(speaking_order=[])
 
@@ -507,7 +507,7 @@ async def _mute_everyone(room_name: str, lkapi: api.LiveKitAPI, except_identity:
                         )
                     )
                 except api.TwirpError as e:
-                    logging.error(f"Failed to mute participant {participant.identity} in room {room_name}: {e}")
+                    logging.error("Failed to mute participant %s in room %s: %s", participant.identity, room_name, e)
                     continue
 
 

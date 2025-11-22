@@ -65,13 +65,13 @@ def get_livekit_token(request: HttpRequest, event_slug: str):
 
         return LivekitTokenResponseSchema(token=token)
     except LiveKitConfigurationError as e:
-        logging.error(f"LiveKit configuration error: {e}")
+        logging.error("LiveKit configuration error: %s", e)
         return 500, ErrorResponseSchema(error="LiveKit service is not properly configured.")
     except api.TwirpError as e:
-        logging.error(f"LiveKit API error in get_livekit_token: {e}")
+        logging.error("LiveKit API error in get_livekit_token: %s", e)
         return 500, ErrorResponseSchema(error=f"Failed to create access token: {str(e)}")
     except Exception as e:
-        logging.error(f"Unexpected error in get_livekit_token: {e}", exc_info=True)
+        logging.error("Unexpected error in get_livekit_token: %s", e, exc_info=True)
         return 500, ErrorResponseSchema(error="An unexpected error occurred while creating access token.")
 
 
@@ -100,10 +100,10 @@ def pass_totem_endpoint(request: HttpRequest, event_slug: str):
     except UnauthorizedError as e:
         return 403, ErrorResponseSchema(error=str(e))
     except api.TwirpError as e:
-        logging.error(f"LiveKit API error in pass_totem: {e}")
+        logging.error("LiveKit API error in pass_totem: %s", e)
         return 500, ErrorResponseSchema(error=f"Failed to pass totem: {str(e)}")
     except Exception as e:
-        logging.error(f"Unexpected error in pass_totem: {e}", exc_info=True)
+        logging.error("Unexpected error in pass_totem: %s", e, exc_info=True)
         return 500, ErrorResponseSchema(error="An unexpected error occurred while passing the totem.")
 
 
@@ -136,10 +136,10 @@ def accept_totem_endpoint(request: HttpRequest, event_slug: str):
     except NotCurrentSpeakerError as e:
         return 403, ErrorResponseSchema(error=str(e))
     except api.TwirpError as e:
-        logging.error(f"LiveKit API error in accept_totem: {e}")
+        logging.error("LiveKit API error in accept_totem: %s", e)
         return 500, ErrorResponseSchema(error=f"Failed to accept totem: {str(e)}")
     except Exception as e:
-        logging.error(f"Unexpected error in accept_totem: {e}", exc_info=True)
+        logging.error("Unexpected error in accept_totem: %s", e, exc_info=True)
         return 500, ErrorResponseSchema(error="An unexpected error occurred while accepting the totem.")
 
 
@@ -173,10 +173,10 @@ def start_room_endpoint(request: HttpRequest, event_slug: str):
     except RoomAlreadyStartedError as e:
         return 400, ErrorResponseSchema(error=str(e))
     except api.TwirpError as e:
-        logging.error(f"LiveKit API error in start_room: {e}")
+        logging.error("LiveKit API error in start_room: %s", e)
         return 500, ErrorResponseSchema(error=f"Failed to start room: {str(e)}")
     except Exception as e:
-        logging.error(f"Unexpected error in start_room: {e}", exc_info=True)
+        logging.error("Unexpected error in start_room: %s", e, exc_info=True)
         return 500, ErrorResponseSchema(error="An unexpected error occurred while starting the room.")
 
 
@@ -208,10 +208,10 @@ def end_room_endpoint(request: HttpRequest, event_slug: str):
     except RoomAlreadyEndedError as e:
         return 400, ErrorResponseSchema(error=str(e))
     except api.TwirpError as e:
-        logging.error(f"LiveKit API error in end_room: {e}")
+        logging.error("LiveKit API error in end_room: %s", e)
         return 500, ErrorResponseSchema(error=f"Failed to end room: {str(e)}")
     except Exception as e:
-        logging.error(f"Unexpected error in end_room: {e}", exc_info=True)
+        logging.error("Unexpected error in end_room: %s", e, exc_info=True)
         return 500, ErrorResponseSchema(error="An unexpected error occurred while ending the room.")
 
 
@@ -243,10 +243,10 @@ def mute_participant_endpoint(request: HttpRequest, event_slug: str, participant
     except NoAudioTrackError as e:
         return 400, ErrorResponseSchema(error=str(e))
     except api.TwirpError as e:
-        logging.error(f"LiveKit API error in mute_participant: {e}")
+        logging.error("LiveKit API error in mute_participant: %s", e)
         return 500, ErrorResponseSchema(error=f"Failed to mute participant: {str(e)}")
     except Exception as e:
-        logging.error(f"Unexpected error in mute_participant: {e}", exc_info=True)
+        logging.error("Unexpected error in mute_participant: %s", e, exc_info=True)
         return 500, ErrorResponseSchema(error="An unexpected error occurred while muting participant.")
 
 
@@ -279,10 +279,10 @@ def remove_participant_endpoint(request: HttpRequest, event_slug: str, participa
     except ParticipantNotFoundError as e:
         return 404, ErrorResponseSchema(error=str(e))
     except api.TwirpError as e:
-        logging.error(f"LiveKit API error in remove_participant: {e}")
+        logging.error("LiveKit API error in remove_participant: %s", e)
         return 500, ErrorResponseSchema(error=f"Failed to remove participant: {str(e)}")
     except Exception as e:
-        logging.error(f"Unexpected error in remove_participant: {e}", exc_info=True)
+        logging.error("Unexpected error in remove_participant: %s", e, exc_info=True)
         return 500, ErrorResponseSchema(error="An unexpected error occurred while removing participant.")
 
 
@@ -314,10 +314,10 @@ def reorder_participants_endpoint(request: HttpRequest, event_slug: str, order: 
     except RoomAlreadyEndedError as e:
         return 400, ErrorResponseSchema(error=str(e))
     except api.TwirpError as e:
-        logging.error(f"LiveKit API error in reorder: {e}")
+        logging.error("LiveKit API error in reorder: %s", e)
         return 500, ErrorResponseSchema(error=f"Failed to reorder participants: {str(e)}")
     except Exception as e:
-        logging.error(f"Unexpected error in reorder: {e}", exc_info=True)
+        logging.error("Unexpected error in reorder: %s", e, exc_info=True)
         return 500, ErrorResponseSchema(error="An unexpected error occurred while reordering participants.")
 
 
@@ -341,8 +341,8 @@ def get_room_state_endpoint(request: HttpRequest, event_slug: str):
     except RoomNotFoundError as e:
         return 404, ErrorResponseSchema(error=str(e))
     except api.TwirpError as e:
-        logging.error(f"LiveKit API error in get_room_state: {e}")
+        logging.error("LiveKit API error in get_room_state: %s", e)
         return 500, ErrorResponseSchema(error=f"Failed to retrieve room state: {str(e)}")
     except Exception as e:
-        logging.error(f"Unexpected error in get_room_state: {e}", exc_info=True)
+        logging.error("Unexpected error in get_room_state: %s", e, exc_info=True)
         return 500, ErrorResponseSchema(error="An unexpected error occurred while retrieving room state.")
