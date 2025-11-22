@@ -102,6 +102,9 @@ def pass_totem_endpoint(request: HttpRequest, event_slug: str):
     except api.TwirpError as e:
         logging.error(f"LiveKit API error in pass_totem: {e}")
         return 500, ErrorResponseSchema(error=f"Failed to pass totem: {str(e)}")
+    except Exception as e:
+        logging.error(f"Unexpected error in pass_totem: {e}", exc_info=True)
+        return 500, ErrorResponseSchema(error="An unexpected error occurred while passing the totem.")
 
 
 @meetings_router.post(
@@ -135,6 +138,9 @@ def accept_totem_endpoint(request: HttpRequest, event_slug: str):
     except api.TwirpError as e:
         logging.error(f"LiveKit API error in accept_totem: {e}")
         return 500, ErrorResponseSchema(error=f"Failed to accept totem: {str(e)}")
+    except Exception as e:
+        logging.error(f"Unexpected error in accept_totem: {e}", exc_info=True)
+        return 500, ErrorResponseSchema(error="An unexpected error occurred while accepting the totem.")
 
 
 @meetings_router.post(
@@ -169,6 +175,9 @@ def start_room_endpoint(request: HttpRequest, event_slug: str):
     except api.TwirpError as e:
         logging.error(f"LiveKit API error in start_room: {e}")
         return 500, ErrorResponseSchema(error=f"Failed to start room: {str(e)}")
+    except Exception as e:
+        logging.error(f"Unexpected error in start_room: {e}", exc_info=True)
+        return 500, ErrorResponseSchema(error="An unexpected error occurred while starting the room.")
 
 
 @meetings_router.post(
@@ -201,6 +210,9 @@ def end_room_endpoint(request: HttpRequest, event_slug: str):
     except api.TwirpError as e:
         logging.error(f"LiveKit API error in end_room: {e}")
         return 500, ErrorResponseSchema(error=f"Failed to end room: {str(e)}")
+    except Exception as e:
+        logging.error(f"Unexpected error in end_room: {e}", exc_info=True)
+        return 500, ErrorResponseSchema(error="An unexpected error occurred while ending the room.")
 
 
 @meetings_router.post(
@@ -233,6 +245,9 @@ def mute_participant_endpoint(request: HttpRequest, event_slug: str, participant
     except api.TwirpError as e:
         logging.error(f"LiveKit API error in mute_participant: {e}")
         return 500, ErrorResponseSchema(error=f"Failed to mute participant: {str(e)}")
+    except Exception as e:
+        logging.error(f"Unexpected error in mute_participant: {e}", exc_info=True)
+        return 500, ErrorResponseSchema(error="An unexpected error occurred while muting participant.")
 
 
 @meetings_router.post(
@@ -266,6 +281,9 @@ def remove_participant_endpoint(request: HttpRequest, event_slug: str, participa
     except api.TwirpError as e:
         logging.error(f"LiveKit API error in remove_participant: {e}")
         return 500, ErrorResponseSchema(error=f"Failed to remove participant: {str(e)}")
+    except Exception as e:
+        logging.error(f"Unexpected error in remove_participant: {e}", exc_info=True)
+        return 500, ErrorResponseSchema(error="An unexpected error occurred while removing participant.")
 
 
 @meetings_router.post(
@@ -298,6 +316,9 @@ def reorder_participants_endpoint(request: HttpRequest, event_slug: str, order: 
     except api.TwirpError as e:
         logging.error(f"LiveKit API error in reorder: {e}")
         return 500, ErrorResponseSchema(error=f"Failed to reorder participants: {str(e)}")
+    except Exception as e:
+        logging.error(f"Unexpected error in reorder: {e}", exc_info=True)
+        return 500, ErrorResponseSchema(error="An unexpected error occurred while reordering participants.")
 
 
 @meetings_router.get(
@@ -322,3 +343,6 @@ def get_room_state_endpoint(request: HttpRequest, event_slug: str):
     except api.TwirpError as e:
         logging.error(f"LiveKit API error in get_room_state: {e}")
         return 500, ErrorResponseSchema(error=f"Failed to retrieve room state: {str(e)}")
+    except Exception as e:
+        logging.error(f"Unexpected error in get_room_state: {e}", exc_info=True)
+        return 500, ErrorResponseSchema(error="An unexpected error occurred while retrieving room state.")
