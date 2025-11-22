@@ -16,7 +16,7 @@ class TotemStatus(str, Enum):
 
 
 class SessionState(Schema):
-    status: str = SessionStatus.WAITING
+    status: SessionStatus = SessionStatus.WAITING
     speaking_order: list[str]
     speaking_now: str | None = None
     totem_status: TotemStatus = TotemStatus.NONE
