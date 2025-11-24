@@ -131,7 +131,7 @@ class TestSessionState:
         state = SessionState(speaking_order=["user1", "user2", "user3"])
         assert state.totem_status == TotemStatus.NONE
         state.start()
-        assert state.totem_status == TotemStatus.NONE
+        assert state.totem_status == TotemStatus.PASSING
         assert state.speaking_now == "user1"
 
     def test_totem_status_with_session_end(self):
@@ -141,7 +141,7 @@ class TestSessionState:
         state.pass_totem()
         assert state.totem_status == TotemStatus.PASSING
         state.end()
-        assert state.totem_status == TotemStatus.PASSING
+        assert state.totem_status == TotemStatus.NONE
         assert state.speaking_now is None
 
     def test_reorder(self):
