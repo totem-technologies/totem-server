@@ -241,7 +241,7 @@ def mute_participant_endpoint(request: HttpRequest, event_slug: str, participant
     except ParticipantNotFoundError as e:
         return 404, ErrorResponseSchema(error=str(e))
     except NoAudioTrackError as e:
-        return 400, ErrorResponseSchema(error=str(e))
+        return 404, ErrorResponseSchema(error=str(e))
     except api.TwirpError as e:
         logging.error("LiveKit API error in mute_participant: %s", e)
         return 500, ErrorResponseSchema(error=f"Failed to mute participant: {str(e)}")

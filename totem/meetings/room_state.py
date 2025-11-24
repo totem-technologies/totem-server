@@ -28,6 +28,7 @@ class SessionState(Schema):
         self.status = SessionStatus.STARTED
         if self.speaking_order:
             self.speaking_now = self.speaking_order[0]
+            self.totem_status = TotemStatus.PASSING
 
     def end(self):
         """
@@ -35,6 +36,7 @@ class SessionState(Schema):
         """
         self.status = SessionStatus.ENDED
         self.speaking_now = None
+        self.totem_status = TotemStatus.NONE
 
     def pass_totem(self):
         """
