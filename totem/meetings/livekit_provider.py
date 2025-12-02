@@ -196,10 +196,8 @@ async def _parse_room_state(room: api.Room) -> SessionState:
         room: The room object containing metadata.
 
     Returns:
-        A SessionState object parsed from the room metadata.
-
-    Raises:
-        ValueError: If the metadata contains invalid JSON.
+        A SessionState object parsed from the room metadata. If the metadata is missing or invalid,
+        returns a default SessionState with an empty speaking order.
     """
     if not room.metadata:
         return SessionState(speaking_order=[])
@@ -521,8 +519,7 @@ async def remove_participant(room_name: str, user_identity: str) -> None:
         user_identity: The identity of the participant to remove.
 
     Raises:
-        ParticipantNotFoundError: If the participant removal fails or participant is not found.
-        api.TwirpError: If the API call fails.
+        ParticipantNotFoundError: If the participant removal fails, the participant is not found, or the API call fails.
     """
     async with _get_lk_api_client() as lkapi:
         try:

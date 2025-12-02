@@ -127,7 +127,7 @@ class TestSessionState:
         assert state.totem_status == TotemStatus.ACCEPTED
 
     def test_totem_status_with_session_start(self):
-        """Test that starting a session doesn't affect totem_status."""
+        """Test that starting a session sets totem_status to PASSING."""
         state = SessionState(speaking_order=["user1", "user2", "user3"])
         assert state.totem_status == TotemStatus.NONE
         state.start()
@@ -135,7 +135,7 @@ class TestSessionState:
         assert state.speaking_now == "user1"
 
     def test_totem_status_with_session_end(self):
-        """Test that ending a session doesn't reset totem_status."""
+        """Test that ending a session resets totem_status to NONE."""
         state = SessionState(speaking_order=["user1", "user2", "user3"])
         state.speaking_now = "user1"
         state.pass_totem()
