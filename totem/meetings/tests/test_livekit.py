@@ -378,7 +378,10 @@ class TestGetLiveKitToken:
 
     def test_get_room_state_success(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = CircleEventFactory()
+        event = CircleEventFactory(start=timezone.now())
+        event.attendees.add(user)
+        event.joined.add(user)
+        event.save()
 
         mock_state = SessionState(
             speaking_order=["user1", "user2", "user3"],
@@ -401,7 +404,10 @@ class TestGetLiveKitToken:
 
     def test_get_room_state_empty_state(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = CircleEventFactory()
+        event = CircleEventFactory(start=timezone.now())
+        event.attendees.add(user)
+        event.joined.add(user)
+        event.save()
 
         mock_state = SessionState(
             speaking_order=[],
@@ -432,7 +438,10 @@ class TestGetLiveKitToken:
 
     def test_get_room_state_room_not_found(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = CircleEventFactory()
+        event = CircleEventFactory(start=timezone.now())
+        event.attendees.add(user)
+        event.joined.add(user)
+        event.save()
 
         with patch(
             f"{self.LIVEKIT_PROVIDER_PATH}.get_room_state",
@@ -447,7 +456,10 @@ class TestGetLiveKitToken:
 
     def test_get_room_state_livekit_api_error(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = CircleEventFactory()
+        event = CircleEventFactory(start=timezone.now())
+        event.attendees.add(user)
+        event.joined.add(user)
+        event.save()
 
         from livekit import api
 

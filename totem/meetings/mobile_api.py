@@ -323,7 +323,7 @@ def reorder_participants_endpoint(request: HttpRequest, event_slug: str, order: 
 
 @meetings_router.get(
     "/event/{event_slug}/room-state",
-    response={200: SessionState, 404: ErrorResponseSchema, 500: ErrorResponseSchema},
+    response={200: SessionState, 403: ErrorResponseSchema, 404: ErrorResponseSchema, 500: ErrorResponseSchema},
     url_name="get_room_state",
 )
 def get_room_state_endpoint(request: HttpRequest, event_slug: str):
@@ -334,6 +334,12 @@ def get_room_state_endpoint(request: HttpRequest, event_slug: str):
     in the OpenAPI documentation for client-side usage.
     """
     event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
+
+    user: User = request.user  # type: ignore
+    is_joinable = event.can_join(user=user)
+    if not is_joinable:
+        logging.warning("User %s attempted to join non-joinable event %s", user.slug, event.slug)
+        return 403, ErrorResponseSchema(error="Session is not joinable at this time.")
 
     try:
         state = livekit.get_room_state(event.slug)

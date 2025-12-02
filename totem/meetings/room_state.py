@@ -80,8 +80,6 @@ class SessionState(Schema):
         # Deduplicate users list (preserves order)
         users = list(dict.fromkeys(users))
 
-        # Start with existing users who are still in the room (preserves their order)
-        # Also deduplicate in case self.speaking_order had duplicates
         valid_order = []
         seen = set()
         for user in self.speaking_order:
@@ -96,6 +94,5 @@ class SessionState(Schema):
 
         self.speaking_order = valid_order
 
-        # Update speaking_now if the current speaker is no longer in the validated order
         if self.speaking_now not in valid_order:
             self.speaking_now = valid_order[0] if valid_order else None
