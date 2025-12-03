@@ -477,6 +477,15 @@ async def mute_participant(room_name: str, user_identity: str) -> None:
         )
 
 
+@async_to_sync
+async def mute_all_participants(room_name: str, except_identity: str | None = None) -> None:
+    """
+    Mutes all participants in the room.
+    """
+    async with _get_lk_api_client() as lkapi:
+        await _mute_everyone(room_name=room_name, lkapi=lkapi, except_identity=except_identity)
+
+
 async def _mute_everyone(room_name: str, lkapi: api.LiveKitAPI, except_identity: str | None = None):
     """
     Mutes everyone in the room.

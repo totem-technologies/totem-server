@@ -223,6 +223,72 @@ class TestGetLiveKitToken:
         assert response.status_code == 403
         mock_mute.assert_not_called()
 
+    def test_mute_all_participants_success_by_keeper(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        circle = CircleFactory(author=user)
+        event = CircleEventFactory(circle=circle)
+
+        with patch(f"{self.LIVEKIT_PROVIDER_PATH}.mute_all_participants", new_callable=Mock) as mock_mute_all:
+            url = reverse("mobile-api:mute_all_participants", kwargs={"event_slug": event.slug})
+            response = client.post(url)
+
+        assert response.status_code == 200
+        mock_mute_all.assert_called_once_with(event.slug, except_identity=user.slug)
+
+    def test_mute_all_participants_forbidden_for_non_keeper(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory()
+
+        with patch(f"{self.LIVEKIT_PROVIDER_PATH}.mute_all_participants", new_callable=Mock) as mock_mute_all:
+            url = reverse("mobile-api:mute_all_participants", kwargs={"event_slug": event.slug})
+            response = client.post(url)
+
+        assert response.status_code == 403
+        assert response.json() == {"error": "Only the Keeper can mute participants."}
+        mock_mute_all.assert_not_called()
+
+    def test_mute_all_participants_event_not_found(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+
+        url = reverse("mobile-api:mute_all_participants", kwargs={"event_slug": "non-existent-slug"})
+        response = client.post(url)
+
+        assert response.status_code == 404
+
+    def test_mute_all_participants_livekit_api_error(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        circle = CircleFactory(author=user)
+        event = CircleEventFactory(circle=circle)
+
+        from livekit import api
+
+        with patch(
+            f"{self.LIVEKIT_PROVIDER_PATH}.mute_all_participants",
+            side_effect=api.TwirpError(code=500, status=1, msg="LiveKit API error"),
+        ) as mock_mute_all:
+            url = reverse("mobile-api:mute_all_participants", kwargs={"event_slug": event.slug})
+            response = client.post(url)
+
+        assert response.status_code == 500
+        assert "Failed to mute all participants" in response.json()["error"]
+        mock_mute_all.assert_called_once_with(event.slug, except_identity=user.slug)
+
+    def test_mute_all_participants_unexpected_error(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        circle = CircleFactory(author=user)
+        event = CircleEventFactory(circle=circle)
+
+        with patch(
+            f"{self.LIVEKIT_PROVIDER_PATH}.mute_all_participants",
+            side_effect=ValueError("Unexpected error"),
+        ) as mock_mute_all:
+            url = reverse("mobile-api:mute_all_participants", kwargs={"event_slug": event.slug})
+            response = client.post(url)
+
+        assert response.status_code == 500
+        assert response.json() == {"error": "An unexpected error occurred while muting all participants."}
+        mock_mute_all.assert_called_once_with(event.slug, except_identity=user.slug)
+
     def test_remove_participant_success_by_staff(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         user.is_staff = True
