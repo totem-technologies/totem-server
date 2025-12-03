@@ -9,10 +9,17 @@ class SessionStatus(str, Enum):
     ENDED = "ended"
 
 
+class TotemStatus(str, Enum):
+    NONE = "none"
+    ACCEPTED = "accepted"
+    PASSING = "passing"
+
+
 class SessionState(Schema):
-    status: str = SessionStatus.WAITING
+    status: SessionStatus = SessionStatus.WAITING
     speaking_order: list[str]
     speaking_now: str | None = None
+    totem_status: TotemStatus = TotemStatus.NONE
 
     def start(self):
         """
@@ -21,6 +28,7 @@ class SessionState(Schema):
         self.status = SessionStatus.STARTED
         if self.speaking_order:
             self.speaking_now = self.speaking_order[0]
+            self.totem_status = TotemStatus.PASSING
 
     def end(self):
         """
@@ -28,10 +36,12 @@ class SessionState(Schema):
         """
         self.status = SessionStatus.ENDED
         self.speaking_now = None
+        self.totem_status = TotemStatus.NONE
 
     def pass_totem(self):
         """
-        Passes the totem to the next person and returns the new state.
+        Passes the totem to the next person in the speaking order.
+        Sets totem_status to PASSING.
         """
         order = self.speaking_order
         current_speaker = self.speaking_now
@@ -43,11 +53,46 @@ class SessionState(Schema):
             next_index = (current_index + 1) % len(order)
 
         self.speaking_now = order[next_index]
+        self.totem_status = TotemStatus.PASSING
+
+    def accept_totem(self):
+        """
+        Accepts the totem by setting the totem status to 'accepted'.
+        """
+        self.totem_status = TotemStatus.ACCEPTED
 
     def reorder(self, new_order: list[str]):
         """
         Reorders the speaking order.
         """
+
         self.speaking_order = new_order
         if self.speaking_now not in new_order:
             self.speaking_now = new_order[0] if new_order else None
+
+    def validate_order(self, users: list[str]):
+        """
+        Validates the speaking order by removing users who left and adding new users.
+
+        Args:
+            users: The list of user slugs in the room. Duplicates will be removed.
+        """
+        # Deduplicate users list (preserves order)
+        users = list(dict.fromkeys(users))
+
+        valid_order = []
+        seen = set()
+        for user in self.speaking_order:
+            if user in users and user not in seen:
+                valid_order.append(user)
+                seen.add(user)
+
+        for user in users:
+            if user not in seen:
+                valid_order.append(user)
+                seen.add(user)
+
+        self.speaking_order = valid_order
+
+        if self.speaking_now not in valid_order:
+            self.speaking_now = valid_order[0] if valid_order else None

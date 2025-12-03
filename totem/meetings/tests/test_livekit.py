@@ -9,6 +9,11 @@ from django.utils import timezone
 
 from totem.circles.models import CircleEvent
 from totem.circles.tests.factories import CircleEventFactory, CircleFactory
+from totem.meetings.livekit_provider import (
+    RoomAlreadyEndedError,
+    RoomNotFoundError,
+)
+from totem.meetings.room_state import SessionState, SessionStatus, TotemStatus
 from totem.users.models import User
 
 
@@ -82,7 +87,7 @@ class TestGetLiveKitToken:
         response = client.get(url)
 
         assert response.status_code == 403
-        assert response.json() == "Session is not joinable at this time."
+        assert response.json() == {"error": "Session is not joinable at this time."}
 
     def test_get_livekit_token_not_attendee(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -92,7 +97,7 @@ class TestGetLiveKitToken:
         response = client.get(url)
 
         assert response.status_code == 403
-        assert response.json() == "Session is not joinable at this time."
+        assert response.json() == {"error": "Session is not joinable at this time."}
 
     def test_get_livekit_token_not_found(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -101,7 +106,7 @@ class TestGetLiveKitToken:
         response = client.get(url)
 
         assert response.status_code == 404
-        assert response.json() == "Session not found"
+        assert response.json() == {"error": "Session not found"}
 
     def test_pass_totem_success(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -253,7 +258,7 @@ class TestGetLiveKitToken:
         response = client.post(url)
 
         assert response.status_code == 403
-        assert response.json()["detail"] == "Cannot remove the keeper from the room."
+        assert response.json() == {"error": "Cannot remove the keeper from the room."}
 
     def test_remove_participant_forbidden_for_non_staff(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -329,7 +334,7 @@ class TestGetLiveKitToken:
 
         assert response.status_code == 404
 
-    def test_reorder_participants_livekit_raises_error(self, client_with_user: tuple[Client, User]):
+    def test_reorder_participants_room_already_ended(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         user.is_staff = True
         user.save()
@@ -341,11 +346,130 @@ class TestGetLiveKitToken:
 
         with patch(
             f"{self.LIVEKIT_PROVIDER_PATH}.reorder",
-            side_effect=ValueError("Room has already ended."),
-            return_value=new_order,
+            side_effect=RoomAlreadyEndedError(f"Room {event.slug} has already ended."),
+        ) as mock_reorder:
+            url = reverse("mobile-api:reorder_participants", kwargs={"event_slug": event.slug})
+            response = client.post(url, data=json.dumps(payload), content_type="application/json")
+
+        assert response.status_code == 400
+        assert response.json() == {"error": f"Room {event.slug} has already ended."}
+        mock_reorder.assert_called_once_with(event.slug, new_order)
+
+    def test_reorder_participants_room_not_found(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        user.is_staff = True
+        user.save()
+
+        circle = CircleFactory(author=user)
+        event = CircleEventFactory(circle=circle)
+        new_order = ["invalid-slug"]
+        payload = {"order": new_order}
+
+        with patch(
+            f"{self.LIVEKIT_PROVIDER_PATH}.reorder",
+            side_effect=RoomNotFoundError(f"Room {event.slug} does not exist."),
         ) as mock_reorder:
             url = reverse("mobile-api:reorder_participants", kwargs={"event_slug": event.slug})
             response = client.post(url, data=json.dumps(payload), content_type="application/json")
 
         assert response.status_code == 404
+        assert response.json() == {"error": f"Room {event.slug} does not exist."}
         mock_reorder.assert_called_once_with(event.slug, new_order)
+
+    def test_get_room_state_success(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory(start=timezone.now())
+        event.attendees.add(user)
+        event.joined.add(user)
+        event.save()
+
+        mock_state = SessionState(
+            speaking_order=["user1", "user2", "user3"],
+            speaking_now="user1",
+            status=SessionStatus.STARTED,
+            totem_status=TotemStatus.ACCEPTED,
+        )
+
+        with patch(f"{self.LIVEKIT_PROVIDER_PATH}.get_room_state", return_value=mock_state) as mock_get_state:
+            url = reverse("mobile-api:get_room_state", kwargs={"event_slug": event.slug})
+            response = client.get(url)
+
+        assert response.status_code == 200
+        response_data = response.json()
+        assert response_data["speaking_order"] == ["user1", "user2", "user3"]
+        assert response_data["speaking_now"] == "user1"
+        assert response_data["status"] == SessionStatus.STARTED
+        assert response_data["totem_status"] == TotemStatus.ACCEPTED
+        mock_get_state.assert_called_once_with(event.slug)
+
+    def test_get_room_state_empty_state(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory(start=timezone.now())
+        event.attendees.add(user)
+        event.joined.add(user)
+        event.save()
+
+        mock_state = SessionState(
+            speaking_order=[],
+            speaking_now=None,
+            status=SessionStatus.WAITING,
+            totem_status=TotemStatus.NONE,
+        )
+
+        with patch(f"{self.LIVEKIT_PROVIDER_PATH}.get_room_state", return_value=mock_state) as mock_get_state:
+            url = reverse("mobile-api:get_room_state", kwargs={"event_slug": event.slug})
+            response = client.get(url)
+
+        assert response.status_code == 200
+        response_data = response.json()
+        assert response_data["speaking_order"] == []
+        assert response_data["speaking_now"] is None
+        assert response_data["status"] == SessionStatus.WAITING
+        assert response_data["totem_status"] == TotemStatus.NONE
+        mock_get_state.assert_called_once_with(event.slug)
+
+    def test_get_room_state_event_not_found(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+
+        url = reverse("mobile-api:get_room_state", kwargs={"event_slug": "non-existent-slug"})
+        response = client.get(url)
+
+        assert response.status_code == 404
+
+    def test_get_room_state_room_not_found(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory(start=timezone.now())
+        event.attendees.add(user)
+        event.joined.add(user)
+        event.save()
+
+        with patch(
+            f"{self.LIVEKIT_PROVIDER_PATH}.get_room_state",
+            side_effect=RoomNotFoundError(f"Room {event.slug} does not exist."),
+        ) as mock_get_state:
+            url = reverse("mobile-api:get_room_state", kwargs={"event_slug": event.slug})
+            response = client.get(url)
+
+        assert response.status_code == 404
+        assert response.json() == {"error": f"Room {event.slug} does not exist."}
+        mock_get_state.assert_called_once_with(event.slug)
+
+    def test_get_room_state_livekit_api_error(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory(start=timezone.now())
+        event.attendees.add(user)
+        event.joined.add(user)
+        event.save()
+
+        from livekit import api
+
+        with patch(
+            f"{self.LIVEKIT_PROVIDER_PATH}.get_room_state",
+            side_effect=api.TwirpError(code=500, status=1, msg="LiveKit API error"),
+        ) as mock_get_state:
+            url = reverse("mobile-api:get_room_state", kwargs={"event_slug": event.slug})
+            response = client.get(url)
+
+        assert response.status_code == 500
+        assert "Failed to retrieve room state" in response.json()["error"]
+        mock_get_state.assert_called_once_with(event.slug)

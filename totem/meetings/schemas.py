@@ -7,3 +7,7 @@ class LivekitTokenResponseSchema(Schema):
 
 class LivekitMuteParticipantSchema(Schema):
     order: list[str]
+
+
+class ErrorResponseSchema(Schema):
+    error: str
