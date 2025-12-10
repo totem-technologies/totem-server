@@ -2,6 +2,7 @@ import base64
 import random
 import uuid
 from dataclasses import dataclass
+from typing import Optional
 
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
@@ -16,7 +17,6 @@ from ..users.models import User
 from .models import Redirect
 from .qrmaker import make_qr
 from .webflow import get_webflow_page
-from typing import Optional
 
 
 @dataclass
@@ -102,6 +102,13 @@ def team_view(request):
             image="smita.jpg",
             url="https://www.linkedin.com/in/smita-agarwal-4012164/",
             external=True,
+        ),
+        Member(
+            name="Jesse Woche",
+            title="Keeper",
+            image="jesse.webp",
+            url=reverse("pages:keepers", kwargs={"name": "jesse"}),
+            external=False,
         ),
     ]
     # randomly shuffle the team
