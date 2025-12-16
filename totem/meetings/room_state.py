@@ -67,7 +67,7 @@ class SessionState(Schema):
         """
 
         self.speaking_order = new_order
-        if self.speaking_now not in new_order:
+        if self.speaking_now and self.speaking_now not in new_order:
             self.speaking_now = new_order[0] if new_order else None
 
     def validate_order(self, users: list[str]):
