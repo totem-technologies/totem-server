@@ -367,3 +367,22 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
 
 class CircleEventException(Exception):
     pass
+
+
+class SessionFeedbackOptions(models.TextChoices):
+    UP = "up", _("Thumbs Up")
+    DOWN = "down", _("Thumbs Down")
+
+
+class SessionFeedback(AdminURLMixin, models.Model):
+    event = models.ForeignKey(CircleEvent, on_delete=models.CASCADE, related_name="feedback")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="session_feedback")
+    feedback = models.CharField(max_length=4, choices=SessionFeedbackOptions.choices)
+    message = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [["event", "user"]]
+
+    def __str__(self):
+        return f"{self.user} gave {self.feedback} for {self.event}"
