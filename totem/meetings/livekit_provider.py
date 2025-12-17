@@ -200,7 +200,7 @@ async def _parse_room_state(room: api.Room) -> SessionState:
         returns a default SessionState with an empty speaking order.
     """
     if not room.metadata:
-        return SessionState(speaking_order=[])
+        return SessionState(speaking_order=[], keeper_slug='')
 
     try:
         current_state = json.loads(room.metadata)
@@ -208,7 +208,7 @@ async def _parse_room_state(room: api.Room) -> SessionState:
     except (json.JSONDecodeError, TypeError, ValueError) as e:
         logging.error("Failed to parse room metadata for room %s: %s", room.name, e)
         # Return a default state if parsing fails
-        return SessionState(speaking_order=[])
+        return SessionState(speaking_order=[], keeper_slug='')
 
 
 async def _update_room_metadata(room_name: str, state: SessionState, lkapi: api.LiveKitAPI) -> None:
@@ -254,7 +254,7 @@ async def _ensure_keeper_in_room(room_name: str, keeper_slug: str, lkapi: api.Li
 
 
 @async_to_sync
-async def initialize_room(room_name: str, speaking_order: list[str]) -> None:
+async def initialize_room(room_name: str, speaking_order: list[str], keeper_slug: str) -> None:
     """
     Initializes a room with default metadata if it doesn't exist.
 
@@ -265,7 +265,7 @@ async def initialize_room(room_name: str, speaking_order: list[str]) -> None:
     async with _get_lk_api_client() as lkapi:
         room = await _get_room(room_name, lkapi)
         if not room:
-            state = SessionState(speaking_order=speaking_order)
+            state = SessionState(speaking_order=speaking_order, keeper_slug=keeper_slug)
             await lkapi.room.create_room(
                 create=api.CreateRoomRequest(
                     name=room_name,

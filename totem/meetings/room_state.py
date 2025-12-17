@@ -16,6 +16,7 @@ class TotemStatus(str, Enum):
 
 
 class SessionState(Schema):
+    keeper_slug: str
     status: SessionStatus = SessionStatus.WAITING
     speaking_order: list[str]
     speaking_now: str | None = None
@@ -65,6 +66,9 @@ class SessionState(Schema):
         """
         Reorders the speaking order.
         """
+        if self.keeper_slug in new_order:
+            new_order.remove(self.keeper_slug)
+            new_order.insert(0, self.keeper_slug)
 
         self.speaking_order = new_order
         if self.speaking_now and self.speaking_now not in new_order:
@@ -82,6 +86,11 @@ class SessionState(Schema):
 
         valid_order = []
         seen = set()
+
+        if self.keeper_slug in users:
+            valid_order.append(self.keeper_slug)
+            seen.add(self.keeper_slug)
+
         for user in self.speaking_order:
             if user in users and user not in seen:
                 valid_order.append(user)

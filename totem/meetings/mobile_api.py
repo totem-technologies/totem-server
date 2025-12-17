@@ -54,7 +54,11 @@ def get_livekit_token(request: HttpRequest, event_slug: str):
     try:
         # Initialize the room with the speaking order if not already done
         speaking_order = event.attendees.all()
-        livekit.initialize_room(event.slug, [attendee.slug for attendee in speaking_order])
+        livekit.initialize_room(
+            room_name=event.slug,
+            speaking_order=[attendee.slug for attendee in speaking_order],
+            keeper_slug=event.circle.author.slug,
+        )
 
         # Create and return the access token
         token = livekit.create_access_token(user, event)
