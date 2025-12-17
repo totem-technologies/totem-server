@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from enum import Enum
 
 import jwt
@@ -6,16 +6,18 @@ from django.conf import settings
 from django.utils import timezone
 from ninja import Router, Schema
 from ninja.errors import AuthenticationError
-from datetime import datetime
 
 from totem.email import emails
 from totem.email.emails import login_pin_email
+from totem.email.exceptions import EmailBounced
 from totem.users import analytics
 from totem.users.models import LoginPin, RefreshToken, User
-from totem.email.exceptions import EmailBounced
 
 # Create router
 router = Router()
+
+# Constants
+ACCESS_TOKEN_LIFETIME_DAYS = 30
 
 
 # Enum for error messages
@@ -69,7 +71,7 @@ class RefreshTokenSchema(Schema):
 def generate_jwt_token(user: User, expire_at: datetime | None = None) -> str:
     """Generate a JWT token for the user."""
     if expire_at is None:
-        expire_at = timezone.now() + timedelta(minutes=60)
+        expire_at = timezone.now() + timedelta(days=ACCESS_TOKEN_LIFETIME_DAYS)
     payload = JWTSchema(pk=user.pk, api_key=str(user.api_key), exp=expire_at)
     return jwt.encode(payload.model_dump(), settings.SECRET_KEY, algorithm="HS256")
 
@@ -148,7 +150,7 @@ def validate_pin(request, data: ValidatePinSchema):
     return {
         "access_token": access_token,
         "refresh_token": refresh_token_string,
-        "expires_in": 3600,  # 60 minutes in seconds
+        "expires_in": ACCESS_TOKEN_LIFETIME_DAYS * 24 * 60 * 60,
     }
 
 
@@ -175,7 +177,7 @@ def refresh_token(request, data: RefreshTokenSchema):
     return {
         "access_token": access_token,
         "refresh_token": data.refresh_token,  # Return the same refresh token
-        "expires_in": 3600,  # 60 minutes in seconds
+        "expires_in": ACCESS_TOKEN_LIFETIME_DAYS * 24 * 60 * 60,
     }
 
 
