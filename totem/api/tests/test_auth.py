@@ -8,6 +8,7 @@ from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
 
+from totem.api.auth import ACCESS_TOKEN_LIFETIME_DAYS
 from totem.users.models import LoginPin, RefreshToken, User
 from totem.users.tests.factories import UserFactory
 
@@ -125,7 +126,7 @@ class TestPinValidationEndpoint:
         data = response.json()
         assert "access_token" in data
         assert "refresh_token" in data
-        assert data["expires_in"] == 3600
+        assert data["expires_in"] == ACCESS_TOKEN_LIFETIME_DAYS * 24 * 60 * 60
 
         # Decode and verify access token
         payload = jwt.decode(data["access_token"], settings.SECRET_KEY, algorithms=["HS256"])
@@ -254,7 +255,7 @@ class TestRefreshTokenEndpoint:
         data = response.json()
         assert "access_token" in data
         assert data["refresh_token"] == refresh_token
-        assert data["expires_in"] == 3600
+        assert data["expires_in"] == ACCESS_TOKEN_LIFETIME_DAYS * 24 * 60 * 60
 
         # Verify token was updated (last_used_at)
         token_obj.refresh_from_db()
@@ -355,7 +356,7 @@ class TestFixedPinEndpoint:
         data = response.json()
         assert "access_token" in data
         assert "refresh_token" in data
-        assert data["expires_in"] == 3600
+        assert data["expires_in"] == ACCESS_TOKEN_LIFETIME_DAYS * 24 * 60 * 60
 
         # Decode and verify access token
         payload = jwt.decode(data["access_token"], settings.SECRET_KEY, algorithms=["HS256"])
