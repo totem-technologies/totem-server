@@ -483,8 +483,7 @@ async def mute_all_participants(room_name: str, except_identity: str | None = No
     Args:
         room_name (str): The name of the room in which to mute participants.
         except_identity (str | None, optional): The identity of a participant to exclude from muting. If None, all participants are muted.
-    Raises:
-        api.TwirpError: If the API call to mute a participant fails.
+
     Note:
         This function is synchronous due to the @async_to_sync decorator.
     """

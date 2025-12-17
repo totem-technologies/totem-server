@@ -66,6 +66,7 @@ class SessionState(Schema):
         """
         Reorders the speaking order.
         """
+        new_order = list(new_order)
         if self.keeper_slug in new_order:
             new_order.remove(self.keeper_slug)
             new_order.insert(0, self.keeper_slug)

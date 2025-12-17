@@ -557,6 +557,23 @@ class TestMobileApiSpaces:
         assert feedback.feedback == SessionFeedbackOptions.DOWN
         assert feedback.message == "It was not good."
 
+    def test_post_session_feedback_down_no_message(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory()
+        event.attendees.add(user)
+
+        url = reverse("mobile-api:session_feedback", kwargs={"event_slug": event.slug})
+        response = client.post(
+            url,
+            {"feedback": "down"},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 204
+        feedback = SessionFeedback.objects.get(event=event, user=user)
+        assert feedback.feedback == SessionFeedbackOptions.DOWN
+        assert feedback.message == ""
+
     def test_post_session_feedback_not_attendee(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
         event = CircleEventFactory()
