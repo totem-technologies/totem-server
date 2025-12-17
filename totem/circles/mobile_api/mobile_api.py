@@ -87,9 +87,6 @@ def post_session_feedback(request: HttpRequest, event_slug: str, payload: Sessio
     if not event.attendees.filter(pk=user.pk).exists():
         raise AuthorizationError(message="User is not an attendee of this event.")
 
-    if payload.feedback not in [SessionFeedbackOptions.UP, SessionFeedbackOptions.DOWN]:
-        raise AuthorizationError(message="Invalid feedback value.")
-
     defaults: dict[str, str] = {"feedback": payload.feedback.value}
     if payload.feedback == SessionFeedbackOptions.DOWN:
         defaults["message"] = payload.message or ""
@@ -101,6 +98,8 @@ def post_session_feedback(request: HttpRequest, event_slug: str, payload: Sessio
         user=user,
         defaults=defaults,
     )
+
+    return 204, None
 
 
 @spaces_router.get("/sessions/history", response={200: List[EventDetailSchema]}, url_name="sessions_history")

@@ -264,7 +264,7 @@ class TestGetLiveKitToken:
 
         with patch(
             f"{self.LIVEKIT_PROVIDER_PATH}.mute_all_participants",
-            side_effect=api.TwirpError(code='500', status=1, msg="LiveKit API error"),
+            side_effect=api.TwirpError(code="500", status=1, msg="LiveKit API error"),
         ) as mock_mute_all:
             url = reverse("mobile-api:mute_all_participants", kwargs={"event_slug": event.slug})
             response = client.post(url)
@@ -533,7 +533,7 @@ class TestGetLiveKitToken:
 
         with patch(
             f"{self.LIVEKIT_PROVIDER_PATH}.get_room_state",
-            side_effect=api.TwirpError(code='500', status=1, msg="LiveKit API error"),
+            side_effect=api.TwirpError(code="500", status=1, msg="LiveKit API error"),
         ) as mock_get_state:
             url = reverse("mobile-api:get_room_state", kwargs={"event_slug": event.slug})
             response = client.get(url)

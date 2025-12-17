@@ -200,15 +200,14 @@ async def _parse_room_state(room: api.Room) -> SessionState:
         returns a default SessionState with an empty speaking order.
     """
     if not room.metadata:
-        return SessionState(speaking_order=[], keeper_slug='')
+        return SessionState(speaking_order=[], keeper_slug="")
 
     try:
         current_state = json.loads(room.metadata)
         return SessionState(**current_state)
     except (json.JSONDecodeError, TypeError, ValueError) as e:
         logging.error("Failed to parse room metadata for room %s: %s", room.name, e)
-        # Return a default state if parsing fails
-        return SessionState(speaking_order=[], keeper_slug='')
+        return SessionState(speaking_order=[], keeper_slug="")
 
 
 async def _update_room_metadata(room_name: str, state: SessionState, lkapi: api.LiveKitAPI) -> None:
@@ -481,6 +480,13 @@ async def mute_participant(room_name: str, user_identity: str) -> None:
 async def mute_all_participants(room_name: str, except_identity: str | None = None) -> None:
     """
     Mutes all participants in the room.
+    Args:
+        room_name (str): The name of the room in which to mute participants.
+        except_identity (str | None, optional): The identity of a participant to exclude from muting. If None, all participants are muted.
+    Raises:
+        api.TwirpError: If the API call to mute a participant fails.
+    Note:
+        This function is synchronous due to the @async_to_sync decorator.
     """
     async with _get_lk_api_client() as lkapi:
         await _mute_everyone(room_name=room_name, lkapi=lkapi, except_identity=except_identity)
