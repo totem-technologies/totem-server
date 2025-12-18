@@ -382,7 +382,4 @@ class SessionFeedback(AdminURLMixin, BaseModel):
     message = MaxLengthTextField(blank=True, max_length=2000)
 
     class Meta(BaseModel.Meta):
-        unique_together = [["event", "user"]]
-
-    def __str__(self):
-        return f"{self.user} gave {self.feedback} for {self.event}"
+        constraints = [models.UniqueConstraint(fields=["event", "user"], name="unique_user_feedback_for_event")]
