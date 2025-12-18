@@ -150,7 +150,7 @@ def copy_event(modeladmin, request, queryset: QuerySet[CircleEvent]):
 class SessionFeedbackInline(admin.TabularInline):
     model = SessionFeedback
     extra = 0
-    readonly_fields = ("user", "feedback", "message", "created_at")
+    readonly_fields = ("user", "feedback", "message", "date_created")
 
 
 @final

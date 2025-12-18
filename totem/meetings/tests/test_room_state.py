@@ -168,6 +168,13 @@ class TestSessionState:
         assert state.speaking_order == []
         assert state.speaking_now is None
 
+    def test_reorder_maintains_current_speaker(self):
+        """Test reordering to an empty order."""
+        state = SessionState(speaking_order=["user1", "user2", "user3"], keeper_slug="user1")
+        state.speaking_now = None
+        state.reorder(["user2", "user3", "user1"])
+        assert state.speaking_now is None
+
     def test_validate_order_preserves_existing_order(self):
         """Test that validate_order preserves the order of existing users."""
         state = SessionState(speaking_order=["user1", "user2", "user3"], keeper_slug="user1")

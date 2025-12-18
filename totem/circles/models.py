@@ -380,7 +380,6 @@ class SessionFeedback(AdminURLMixin, BaseModel):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="session_feedback")
     feedback = models.CharField(max_length=4, choices=SessionFeedbackOptions.choices)
     message = MaxLengthTextField(blank=True, max_length=2000)
-    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta(BaseModel.Meta):
         unique_together = [["event", "user"]]
