@@ -54,7 +54,11 @@ def get_livekit_token(request: HttpRequest, event_slug: str):
     try:
         # Initialize the room with the speaking order if not already done
         speaking_order = event.attendees.all()
-        livekit.initialize_room(event.slug, [attendee.slug for attendee in speaking_order])
+        livekit.initialize_room(
+            room_name=event.slug,
+            speaking_order=[attendee.slug for attendee in speaking_order],
+            keeper_slug=event.circle.author.slug,
+        )
 
         # Create and return the access token
         token = livekit.create_access_token(user, event)
@@ -248,6 +252,36 @@ def mute_participant_endpoint(request: HttpRequest, event_slug: str, participant
     except Exception as e:
         logging.error("Unexpected error in mute_participant: %s", e, exc_info=True)
         return 500, ErrorResponseSchema(error="An unexpected error occurred while muting participant.")
+
+
+@meetings_router.post(
+    "/event/{event_slug}/mute-all",
+    response={
+        200: None,
+        403: ErrorResponseSchema,
+        404: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+    },
+    url_name="mute_all_participants",
+)
+def mute_all_participants_endpoint(request: HttpRequest, event_slug: str):
+    user: User = request.user  # type: ignore
+    event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
+    is_keeper = event.circle.author.slug == user.slug
+
+    if not is_keeper:
+        logging.warning("User %s attempted to mute all participants in event %s", user.slug, event_slug)
+        return 403, ErrorResponseSchema(error="Only the Keeper can mute participants.")
+
+    try:
+        livekit.mute_all_participants(event.slug, except_identity=user.slug)
+        return HttpResponse(status=200)
+    except api.TwirpError as e:
+        logging.error("LiveKit API error in mute_all_participants: %s", e)
+        return 500, ErrorResponseSchema(error=f"Failed to mute all participants: {str(e)}")
+    except Exception as e:
+        logging.error("Unexpected error in mute_all_participants: %s", e, exc_info=True)
+        return 500, ErrorResponseSchema(error="An unexpected error occurred while muting all participants.")
 
 
 @meetings_router.post(

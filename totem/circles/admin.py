@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from totem.users.models import User
 
-from .models import Circle, CircleCategory, CircleEvent
+from .models import Circle, CircleCategory, CircleEvent, SessionFeedback
 
 
 @final
@@ -147,6 +147,12 @@ def copy_event(modeladmin, request, queryset: QuerySet[CircleEvent]):
     return redirect(change_url)
 
 
+class SessionFeedbackInline(admin.TabularInline):
+    model = SessionFeedback
+    extra = 0
+    readonly_fields = ("user", "feedback", "message", "date_created")
+
+
 @final
 @admin.register(CircleEvent)
 class CircleEventAdmin(admin.ModelAdmin):
@@ -155,6 +161,7 @@ class CircleEventAdmin(admin.ModelAdmin):
     autocomplete_fields = ["attendees", "joined"]
     readonly_fields = ("date_created", "date_modified")
     actions = [copy_event]
+    inlines = [SessionFeedbackInline]
     fieldsets = (
         (
             None,

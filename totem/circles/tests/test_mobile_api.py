@@ -5,6 +5,7 @@ from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
 
+from totem.circles.models import SessionFeedback, SessionFeedbackOptions
 from totem.circles.tests.factories import CircleCategoryFactory, CircleEventFactory, CircleFactory
 from totem.onboard.tests.factories import OnboardModelFactory
 from totem.users.models import User
@@ -82,12 +83,12 @@ class TestMobileApiSpaces:
         assert response.status_code == 200
         assert response.json()["items"] == []
 
-    def test_get_event_detail(self, client_with_user: tuple[Client, User]):
+    def test_get_session_detail(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
         event = CircleEventFactory(circle__published=True)
         space = event.circle
 
-        url = reverse("mobile-api:event_detail", kwargs={"event_slug": event.slug})
+        url = reverse("mobile-api:session_detail", kwargs={"event_slug": event.slug})
         response = client.get(url)
 
         assert response.status_code == 200
@@ -95,12 +96,12 @@ class TestMobileApiSpaces:
         assert data["slug"] == event.slug
         assert data["space"]["slug"] == space.slug
 
-    def test_get_event_detail_unpublished_circle(self, client_with_user: tuple[Client, User]):
+    def test_get_session_detail_unpublished_circle(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
         event = CircleEventFactory(circle__published=False)
         space = event.circle
 
-        url = reverse("mobile-api:event_detail", kwargs={"event_slug": event.slug})
+        url = reverse("mobile-api:session_detail", kwargs={"event_slug": event.slug})
         response = client.get(url)
 
         assert response.status_code == 200
@@ -521,3 +522,101 @@ class TestMobileApiSpaces:
         assert response.status_code == 403
         assert "no spots left" in response.json()["detail"].lower() or "spots" in response.json()["detail"].lower()
         assert not event.attendees.filter(pk=user.pk).exists()
+
+    def test_post_session_feedback_up(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory()
+        event.attendees.add(user)
+
+        url = reverse("mobile-api:session_feedback", kwargs={"event_slug": event.slug})
+        response = client.post(
+            url,
+            {"feedback": "up"},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 204
+        feedback = SessionFeedback.objects.get(event=event, user=user)
+        assert feedback.feedback == SessionFeedbackOptions.UP
+        assert feedback.message == ""
+
+    def test_post_session_feedback_down(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory()
+        event.attendees.add(user)
+
+        url = reverse("mobile-api:session_feedback", kwargs={"event_slug": event.slug})
+        response = client.post(
+            url,
+            {"feedback": "down", "message": "It was not good."},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 204
+        feedback = SessionFeedback.objects.get(event=event, user=user)
+        assert feedback.feedback == SessionFeedbackOptions.DOWN
+        assert feedback.message == "It was not good."
+
+    def test_post_session_feedback_down_no_message(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory()
+        event.attendees.add(user)
+
+        url = reverse("mobile-api:session_feedback", kwargs={"event_slug": event.slug})
+        response = client.post(
+            url,
+            {"feedback": "down"},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 204
+        feedback = SessionFeedback.objects.get(event=event, user=user)
+        assert feedback.feedback == SessionFeedbackOptions.DOWN
+        assert feedback.message == ""
+
+    def test_post_session_feedback_not_attendee(self, client_with_user: tuple[Client, User]):
+        client, _ = client_with_user
+        event = CircleEventFactory()
+
+        url = reverse("mobile-api:session_feedback", kwargs={"event_slug": event.slug})
+        response = client.post(
+            url,
+            {"feedback": "up"},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 403
+        assert "not an attendee" in response.json()["detail"].lower()
+
+    def test_post_session_feedback_update(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory()
+        event.attendees.add(user)
+        SessionFeedback.objects.create(event=event, user=user, feedback=SessionFeedbackOptions.DOWN, message="old")
+
+        url = reverse("mobile-api:session_feedback", kwargs={"event_slug": event.slug})
+        response = client.post(
+            url,
+            {"feedback": "up"},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 204
+        feedback = SessionFeedback.objects.get(event=event, user=user)
+        assert feedback.feedback == SessionFeedbackOptions.UP
+        assert feedback.message == ""
+        assert SessionFeedback.objects.count() == 1
+
+    def test_post_session_feedback_invalid_value(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = CircleEventFactory()
+        event.attendees.add(user)
+
+        url = reverse("mobile-api:session_feedback", kwargs={"event_slug": event.slug})
+        response = client.post(
+            url,
+            {"feedback": "invalid"},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 422

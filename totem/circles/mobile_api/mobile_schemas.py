@@ -3,7 +3,7 @@ from enum import Enum
 
 from ninja import ModelSchema, Schema
 
-from totem.circles.models import Circle, CircleEvent
+from totem.circles.models import Circle, CircleEvent, SessionFeedbackOptions
 from totem.users.schemas import PublicUserSchema
 
 
@@ -93,3 +93,8 @@ class SummarySpacesSchema(Schema):
     upcoming: list[EventDetailSchema]
     for_you: list[MobileSpaceDetailSchema]
     explore: list[MobileSpaceDetailSchema]
+
+
+class SessionFeedbackSchema(Schema):
+    feedback: SessionFeedbackOptions
+    message: str | None = None

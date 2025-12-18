@@ -30,9 +30,10 @@ from totem.notifications.notifications import (
     circle_starting_notification,
     missed_event_notification,
 )
+from totem.utils.fields import MaxLengthTextField
 from totem.utils.hash import basic_hash, hmac
 from totem.utils.md import MarkdownField, MarkdownMixin
-from totem.utils.models import AdminURLMixin, SluggedModel
+from totem.utils.models import AdminURLMixin, BaseModel, SluggedModel
 from totem.utils.slack import notify_slack
 from totem.utils.utils import full_url
 
@@ -367,3 +368,18 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
 
 class CircleEventException(Exception):
     pass
+
+
+class SessionFeedbackOptions(models.TextChoices):
+    UP = "up", _("Thumbs Up")
+    DOWN = "down", _("Thumbs Down")
+
+
+class SessionFeedback(AdminURLMixin, BaseModel):
+    event = models.ForeignKey(CircleEvent, on_delete=models.CASCADE, related_name="feedback")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="session_feedback")
+    feedback = models.CharField(max_length=4, choices=SessionFeedbackOptions.choices)
+    message = MaxLengthTextField(blank=True, max_length=2000)
+
+    class Meta(BaseModel.Meta):
+        constraints = [models.UniqueConstraint(fields=["event", "user"], name="unique_user_feedback_for_event")]

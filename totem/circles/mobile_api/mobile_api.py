@@ -21,10 +21,11 @@ from totem.circles.mobile_api.mobile_filters import (
 from totem.circles.mobile_api.mobile_schemas import (
     EventDetailSchema,
     MobileSpaceDetailSchema,
+    SessionFeedbackSchema,
     SpaceSchema,
     SummarySpacesSchema,
 )
-from totem.circles.models import Circle, CircleEvent, CircleEventException
+from totem.circles.models import Circle, CircleEvent, CircleEventException, SessionFeedback, SessionFeedbackOptions
 from totem.onboard.models import OnboardModel
 from totem.users.models import User
 
@@ -57,13 +58,6 @@ def list_spaces(request):
     return [space_detail_schema(space, request.user) for space in spaces]
 
 
-@spaces_router.get("/event/{event_slug}", response={200: EventDetailSchema}, url_name="event_detail")
-def get_event_detail(request: HttpRequest, event_slug: str):
-    user: User = request.user  # type: ignore
-    event = get_object_or_404(CircleEvent, slug=event_slug)
-    return event_detail_schema(event, user)
-
-
 @spaces_router.get("/space/{space_slug}", response={200: MobileSpaceDetailSchema}, url_name="spaces_detail")
 def get_space_detail(request: HttpRequest, space_slug: str):
     user: User = request.user  # type: ignore
@@ -78,6 +72,36 @@ def get_keeper_spaces(request: HttpRequest, slug: str):
     return [space_detail_schema(circle, user) for circle in circles]
 
 
+@spaces_router.get("/session/{event_slug}", response={200: EventDetailSchema}, url_name="session_detail")
+def get_session_detail(request: HttpRequest, event_slug: str):
+    user: User = request.user  # type: ignore
+    event = get_object_or_404(CircleEvent, slug=event_slug)
+    return event_detail_schema(event, user)
+
+
+@spaces_router.post("/session/{event_slug}/feedback", response={204: None}, url_name="session_feedback")
+def post_session_feedback(request: HttpRequest, event_slug: str, payload: SessionFeedbackSchema):
+    user: User = request.user  # type: ignore
+    event = get_object_or_404(CircleEvent, slug=event_slug)
+
+    if not event.attendees.filter(pk=user.pk).exists():
+        raise AuthorizationError(message="User is not an attendee of this event.")
+
+    defaults: dict[str, str] = {"feedback": payload.feedback.value}
+    if payload.feedback == SessionFeedbackOptions.DOWN:
+        defaults["message"] = payload.message or ""
+    else:
+        defaults["message"] = ""
+
+    SessionFeedback.objects.update_or_create(
+        event=event,
+        user=user,
+        defaults=defaults,
+    )
+
+    return 204, None
+
+
 @spaces_router.get("/sessions/history", response={200: List[EventDetailSchema]}, url_name="sessions_history")
 def get_sessions_history(request: HttpRequest):
     user: User = request.user  # type: ignore
@@ -90,7 +114,7 @@ def get_sessions_history(request: HttpRequest):
     return events
 
 
-@spaces_router.get("/recommended", response={200: List[EventDetailSchema]}, url_name="recommended_spaces")
+@spaces_router.get("/sessions/recommended", response={200: List[EventDetailSchema]}, url_name="recommended_spaces")
 def get_recommended_spaces(request: HttpRequest, limit: int = 3, categories: list[str] | None = None):
     user: User = request.user  # type: ignore
 
