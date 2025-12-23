@@ -9,4 +9,4 @@ python manage.py migrate
 echo "----------------------------------------"
 echo "URL: https://totem.local"
 echo "----------------------------------------"
-exec gunicorn config.wsgi --workers 1 --bind 0.0.0.0:8000 --reload
+exec gunicorn config.wsgi --workers 1 --bind 0.0.0.0:8000 --reload --timeout 120
