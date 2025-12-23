@@ -1,3 +1,4 @@
+import hashlib
 import secrets
 import time
 import uuid
@@ -5,7 +6,6 @@ from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
 from django.conf import settings
-from django.contrib.auth.hashers import check_password, make_password
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -297,13 +297,18 @@ class ActionToken(models.Model):
 
 
 class RefreshTokenManager(models.Manager):
-    def generate_token(self, user) -> tuple[str, "RefreshToken"]:
-        """Generate a new refresh token for a user on a specific device."""
-        # Generate a random 128-bit token
-        token_string = secrets.token_hex(16)  # 16 bytes = 128 bits
+    @staticmethod
+    def _hash_token(token_string: str) -> str:
+        """Hash a token using SHA-256."""
+        return hashlib.sha256(token_string.encode()).hexdigest()
 
-        # Hash token for storage
-        token_hash = make_password(token_string)
+    def generate_token(self, user) -> tuple[str, "RefreshToken"]:
+        """Generate a new refresh token for a user."""
+        # Generate a random 256-bit token
+        token_string = secrets.token_hex(32)  # 32 bytes = 256 bits
+
+        # Hash token for storage using SHA-256
+        token_hash = self._hash_token(token_string)
 
         # Create token in database
         token_obj: RefreshToken = self.create(user=user, token_hash=token_hash)
@@ -319,23 +324,22 @@ class RefreshTokenManager(models.Manager):
 
     def validate_token(self, token_string):
         """Validate a refresh token. Returns (user, token_obj) if valid."""
-        # Need to check all active tokens since we don't know which one matches
-        for token in self.filter(is_active=True):
-            if check_password(token_string, token.token_hash):
-                if not token.is_active:
-                    return None, None
+        token_hash = self._hash_token(token_string)
 
-                # Update last used timestamp
-                token.last_used_at = timezone.now()
-                token.save(update_fields=["last_used_at"])
-                return token.user, token
+        # Direct O(1) lookup by hash
+        token = self.filter(token_hash=token_hash, is_active=True).first()
+        if not token:
+            return None, None
 
-        return None, None
+        # Update last used timestamp
+        token.last_used_at = timezone.now()
+        token.save(update_fields=["last_used_at"])
+        return token.user, token
 
 
 class RefreshToken(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="refresh_tokens")
-    token_hash = models.CharField(max_length=255)
+    token_hash = models.CharField(max_length=64)
     created_at = models.DateTimeField(auto_now_add=True)
     last_used_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
@@ -344,7 +348,8 @@ class RefreshToken(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=["user", "token_hash", "created_at"]),
+            models.Index(fields=["token_hash", "is_active"]),
+            models.Index(fields=["user", "created_at"]),
         ]
 
     def invalidate(self):
