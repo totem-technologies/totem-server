@@ -8,6 +8,7 @@ dependencies = [
     "argon2-cffi<26",
     "cssselect<2",
     "fonttools>=4.55.3",
+    "environs[django]<15",
     "google-api-python-client<3",
     "google-auth-oauthlib<2",
     "gunicorn<24",
@@ -28,7 +29,6 @@ dependencies = [
     "django-anymail<15",
     "django-auditlog<4",
     "django-cors-headers<5",
-    "django-environ==0.12.0",
     "django-imagekit<7.0.0",
     "django-impersonate<2",
     "django-ninja<2",
@@ -87,9 +87,6 @@ filterwarnings = [
 include = ["totem/**"]
 omit = ["*/migrations/*", "*/tests/*"]
 disable_warnings = ["include-ignored"]
-
-
-
 
 
 # ==== mypy ====

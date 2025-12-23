@@ -261,7 +261,7 @@ function EventsChunkedByDate() {
     })
     context?.setActiveID(closest.dateId)
   }
-  const [intersectionObserver] = createViewportObserver([], handleIntersection)
+  const [intersectionObserver] = createViewportObserver([], handleIntersection) // eslint-disable-line no-unused-vars
   return (
     <ul>
       <For each={context?.chunkedEvents()}>
@@ -418,11 +418,11 @@ function FilterBar() {
 function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
   const context = useContext(CircleListContext)
   const [refs, setRefs] = createSignal<HTMLAnchorElement[]>([])
-  let scrollableRef: HTMLDivElement | undefined
-  let containerRef: HTMLDivElement | undefined
+  let scrollableRef: HTMLDivElement | undefined // eslint-disable-line no-unassigned-vars
+  let containerRef: HTMLDivElement | undefined // eslint-disable-line no-unassigned-vars
   createEffect(() => {
     if (context?.scrolling()) return
-    // scroll active date into view, dont use scrollIntoView
+    // scroll active date into view, don't use scrollIntoView
     const active = refs().find((ref) => ref.dataset.dateid === props.activeID)
     if (active) {
       // avoid scrollIntoView, try to keep the active date in the center

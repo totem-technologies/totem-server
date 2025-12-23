@@ -75,3 +75,7 @@ generate_api_models:
 updatedep:
 	uv sync -U
 	$(MAKE) build
+
+syncdeps:
+	uv sync
+	$(MAKE) build

@@ -95,7 +95,7 @@ function createCalendarButton(eventStore: EventDetailSchema) {
 }
 
 function AttendingPopup(props: { eventStore: EventDetailSchema | undefined }) {
-  let modalRef: HTMLDialogElement | undefined
+  let modalRef: HTMLDialogElement | undefined // eslint-disable-line no-unassigned-vars
   createEffect(() => {
     if (showAttendingPopup()) {
       modalRef?.showModal()
@@ -108,7 +108,7 @@ function AttendingPopup(props: { eventStore: EventDetailSchema | undefined }) {
       <div class="modal-box">
         <Show when={showAttendingPopup()}>
           <video
-            class="m-auto max-w-[200px]"
+            class="m-auto max-w-50"
             src="/static/video/success.webm"
             muted
             playsinline

@@ -7,30 +7,24 @@ import json
 from pathlib import Path
 
 import django
-import environ
+from environs import env
 
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
 # totem/
 APPS_DIR = BASE_DIR / "totem"
-env = environ.Env()
 TEST = False
 
 
 def b64_json_env(key: str) -> str:
     empty_json = "e30K"
-    return json.loads(base64.b64decode(env(key, default=empty_json)))  # type: ignore
+    return json.loads(base64.b64decode(env(key, default=empty_json)))
 
-
-READ_DOT_ENV_FILE = env.bool("DJANGO_READ_DOT_ENV_FILE", default=False)  # type: ignore
-if READ_DOT_ENV_FILE:
-    # OS environment variables take precedence over variables from .env
-    env.read_env(str(BASE_DIR / ".env"))
 
 # GENERAL
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#debug
-DEBUG = env.bool("DJANGO_DEBUG", False)  # type: ignore
-SITE_HOST = env("SITE_HOST", default="localhost:8000")  # type: ignore
+DEBUG = env.bool("DJANGO_DEBUG", False)
+SITE_HOST = env("SITE_HOST", default="localhost:8000")
 # Local time zone. Choices are
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # though not all of them may be available with every OS.
@@ -53,7 +47,7 @@ FORMAT_MODULE_PATH = ["totem.formats"]
 # DATABASES
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#databases
-DATABASES = {"default": env.db("DATABASE_URL")}
+DATABASES = {"default": env.dj_db_url("DATABASE_URL")}
 # DATABASES["default"]["ATOMIC_REQUESTS"] = True
 # https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-DEFAULT_AUTO_FIELD
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -181,7 +175,7 @@ STATICFILES_FINDERS = [
     "django.contrib.staticfiles.finders.FileSystemFinder",
     "django.contrib.staticfiles.finders.AppDirectoriesFinder",
 ]
-STATIC_HOST = env.str("DJANGO_STATIC_HOST", default=None)  # type: ignore
+STATIC_HOST = env.str("DJANGO_STATIC_HOST", default=None)
 # https://docs.djangoproject.com/en/dev/ref/settings/#static-url
 STATIC_URL = "/static/"
 if STATIC_HOST:
@@ -203,9 +197,9 @@ STORAGES = {
     },
 }
 
-USE_S3_STORAGE = env.bool("USE_S3_STORAGE", default=False)  # type: ignore
+USE_S3_STORAGE = env.bool("USE_S3_STORAGE", default=False)
 if USE_S3_STORAGE:
-    _region = env("DO_STORAGE_BUCKET_REGION", default="nyc3")  # type: ignore
+    _region = env("DO_STORAGE_BUCKET_REGION", default="nyc3")
     STORAGES["default"] = {  # type: ignore
         "BACKEND": "storages.backends.s3.S3Storage",
         "OPTIONS": {
@@ -237,7 +231,7 @@ TEMPLATES = [
         # https://docs.djangoproject.com/en/dev/ref/settings/#std:setting-TEMPLATES-BACKEND
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         # https://docs.djangoproject.com/en/dev/ref/settings/#dirs
-        "DIRS": [str(APPS_DIR / "templates"), django.__path__[0] + "/forms/templates"],  # type: ignore
+        "DIRS": [str(APPS_DIR / "templates"), django.__path__[0] + "/forms/templates"],
         # https://docs.djangoproject.com/en/dev/ref/settings/#app-dirs
         "OPTIONS": {
             # https://docs.djangoproject.com/en/dev/ref/settings/#template-context-processors
@@ -278,33 +272,33 @@ X_FRAME_OPTIONS = "DENY"
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
 EMAIL_BACKEND = env(
     "DJANGO_EMAIL_BACKEND",
-    default="django.core.mail.backends.console.EmailBackend",  # type: ignore
+    default="django.core.mail.backends.console.EmailBackend",
 )
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-timeout
 EMAIL_TIMEOUT = 5
-EMAIL_BASE_URL = env("EMAIL_BASE_URL", default=f"https://{SITE_HOST}")  # type: ignore
+EMAIL_BASE_URL = env("EMAIL_BASE_URL", default=f"https://{SITE_HOST}")
 SITE_BASE_URL = EMAIL_BASE_URL
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#default-from-email
 DEFAULT_FROM_EMAIL = env(
     "DJANGO_DEFAULT_FROM_EMAIL",
-    default="Totem <computer@totem.org>",  # type: ignore
+    default="Totem <computer@totem.org>",
 )
 # https://docs.djangoproject.com/en/dev/ref/settings/#server-email
-SERVER_EMAIL = env("DJANGO_SERVER_EMAIL", default=DEFAULT_FROM_EMAIL)  # type: ignore
+SERVER_EMAIL = env("DJANGO_SERVER_EMAIL", default=DEFAULT_FROM_EMAIL)
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-subject-prefix
 EMAIL_SUBJECT_PREFIX = env(
     "DJANGO_EMAIL_SUBJECT_PREFIX",
-    default="[Totem]",  # type: ignore
+    default="[Totem]",
 )
 EMAIL_SUPPORT_ADDRESS = "help@totem.org"
-EMAIL_SHOW_ENV_BANNER = env.bool("EMAIL_SHOW_ENV_BANNER", default=False)  # type: ignore
-MAILERLITE_API_KEY = env("MAILERLITE_API_KEY", default="")  # type: ignore
-MAILERSEND_API_TOKEN = env("MAILERSEND_API_TOKEN", default="")  # type: ignore
-MAILERSEND_COLLECT_ACTIVITY = env.bool("MAILERSEND_COLLECT_ACTIVITY", default=False)  # type: ignore
-MAILERSEND_DOMAIN_ID = env("MAILERSEND_DOMAIN_ID", default="")  # type: ignore
-BREVO_API_KEY = env("BREVO_API_KEY", default="")  # type: ignore
-SEND_BREVO_EMAILS = env.bool("SEND_BREVO_EMAILS", default=False)  # type: ignore
+EMAIL_SHOW_ENV_BANNER = env.bool("EMAIL_SHOW_ENV_BANNER", default=False)
+MAILERLITE_API_KEY = env("MAILERLITE_API_KEY", default="")
+MAILERSEND_API_TOKEN = env("MAILERSEND_API_TOKEN", default="")
+MAILERSEND_COLLECT_ACTIVITY = env.bool("MAILERSEND_COLLECT_ACTIVITY", default=False)
+MAILERSEND_DOMAIN_ID = env("MAILERSEND_DOMAIN_ID", default="")
+BREVO_API_KEY = env("BREVO_API_KEY", default="")
+SEND_BREVO_EMAILS = env.bool("SEND_BREVO_EMAILS", default=False)
 
 # ADMIN
 # ------------------------------------------------------------------------------
@@ -341,7 +335,7 @@ LOGGING = {
 
 # django-allauth
 # ------------------------------------------------------------------------------
-ACCOUNT_ALLOW_REGISTRATION = env.bool("DJANGO_ACCOUNT_ALLOW_REGISTRATION", True)  # type: ignore
+ACCOUNT_ALLOW_REGISTRATION = env.bool("DJANGO_ACCOUNT_ALLOW_REGISTRATION", True)
 # https://django-allauth.readthedocs.io/en/latest/configuration.html
 ACCOUNT_LOGIN_METHODS = {"email"}
 # https://django-allauth.readthedocs.io/en/latest/configuration.html
@@ -371,15 +365,15 @@ FIREBASE_FCM_CREDENTIALS_JSON_B64 = b64_json_env("FIREBASE_FCM_CREDENTIALS_JSON_
 # Custom
 # ------------------------------------------------------------------------------
 TOTEM_RUN_TASKS_TOKEN = env("TOTEM_RUN_TASKS_TOKEN")
-TOTEM_ASYNC_WORKER_QUEUE_ENABLED = env.bool("TOTEM_ASYNC_WORKER_QUEUE_ENABLED", default=True)  # type: ignore
+TOTEM_ASYNC_WORKER_QUEUE_ENABLED = env.bool("TOTEM_ASYNC_WORKER_QUEUE_ENABLED", default=True)
 
 
-ROBOTS_NO_INDEX = env.bool("ROBOT_NO_INDEX", False)  # type: ignore
+ROBOTS_NO_INDEX = env.bool("ROBOT_NO_INDEX", False)
 
 # admin banner
 # ------------------------------------------------------------------------------
-ENVIRONMENT_NAME = env("ENVIRONMENT_NAME", default="Development")  # type: ignore
-ENVIRONMENT_COLOR = env("ENVIRONMENT_COLOR", default="gray")  # type: ignore
+ENVIRONMENT_NAME = env("ENVIRONMENT_NAME", default="Development")
+ENVIRONMENT_COLOR = env("ENVIRONMENT_COLOR", default="gray")
 
 # django-taggit
 # ------------------------------------------------------------------------------
@@ -389,7 +383,7 @@ TAGGIT_TAGS_FROM_STRING = "totem.utils.tag_utils.parse_tags"
 
 # sentry
 # ------------------------------------------------------------------------------
-SENTRY_ENVIRONMENT = env("SENTRY_ENVIRONMENT", default="development")  # type: ignore
+SENTRY_ENVIRONMENT = env("SENTRY_ENVIRONMENT", default="development")
 if not DEBUG:
     import sentry_sdk
     from sentry_sdk.integrations.django import DjangoIntegration
@@ -399,7 +393,7 @@ if not DEBUG:
         integrations=[
             DjangoIntegration(),
         ],
-        environment=SENTRY_ENVIRONMENT,  # type: ignore
+        environment=SENTRY_ENVIRONMENT,
         traces_sample_rate=0.1,
         profiles_sample_rate=0.1,
         send_default_pii=True,
@@ -409,7 +403,7 @@ if not DEBUG:
 
 # posthog
 # ------------------------------------------------------------------------------
-POSTHOG_API_KEY = env("POSTHOG_API_KEY", default="phc_OJCztWvtlN5scoDe58jLipnOTCBugeidvZlni3FIy9z")  # type: ignore
+POSTHOG_API_KEY = env("POSTHOG_API_KEY", default="phc_OJCztWvtlN5scoDe58jLipnOTCBugeidvZlni3FIy9z")
 
 
 # google API
@@ -417,15 +411,15 @@ POSTHOG_API_KEY = env("POSTHOG_API_KEY", default="phc_OJCztWvtlN5scoDe58jLipnOTC
 GOOGLE_SERVICE_JSON = b64_json_env("GOOGLE_SERVICE_JSON_B64")
 GOOGLE_CALENDAR_ID = env(
     "GOOGLE_CALENDAR_ID",
-    default="c_ddf4458b375a1d28389aee93ed234ac1b51ee98ed37d09a8a22509a950bac115@group.calendar.google.com",  # type: ignore
+    default="c_ddf4458b375a1d28389aee93ed234ac1b51ee98ed37d09a8a22509a950bac115@group.calendar.google.com",
 )
-SAVE_TO_GOOGLE_CALENDAR = env.bool("SAVE_TO_GOOGLE_CALENDAR", default=False)  # type: ignore
+SAVE_TO_GOOGLE_CALENDAR = env.bool("SAVE_TO_GOOGLE_CALENDAR", default=False)
 
 
 # Slack
 # ------------------------------------------------------------------------------
-SLACK_BOT_TOKEN = env("SLACK_BOT_TOKEN", default=None)  # type: ignore
-SLACK_CHANNEL_ID = env("SLACK_CHANNEL_ID", default=None)  # type: ignore
+SLACK_BOT_TOKEN = env("SLACK_BOT_TOKEN", default=None)
+SLACK_CHANNEL_ID = env("SLACK_CHANNEL_ID", default=None)
 
 
 # Impersonate
@@ -456,7 +450,7 @@ AUDITLOG_EXCLUDE_TRACKING_MODELS = ["totem.email.models.EmailLog"]
 
 # Webflow
 # ------------------------------------------------------------------------------
-WEBFLOW_BASE_URL = env("WEBFLOW_BASE_URL", default="https://wf.totem.org/")  # type: ignore
+WEBFLOW_BASE_URL = env("WEBFLOW_BASE_URL", default="https://wf.totem.org/")
 
 
 # Social
