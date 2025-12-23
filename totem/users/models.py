@@ -299,7 +299,13 @@ class ActionToken(models.Model):
 class RefreshTokenManager(models.Manager):
     @staticmethod
     def _hash_token(token_string: str) -> str:
-        """Hash a token using SHA-256."""
+        """Hash a token using SHA-256.
+
+        SHA-256 is appropriate for cryptographically random tokens because:
+        - Tokens have 256-bits of entropy (no dictionary attack risk)
+        - Fast hashing enables O(1) lookups vs O(n) iteration
+        - Industry standard for API tokens (GitHub, AWS, etc.)
+        """
         return hashlib.sha256(token_string.encode()).hexdigest()
 
     def generate_token(self, user) -> tuple[str, "RefreshToken"]:
@@ -339,7 +345,7 @@ class RefreshTokenManager(models.Manager):
 
 class RefreshToken(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="refresh_tokens")
-    token_hash = models.CharField(max_length=64)
+    token_hash = models.CharField(max_length=64, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     last_used_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
@@ -348,7 +354,6 @@ class RefreshToken(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=["token_hash", "is_active"]),
             models.Index(fields=["user", "created_at"]),
         ]
 
