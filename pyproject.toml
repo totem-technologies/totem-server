@@ -12,10 +12,10 @@ dependencies = [
     "google-auth-oauthlib<2",
     "gunicorn<24",
     "lxml<7",
-    "markdown<3.9.0",
+    "markdown<3.11.0",
     "mrml<0.3.0",
-    "Pillow<12",
-    "posthog<7.0.0",
+    "Pillow<13",
+    "posthog<8.0.0",
     "psycopg[binary]<4",
     "python-dateutil<3",
     "pytz",
@@ -52,7 +52,7 @@ dev = [
     # Testing
     "mypy<2",
     "django-stubs[compatible-mypy]<6",
-    "pytest<9",
+    "pytest<10",
     "pytest-sugar<2",
     "pytest-socket<1",
 
@@ -66,7 +66,7 @@ dev = [
     "django-debug-toolbar<7",
     "django-extensions<5",
     "factory-boy<4",
-    "pytest-cov<7",
+    "pytest-cov<8",
     "pytest-django<5",
     "pytest-xdist<4",
 ]
@@ -77,7 +77,10 @@ dev = [
 minversion = "6.0"
 addopts = "--ds=config.settings.test --reuse-db"
 python_files = ["tests.py", "test_*.py"]
-filterwarnings = ["ignore::pydantic.warnings.PydanticDeprecatedSince20"]
+filterwarnings = [
+    # "ignore::pydantic.warnings.PydanticDeprecatedSince20",
+    "ignore:::httplib2.*",
+]
 
 # ==== Coverage ====
 [tool.coverage.run]

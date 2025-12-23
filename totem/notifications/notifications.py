@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 import totem.circles.models as circle_models
 from totem.notifications.utils import notify_users
@@ -18,14 +18,12 @@ class NotificationType(str, Enum):
 
 
 class Notification(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     recipients: List[User]
     title: str
     message: str
     category: str
     extra_data: dict = {}
-
-    class Config:
-        arbitrary_types_allowed = True
 
     def send(self):
         """
