@@ -117,28 +117,3 @@ def send_notification(tokens: List[str], title: str, body: str, data: Optional[D
         FCMDevice.objects.filter(token__in=invalid_tokens).update(active=False)
 
     return success_count > 0
-
-
-def validate_fcm_token(token: str) -> bool:
-    """
-    Validate FCM token with Firebase by doing a dry run
-
-    Args:
-        token: FCM token to validate
-
-    Returns:
-        bool: True if token is valid
-    """
-    if not initialize_firebase():
-        return False
-
-    try:
-        # Create a message targeting the token
-        message = messaging.Message(data={"validation": "true"}, token=token)
-
-        # Perform a dry run (validation only, no actual message sent)
-        messaging.send(message, dry_run=True)
-        return True
-    except messaging.UnregisteredError:
-        # Token is invalid or has been unregistered
-        return False

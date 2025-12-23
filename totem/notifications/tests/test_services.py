@@ -1,12 +1,10 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
-from firebase_admin import messaging as firebase_messaging
 
 from totem.notifications.services import (
     send_notification,
     send_notification_to_user,
-    validate_fcm_token,
 )
 from totem.notifications.tests.factories import FCMDeviceFactory
 from totem.users.tests.factories import UserFactory
@@ -93,41 +91,3 @@ class TestNotificationServices:
         # Verify the result
         assert result is False
         mock_send_notification.assert_not_called()
-
-    @patch("totem.notifications.services.messaging")
-    def test_validate_fcm_token_success(self, mock_messaging, mock_firebase_initialized):
-        """Test successful token validation."""
-        # Set up mock
-        mock_messaging.send.return_value = "message_id"
-
-        # Call the function
-        result = validate_fcm_token("valid_token")
-
-        # Verify the result
-        assert result is True
-        mock_messaging.Message.assert_called_once()
-        mock_messaging.send.assert_called_once()
-
-    @patch("totem.notifications.services.messaging.send")
-    def test_validate_fcm_token_invalid(self, mock_send, mock_firebase_initialized):
-        """Test validation of invalid token."""
-        # Set up mock to raise the real UnregisteredError
-        mock_send.side_effect = firebase_messaging.UnregisteredError("Mock error")
-
-        # Call the function
-        result = validate_fcm_token("invalid_token")
-
-        # Verify the result
-        assert result is False
-
-    @patch("totem.notifications.services.messaging.send")
-    def test_validate_fcm_token_exception(self, mock_send, mock_firebase_initialized):
-        """Test token validation with other exception."""
-        # Set up mock to raise a generic exception
-        mock_send.side_effect = firebase_messaging.UnregisteredError("Mock error", None)
-
-        # Call the function
-        result = validate_fcm_token("token")
-
-        # Verify the result
-        assert result is False
