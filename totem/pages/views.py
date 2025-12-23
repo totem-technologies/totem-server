@@ -167,19 +167,37 @@ def redirect_qr(request, slug):
 
 
 def webflow_page(request, page: str | None = None):
-    def _get() -> str:
-        return get_webflow_page(page)
+    from totem.pages.webflow import WebflowUnavailable
 
     one_hour = 60 * 60
+    one_week = 60 * 60 * 24 * 7
     key = f"webflow:{page or 'home'}"
+    fresh_key = f"{key}:fresh"
     should_refresh = request.GET.get("refresh", False)
     if should_refresh:
-        # print(f"refreshing {key}")
-        cache.delete(key)
-    content: str | None = cache.get_or_set(key, _get, one_hour)
-    if content is None:
-        raise Http404
-    return HttpResponse(content, content_type="text/html")
+        cache.delete(fresh_key)
+
+    # If fresh marker exists, serve cached content without refetching
+    content = cache.get(key)
+    if cache.get(fresh_key) and content is not None:
+        return HttpResponse(content, content_type="text/html")
+
+    # Stale or missing - try to fetch new content
+    try:
+        content = get_webflow_page(page)
+        cache.set(key, content, one_week)  # Content stored for 1 week
+        cache.set(fresh_key, True, one_hour)  # Fresh marker for 1 hour
+        return HttpResponse(content, content_type="text/html")
+    except WebflowUnavailable:
+        # Fetch failed - serve stale content if available
+        if content is not None:
+            return HttpResponse(content, content_type="text/html")
+        # No content at all - return error page
+        return HttpResponse(
+            "<html><body><h1>Page temporarily unavailable</h1><p>Please try again in a moment.</p></body></html>",
+            content_type="text/html",
+            status=503,
+        )
 
 
 @login_required
