@@ -2,8 +2,12 @@
 With these settings, tests run faster.
 """
 
+import sentry_sdk
+
+sentry_sdk.init(dsn=None)  # Disable Sentry before anything else
+
 from .base import *  # noqa
-from .base import env
+from .base import env  # noqa
 
 del STORAGES  # noqa: F821
 
