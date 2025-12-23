@@ -11,27 +11,32 @@ from totem.users.models import User
 
 logger = logging.getLogger(__name__)
 
-# Firebase initialization flag
-_firebase_initialized = False
-
 
 def initialize_firebase():
     """
-    Initialize Firebase Admin SDK if not already initialized
+    Initialize Firebase Admin SDK if not already initialized.
+    Uses Firebase's built-in app detection instead of a manual flag.
     """
-    global _firebase_initialized
-    if not _firebase_initialized:
-        if settings.FIREBASE_FCM_CREDENTIALS_JSON_B64:
-            cred = credentials.Certificate(settings.FIREBASE_FCM_CREDENTIALS_JSON_B64)
-        else:
-            logger.error("No Firebase credentials configured")
-            return False
+    try:
+        # Check if already initialized
+        firebase_admin.get_app()
+        return True
+    except ValueError:
+        # Not initialized yet
+        pass
 
+    if not settings.FIREBASE_FCM_CREDENTIALS_JSON_B64:
+        logger.error("No Firebase credentials configured")
+        return False
+
+    try:
+        cred = credentials.Certificate(settings.FIREBASE_FCM_CREDENTIALS_JSON_B64)
         firebase_admin.initialize_app(cred)
-        _firebase_initialized = True
         logger.info("Firebase initialized")
         return True
-    return True
+    except Exception as e:
+        logger.error("Failed to initialize Firebase: %s", e)
+        return False
 
 
 def send_notification_to_user(user: User, title: str, body: str, data: Optional[Dict[str, str]] = None) -> bool:
@@ -47,8 +52,6 @@ def send_notification_to_user(user: User, title: str, body: str, data: Optional[
     Returns:
         bool: True if notification was sent to at least one device
     """
-    if not initialize_firebase():
-        return False
 
     devices = FCMDevice.objects.filter(user=user, active=True)
     if not devices.exists():
@@ -84,7 +87,7 @@ def send_notification(tokens: List[str], title: str, body: str, data: Optional[D
     data_payload = data or {}
 
     success_count = 0
-    failed_tokens = []
+    invalid_tokens = []  # Tokens that are no longer valid (should be deactivated)
     successful_tokens = []
 
     for token in tokens:
@@ -95,19 +98,23 @@ def send_notification(tokens: List[str], title: str, body: str, data: Optional[D
             success_count += 1
             successful_tokens.append(token)
         except messaging.UnregisteredError:
-            # Token is no longer valid
-            failed_tokens.append(token)
-            logger.info(f"FCM token invalid and marked as inactive: {token}")
+            # Token is no longer valid - mark for deactivation
+            invalid_tokens.append(token)
+            logger.info("FCM token invalid and marked as inactive: %s...", token[:20])
+        except messaging.SenderIdMismatchError:
+            # Token was registered with a different sender - mark for deactivation
+            invalid_tokens.append(token)
+            logger.warning("FCM token sender mismatch: %s...", token[:20])
         except Exception as e:
-            failed_tokens.append(token)
-            logger.error(f"Failed to send FCM notification: {str(e)}")
+            # Don't deactivate token for server-side errors (auth issues, network, etc.)
+            logger.error("Failed to send FCM notification (%s): %s", type(e).__name__, e)
 
     # Bulk update the device records to avoid individual DB queries
     if successful_tokens:
         FCMDevice.objects.filter(token__in=successful_tokens).update(last_used=timezone.now())
 
-    if failed_tokens:
-        FCMDevice.objects.filter(token__in=failed_tokens).update(active=False)
+    if invalid_tokens:
+        FCMDevice.objects.filter(token__in=invalid_tokens).update(active=False)
 
     return success_count > 0
 
