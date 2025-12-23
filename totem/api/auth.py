@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from enum import Enum
 
 import jwt
@@ -6,13 +6,12 @@ from django.conf import settings
 from django.utils import timezone
 from ninja import Router, Schema
 from ninja.errors import AuthenticationError
-from datetime import datetime
 
 from totem.email import emails
 from totem.email.emails import login_pin_email
+from totem.email.exceptions import EmailBounced
 from totem.users import analytics
 from totem.users.models import LoginPin, RefreshToken, User
-from totem.email.exceptions import EmailBounced
 
 # Create router
 router = Router()

@@ -1,9 +1,10 @@
+from unittest.mock import patch
+
 import pytest
 from django.core import mail
 from django.urls import reverse
-from unittest.mock import patch
 
-from totem.users.models import User, LoginPin
+from totem.users.models import LoginPin, User
 from totem.users.tests.factories import UserFactory
 
 

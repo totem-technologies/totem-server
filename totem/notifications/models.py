@@ -1,4 +1,5 @@
 from django.db import models
+
 from totem.users.models import User
 
 

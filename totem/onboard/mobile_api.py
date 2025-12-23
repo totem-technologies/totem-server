@@ -1,9 +1,10 @@
-from ninja import Router
-from ninja.errors import ValidationError as APIValidationError
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
-from .schemas import OnboardSchema
+from ninja import Router
+from ninja.errors import ValidationError as APIValidationError
+
 from .models import OnboardModel
+from .schemas import OnboardSchema
 
 onboard_router = Router()
 

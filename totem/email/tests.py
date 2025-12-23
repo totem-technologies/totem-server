@@ -3,7 +3,7 @@ from django.test import Client, override_settings
 from django.urls import reverse
 
 from totem.circles.tests.factories import CircleEventFactory
-from totem.email.emails import missed_event_email, notify_circle_advertisement, login_pin_email
+from totem.email.emails import login_pin_email, missed_event_email, notify_circle_advertisement
 from totem.users.models import LoginPin
 from totem.users.tests.factories import UserFactory
 

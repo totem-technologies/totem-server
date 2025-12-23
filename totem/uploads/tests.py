@@ -1,4 +1,5 @@
 from django.test import TestCase
+
 from totem.uploads.admin import filename_to_title
 
 

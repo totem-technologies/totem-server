@@ -1,5 +1,6 @@
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 from totem.notifications.utils import notify_users
 from totem.users.tests.factories import UserFactory

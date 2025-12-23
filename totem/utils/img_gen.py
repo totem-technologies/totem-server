@@ -1,6 +1,6 @@
-from collections.abc import Sequence
 import hashlib
 import os
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from functools import lru_cache
 from io import BytesIO

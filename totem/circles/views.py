@@ -1,4 +1,5 @@
 import datetime
+from dataclasses import dataclass
 from io import BytesIO
 
 import pytz
@@ -14,15 +15,14 @@ from sentry_sdk import capture_exception
 from totem.users import analytics
 from totem.users.models import User
 from totem.utils.hash import basic_hash
+from totem.utils.img_gen import CircleImageParams, generate_circle_image
 from totem.utils.utils import is_ajax
 
 from .actions import JoinCircleAction, SubscribeAction
 from .filters import (
     upcoming_events_by_author,
 )
-from totem.utils.img_gen import CircleImageParams, generate_circle_image
 from .models import Circle, CircleEvent, CircleEventException
-from dataclasses import dataclass
 
 ICS_QUERY_PARAM = "key"
 AUTO_RSVP_SESSION_KEY = "auto_rsvp"

@@ -1,6 +1,7 @@
+from django import forms
 from django.contrib import admin
 from django.utils.safestring import mark_safe
-from django import forms
+
 from totem.users.models import User
 
 from .models import BlogPost

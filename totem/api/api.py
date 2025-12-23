@@ -1,7 +1,8 @@
-from django.http import HttpRequest
-from ninja import File, NinjaAPI, Schema, Router
-from ninja.files import UploadedFile
 import os
+
+from django.http import HttpRequest
+from ninja import File, NinjaAPI, Router, Schema
+from ninja.files import UploadedFile
 
 from totem.circles.api import router as circles_router
 from totem.users.models import User

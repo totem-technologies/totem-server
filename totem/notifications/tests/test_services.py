@@ -1,10 +1,11 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 from firebase_admin import messaging as firebase_messaging
 
 from totem.notifications.services import (
-    send_notification_to_user,
     send_notification,
+    send_notification_to_user,
     validate_fcm_token,
 )
 from totem.notifications.tests.factories import FCMDeviceFactory

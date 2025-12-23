@@ -1,5 +1,6 @@
-import factory
 import uuid
+
+import factory
 from django.utils import timezone
 
 from totem.notifications.models import FCMDevice

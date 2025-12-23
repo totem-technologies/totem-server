@@ -1,13 +1,14 @@
-from io import BytesIO
 from dataclasses import dataclass
+from io import BytesIO
 
 from django.conf import settings
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import render
 from django.views.generic import DetailView, ListView
 
-from .models import BlogPost
 from totem.utils.img_gen import BlogImageParams, generate_blog_image
+
+from .models import BlogPost
 
 
 class BlogPostDetailView(DetailView):  # pyright: ignore[reportMissingTypeArgument]

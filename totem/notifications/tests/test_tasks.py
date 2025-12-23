@@ -1,7 +1,8 @@
-import pytest
-from unittest.mock import patch
-from django.utils import timezone
 from datetime import timedelta
+from unittest.mock import patch
+
+import pytest
+from django.utils import timezone
 
 from totem.notifications.tasks import verify_fcm_tokens
 from totem.notifications.tests.factories import FCMDeviceFactory

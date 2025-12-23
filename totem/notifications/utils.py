@@ -1,4 +1,5 @@
 from typing import Dict, List, Optional
+
 from totem.notifications.services import send_notification_to_user
 from totem.users.models import User
 
