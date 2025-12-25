@@ -25,12 +25,15 @@ class SessionState(Schema):
 
     def start(self):
         """
-        Starts the session by setting the status to 'started' and the first speaker.
+        Starts the session by setting the status to 'started'.
+
+        The keeper is always the first speaker and starts speaking.
         """
+        self.validate_order(self.speaking_order)
         self.status = SessionStatus.STARTED
         if self.speaking_order:
             self.speaking_now = self.speaking_order[0]
-            self.totem_status = TotemStatus.PASSING
+            self.totem_status = TotemStatus.ACCEPTED
             self._update_next_speaker()
 
     def end(self):

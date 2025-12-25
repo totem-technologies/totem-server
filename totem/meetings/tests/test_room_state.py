@@ -21,6 +21,16 @@ class TestSessionState:
         assert state.speaking_now == "user1"
         assert state.next_speaker == "user2"
 
+    def test_keeper_starts_speaking(self):
+        """Test starting a session with a speaking order."""
+        state = SessionState(speaking_order=["user1", "user2", "user3"], keeper_slug="user3")
+        state.start()
+        assert state.status == SessionStatus.STARTED
+        assert state.totem_status == TotemStatus.ACCEPTED
+        assert state.speaking_order == ["user3", "user1", "user2"]
+        assert state.speaking_now == "user3"
+        assert state.next_speaker == "user1"
+
     def test_start_without_order(self):
         """Test starting a session without a speaking order."""
         state = SessionState(speaking_order=[], keeper_slug="user1")
