@@ -43,6 +43,7 @@ class SessionState(Schema):
         self.status = SessionStatus.ENDED
         self.speaking_now = None
         self.totem_status = TotemStatus.NONE
+        self.next_speaker = None
 
     def pass_totem(self):
         """
