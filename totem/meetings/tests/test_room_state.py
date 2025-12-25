@@ -22,7 +22,7 @@ class TestSessionState:
         assert state.next_speaker == "user2"
 
     def test_keeper_starts_speaking(self):
-        """Test starting a session with a speaking order."""
+        """Test that the keeper automatically starts speaking when the session starts."""
         state = SessionState(speaking_order=["user1", "user2", "user3"], keeper_slug="user3")
         state.start()
         assert state.status == SessionStatus.STARTED
@@ -62,6 +62,7 @@ class TestSessionState:
         state = SessionState(speaking_order=["user1", "user2", "user3"], keeper_slug="user1")
         state.speaking_now = "user3"
         state.pass_totem()
+        assert state.totem_status == TotemStatus.PASSING
         assert state.speaking_now == "user3"
         assert state.next_speaker == "user1"
 
@@ -77,6 +78,7 @@ class TestSessionState:
         state = SessionState(speaking_order=[], keeper_slug="user1")
         state.speaking_now = "user1"
         state.pass_totem()
+        assert state.totem_status == TotemStatus.PASSING
         assert state.next_speaker is None
 
     def test_pass_totem_no_current_speaker(self):
@@ -85,6 +87,8 @@ class TestSessionState:
         state.speaking_now = None
         state.pass_totem()
         assert state.next_speaker == "user1"
+        assert state.totem_status == TotemStatus.PASSING
+        assert state.speaking_now is None
 
     def test_accept_totem_success(self):
         """Test that accept_totem updates the speaker, status, and next speaker."""

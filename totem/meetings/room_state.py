@@ -55,7 +55,7 @@ class SessionState(Schema):
     def accept_totem(self):
         """
         Accepts the totem.
-        It sets the current speaker to the next speaker
+        It sets the current speaker to the next speaker.
 
         If the totem is not being passed, raises a ValueError.
         """
