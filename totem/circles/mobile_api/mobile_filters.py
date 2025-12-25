@@ -12,6 +12,7 @@ from totem.users.models import User
 
 
 def get_spaces_list() -> QuerySet[Circle]:
+    """Get all published spaces."""
     return (
         Circle.objects.filter(published=True)
         .distinct()
@@ -32,6 +33,7 @@ def get_spaces_list() -> QuerySet[Circle]:
 
 
 def get_upcoming_spaces_list() -> QuerySet[Circle]:
+    """Get all published spaces with upcoming events."""
     return (
         Circle.objects.filter(published=True, events__start__gte=timezone.now())
         .distinct()
