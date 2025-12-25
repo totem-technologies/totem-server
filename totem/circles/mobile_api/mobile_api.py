@@ -12,7 +12,6 @@ from ninja.pagination import paginate
 
 from totem.circles.mobile_api.mobile_filters import (
     event_detail_schema,
-    get_spaces_list,
     get_upcoming_spaces_list,
     space_detail_schema,
     upcoming_recommended_events,
@@ -54,7 +53,7 @@ def list_subscriptions(request: HttpRequest):
 @spaces_router.get("/", response={200: List[MobileSpaceDetailSchema]}, url_name="mobile_spaces_list")
 @paginate
 def list_spaces(request):
-    spaces = get_spaces_list()
+    spaces = get_upcoming_spaces_list()
     return [space_detail_schema(space, request.user) for space in spaces]
 
 
