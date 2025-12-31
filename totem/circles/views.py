@@ -185,7 +185,6 @@ def subscribe(request: HttpRequest, slug: str):
             return redirect("circles:detail", slug=slug)
     else:
         return redirect("circles:detail", slug=slug)
-
     circle = _get_circle(slug)
     if sub:
         circle.subscribe(user)
@@ -213,7 +212,7 @@ def calendar(request: HttpRequest, event_slug: str):
 
 def event_social(request: HttpRequest, event_slug: str):
     event = _get_circle_event(event_slug)
-    user: User = request.user
+    user: User = request.user  # type: ignore
     # start time in pst
     start_time_pst = event.start.astimezone(pytz.timezone("US/Pacific")).strftime("%I:%M %p") + " PST"
     # start time in est

@@ -329,17 +329,16 @@ function Subscribe(props: {
   event: EventDetailSchema
   refetchEvent: () => void
 }) {
+  const subscribe_url = `/spaces/subscribe/${props.event.space.slug}/`
   async function handleSubscribe(e: Event) {
-    if (!props.event.subscribe_url) return
     e.preventDefault()
-    await postData(props.event.subscribe_url, { action: "subscribe" })
+    await postData(subscribe_url, { action: "subscribe" })
     props.refetchEvent()
   }
 
   async function handleUnsubscribe(e: Event) {
-    if (!props.event.subscribe_url) return
     e.preventDefault()
-    await postData(props.event.subscribe_url, { action: "unsubscribe" })
+    await postData(subscribe_url, { action: "unsubscribe" })
     props.refetchEvent()
   }
 

@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(command make test-python)"
+      "Bash(command make test-python)",
+      "Bash(cat:*)"
     ]
   }
 }
