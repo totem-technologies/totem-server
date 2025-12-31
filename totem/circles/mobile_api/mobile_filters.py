@@ -11,27 +11,8 @@ from totem.circles.models import Circle, CircleEvent
 from totem.users.models import User
 
 
-def get_spaces_list() -> QuerySet[Circle]:
-    return (
-        Circle.objects.filter(published=True)
-        .distinct()
-        .select_related("author")
-        .prefetch_related(
-            "categories",
-            "subscribed",
-            Prefetch(
-                "events",
-                queryset=CircleEvent.objects.filter(start__gte=timezone.now())
-                .order_by("start")
-                .prefetch_related("attendees"),
-                to_attr="upcoming_events",
-            ),
-        )
-        .annotate(subscriber_count=Count("subscribed", distinct=True))
-    )
-
-
 def get_upcoming_spaces_list() -> QuerySet[Circle]:
+    """Get all published spaces with upcoming events."""
     return (
         Circle.objects.filter(published=True, events__start__gte=timezone.now())
         .distinct()
