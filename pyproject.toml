@@ -11,7 +11,6 @@ dependencies = [
     "environs[django]<15",
     "google-api-python-client<3",
     "google-auth-oauthlib<2",
-    "gunicorn<24",
     "lxml<7",
     "markdown<3.11.0",
     "mrml<0.3.0",
@@ -40,7 +39,8 @@ dependencies = [
     "firebase-admin>=6.8.0",
     "tenacity>=9.1.2",
     "livekit<2",
-    "livekit-api<2"
+    "livekit-api<2",
+    "granian<3",
 ]
 
 [dependency-groups]
@@ -69,6 +69,7 @@ dev = [
     "pytest-cov<8",
     "pytest-django<5",
     "pytest-xdist<4",
+    "debugpy"
 ]
 
 
