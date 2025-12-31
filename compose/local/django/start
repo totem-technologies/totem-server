@@ -10,7 +10,7 @@ echo "----------------------------------------"
 echo "URL: https://totem.local"
 echo "----------------------------------------"
 exec granian --interface wsgi config.wsgi:application --reload \
---host 0.0.0.0 --port 8000 --workers=2 --http 1 --backpressure 20
+--host 0.0.0.0 --port 8000 --workers=1 --http 1 --backpressure 30
 
 # We use 'python -m debugpy' to wrap the granian execution.
 # --wait-for-client is optional; remove it if you want the app to start immediately.
