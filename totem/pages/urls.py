@@ -47,7 +47,7 @@ webflow_pages = [
     "why-totem",
 ]
 
-webflow_patterns = [re_path(rf"^{page}/", views.webflow_proxy, name=page) for page in webflow_pages]
+webflow_patterns = [re_path(rf"^{page}/$", views.webflow_proxy, name=page) for page in webflow_pages]
 
 
 app_name = "pages"
