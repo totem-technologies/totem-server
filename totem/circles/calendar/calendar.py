@@ -116,7 +116,7 @@ cal_id = settings.GOOGLE_CALENDAR_ID
 service = None
 
 
-def _init(service_json=settings.GOOGLE_SERVICE_JSON):
+def _init(service_json=settings.GOOGLE_SERVICE_SECRET_JSON):
     global credentials, service
     if credentials is None:
         SCOPES = ["https://www.googleapis.com/auth/calendar"]

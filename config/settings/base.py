@@ -33,6 +33,7 @@ TIME_ZONE = "UTC"
 # https://docs.djangoproject.com/en/dev/ref/settings/#language-code
 LANGUAGE_CODE = "en-us"
 DATETIME_FORMAT = "jS M Y fA e"
+DEFAULT_EXCEPTION_REPORTER_FILTER = "config.settings.filter.HardenedReporterFilter"
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#site-id
 
@@ -359,7 +360,7 @@ SOCIALACCOUNT_FORMS = {"signup": "totem.users.forms.UserSocialSignupForm"}
 # Firebase Cloud Messaging
 # ------------------------------------------------------------------------------
 
-FIREBASE_FCM_CREDENTIALS_JSON_B64 = b64_json_env("FIREBASE_FCM_CREDENTIALS_JSON_B64")
+FIREBASE_FCM_CREDENTIALS_SECRET_JSON_B64 = b64_json_env("FIREBASE_FCM_CREDENTIALS_JSON_B64")
 
 # Custom
 # ------------------------------------------------------------------------------
@@ -407,7 +408,7 @@ POSTHOG_API_KEY = env("POSTHOG_API_KEY", default="phc_OJCztWvtlN5scoDe58jLipnOTC
 
 # google API
 # ------------------------------------------------------------------------------
-GOOGLE_SERVICE_JSON = b64_json_env("GOOGLE_SERVICE_JSON_B64")
+GOOGLE_SERVICE_SECRET_JSON = b64_json_env("GOOGLE_SERVICE_JSON_B64")
 GOOGLE_CALENDAR_ID = env(
     "GOOGLE_CALENDAR_ID",
     default="c_ddf4458b375a1d28389aee93ed234ac1b51ee98ed37d09a8a22509a950bac115@group.calendar.google.com",

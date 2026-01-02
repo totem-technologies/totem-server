@@ -25,12 +25,12 @@ def initialize_firebase():
         # Not initialized yet
         pass
 
-    if not settings.FIREBASE_FCM_CREDENTIALS_JSON_B64:
+    if not settings.FIREBASE_FCM_CREDENTIALS_SECRET_JSON_B64:
         logger.error("No Firebase credentials configured")
         return False
 
     try:
-        cred = credentials.Certificate(settings.FIREBASE_FCM_CREDENTIALS_JSON_B64)
+        cred = credentials.Certificate(settings.FIREBASE_FCM_CREDENTIALS_SECRET_JSON_B64)
         firebase_admin.initialize_app(cred)
         logger.info("Firebase initialized")
         return True
