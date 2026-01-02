@@ -9,7 +9,7 @@ python manage.py migrate
 echo "----------------------------------------"
 echo "URL: https://totem.local"
 echo "----------------------------------------"
-exec granian --interface wsgi config.wsgi:application --reload \
+exec granian --interface wsgi config.wsgi:application --reload --reload-paths 'totem' \
 --host 0.0.0.0 --port 8000 --workers=1 --http 1 --backpressure 30
 
 # We use 'python -m debugpy' to wrap the granian execution.
