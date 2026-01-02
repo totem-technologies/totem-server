@@ -4,28 +4,6 @@ from django.views.generic import TemplateView
 
 from . import views
 
-
-class PagesSitemap(Sitemap):
-    priority = 0.5
-    changefreq = "daily"
-
-    def items(self):
-        pages = [
-            "home",
-            "about",
-            "tos",
-            "privacy",
-            "team",
-            "why-totem",
-            "how-it-works",
-            "team-pam",
-        ]
-        return [f"pages:{page}" for page in pages]
-
-    def location(self, item):
-        return reverse(item)
-
-
 webflow_pages = [
     "about",
     "crisis-resources",
@@ -36,7 +14,7 @@ webflow_pages = [
     "how-it-works",
     "privacy-notice",
     "staying-grounded",
-    "topics/creatives",
+    # "topics/creatives",
     "topics/lgbtq",
     "topics/lgbtqia-topic-details",
     "topics/love-and-other-emotions",
@@ -48,6 +26,24 @@ webflow_pages = [
 ]
 
 webflow_patterns = [re_path(rf"^{page}/$", views.webflow_proxy, name=page) for page in webflow_pages]
+
+
+class PagesSitemap(Sitemap):
+    priority = 0.5
+    changefreq = "daily"
+
+    def items(self):
+        static_pages = [
+            "home",
+            "tos",
+            "privacy",
+            "team",
+            "team-pam",
+        ]
+        return [f"pages:{page}" for page in static_pages + webflow_pages]
+
+    def location(self, item):
+        return reverse(item)
 
 
 app_name = "pages"
