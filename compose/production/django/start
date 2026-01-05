@@ -7,4 +7,4 @@ set -o nounset
 
 exec granian --interface wsgi config.wsgi:application \
 --host 0.0.0.0 --port $PORT --workers=1 --http 1 --backpressure 30 \
---workers-lifetime 2h --workers-kill-timeout 1m
+--workers-lifetime 24h --workers-kill-timeout 1m
