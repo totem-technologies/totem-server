@@ -13,7 +13,7 @@ from totem.users.models import User
 
 def get_spaces_list() -> QuerySet[Circle]:
     return (
-        Circle.objects.filter(published=True)
+        Circle.objects.filter(published=True, events__start__gte=timezone.now())
         .distinct()
         .select_related("author")
         .prefetch_related(
