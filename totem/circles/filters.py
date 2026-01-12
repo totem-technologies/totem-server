@@ -172,7 +172,7 @@ def event_detail_schema(event: CircleEvent, user: User):
         subscribe_url=reverse("mobile-api:spaces_subscribe", kwargs={"space_slug": space.slug}),
         subscribed=subscribed,
         user_timezone=str("UTC"),
-        meeting_provider=event.meeting_provider,
+        meeting_provider=space.meeting_provider,
     )
 
 
@@ -191,7 +191,7 @@ def space_detail_schema(circle: Circle, user: User, event: CircleEvent | None = 
             link=next_event.get_absolute_url(),
             seats_left=seats_left,
             duration=next_event.duration_minutes,
-            meeting_provider=next_event.meeting_provider,
+            meeting_provider=next_event.circle.meeting_provider,
             cal_link=next_event.cal_link(),
             attending=next_event.attendees.filter(pk=user.pk).exists(),
             cancelled=next_event.cancelled,
