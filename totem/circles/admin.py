@@ -22,7 +22,7 @@ class SpaceDropdownFilter(admin.SimpleListFilter):
 
     @override
     def lookups(self, request, model_admin):
-        return Circle.objects.values_list("slug", "title")
+        return Circle.objects.order_by("title").values_list("slug", "title")
 
     @override
     def queryset(self, request, queryset):
@@ -175,7 +175,6 @@ class CircleEventAdmin(admin.ModelAdmin):
                     "content",
                     "attendees",
                     "joined",
-                    "meeting_provider",
                     "meeting_url",
                 )
             },

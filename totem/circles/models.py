@@ -83,6 +83,10 @@ class CircleCategory(models.Model):
 
 
 class Circle(AdminURLMixin, MarkdownMixin, SluggedModel):
+    class MeetingProviderChoices(models.TextChoices):
+        GOOGLE_MEET = "google_meet", _("Google Meet")
+        LIVEKIT = "livekit", _("LiveKit")
+
     title = models.CharField(max_length=255)
     subtitle = models.CharField(max_length=2000)
     categories = models.ManyToManyField(CircleCategory, blank=True)
@@ -116,6 +120,12 @@ class Circle(AdminURLMixin, MarkdownMixin, SluggedModel):
     recurring = models.CharField(
         max_length=255,
         help_text="Example: Once a month (or week, day, etc). Do not put specific times or days of the week.",
+    )
+    meeting_provider = models.CharField(
+        max_length=20,
+        choices=MeetingProviderChoices.choices,
+        default=MeetingProviderChoices.GOOGLE_MEET,
+        help_text="The video conferencing provider for this circle.",
     )
     subscribed = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="subscribed_circles")
     events: QuerySet["CircleEvent"]
@@ -169,17 +179,6 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
     open = models.BooleanField(default=True, help_text="Is this session open for more attendees?")
     seats = models.IntegerField(default=8)
     start = models.DateTimeField(default=timezone.now)
-
-    class MeetingProviderChoices(models.TextChoices):
-        GOOGLE_MEET = "google_meet", _("Google Meet")
-        LIVEKIT = "livekit", _("LiveKit")
-
-    meeting_provider = models.CharField(
-        max_length=20,
-        choices=MeetingProviderChoices.choices,
-        default=MeetingProviderChoices.GOOGLE_MEET,
-        help_text="The video conferencing provider for this event.",
-    )
 
     class Meta:  # pyright: ignore [reportIncompatibleVariableOverride]
         ordering = ["start"]
