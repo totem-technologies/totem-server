@@ -2,7 +2,7 @@
   <h3 class="h3">Session History</h3>
   <div class="divider"></div>
   <p class="py-5">Here are the recent sessions you have be a part of.</p>
-  {% if circle_history %}
+  {% if session_history %}
     <div class="relative mb-10 overflow-x-auto rounded-3xl">
       <table class="table">
         <thead>
@@ -11,14 +11,14 @@
             <th class="text-right">Date</th>
           </tr>
         </thead>
-        {% for event in circle_history %}
+        {% for session in session_history %}
           <tr>
             <td class="text-ellipsis">
-              <a class="link" href="{{ event.get_absolute_url }}"
-                >{{ event.circle.title }}</a
+              <a class="link" href="{{ session.get_absolute_url }}"
+                >{{ session.space.title }}</a
               >
             </td>
-            <td class="text-right">{{ event.start }}</td>
+            <td class="text-right">{{ session.start }}</td>
           </tr>
         {% endfor %}
       </table>

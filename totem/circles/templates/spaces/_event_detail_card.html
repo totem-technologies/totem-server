@@ -1,7 +1,7 @@
 {% load icons %}
 {% load avatar %}
 <div
-  class="{% if object.image %}circle-bg-image-{{ object.slug }}{% else %}no-image{% endif %} relative rounded-2xl shadow-lg">
+  class="{% if object.image %}space-bg-image-{{ object.slug }}{% else %}no-image{% endif %} relative rounded-2xl shadow-lg">
   {% comment %}Share button{% endcomment %}
   <div class="absolute top-5 right-5">
     <button
@@ -23,7 +23,7 @@
           <button class="btn btn-ghost btn-sm" aria-label="Close">X</button>
         </form>
       </div>
-      {% include "circles/_social_share.html" with circle=object only %}
+      {% include "spaces/_social_share.html" with space=object only %}
     </div>
     <form method="dialog" class="modal-backdrop">
       <button>close</button>
@@ -32,8 +32,8 @@
   {% comment %}End share button{% endcomment %}
   <div class="flex min-h-[400px] flex-col justify-between gap-y-5 p-5">
     <div>
-      {% if event and event.title %}
-        <h1 class="h1 pb-3 text-white">{{ event.title }}</h1>
+      {% if session and session.title %}
+        <h1 class="h1 pb-3 text-white">{{ session.title }}</h1>
         <div class="h3 text-white">{{ object.title }}</div>
       {% else %}
         <h1 class="h1 pb-3 text-white">{{ object.title }}</h1>
@@ -45,12 +45,14 @@
           >{{ object.author.name }}</a
         >
       </div>
-      <div class="text-white">
-        Starting
-        <t-time time="{{ event.start|date:'c' }}" format="at"
-          >{{ event.start|date:"M d, Y gA T" }}</t-time
-        >
-      </div>
+      {% if session %}
+        <div class="text-white">
+          Starting
+          <t-time time="{{ session.start|date:'c' }}" format="at"
+            >{{ session.start|date:"M d, Y gA T" }}</t-time
+          >
+        </div>
+      {% endif %}
     </div>
     <div class="max-w-[150px] self-center md:max-w-[200px] md:self-end">
       <a href="{{ object.author.get_keeper_url }}">

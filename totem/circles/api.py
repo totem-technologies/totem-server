@@ -17,13 +17,13 @@ from totem.circles.schemas import (
 from totem.users.models import User
 
 from .filters import (
-    all_upcoming_recommended_events,
-    event_detail_schema,
-    events_by_month,
-    get_upcoming_events_for_spaces_list,
+    all_upcoming_recommended_sessions,
+    get_upcoming_sessions_for_spaces_list,
+    session_detail_schema,
+    sessions_by_month,
     space_detail_schema,
 )
-from .models import Circle, CircleEvent
+from .models import Session, Space
 
 router = Router()
 
@@ -31,7 +31,7 @@ router = Router()
 @router.get("/", response={200: List[EventListSchema]}, tags=["events"], url_name="events_list")
 @paginate
 def list_events(request, filters: EventsFilterSchema = Query()):
-    return all_upcoming_recommended_events(request.user, category=filters.category, author=filters.author)
+    return all_upcoming_recommended_sessions(request.user, category=filters.category, author=filters.author)
 
 
 @router.get(
@@ -41,7 +41,7 @@ def list_events(request, filters: EventsFilterSchema = Query()):
     url_name="events_filter_options",
 )
 def filter_options(request):
-    events = all_upcoming_recommended_events(request.user)
+    events = all_upcoming_recommended_sessions(request.user)
     # get distinct categories that have events
     categories = set(events.values_list("circle__categories__name", "circle__categories__slug").distinct())
     categories = [{"name": name, "slug": slug} for name, slug in categories if name]
@@ -58,10 +58,10 @@ def filter_options(request):
     url_name="event_detail",
 )
 def event_detail(request: HttpRequest, event_slug: str):
-    event = get_object_or_404(CircleEvent, slug=event_slug)
+    event = get_object_or_404(Session, slug=event_slug)
     user: User = request.user  # type: ignore
 
-    return event_detail_schema(event, user)
+    return session_detail_schema(event, user)
 
 
 class EventCalendarSchema(Schema):
@@ -79,7 +79,7 @@ class EventCalendarFilterSchema(FilterSchema):
 
 @router.get("/calendar", response={200: List[EventCalendarSchema]}, tags=["events"], url_name="event_calendar")
 def upcoming_events(request, filters: EventCalendarFilterSchema = Query()):
-    events = events_by_month(request.user, filters.space_slug, filters.month, filters.year)
+    events = sessions_by_month(request.user, filters.space_slug, filters.month, filters.year)
     return [
         EventCalendarSchema(
             title=event.title, start=event.start.isoformat(), url=event.get_absolute_url(), slug=event.slug
@@ -113,27 +113,27 @@ class WebflowEventSchema(Schema):
     auth=None,
 )
 def webflow_events_list(request, filters: WebflowEventsFilterSchema = Query()):
-    events = all_upcoming_recommended_events(None)
+    events = all_upcoming_recommended_sessions(None)
     if filters.keeper_username:
         events = events.filter(circle__author__keeper_profile__username=filters.keeper_username)
 
     results: list[WebflowEventSchema] = []
     for event in events:
-        circle = event.circle
+        space = event.space
 
-        keeper_profile = getattr(circle.author, "keeper_profile", None)
+        keeper_profile = getattr(space.author, "keeper_profile", None)
         if not keeper_profile:
             continue
 
-        image_url = circle.image.url if circle.image else None
-        keeper_image_link = circle.author.profile_image.url if circle.author.profile_image else None
+        image_url = space.image.url if space.image else None
+        keeper_image_link = space.author.profile_image.url if space.author.profile_image else None
         join_link = request.build_absolute_uri(event.get_absolute_url())
 
         results.append(
             WebflowEventSchema(
                 start=event.start.isoformat(),
-                name=event.title or circle.title,
-                keeper_name=circle.author.name,
+                name=event.title or space.title,
+                keeper_name=space.author.name,
                 keeper_username=keeper_profile.username,
                 join_link=join_link,
                 image_link=image_url,
@@ -147,19 +147,19 @@ def webflow_events_list(request, filters: WebflowEventsFilterSchema = Query()):
 @router.get("/list", response={200: List[SpaceDetailSchema]}, tags=["spaces"], url_name="spaces_list")
 def list_spaces(request):
     # Get events with availability information
-    events = get_upcoming_events_for_spaces_list()
+    events = get_upcoming_sessions_for_spaces_list()
 
     # Build spaces list
     spaces_set = set()
     spaces = []
 
     for event in events:
-        if event.circle.slug in spaces_set:
+        if event.space.slug in spaces_set:
             continue
 
-        spaces_set.add(event.circle.slug)
-        circle: Circle = event.circle
+        spaces_set.add(event.space.slug)
+        space: Space = event.space
 
-        spaces.append(space_detail_schema(circle, request.user))
+        spaces.append(space_detail_schema(space, request.user))
 
     return spaces

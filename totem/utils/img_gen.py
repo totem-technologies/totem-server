@@ -382,6 +382,10 @@ def generate_circle_image(params: CircleImageParams):
     return image.convert("RGB")
 
 
+SpaceImageParams = CircleImageParams
+generate_space_image = generate_circle_image
+
+
 @lru_cache(maxsize=100)
 def generate_blog_image(params: BlogImageParams):
     image = _load_img(params.background_path)  # Replace with your image path

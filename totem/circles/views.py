@@ -15,76 +15,77 @@ from sentry_sdk import capture_exception
 from totem.users import analytics
 from totem.users.models import User
 from totem.utils.hash import basic_hash
-from totem.utils.img_gen import CircleImageParams, generate_circle_image
+from totem.utils.img_gen import SpaceImageParams, generate_space_image
 from totem.utils.utils import is_ajax
 
-from .actions import JoinCircleAction, SubscribeAction
+from .actions import JoinSessionAction, SubscribeSpaceAction
 from .filters import (
-    upcoming_events_by_author,
+    upcoming_sessions_by_author,
 )
-from .models import Circle, CircleEvent, CircleEventException
+from .models import Session, SessionException, Space
 
 ICS_QUERY_PARAM = "key"
 AUTO_RSVP_SESSION_KEY = "auto_rsvp"
 
 
-def _get_circle(slug: str) -> Circle:
+def _get_space(slug: str) -> Space:
     try:
-        return Circle.objects.get(slug=slug)
-    except Circle.DoesNotExist:
+        return Space.objects.get(slug=slug)
+    except Space.DoesNotExist:
         raise Http404
 
 
-def _get_circle_event(slug: str) -> CircleEvent:
+def _get_session(slug: str) -> Session:
     try:
         return (
-            CircleEvent.objects.select_related("circle", "circle__author")
+            Session.objects.select_related("circle", "circle__author")
             .prefetch_related("attendees", "circle__subscribed")
             .get(slug=slug)
         )
-    except CircleEvent.DoesNotExist:
+    except Session.DoesNotExist:
         raise Http404
 
 
-def event_detail(request, event_slug):
-    event = _get_circle_event(event_slug)
-    circle = event.circle
-    return _circle_detail(request, request.user, circle, event)
+def session_detail(request, event_slug):
+    session = _get_session(event_slug)
+    space = session.space
+    return _space_detail(request, request.user, space, session)
 
 
 def detail(request, slug):
-    circle = _get_circle(slug)
-    event = circle.next_event()
-    if not event:
-        return _circle_detail(request, request.user, circle, event)
-    return redirect("circles:event_detail", event_slug=event.slug)
+    space = _get_space(slug)
+    session = space.next_session()
+    if not session:
+        return _space_detail(request, request.user, space, session)
+    return redirect("circles:event_detail", event_slug=session.slug)
 
 
-def _circle_detail(request: HttpRequest, user: User, circle: Circle, event: CircleEvent | None):
-    if not circle.published and not user.is_staff:
+def _space_detail(request: HttpRequest, user: User, space: Space, session: Session | None):
+    if not space.published and not user.is_staff:
         raise PermissionDenied
 
     attending = False
     joinable = False
     subscribed = False
     if user.is_authenticated:
-        subscribed = circle.subscribed.contains(user)
-        if event:
-            attending = event.attendees.contains(user)
-            joinable = event.can_join(user)
+        subscribed = space.subscribed.contains(user)
+        if session:
+            attending = session.attendees.contains(user)
+            joinable = session.can_join(user)
 
-    other_circles = upcoming_events_by_author(user, circle.author, exclude_event=event)[:6]
+    other_spaces = upcoming_sessions_by_author(user, space.author, exclude_event=session)[:6]
 
     return render(
         request,
-        "circles/detail.html",
+        "spaces/detail.html",
         {
-            "object": circle,
+            "object": space,
             "attending": attending,
             "joinable": joinable,
             "subscribed": subscribed,
-            "event": event,
-            "other_circles": other_circles,
+            "event": session,
+            "session": session,
+            "other_spaces": other_spaces,
         },
     )
 
@@ -95,25 +96,25 @@ def ics_hash(slug, user_ics_key):
     return basic_hash(slug + str(user_ics_key))
 
 
-def _add_or_remove_attendee(user, event: CircleEvent, add: bool):
+def _add_or_remove_attendee(user, session: Session, add: bool):
     if add:
-        event.add_attendee(user)
-        event.circle.subscribe(user)
+        session.add_attendee(user)
+        session.space.subscribe(user)
     else:
-        event.remove_attendee(user)
+        session.remove_attendee(user)
 
 
 def rsvp(request: HttpRequest, event_slug):
     if not request.user.is_authenticated:
         request.session[AUTO_RSVP_SESSION_KEY] = event_slug
         return redirect_to_login(request.get_full_path())
-    event = _get_circle_event(event_slug)
+    session = _get_session(event_slug)
     error = ""
     if request.POST:
         try:
             with transaction.atomic():
-                _add_or_remove_attendee(request.user, event, request.POST.get("action") != "remove")
-        except CircleEventException as e:
+                _add_or_remove_attendee(request.user, session, request.POST.get("action") != "remove")
+        except SessionException as e:
             error = str(e)
     if is_ajax(request):
         if error:
@@ -122,15 +123,15 @@ def rsvp(request: HttpRequest, event_slug):
     else:
         if error:
             messages.error(request, error)
-        return redirect("circles:event_detail", event_slug=event.slug)
+        return redirect("circles:event_detail", event_slug=session.slug)
 
 
 def events(request):
-    return render(request, "circles/events.html")
+    return render(request, "spaces/events.html")
 
 
 def spaces(request):
-    return render(request, "circles/spaces.html")
+    return render(request, "spaces/spaces.html")
 
 
 @transaction.atomic
@@ -138,8 +139,10 @@ def join(request, event_slug):
     token = request.GET.get("token")
     if token:
         try:
-            user, params = JoinCircleAction.resolve(token)
-            token_event_slug = params["event_slug"]
+            user, params = JoinSessionAction.resolve(token)
+            token_event_slug = params.get("session_slug") or params.get("event_slug")
+            if token_event_slug is None:
+                raise PermissionDenied
             if token_event_slug != event_slug:
                 raise PermissionDenied
         except Exception:
@@ -152,17 +155,17 @@ def join(request, event_slug):
     else:
         return redirect_to_login(request.get_full_path())
 
-    event = _get_circle_event(event_slug)
-    if event.can_join(user):
-        event.joined.add(user)
-        analytics.event_joined(user, event)
-        return redirect(event.meeting_url, permanent=False)
+    session = _get_session(event_slug)
+    if session.can_join(user):
+        session.joined.add(user)
+        analytics.event_joined(user, session)
+        return redirect(session.meeting_url, permanent=False)
 
-    if event.started():
-        messages.info(request, "This event has already started.")
+    if session.started():
+        messages.info(request, "This session has already started.")
     else:
         messages.info(request, "Cannot join at this time. Please try again later.")
-    return redirect("circles:event_detail", event_slug=event.slug)
+    return redirect("circles:event_detail", event_slug=session.slug)
 
 
 @transaction.atomic
@@ -176,21 +179,21 @@ def subscribe(request: HttpRequest, slug: str):
         sub = request.POST.get("action") == "subscribe"
     elif token:
         try:
-            user, params = SubscribeAction.resolve(token)
+            user, params = SubscribeSpaceAction.resolve(token)
             sub = params["subscribe"]
-            slug = params["circle_slug"]
+            slug = params.get("space_slug") or params.get("circle_slug") or slug
         except Exception as e:
             capture_exception(e)
             messages.error(request, "Invalid or expired link. If you think this is an error, please contact us.")
             return redirect("circles:detail", slug=slug)
     else:
         return redirect("circles:detail", slug=slug)
-    circle = _get_circle(slug)
+    space = _get_space(slug)
     if sub:
-        circle.subscribe(user)
+        space.subscribe(user)
         message = "You are now subscribed to this Space."
     else:
-        circle.unsubscribe(user)
+        space.unsubscribe(user)
         message = "You are now unsubscribed from this Space."
 
     if is_ajax(request):
@@ -201,32 +204,33 @@ def subscribe(request: HttpRequest, slug: str):
 
 
 def calendar(request: HttpRequest, event_slug: str):
-    event = _get_circle_event(event_slug)
+    session = _get_session(event_slug)
     user = request.user
 
-    if not event.circle.published and not user.is_staff:  # type: ignore
+    if not session.space.published and not user.is_staff:  # type: ignore
         raise PermissionDenied
 
-    return render(request, "circles/calendaradd.html", {"event": event})
+    return render(request, "spaces/calendaradd.html", {"event": session, "session": session})
 
 
-def event_social(request: HttpRequest, event_slug: str):
-    event = _get_circle_event(event_slug)
+def session_social(request: HttpRequest, event_slug: str):
+    session = _get_session(event_slug)
     user: User = request.user  # type: ignore
     # start time in pst
-    start_time_pst = event.start.astimezone(pytz.timezone("US/Pacific")).strftime("%I:%M %p") + " PST"
+    start_time_pst = session.start.astimezone(pytz.timezone("US/Pacific")).strftime("%I:%M %p") + " PST"
     # start time in est
-    start_time_est = event.start.astimezone(pytz.timezone("US/Eastern")).strftime("%I:%M %p") + " EST"
+    start_time_est = session.start.astimezone(pytz.timezone("US/Eastern")).strftime("%I:%M %p") + " EST"
 
-    if not event.circle.published and not user.is_staff:  # type: ignore
+    if not session.space.published and not user.is_staff:  # type: ignore
         raise PermissionDenied
 
     return render(
         request,
-        "circles/social.html",
+        "spaces/social.html",
         {
-            "object": event.circle,
-            "event": event,
+            "object": session.space,
+            "event": session,
+            "session": session,
             "start_time_pst": start_time_pst,
             "start_time_est": start_time_est,
         },
@@ -239,7 +243,7 @@ class SocialImage:
     width: int
 
 
-def event_social_img(request: HttpRequest, event_slug: str, image_format: str):
+def session_social_img(request: HttpRequest, event_slug: str, image_format: str):
     image_size = {
         "square": SocialImage(height=1080, width=1080),
         "2to1": SocialImage(width=1280, height=640),
@@ -248,9 +252,9 @@ def event_social_img(request: HttpRequest, event_slug: str, image_format: str):
     if not image_size:
         raise Http404
 
-    event = _get_circle_event(event_slug)
-    pst: datetime.datetime = event.start.astimezone(pytz.timezone("US/Pacific"))
-    est: datetime.datetime = event.start.astimezone(pytz.timezone("US/Eastern"))
+    session = _get_session(event_slug)
+    pst: datetime.datetime = session.start.astimezone(pytz.timezone("US/Pacific"))
+    est: datetime.datetime = session.start.astimezone(pytz.timezone("US/Eastern"))
     # start time in pst
     start_day_pst: str = pst.strftime("%B %d, %Y")
     start_time_pst: str = pst.strftime("%-I:%M %p") + " PST"
@@ -260,7 +264,7 @@ def event_social_img(request: HttpRequest, event_slug: str, image_format: str):
     if start_day_pst != start_day_est:
         start_time_est = f"{start_time_est}+1"
     buffer = BytesIO()
-    _make_social_img(event, start_day_pst, start_time_pst, start_time_est, image_size).save(
+    _make_social_img(session, start_day_pst, start_time_pst, start_time_est, image_size).save(
         buffer, "JPEG", optimize=True
     )
     response = HttpResponse(content_type="image/jpeg")
@@ -269,29 +273,29 @@ def event_social_img(request: HttpRequest, event_slug: str, image_format: str):
     return response
 
 
-def _make_social_img(event: CircleEvent, start_day, start_time_pst, start_time_est, image_size: SocialImage):
-    title = event.circle.title
-    subtitle = event.circle.subtitle
-    if event.title:
-        title = event.title
-        subtitle = event.circle.title
+def _make_social_img(session: Session, start_day, start_time_pst, start_time_est, image_size: SocialImage):
+    title = session.space.title
+    subtitle = session.space.subtitle
+    if session.title:
+        title = session.title
+        subtitle = session.space.title
 
     background_url = f"{settings.BASE_DIR}/totem/static/images/circles/default-bg.jpg"
-    if event.circle.image:
-        background_url = event.circle.image.url
+    if session.space.image:
+        background_url = session.space.image.url
         if background_url.startswith("/"):
             background_url = f"totem/{background_url}"
 
     author_profile_url = f"{settings.BASE_DIR}/totem/static/images/default-avatar.jpg"
-    if event.circle.author.profile_image:
-        author_profile_url = event.circle.author.profile_image.url
+    if session.space.author.profile_image:
+        author_profile_url = session.space.author.profile_image.url
         if author_profile_url.startswith("/"):
             author_profile_url = f"totem/{author_profile_url}"
 
-    params = CircleImageParams(
+    params = SpaceImageParams(
         background_path=background_url,
         author_img_path=author_profile_url,
-        author_name=event.circle.author.name,
+        author_name=session.space.author.name,
         title=title,
         subtitle=subtitle,
         day=start_day,
@@ -300,4 +304,4 @@ def _make_social_img(event: CircleEvent, start_day, start_time_pst, start_time_e
         width=image_size.width,
         height=image_size.height,
     )
-    return generate_circle_image(params)
+    return generate_space_image(params)

@@ -5,16 +5,21 @@ from typing import List
 
 from pydantic import BaseModel, ConfigDict
 
-import totem.circles.models as circle_models
+import totem.circles.models as space_models
 from totem.notifications.utils import notify_users
 from totem.users.models import User
 
 
 class NotificationType(str, Enum):
-    CIRCLE_STARTING = "circle_starting"
-    CIRCLE_ADVERTISEMENT = "circle_advertisement"
-    CIRCLE_SIGNUP = "circle_signup"
-    MISSED_EVENT = "missed_event"
+    SESSION_STARTING = "circle_starting"
+    SESSION_ADVERTISEMENT = "circle_advertisement"
+    SESSION_SIGNUP = "circle_signup"
+    MISSED_SESSION = "missed_event"
+
+    CIRCLE_STARTING = SESSION_STARTING
+    CIRCLE_ADVERTISEMENT = SESSION_ADVERTISEMENT
+    CIRCLE_SIGNUP = SESSION_SIGNUP
+    MISSED_EVENT = MISSED_SESSION
 
 
 class Notification(BaseModel):
@@ -40,58 +45,63 @@ class Notification(BaseModel):
         )
 
 
-class CircleStartingNotification(Notification):
-    category: str = NotificationType.CIRCLE_STARTING
+class SessionStartingNotification(Notification):
+    category: str = NotificationType.SESSION_STARTING
 
 
-class CircleAdvertisementNotification(Notification):
-    category: str = NotificationType.CIRCLE_ADVERTISEMENT
+class SessionAdvertisementNotification(Notification):
+    category: str = NotificationType.SESSION_ADVERTISEMENT
 
 
-class MissedEventNotification(Notification):
-    category: str = NotificationType.MISSED_EVENT
+class MissedSessionNotification(Notification):
+    category: str = NotificationType.MISSED_SESSION
 
 
-def circle_starting_notification(event: circle_models.CircleEvent, user: User) -> Notification:
-    """Creates a notification that a Circle is starting soon."""
-    return CircleStartingNotification(
+def session_starting_notification(event: space_models.Session, user: User) -> Notification:
+    """Creates a notification that a session is starting soon."""
+    return SessionStartingNotification(
         recipients=[user],
         title="🚨 Your Space is starting soon!",
-        message=event.circle.title,
+        message=event.space.title,
         extra_data={
-            "space_slug": event.circle.slug,
+            "space_slug": event.space.slug,
             "event_slug": event.slug,
         },
     )
 
 
-def circle_advertisement_notification(event: circle_models.CircleEvent, user: User) -> Notification:
-    """Creates a notification to advertise a new Circle event."""
-    title = event.title or event.circle.subtitle
-    author_name = event.circle.author.name
-    image_url = event.circle.image.url if event.circle.image else None
+def session_advertisement_notification(event: space_models.Session, user: User) -> Notification:
+    """Creates a notification to advertise a new session."""
+    title = event.title or event.space.subtitle
+    author_name = event.space.author.name
+    image_url = event.space.image.url if event.space.image else None
 
-    return CircleAdvertisementNotification(
+    return SessionAdvertisementNotification(
         recipients=[user],
         title=f"New Space Available: {title}",
         message=f"A new session by {author_name} has been posted. Reserve a spot now!",
         extra_data={
-            "space_slug": event.circle.slug,
+            "space_slug": event.space.slug,
             "event_slug": event.slug,
             "image_url": image_url,
         },
     )
 
 
-def missed_event_notification(event: circle_models.CircleEvent, user: User) -> Notification:
-    """Creates a notification for a user who missed an event."""
-    title = event.title or event.circle.title
-    return MissedEventNotification(
+def missed_session_notification(event: space_models.Session, user: User) -> Notification:
+    """Creates a notification for a user who missed a session."""
+    title = event.title or event.space.title
+    return MissedSessionNotification(
         recipients=[user],
         title="We missed you!",
         message=f"We missed you at the {title} session.",
         extra_data={
-            "space_slug": event.circle.slug,
+            "space_slug": event.space.slug,
             "event_slug": event.slug,
         },
     )
+
+
+circle_starting_notification = session_starting_notification
+circle_advertisement_notification = session_advertisement_notification
+missed_event_notification = missed_session_notification

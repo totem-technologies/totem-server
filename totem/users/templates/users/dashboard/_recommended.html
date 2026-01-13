@@ -1,6 +1,6 @@
 {% load avatar %}
 <div class="pb-5">
-  {% if recommended_events %}
+  {% if recommended_sessions %}
     <strong>
       <h3 class="pb-3" id="recommended">
         Recommended Spaces (<a class="link" href="{% url "circles:list" %}"
@@ -9,8 +9,8 @@
       </h3>
     </strong>
     <ul role="list" class="grid grid-cols-1 gap-6 pb-5 sm:grid-cols-2">
-      {% for event in recommended_events %}
-        {% include "circles/_event_card.html" with event=event only %}
+      {% for session in recommended_sessions %}
+        {% include "spaces/_event_card.html" with session=session only %}
       {% endfor %}
     </ul>
   {% else %}

@@ -18,17 +18,17 @@ from taggit.managers import TaggableManager
 
 from totem.circles import jsonld
 from totem.email.emails import (
-    missed_event_email,
-    notify_circle_advertisement,
-    notify_circle_signup,
-    notify_circle_starting,
-    notify_circle_tomorrow,
+    missed_session_email,
+    notify_session_advertisement,
+    notify_session_signup,
+    notify_session_starting,
+    notify_session_tomorrow,
 )
 from totem.email.exceptions import EmailBounced
 from totem.notifications.notifications import (
-    circle_advertisement_notification,
-    circle_starting_notification,
-    missed_event_notification,
+    missed_session_notification,
+    session_advertisement_notification,
+    session_starting_notification,
 )
 from totem.utils.fields import MaxLengthTextField
 from totem.utils.hash import basic_hash, hmac
@@ -37,7 +37,7 @@ from totem.utils.models import AdminURLMixin, BaseModel, SluggedModel
 from totem.utils.slack import notify_slack
 from totem.utils.utils import full_url
 
-from .actions import JoinCircleAction, SubscribeAction
+from .actions import JoinSessionAction, SubscribeSpaceAction
 from .calendar import calendar
 
 if TYPE_CHECKING:
@@ -89,6 +89,7 @@ class Circle(AdminURLMixin, MarkdownMixin, SluggedModel):
 
     title = models.CharField(max_length=255)
     subtitle = models.CharField(max_length=2000)
+    # Keep original related_name to avoid migration
     categories = models.ManyToManyField(CircleCategory, blank=True)
     image = ProcessedImageField(
         blank=True,
@@ -100,6 +101,7 @@ class Circle(AdminURLMixin, MarkdownMixin, SluggedModel):
     tags = TaggableManager(blank=True)
     short_description = models.CharField(max_length=255, blank=True, help_text="Short description, max 255 characters")
     content = MarkdownField(default="")
+    # Keep original related_name="created_circles" to avoid migration
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -127,7 +129,9 @@ class Circle(AdminURLMixin, MarkdownMixin, SluggedModel):
         default=MeetingProviderChoices.GOOGLE_MEET,
         help_text="The video conferencing provider for this circle.",
     )
+    # Keep original related_name="subscribed_circles" to avoid migration
     subscribed = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="subscribed_circles")
+    # Type hint for reverse relation (sessions is the related_name on CircleEvent.circle)
     events: QuerySet["CircleEvent"]
 
     def __str__(self):
@@ -139,8 +143,16 @@ class Circle(AdminURLMixin, MarkdownMixin, SluggedModel):
     def subscribed_list(self):
         return ", ".join([str(attendee.email) for attendee in self.subscribed.all()])
 
-    def next_event(self):
+    def next_session(self):
         return self.events.filter(start__gte=timezone.now() - _default_grace_period).order_by("start").first()
+
+    def next_event(self):
+        return self.next_session()
+
+    @property
+    def sessions(self):
+        """Alias for events - new terminology"""
+        return self.events
 
     def is_free(self):
         return self.price == 0
@@ -152,7 +164,7 @@ class Circle(AdminURLMixin, MarkdownMixin, SluggedModel):
         return self.subscribed.remove(user)
 
     def subscribe_url(self, user, subscribe: bool) -> str:
-        return SubscribeAction(user, parameters={"circle_slug": self.slug, "subscribe": subscribe}).build_url()
+        return SubscribeSpaceAction(user, parameters={"space_slug": self.slug, "subscribe": subscribe}).build_url()
 
 
 class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
@@ -162,8 +174,10 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
     )
     title = models.CharField(max_length=255, blank=True)
     advertised = models.BooleanField(default=False)
+    # Keep original related_name="events_attending" to avoid migration
     attendees = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="events_attending")
     cancelled = models.BooleanField(default=False, help_text="Is this session canceled?")
+    # Keep original field name "circle" with related_name="events" to avoid migration
     circle = models.ForeignKey(Circle, on_delete=models.CASCADE, related_name="events")
     content = MarkdownField(
         help_text="Optional description for this specific session. Markdown is supported.",
@@ -171,6 +185,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         blank=True,
     )
     duration_minutes = models.IntegerField(_("Minutes"), default=60)
+    # Keep original related_name="events_joined" to avoid migration
     joined = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="events_joined")
     meeting_url = models.CharField(max_length=255, blank=True)
     notified = models.BooleanField(default=False)
@@ -184,6 +199,15 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         ordering = ["start"]
         unique_together = [["circle", "start", "open", "title"]]
 
+    @property
+    def space(self):
+        """Alias for circle - new terminology"""
+        return self.circle
+
+    @space.setter
+    def space(self, value):
+        self.circle = value
+
     def get_absolute_url(self) -> str:
         return reverse("circles:event_detail", kwargs={"event_slug": self.slug})
 
@@ -196,33 +220,33 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
     def can_attend(self, user: "User | None" = None, silent=False):
         try:
             if user and user in self.attendees.all():
-                raise CircleEventException("You are already attending this session")
+                raise SessionException("You are already attending this session")
             if user and user.is_staff:
                 return True
             if not self.open:
-                raise CircleEventException("Session is not available for signup")
+                raise SessionException("Session is not available for signup")
             if self.cancelled:
-                raise CircleEventException("Session was cancelled")
+                raise SessionException("Session was cancelled")
             if self.started():
-                raise CircleEventException("Session has already started")
+                raise SessionException("Session has already started")
             if self.seats_left() <= 0:
-                raise CircleEventException("There are no spots left")
+                raise SessionException("There are no spots left")
             return True
-        except CircleEventException as e:
+        except SessionException as e:
             if silent:
                 return False
             raise e
 
     def state(self, user: "User|None" = None):
         if self.cancelled:
-            return CircleEventState.CANCELLED
+            return SessionState.CANCELLED
         if self.started():
-            return CircleEventState.CLOSED
+            return SessionState.CLOSED
         if self.open:
-            return CircleEventState.OPEN
+            return SessionState.OPEN
         if user is not None and user in self.attendees.all():
-            return CircleEventState.JOINABLE
-        return CircleEventState.CLOSED
+            return SessionState.JOINABLE
+        return SessionState.CLOSED
 
     def add_attendee(self, user):
         # checks if the user can attend and adds them to the attendees list, throws an exception if they can't
@@ -231,20 +255,20 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
             try:
                 if self.notified and self.can_join(user):
                     # Send the user the join email if they are attending and the event is about to start
-                    notify_circle_starting(self, user).send()
-                    circle_starting_notification(self, user).send()
+                    notify_session_starting(self, user).send()
+                    session_starting_notification(self, user).send()
                 else:
                     # Otherwise, send the user the signed up email
-                    notify_circle_signup(self, user).send()
+                    notify_session_signup(self, user).send()
             except EmailBounced:
-                # If the email was blocked, remove the user from the event and circle
+                # If the email was blocked, remove the user from the session and space
                 self.attendees.remove(user)
-                self.circle.unsubscribe(user)
+                self.space.unsubscribe(user)
                 return
-            if not self.circle.author == user:
+            if not self.space.author == user:
                 notify_slack(
                     f"✅ New session attendee: {self._get_slack_attendee_message(user)}",
-                    email_to_mention=self.circle.author.email,
+                    email_to_mention=self.space.author.email,
                 )
 
     def started(self):
@@ -272,48 +296,48 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         if user not in self.attendees.all():
             return
         if self.cancelled:
-            raise CircleEventException("Session is cancelled")
+            raise SessionException("Session is cancelled")
         if self.started():
-            raise CircleEventException("Session has already started")
+            raise SessionException("Session has already started")
         self.attendees.remove(user)
         notify_slack(
             f"🛑 Session attendee left: {self._get_slack_attendee_message(user)}",
-            email_to_mention=self.circle.author.email,
+            email_to_mention=self.space.author.email,
         )
 
     def _get_slack_attendee_message(self, user):
         start_time_in_pst = self.start.astimezone(pytz.timezone("America/Los_Angeles")).strftime("%I:%M %p %Z")
         short_date = self.start.astimezone(pytz.timezone("America/Los_Angeles")).strftime("%b %d")
-        return f"<{full_url(user.get_admin_url())}|{user.name}> for <{full_url(self.get_admin_url())}|{self.circle.title}> @ {start_time_in_pst}, {short_date}"
+        return f"<{full_url(user.get_admin_url())}|{user.name}> for <{full_url(self.get_admin_url())}|{self.space.title}> @ {start_time_in_pst}, {short_date}"
 
     def notify(self, force=False):
-        # Notify users who are attending that the circle is about to start
+        # Notify users who are attending that the space is about to start
         if force is False and self.notified:
             return
         self.notified = True
         self.save()
         for user in self.attendees.all():
             try:
-                notify_circle_starting(self, user).send()
-                circle_starting_notification(self, user).send()
+                notify_session_starting(self, user).send()
+                session_starting_notification(self, user).send()
             except EmailBounced:
-                # If the email was blocked, remove the user from the event and circle
+                # If the email was blocked, remove the user from the session and space
                 self.attendees.remove(user)
-                self.circle.unsubscribe(user)
+                self.space.unsubscribe(user)
 
     def notify_tomorrow(self, force=False):
-        # Notify users who are attending that the circle is starting tomorrow
+        # Notify users who are attending that the space is starting tomorrow
         if force is False and self.notified_tomorrow:
             return
         self.notified_tomorrow = True
         self.save()
         for user in self.attendees.all():
             try:
-                notify_circle_tomorrow(self, user).send()
+                notify_session_tomorrow(self, user).send()
             except EmailBounced:
-                # If the email was blocked, remove the user from the event and circle
+                # If the email was blocked, remove the user from the session and space
                 self.attendees.remove(user)
-                self.circle.unsubscribe(user)
+                self.space.unsubscribe(user)
 
     def notify_missed(self, force=False):
         # Notify users who signed up but didn't join
@@ -324,15 +348,15 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         self.notified_missed = True
         self.save()
         for user in self.attendees.all():
-            if user == self.circle.author:
+            if user == self.space.author:
                 continue
             if user not in self.joined.all():
                 try:
-                    missed_event_email(self, user).send()
-                    missed_event_notification(self, user).send()
+                    missed_session_email(self, user).send()
+                    missed_session_notification(self, user).send()
                 except EmailBounced:
-                    # If the email was blocked, unsubscribe the user from the circle
-                    self.circle.unsubscribe(user)
+                    # If the email was blocked, unsubscribe the user from the space
+                    self.space.unsubscribe(user)
 
     def advertise(self, force=False):
         # Notify users who are subscribed that a new event is available, if they aren't already attending.
@@ -340,14 +364,14 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
             return
         self.advertised = True
         self.save()
-        for user in self.circle.subscribed.all():
+        for user in self.space.subscribed.all():
             if self.can_attend(silent=True) and user not in self.attendees.all():
                 try:
-                    notify_circle_advertisement(self, user).send()
-                    circle_advertisement_notification(self, user).send()
+                    notify_session_advertisement(self, user).send()
+                    session_advertisement_notification(self, user).send()
                 except EmailBounced:
-                    # If the email was blocked, remove the user from the circle
-                    self.circle.unsubscribe(user)
+                    # If the email was blocked, remove the user from the space
+                    self.space.unsubscribe(user)
 
     def cal_link(self):
         return full_url(self.get_absolute_url())
@@ -357,7 +381,7 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
             event_id=self.slug,
             start=self.start.isoformat(),
             end=self.end().isoformat(),
-            summary=self.circle.title,
+            summary=self.space.title,
             description=self.cal_link(),
         )
         if cal_event:
@@ -371,22 +395,28 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
         return basic_hash(hmac(f"{self.slug}|{self.meeting_url}"))
 
     def email_join_url(self, user):
-        return JoinCircleAction(user=user, parameters={"event_slug": self.slug}).build_url()
+        return JoinSessionAction(user=user, parameters={"session_slug": self.slug}).build_url()
 
     def jsonld(self):
         return jsonld.create_jsonld(self)
 
     # def attend_url(self, user):
     #     return AttendCircleAction(user=user, parameters={"event_slug": self.slug}).build_url()
+    def session_title_or_title(self):
+        return self.title or self.space.title
+
     def event_title_or_title(self):
-        return self.title or self.circle.title
+        return self.session_title_or_title()
 
     def __str__(self):
-        return f"CircleEvent: {self.start}"
+        return f"Session: {self.start}"
 
 
-class CircleEventException(Exception):
+class SessionException(Exception):
     pass
+
+
+CircleEventException = SessionException
 
 
 class SessionFeedbackOptions(models.TextChoices):
@@ -395,6 +425,7 @@ class SessionFeedbackOptions(models.TextChoices):
 
 
 class SessionFeedback(AdminURLMixin, BaseModel):
+    # Keep original field name "event" to avoid migration
     event = models.ForeignKey(CircleEvent, on_delete=models.CASCADE, related_name="feedback")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="session_feedback")
     feedback = models.CharField(max_length=4, choices=SessionFeedbackOptions.choices)
@@ -402,3 +433,19 @@ class SessionFeedback(AdminURLMixin, BaseModel):
 
     class Meta(BaseModel.Meta):
         constraints = [models.UniqueConstraint(fields=["event", "user"], name="unique_user_feedback_for_event")]
+
+    @property
+    def session(self):
+        """Alias for event - new terminology"""
+        return self.event
+
+    @session.setter
+    def session(self, value):
+        self.event = value
+
+
+SpaceImageSpec = CircleImageSpec
+SpaceCategory = CircleCategory
+SessionState = CircleEventState
+Space = Circle
+Session = CircleEvent

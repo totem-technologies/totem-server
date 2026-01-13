@@ -202,7 +202,7 @@ function CirclesInner() {
   return (
     <Show when={context}>
       <div class="m-auto max-w-7xl">
-        <Switch fallback={<div>No Circles yet.</div>}>
+        <Switch fallback={<div>No Spaces yet.</div>}>
           <Match when={context?.events.state === "errored"}>
             <div>Error: {context?.events.error}</div>
           </Match>
@@ -506,7 +506,7 @@ function FilterModal() {
           class="drawer-overlay"
         />
         <div class="bg-tcreme flex min-h-full w-[90vw] max-w-80 flex-col gap-5 p-4 text-left">
-          <h3 class="text-lg font-bold">Filter Circles</h3>
+          <h3 class="text-lg font-bold">Filter Spaces</h3>
           <div>
             <label class="form-label" for="category">
               Category

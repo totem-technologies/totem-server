@@ -3,7 +3,7 @@ from django.urls import path
 from django.utils import timezone
 
 from . import views
-from .models import CircleEvent
+from .models import Session
 
 app_name = "circles"
 
@@ -13,11 +13,11 @@ class SpacesSitemap(Sitemap):
     changefreq = "daily"
 
     def items(self):
-        return CircleEvent.objects.filter(
+        return Session.objects.filter(
             start__gte=timezone.now(), cancelled=False, open=True, listed=True, circle__published=True
         )
 
-    def lastmod(self, obj: CircleEvent):
+    def lastmod(self, obj: Session):
         return obj.date_modified
 
 
@@ -26,9 +26,9 @@ urlpatterns = [
     path("events/", views.events, name="events"),
     path("rsvp/<str:event_slug>/", views.rsvp, name="rsvp"),
     path("join/<str:event_slug>/", views.join, name="join"),
-    path("event/<str:event_slug>/", views.event_detail, name="event_detail"),
-    path("event/<str:event_slug>/social/", views.event_social, name="event_social"),
-    path("event/<str:event_slug>/social/<str:image_format>.jpg", views.event_social_img, name="event_social_img"),
+    path("event/<str:event_slug>/", views.session_detail, name="event_detail"),
+    path("event/<str:event_slug>/social/", views.session_social, name="event_social"),
+    path("event/<str:event_slug>/social/<str:image_format>.jpg", views.session_social_img, name="event_social_img"),
     path("calendar/<str:event_slug>/", views.calendar, name="calendar"),
     path("subscribe/<str:slug>/", views.subscribe, name="subscribe"),
     path("<str:slug>/", views.detail, name="detail"),

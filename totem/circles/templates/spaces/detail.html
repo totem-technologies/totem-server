@@ -9,10 +9,10 @@
 {# djlint:off #}
 {% block title %}{{ object.title }}{% endblock title %}
 {% block description %}{{ object.content_text|truncatechars:140 }}{% endblock description %}
-{% block ogimage %}{% if event %}{% absurl 'circles:event_social_img' event_slug=event.slug image_format="2to1" %}{% endif %}{% endblock ogimage %}
+{% block ogimage %}{% if session %}{% absurl 'circles:event_social_img' event_slug=session.slug image_format="2to1" %}{% endif %}{% endblock ogimage %}
 {# djlint:on #}
 {% block jsonld %}
-  {{ event.jsonld|jsonld }}
+  {{ session.jsonld|jsonld }}
 {% endblock jsonld %}
 {% block content %}
   <div class="h-2"></div>
@@ -25,7 +25,7 @@
     <!-- prettier-ignore-start -->
     {% if object.image %}
         <style>
-            .circle-bg-image-{{ object.slug }}{
+            .space-bg-image-{{ object.slug }}{
                 background-image: linear-gradient(355deg, rgba(1, 1, 1, 0), rgba(0, 0, 0, 0.6)),url({{ object.image.url }});
                 background-size: cover;
                 background-position: center;
@@ -34,14 +34,14 @@
         </style>
     {% endif %}
     <!-- prettier-ignore-end -->
-    {% include "circles/_event_detail_card.html" %}
+    {% include "spaces/_event_detail_card.html" %}
   </div>
   <div class="m-auto max-w-5xl flex-row-reverse px-5 md:flex">
     <div>
-      <t-detail-sidebar eventID="{{ event.slug }}"></t-detail-sidebar>
+      <t-detail-sidebar eventID="{{ session.slug }}"></t-detail-sidebar>
       <t-eventcalendar
         spaceID="{{ object.slug }}"
-        eventID="{{ event.slug }}"></t-eventcalendar>
+        eventID="{{ session.slug }}"></t-eventcalendar>
     </div>
     <div class="mt-5 grow pr-4">
       <div>
@@ -50,16 +50,16 @@
         {% endif %}
       </div>
       <div class="h-5"></div>
-      {% if event and event.content_html or request.user.is_staff %}
+      {% if session and session.content_html or request.user.is_staff %}
         <h3 class="mb-5 font-semibold">
           About this Session
           {% if request.user.is_staff %}
-            (<a class="link" target="_blank" href="{{ event.get_admin_url }}"
+            (<a class="link" target="_blank" href="{{ session.get_admin_url }}"
               >Edit</a
             >)
           {% endif %}
         </h3>
-        <div class="prose">{{ event.content_html }}</div>
+        <div class="prose">{{ session.content_html }}</div>
         <div class="h-5"></div>
       {% endif %}
       <h3 class="mb-5 font-semibold">
@@ -109,15 +109,15 @@
       </div>
     </div>
   </div>
-  {% if other_circles %}
+  {% if other_spaces %}
     <div class="m-auto max-w-5xl px-5 pb-2">
       <div class="divider py-5">More from {{ object.author.name }}</div>
       <div>
         <ul
           role="list"
           class="grid grid-cols-1 gap-6 pb-5 sm:grid-cols-2 md:grid-cols-3">
-          {% for event in other_circles %}
-            {% include "circles/_event_card.html" with event=event only %}
+          {% for session in other_spaces %}
+            {% include "spaces/_event_card.html" with session=session only %}
           {% endfor %}
         </ul>
       </div>

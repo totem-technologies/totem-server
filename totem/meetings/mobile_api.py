@@ -6,7 +6,7 @@ from livekit import api
 from ninja import Router
 
 import totem.meetings.livekit_provider as livekit
-from totem.circles.models import CircleEvent
+from totem.circles.models import Session
 from totem.meetings.livekit_provider import (
     KeeperNotInRoomError,
     LiveKitConfigurationError,
@@ -42,8 +42,8 @@ def get_livekit_token(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
 
     try:
-        event = CircleEvent.objects.get(slug=event_slug)
-    except CircleEvent.DoesNotExist:
+        event = Session.objects.get(slug=event_slug)
+    except Session.DoesNotExist:
         return 404, ErrorResponseSchema(error="Session not found")
 
     is_joinable = event.can_join(user=user)
@@ -57,7 +57,7 @@ def get_livekit_token(request: HttpRequest, event_slug: str):
         livekit.initialize_room(
             room_name=event.slug,
             speaking_order=[attendee.slug for attendee in speaking_order],
-            keeper_slug=event.circle.author.slug,
+            keeper_slug=event.space.author.slug,
         )
 
         # Create and return the access token
@@ -92,10 +92,10 @@ def get_livekit_token(request: HttpRequest, event_slug: str):
 )
 def pass_totem_endpoint(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
-    event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
+    event: Session = get_object_or_404(Session, slug=event_slug)
 
     try:
-        livekit.pass_totem(event_slug, event.circle.author.slug, user.slug)
+        livekit.pass_totem(event_slug, event.space.author.slug, user.slug)
         return HttpResponse(status=200)
     except RoomNotFoundError as e:
         return 404, ErrorResponseSchema(error=str(e))
@@ -124,13 +124,13 @@ def pass_totem_endpoint(request: HttpRequest, event_slug: str):
 )
 def accept_totem_endpoint(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
-    event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
+    event: Session = get_object_or_404(Session, slug=event_slug)
 
     try:
         livekit.accept_totem(
             room_name=event_slug,
             user_identity=user.slug,
-            keeper_slug=event.circle.author.slug,
+            keeper_slug=event.space.author.slug,
         )
         return HttpResponse(status=200)
     except RoomNotFoundError as e:
@@ -160,15 +160,15 @@ def accept_totem_endpoint(request: HttpRequest, event_slug: str):
 )
 def start_room_endpoint(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
-    event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
-    is_keeper = event.circle.author.slug == user.slug
+    event: Session = get_object_or_404(Session, slug=event_slug)
+    is_keeper = event.space.author.slug == user.slug
 
     if not is_keeper:
         logging.warning("User %s attempted to start room for event %s", user.slug, event.slug)
         return 403, ErrorResponseSchema(error="Only the Keeper can start the room.")
 
     try:
-        livekit.start_room(room_name=event.slug, keeper_slug=event.circle.author.slug)
+        livekit.start_room(room_name=event.slug, keeper_slug=event.space.author.slug)
         return HttpResponse(status=200)
     except RoomNotFoundError as e:
         return 404, ErrorResponseSchema(error=str(e))
@@ -197,8 +197,8 @@ def start_room_endpoint(request: HttpRequest, event_slug: str):
 )
 def end_room_endpoint(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
-    event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
-    is_keeper = event.circle.author.slug == user.slug
+    event: Session = get_object_or_404(Session, slug=event_slug)
+    is_keeper = event.space.author.slug == user.slug
 
     if not is_keeper:
         logging.warning("User %s attempted to end room for event %s", user.slug, event.slug)
@@ -232,8 +232,8 @@ def end_room_endpoint(request: HttpRequest, event_slug: str):
 )
 def mute_participant_endpoint(request: HttpRequest, event_slug: str, participant_identity: str):
     user: User = request.user  # type: ignore
-    event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
-    is_keeper = event.circle.author.slug == user.slug
+    event: Session = get_object_or_404(Session, slug=event_slug)
+    is_keeper = event.space.author.slug == user.slug
 
     if not is_keeper:
         logging.warning("User %s attempted to mute participant in event %s", user.slug, event_slug)
@@ -266,8 +266,8 @@ def mute_participant_endpoint(request: HttpRequest, event_slug: str, participant
 )
 def mute_all_participants_endpoint(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
-    event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
-    is_keeper = event.circle.author.slug == user.slug
+    event: Session = get_object_or_404(Session, slug=event_slug)
+    is_keeper = event.space.author.slug == user.slug
 
     if not is_keeper:
         logging.warning("User %s attempted to mute all participants in event %s", user.slug, event_slug)
@@ -297,14 +297,14 @@ def mute_all_participants_endpoint(request: HttpRequest, event_slug: str):
 )
 def remove_participant_endpoint(request: HttpRequest, event_slug: str, participant_identity: str):
     user: User = request.user  # type: ignore
-    event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
-    is_keeper = event.circle.author.slug == user.slug
+    event: Session = get_object_or_404(Session, slug=event_slug)
+    is_keeper = event.space.author.slug == user.slug
 
     if not is_keeper:
         logging.warning("User %s attempted to remove participant from event %s", user.slug, event_slug)
         return 403, ErrorResponseSchema(error="Only the Keeper can remove participants.")
 
-    if event.circle.author.slug == participant_identity:
+    if event.space.author.slug == participant_identity:
         return 403, ErrorResponseSchema(error="Cannot remove the keeper from the room.")
 
     try:
@@ -333,8 +333,8 @@ def remove_participant_endpoint(request: HttpRequest, event_slug: str, participa
 )
 def reorder_participants_endpoint(request: HttpRequest, event_slug: str, order: LivekitMuteParticipantSchema):
     user: User = request.user  # type: ignore
-    event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
-    is_keeper = event.circle.author.slug == user.slug
+    event: Session = get_object_or_404(Session, slug=event_slug)
+    is_keeper = event.space.author.slug == user.slug
 
     if not is_keeper:
         logging.warning("User %s attempted to reorder participants in event %s", user.slug, event_slug)
@@ -367,7 +367,7 @@ def get_room_state_endpoint(request: HttpRequest, event_slug: str):
     This endpoint exposes the SessionState schema and its enums (SessionStatus, TotemStatus)
     in the OpenAPI documentation for client-side usage.
     """
-    event: CircleEvent = get_object_or_404(CircleEvent, slug=event_slug)
+    event: Session = get_object_or_404(Session, slug=event_slug)
 
     user: User = request.user  # type: ignore
     is_joinable = event.can_join(user=user)

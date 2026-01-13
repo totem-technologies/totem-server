@@ -52,25 +52,25 @@ def load_fixtures_impl():
             )
         )
 
-    # Create Circle Categories
-    from totem.circles.models import CircleCategory
+    # Create Space Categories
+    from totem.circles.models import SpaceCategory
 
     categories = []
     for i in range(5):
         categories.append(
-            CircleCategory.objects.create(
+            SpaceCategory.objects.create(
                 name=fake.word(),
                 slug=fake.slug(),
                 description=fake.paragraph(nb_sentences=20),
             )
         )
 
-    # Create circles
-    from totem.circles.models import Circle
+    # Create spaces
+    from totem.circles.models import Space
 
-    circles = []
+    spaces = []
     for i in range(15):
-        c = Circle.objects.create(
+        space = Space.objects.create(
             published=True,
             title=fake.bs().title(),
             subtitle=fake.sentence(),
@@ -78,19 +78,19 @@ def load_fixtures_impl():
             content=fake.paragraph(nb_sentences=20),
             recurring="Every week",
         )
-        c.categories.add(*random.sample(categories, 2))
-        c.subscribed.add(c.author, *random.sample(users, 4))
-        circles.append(c)
+        space.categories.add(*random.sample(categories, 2))
+        space.subscribed.add(space.author, *random.sample(users, 4))
+        spaces.append(space)
 
-    # Create circle events
-    from totem.circles.models import CircleEvent
+    # Create sessions
+    from totem.circles.models import Session
 
-    for circle in circles:
+    for space in spaces:
         for i in range(15):
-            e = CircleEvent.objects.create(
-                circle=circle,
+            session = Session.objects.create(
+                space=space,
                 start=timezone.make_aware(fake.date_time_between(start_date="+1d", end_date="+1y")),
                 meeting_url=fake.url(),
             )
-            e.attendees.add(circle.author)
-            e.attendees.add(*random.sample(users, 4))
+            session.attendees.add(space.author)
+            session.attendees.add(*random.sample(users, 4))

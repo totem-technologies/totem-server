@@ -1,21 +1,21 @@
 from django.core.management.base import BaseCommand, CommandError
 
-from totem.circles.models import CircleEvent
+from totem.circles.models import Session
 from totem.email import emails
 from totem.users.models import User
 
-event_maps = {
-    "signup": emails.notify_circle_signup,
-    "start": emails.notify_circle_starting,
-    "tomorrow": emails.notify_circle_tomorrow,
-    "ad": emails.notify_circle_advertisement,
-    "missed": emails.missed_event_email,
+session_maps = {
+    "signup": emails.notify_session_signup,
+    "start": emails.notify_session_starting,
+    "tomorrow": emails.notify_session_tomorrow,
+    "ad": emails.notify_session_advertisement,
+    "missed": emails.missed_session_email,
 }
 
 
 class Command(BaseCommand):
-    help = "Send an email of a type to the admin user for testing. Also takes an event slug. Types are: " + ", ".join(
-        event_maps.keys()
+    help = "Send an email of a type to the admin user for testing. Also takes a session slug. Types are: " + ", ".join(
+        session_maps.keys()
     )
 
     def add_arguments(self, parser):
@@ -27,10 +27,10 @@ class Command(BaseCommand):
         event_slug = options["event_slug"]
 
         user = User.objects.get(email="bo@totem.org")
-        event = CircleEvent.objects.get(slug=event_slug)
+        session = Session.objects.get(slug=event_slug)
 
         try:
-            event_maps[email_type](event, user).send()
+            session_maps[email_type](session, user).send()
             print(f"Sent {email_type} email to {user.email}")
         except KeyError:
             raise CommandError(f"Unknown email type: {email_type}")

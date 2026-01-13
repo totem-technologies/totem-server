@@ -4,7 +4,7 @@ from django.http import HttpRequest
 from ninja import File, NinjaAPI, Router, Schema
 from ninja.files import UploadedFile
 
-from totem.circles.api import router as circles_router
+from totem.circles.api import router as spaces_router
 from totem.users.models import User
 from totem.users.schemas import ProfileAvatarTypeEnum, PublicUserSchema
 
@@ -14,7 +14,7 @@ from .mobile_api import router as mobile_router
 api = NinjaAPI(title="Totem API", version="1")
 dev_api = Router()
 api.add_router("/dev/", dev_api)
-api.add_router("/spaces/", circles_router)
+api.add_router("/spaces/", spaces_router)
 mobile_api = NinjaAPI(title="Totem Mobile API", version="1", urls_namespace="mobile-api")
 mobile_api.add_router("/protected/", mobile_router)
 mobile_api.add_router("/auth/", auth_router)

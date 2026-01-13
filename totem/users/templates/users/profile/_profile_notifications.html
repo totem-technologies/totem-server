@@ -5,7 +5,7 @@
     These are the Spaces you will get notifications for when new sessions are
     coming up.
   </p>
-  {% if subscribed_circles %}
+  {% if subscribed_spaces %}
     <div class="relative overflow-x-auto">
       <div class="overflow-x-auto">
         <table class="table">
@@ -15,17 +15,17 @@
               <th class="text-right">Unsubscribe</th>
             </tr>
           </thead>
-          {% for circle in subscribed_circles %}
+          {% for space in subscribed_spaces %}
             <tr>
               <td class="text-ellipsis">
-                <a class="link" href="{{ circle.get_absolute_url }}"
-                  >{{ circle.title }}</a
+                <a class="link" href="{{ space.get_absolute_url }}"
+                  >{{ space.title }}</a
                 >
               </td>
               <td class="text-right">
                 <form
                   method="post"
-                  action="{% url 'circles:subscribe' slug=circle.slug %}">
+                  action="{% url 'circles:subscribe' slug=space.slug %}">
                   <input type="hidden" name="action" value="unsubscribe" />
                   <input
                     type="hidden"

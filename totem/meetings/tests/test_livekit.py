@@ -7,8 +7,8 @@ from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
 
-from totem.circles.models import CircleEvent
-from totem.circles.tests.factories import CircleEventFactory, CircleFactory
+from totem.circles.models import Session
+from totem.circles.tests.factories import SessionFactory, SpaceFactory
 from totem.meetings.livekit_provider import (
     RoomAlreadyEndedError,
     RoomNotFoundError,
@@ -23,7 +23,7 @@ class TestGetLiveKitToken:
 
     def test_not_attendee(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event: CircleEvent = CircleEventFactory()
+        event: Session = SessionFactory()
         event.start = timezone.now()
         event.save()
 
@@ -34,7 +34,7 @@ class TestGetLiveKitToken:
 
     def test_not_joinable(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event: CircleEvent = CircleEventFactory()
+        event: Session = SessionFactory()
         event.attendees.add(user)
         event.start = timezone.now() - timedelta(hours=1)
         event.save()
@@ -52,7 +52,7 @@ class TestGetLiveKitToken:
 
     def test_get_livekit_token_success(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = CircleEventFactory(start=timezone.now())
+        event = SessionFactory(start=timezone.now())
         event.attendees.add(user)
         event.joined.add(user)
         event.save()
@@ -80,7 +80,7 @@ class TestGetLiveKitToken:
     def test_get_livekit_token_not_joinable(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         # Create an event that started 2 hours ago
-        event = CircleEventFactory(start=timezone.now() - timedelta(hours=2))
+        event = SessionFactory(start=timezone.now() - timedelta(hours=2))
         event.attendees.add(user)
 
         url = reverse("mobile-api:get_livekit_token", kwargs={"event_slug": event.slug})
@@ -91,7 +91,7 @@ class TestGetLiveKitToken:
 
     def test_get_livekit_token_not_attendee(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = CircleEventFactory(start=timezone.now())
+        event = SessionFactory(start=timezone.now())
 
         url = reverse("mobile-api:get_livekit_token", kwargs={"event_slug": event.slug})
         response = client.get(url)
@@ -110,18 +110,18 @@ class TestGetLiveKitToken:
 
     def test_pass_totem_success(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = CircleEventFactory()
+        event = SessionFactory()
 
         with patch(f"{self.LIVEKIT_PROVIDER_PATH}.pass_totem", new_callable=Mock) as mock_pass_totem:
             url = reverse("mobile-api:pass_totem", kwargs={"event_slug": event.slug})
             response = client.post(url)
 
         assert response.status_code == 200
-        mock_pass_totem.assert_called_once_with(event.slug, event.circle.author.slug, user.slug)
+        mock_pass_totem.assert_called_once_with(event.slug, event.space.author.slug, user.slug)
 
     def test_accept_totem_success(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = CircleEventFactory()
+        event = SessionFactory()
 
         with patch(f"{self.LIVEKIT_PROVIDER_PATH}.accept_totem", new_callable=Mock) as mock_accept_totem:
             url = reverse("mobile-api:accept_totem", kwargs={"event_slug": event.slug})
@@ -131,7 +131,7 @@ class TestGetLiveKitToken:
         mock_accept_totem.assert_called_once_with(
             room_name=event.slug,
             user_identity=user.slug,
-            keeper_slug=event.circle.author.slug,
+            keeper_slug=event.space.author.slug,
         )
 
     def test_start_room_success_by_staff(self, client_with_user: tuple[Client, User]):
@@ -139,8 +139,8 @@ class TestGetLiveKitToken:
         user.is_staff = True
         user.save()
 
-        circle = CircleFactory(author=user)
-        event = CircleEventFactory(circle=circle)
+        circle = SpaceFactory(author=user)
+        event = SessionFactory(circle=circle)
 
         with patch(f"{self.LIVEKIT_PROVIDER_PATH}.start_room", new_callable=Mock) as mock_start_room:
             url = reverse("mobile-api:start_room", kwargs={"event_slug": event.slug})
@@ -149,12 +149,12 @@ class TestGetLiveKitToken:
         assert response.status_code == 200
         mock_start_room.assert_called_once_with(
             room_name=event.slug,
-            keeper_slug=event.circle.author.slug,
+            keeper_slug=event.space.author.slug,
         )
 
     def test_start_room_forbidden_for_non_staff(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = CircleEventFactory()
+        event = SessionFactory()
 
         with patch(f"{self.LIVEKIT_PROVIDER_PATH}.start_room", new_callable=Mock) as mock_start_room:
             url = reverse("mobile-api:start_room", kwargs={"event_slug": event.slug})
@@ -168,8 +168,8 @@ class TestGetLiveKitToken:
         user.is_staff = True
         user.save()
 
-        circle = CircleFactory(author=user)
-        event = CircleEventFactory(circle=circle)
+        circle = SpaceFactory(author=user)
+        event = SessionFactory(circle=circle)
 
         with patch(f"{self.LIVEKIT_PROVIDER_PATH}.end_room", new_callable=Mock) as mock_end_room:
             url = reverse("mobile-api:end_room", kwargs={"event_slug": event.slug})
@@ -180,7 +180,7 @@ class TestGetLiveKitToken:
 
     def test_end_room_forbidden_for_non_staff(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = CircleEventFactory()
+        event = SessionFactory()
 
         with patch(f"{self.LIVEKIT_PROVIDER_PATH}.end_room", new_callable=Mock) as mock_end_room:
             url = reverse("mobile-api:end_room", kwargs={"event_slug": event.slug})
@@ -194,8 +194,8 @@ class TestGetLiveKitToken:
         user.is_staff = True
         user.save()
 
-        circle = CircleFactory(author=user)
-        event = CircleEventFactory(circle=circle)
+        circle = SpaceFactory(author=user)
+        event = SessionFactory(circle=circle)
         participant_to_mute = "participant-slug-to-mute"
 
         with patch(f"{self.LIVEKIT_PROVIDER_PATH}.mute_participant", new_callable=Mock) as mock_mute:
@@ -210,7 +210,7 @@ class TestGetLiveKitToken:
 
     def test_mute_participant_forbidden_for_non_staff(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = CircleEventFactory()
+        event = SessionFactory()
         participant_to_mute = "participant-slug-to-mute"
 
         with patch(f"{self.LIVEKIT_PROVIDER_PATH}.mute_participant", new_callable=Mock) as mock_mute:
@@ -225,8 +225,8 @@ class TestGetLiveKitToken:
 
     def test_mute_all_participants_success_by_keeper(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        circle = CircleFactory(author=user)
-        event = CircleEventFactory(circle=circle)
+        circle = SpaceFactory(author=user)
+        event = SessionFactory(circle=circle)
 
         with patch(f"{self.LIVEKIT_PROVIDER_PATH}.mute_all_participants", new_callable=Mock) as mock_mute_all:
             url = reverse("mobile-api:mute_all_participants", kwargs={"event_slug": event.slug})
@@ -237,7 +237,7 @@ class TestGetLiveKitToken:
 
     def test_mute_all_participants_forbidden_for_non_keeper(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = CircleEventFactory()
+        event = SessionFactory()
 
         with patch(f"{self.LIVEKIT_PROVIDER_PATH}.mute_all_participants", new_callable=Mock) as mock_mute_all:
             url = reverse("mobile-api:mute_all_participants", kwargs={"event_slug": event.slug})
@@ -257,8 +257,8 @@ class TestGetLiveKitToken:
 
     def test_mute_all_participants_livekit_api_error(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        circle = CircleFactory(author=user)
-        event = CircleEventFactory(circle=circle)
+        circle = SpaceFactory(author=user)
+        event = SessionFactory(circle=circle)
 
         from livekit import api
 
@@ -275,8 +275,8 @@ class TestGetLiveKitToken:
 
     def test_mute_all_participants_unexpected_error(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        circle = CircleFactory(author=user)
-        event = CircleEventFactory(circle=circle)
+        circle = SpaceFactory(author=user)
+        event = SessionFactory(circle=circle)
 
         with patch(
             f"{self.LIVEKIT_PROVIDER_PATH}.mute_all_participants",
@@ -294,8 +294,8 @@ class TestGetLiveKitToken:
         user.is_staff = True
         user.save()
 
-        circle = CircleFactory(author=user)
-        event = CircleEventFactory(circle=circle)
+        circle = SpaceFactory(author=user)
+        event = SessionFactory(circle=circle)
         participant_to_remove = "participant-slug-to-remove"
 
         with patch(f"{self.LIVEKIT_PROVIDER_PATH}.remove_participant", new_callable=Mock) as mock_remove:
@@ -313,9 +313,9 @@ class TestGetLiveKitToken:
         user.is_staff = True
         user.save()
 
-        circle = CircleFactory(author=user)
-        event = CircleEventFactory(circle=circle)
-        participant_to_remove = event.circle.author.slug
+        circle = SpaceFactory(author=user)
+        event = SessionFactory(circle=circle)
+        participant_to_remove = event.space.author.slug
 
         url = reverse(
             "mobile-api:remove_participant",
@@ -328,7 +328,7 @@ class TestGetLiveKitToken:
 
     def test_remove_participant_forbidden_for_non_staff(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = CircleEventFactory()
+        event = SessionFactory()
         participant_to_remove = "participant-slug-to-remove"
 
         with patch(f"{self.LIVEKIT_PROVIDER_PATH}.remove_participant", new_callable=Mock) as mock_remove:
@@ -360,8 +360,8 @@ class TestGetLiveKitToken:
         user.is_staff = True
         user.save()
 
-        circle = CircleFactory(author=user)
-        event = CircleEventFactory(circle=circle)
+        circle = SpaceFactory(author=user)
+        event = SessionFactory(circle=circle)
         event.save()
 
         new_order = ["participant1-slug", "participant2-slug", user.slug]
@@ -376,7 +376,7 @@ class TestGetLiveKitToken:
 
     def test_reorder_participants_forbidden_for_non_staff(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = CircleEventFactory()
+        event = SessionFactory()
         payload = {"order": ["some-slug"]}
 
         with patch(
@@ -405,8 +405,8 @@ class TestGetLiveKitToken:
         user.is_staff = True
         user.save()
 
-        circle = CircleFactory(author=user)
-        event = CircleEventFactory(circle=circle)
+        circle = SpaceFactory(author=user)
+        event = SessionFactory(circle=circle)
         new_order = ["invalid-slug"]
         payload = {"order": new_order}
 
@@ -426,8 +426,8 @@ class TestGetLiveKitToken:
         user.is_staff = True
         user.save()
 
-        circle = CircleFactory(author=user)
-        event = CircleEventFactory(circle=circle)
+        circle = SpaceFactory(author=user)
+        event = SessionFactory(circle=circle)
         new_order = ["invalid-slug"]
         payload = {"order": new_order}
 
@@ -444,7 +444,7 @@ class TestGetLiveKitToken:
 
     def test_get_room_state_success(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = CircleEventFactory(start=timezone.now())
+        event = SessionFactory(start=timezone.now())
         event.attendees.add(user)
         event.joined.add(user)
         event.save()
@@ -471,7 +471,7 @@ class TestGetLiveKitToken:
 
     def test_get_room_state_empty_state(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = CircleEventFactory(start=timezone.now())
+        event = SessionFactory(start=timezone.now())
         event.attendees.add(user)
         event.joined.add(user)
         event.save()
@@ -506,7 +506,7 @@ class TestGetLiveKitToken:
 
     def test_get_room_state_room_not_found(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = CircleEventFactory(start=timezone.now())
+        event = SessionFactory(start=timezone.now())
         event.attendees.add(user)
         event.joined.add(user)
         event.save()
@@ -524,7 +524,7 @@ class TestGetLiveKitToken:
 
     def test_get_room_state_livekit_api_error(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = CircleEventFactory(start=timezone.now())
+        event = SessionFactory(start=timezone.now())
         event.attendees.add(user)
         event.joined.add(user)
         event.save()

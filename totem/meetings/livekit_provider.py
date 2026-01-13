@@ -9,7 +9,7 @@ from livekit import api
 from totem.meetings.room_state import SessionState, SessionStatus
 from totem.users.models import User
 
-from ..circles.models import CircleEvent
+from ..circles.models import Session
 
 # Constants
 ROOM_EMPTY_TIMEOUT_SECONDS = 60 * 60  # 1 hour
@@ -94,7 +94,7 @@ async def _get_lk_api_client():
         await lkapi.aclose()
 
 
-def create_access_token(user: User, event: CircleEvent) -> str:
+def create_access_token(user: User, event: Session) -> str:
     """
     Create a LiveKit access token for a user to join a specific event room.
 

@@ -14,7 +14,11 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 
-from totem.circles.filters import all_upcoming_recommended_events, upcoming_attending_events, upcoming_events_by_author
+from totem.circles.filters import (
+    all_upcoming_recommended_sessions,
+    upcoming_attending_sessions,
+    upcoming_sessions_by_author,
+)
 from totem.email import emails
 from totem.utils.slack import notify_slack
 
@@ -29,12 +33,17 @@ def user_detail_view(request, slug):
     try:
         user = User.objects.get(slug=slug)
         if user.keeper_profile:
-            events = upcoming_events_by_author(request.user, user)[:10]
-            circle_count = user.events_joined.count()
+            sessions = upcoming_sessions_by_author(request.user, user)[:10]
+            space_count = user.events_joined.count()
             return render(
                 request,
                 "users/user_detail.html",
-                context={"user": user, "events": events, "profile": user.keeper_profile, "circle_count": circle_count},
+                context={
+                    "user": user,
+                    "sessions": sessions,
+                    "profile": user.keeper_profile,
+                    "space_count": space_count,
+                },
             )
     except (User.DoesNotExist, ObjectDoesNotExist):
         pass
@@ -45,12 +54,17 @@ def profiles(request, name):
     try:
         user = KeeperProfile.objects.get(username=name).user
         if user.keeper_profile:
-            events = upcoming_events_by_author(request.user, user)[:10]
-            circle_count = user.events_joined.count()
+            sessions = upcoming_sessions_by_author(request.user, user)[:10]
+            space_count = user.events_joined.count()
             return render(
                 request,
                 "users/user_detail.html",
-                context={"user": user, "events": events, "profile": user.keeper_profile, "circle_count": circle_count},
+                context={
+                    "user": user,
+                    "sessions": sessions,
+                    "profile": user.keeper_profile,
+                    "space_count": space_count,
+                },
             )
     except KeeperProfile.DoesNotExist:
         pass
@@ -237,27 +251,31 @@ def user_index_view(request):
 @login_required
 def user_dashboard_view(request):
     user: User = request.user
-    attending_events = upcoming_attending_events(user, limit=10)
-    recommended_events = all_upcoming_recommended_events(user)[:4]
+    attending_sessions = upcoming_attending_sessions(user, limit=10)
+    recommended_sessions = all_upcoming_recommended_sessions(user)[:4]
 
     return render(
         request,
         "users/dashboard.html",
-        context={"user": user, "attending_events": attending_events, "recommended_events": recommended_events},
+        context={
+            "user": user,
+            "attending_sessions": attending_sessions,
+            "recommended_sessions": recommended_sessions,
+        },
     )
 
 
 @login_required
 def user_profile_view(request):
-    subscribed_circles = request.user.subscribed_circles.all()[0:10]
-    circle_history_query = request.user.events_joined.order_by("-start")
-    circle_history = circle_history_query.all()[0:10]
-    circle_count = circle_history_query.count()
+    subscribed_spaces = request.user.subscribed_circles.all()[0:10]
+    session_history_query = request.user.events_joined.order_by("-start")
+    session_history = session_history_query.all()[0:10]
+    space_count = session_history_query.count()
     context = {
         "object": request.user,
-        "subscribed_circles": subscribed_circles,
-        "circle_history": circle_history,
-        "circle_count": circle_count,
+        "subscribed_spaces": subscribed_spaces,
+        "session_history": session_history,
+        "space_count": space_count,
     }
     context.update(_user_profile_info(request, request.user))
     return render(

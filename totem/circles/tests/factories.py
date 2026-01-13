@@ -6,10 +6,10 @@ from factory.django import DjangoModelFactory
 from totem.users.tests.factories import UserFactory
 from totem.utils.factories import BaseMetaFactory
 
-from ..models import Circle, CircleCategory, CircleEvent
+from ..models import Session, Space, SpaceCategory
 
 
-class CircleFactory(DjangoModelFactory, metaclass=BaseMetaFactory[Circle]):
+class SpaceFactory(DjangoModelFactory, metaclass=BaseMetaFactory[Space]):
     title = Faker("name")
     subtitle = Faker("text")
     author = SubFactory(UserFactory)
@@ -25,23 +25,29 @@ class CircleFactory(DjangoModelFactory, metaclass=BaseMetaFactory[Circle]):
         self.save()  # type: ignore
 
     class Meta:  # type: ignore
-        model = Circle
+        model = Space
         skip_postgeneration_save = True
 
 
-class CircleEventFactory(DjangoModelFactory, metaclass=BaseMetaFactory[CircleEvent]):
-    circle = SubFactory(CircleFactory)
+class SessionFactory(DjangoModelFactory, metaclass=BaseMetaFactory[Session]):
+    # Use actual field name 'circle' but keep 'space' as alias for backwards compat
+    circle = SubFactory(SpaceFactory)
     start = Faker("future_datetime", tzinfo=datetime.UTC)
     meeting_url = "https://example.com"
     duration_minutes = 60
 
     class Meta:  # type: ignore
-        model = CircleEvent
+        model = Session
 
 
-class CircleCategoryFactory(DjangoModelFactory, metaclass=BaseMetaFactory[CircleCategory]):
+class SpaceCategoryFactory(DjangoModelFactory, metaclass=BaseMetaFactory[SpaceCategory]):
     name = Faker("name")
     slug = Faker("slug")
 
     class Meta:  # type: ignore
-        model = CircleCategory
+        model = SpaceCategory
+
+
+SpaceFactory = SpaceFactory
+SessionFactory = SessionFactory
+SpaceCategoryFactory = SpaceCategoryFactory
