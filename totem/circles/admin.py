@@ -140,7 +140,7 @@ def copy_session(modeladmin, request, queryset: QuerySet[Session]):
         start=timezone.now(),
         duration_minutes=session.duration_minutes,
         seats=session.seats,
-        space=session.space,
+        circle=session.circle,
         content=session.content,
     )
     change_url = reverse(f"admin:{obj._meta.app_label}_{obj._meta.model_name}_change", args=[obj.pk])
@@ -167,7 +167,7 @@ class SessionAdmin(admin.ModelAdmin):
             None,
             {
                 "fields": (
-                    "space",
+                    "circle",
                     "title",
                     "start",
                     "duration_minutes",
