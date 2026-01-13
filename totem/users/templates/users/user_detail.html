@@ -19,8 +19,8 @@
             {% icons "location" size=20 %} {{ profile.location }}
           </div>
           <div class="flex gap-2 pb-2 text-sm text-gray-600">
-            {% icons "check-circle" size=20 %} {{ circle_count }}
-            Space{{ circle_count|pluralize }}
+            {% icons "check-circle" size=20 %} {{ space_count }}
+            Space{{ space_count|pluralize }}
           </div>
           <div class="flex gap-2 pl-1">
             {% if profile.x_username %}
@@ -90,14 +90,14 @@
     </div>
   </section>
   <section class="section m-auto max-w-5xl px-5 pt-5">
-    {% if events %}
+    {% if sessions %}
       <div class="divider py-5">More from {{ user.name }}</div>
       <div>
         <ul
           role="list"
           class="grid grid-cols-1 gap-6 pb-5 sm:grid-cols-2 md:grid-cols-3">
-          {% for event in events %}
-            {% include "circles/_event_card.html" with event=event only %}
+          {% for session in sessions %}
+            {% include "spaces/_event_card.html" with session=session only %}
           {% endfor %}
         </ul>
       </div>

@@ -8,49 +8,49 @@
   {% endcomment %}
   <div class="grid grid-cols-2 gap-4 pt-5 text-left">
     <a
-      href="{% sharelink 'facebook' circle.get_absolute_url circle.title %}"
+      href="{% sharelink 'facebook' space.get_absolute_url space.title %}"
       target="_blank"
       class="btn">
       {% icons "facebook" %} Facebook</a
     >
     <a
-      href="{% sharelink 'messenger' circle.get_absolute_url circle.title %}"
+      href="{% sharelink 'messenger' space.get_absolute_url space.title %}"
       target="_blank"
       class="btn">
       {% icons "messenger" %} Messenger</a
     >
     <a
-      href="{% sharelink 'whatsapp' circle.get_absolute_url circle.title %}"
+      href="{% sharelink 'whatsapp' space.get_absolute_url space.title %}"
       target="_blank"
       class="btn">
       {% icons "whatsapp" %} WhatsApp</a
     >
     <a
-      href="{% sharelink 'bluesky' circle.get_absolute_url circle.title %}"
+      href="{% sharelink 'bluesky' space.get_absolute_url space.title %}"
       target="_blank"
       class="btn">
       {% icons "bluesky" %} Bluesky</a
     >
     <a
-      href="{% sharelink 'linkedin' circle.get_absolute_url circle.title %}"
+      href="{% sharelink 'linkedin' space.get_absolute_url space.title %}"
       target="_blank"
       class="btn">
       {% icons "linkedin" %} LinkedIn</a
     >
     <a
-      href="{% sharelink 'email' circle.get_absolute_url circle.title %}"
+      href="{% sharelink 'email' space.get_absolute_url space.title %}"
       target="_blank"
       class="btn">
       {% icons "email" %} Email</a
     >
     <a
-      href="{% sharelink 'sms' circle.get_absolute_url circle.title %}"
+      href="{% sharelink 'sms' space.get_absolute_url space.title %}"
       target="_blank"
       class="btn">
       {% icons "sms" %} SMS</a
     >
     <a
-      data-copy="{% sharelink 'link' circle.get_absolute_url circle.title %}"
+      data-copy="{% sharelink 'link' space.get_absolute_url space.title %}"
       onclick="copyTextToClipboard(this)"
       class="btn">
       {% icons "link" %} Copy link</a

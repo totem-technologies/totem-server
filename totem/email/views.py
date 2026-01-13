@@ -3,7 +3,7 @@ from django.http import Http404
 from django.shortcuts import render
 from django.views.generic import TemplateView
 
-from totem.circles.models import CircleEvent
+from totem.circles.models import Session
 from totem.users.models import User
 
 from . import emails
@@ -64,33 +64,33 @@ def get_templates():
     #         login_url="https://totem.org",
     #     )
 
-    def circle_starting():
+    def session_starting():
         user = User.objects.first()
-        event = CircleEvent.objects.last()
-        if event is None or user is None:
+        session = Session.objects.last()
+        if session is None or user is None:
             raise Exception("Need user or event in DB")
-        return emails.notify_circle_starting(event, user)
+        return emails.notify_session_starting(session, user)
 
-    def circle_advertisement():
+    def session_advertisement():
         user = User.objects.first()
-        event = CircleEvent.objects.last()
-        if event is None or user is None:
+        session = Session.objects.last()
+        if session is None or user is None:
             raise Exception("Need user or event in DB")
-        return emails.notify_circle_advertisement(event, user)
+        return emails.notify_session_advertisement(session, user)
 
-    def circle_tomorrow_reminder():
+    def session_tomorrow_reminder():
         user = User.objects.first()
-        event = CircleEvent.objects.last()
-        if event is None or user is None:
+        session = Session.objects.last()
+        if session is None or user is None:
             raise Exception("Need user or event in DB")
-        return emails.notify_circle_tomorrow(event, user)
+        return emails.notify_session_tomorrow(session, user)
 
-    def circle_signup():
+    def session_signup():
         user = User.objects.first()
-        event = CircleEvent.objects.last()
-        if event is None or user is None:
+        session = Session.objects.last()
+        if session is None or user is None:
             raise Exception("Need user or event in DB")
-        return emails.notify_circle_signup(event, user)
+        return emails.notify_session_signup(session, user)
 
     def test():
         return emails.TestEmail(
@@ -100,20 +100,20 @@ def get_templates():
             event_title="Test Event",
         )
 
-    def missed_event():
+    def missed_session():
         user = User.objects.first()
-        event = CircleEvent.objects.last()
-        if event is None or user is None:
+        session = Session.objects.last()
+        if session is None or user is None:
             raise Exception("Need user or event in DB")
-        return emails.missed_event_email(event, user)
+        return emails.missed_session_email(session, user)
 
     return {
         "login_pin": login_pin,  # Updated key
         # "change_email": change_email,
-        "circle_starting": circle_starting,
-        "circle_advertisement": circle_advertisement,
-        "circle_tomorrow_reminder": circle_tomorrow_reminder,
-        "circle_signup": circle_signup,
+        "session_starting": session_starting,
+        "session_advertisement": session_advertisement,
+        "session_tomorrow_reminder": session_tomorrow_reminder,
+        "session_signup": session_signup,
         "test": test,
-        "missed_event": missed_event,
+        "missed_session": missed_session,
     }

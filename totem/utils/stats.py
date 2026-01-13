@@ -8,7 +8,7 @@ from typing import Any
 from django.db.models import Count, Q, QuerySet, Sum
 from django.utils import timezone
 
-from totem.circles.models import CircleEvent
+from totem.circles.models import Session
 
 UTC = dttz.utc
 
@@ -24,7 +24,7 @@ class DateRange:
 
 
 @dataclass(frozen=True)
-class CircleEventStats:
+class SessionStats:
     date_range: DateRange
     total_events: int
     events_with_attendees: int
@@ -110,34 +110,42 @@ def get_date_range(period: str = "last_quarter") -> DateRange:
     return DateRange(start=start, end=end)
 
 
-def circle_event_queryset(
+def session_queryset(
     *,
     date_range: DateRange,
-    circle_id: int | None = None,
+    space_id: int | None = None,
     event_id: int | None = None,
     author_slug: str | None = None,
-) -> QuerySet[CircleEvent]:
+) -> QuerySet[Session]:
     filters = Q(start__gte=date_range.start) & Q(start__lt=date_range.end)
-    if circle_id is not None:
-        filters &= Q(circle_id=circle_id)
+    if space_id is not None:
+        filters &= Q(circle_id=space_id)
     if event_id is not None:
         filters &= Q(id=event_id)
     if author_slug is not None:
         filters &= Q(circle__author__slug=author_slug)
-    return CircleEvent.objects.filter(filters)
+    return Session.objects.filter(filters)
 
 
-def compute_circle_event_stats(
+def _session_fk_field_name(through_model) -> str:
+    # Avoid hard-coding the through-table FK name for sessions.
+    for field in through_model._meta.fields:
+        if getattr(field.remote_field, "model", None) is Session:
+            return field.name
+    raise RuntimeError("Session FK not found in through model.")
+
+
+def compute_session_stats(
     *,
     date_range: DateRange,
-    circle_id: int | None = None,
+    space_id: int | None = None,
     event_id: int | None = None,
     author_slug: str | None = None,
     top_events: int = 5,
-) -> CircleEventStats:
-    events = circle_event_queryset(
+) -> SessionStats:
+    events = session_queryset(
         date_range=date_range,
-        circle_id=circle_id,
+        space_id=space_id,
         event_id=event_id,
         author_slug=author_slug,
     )
@@ -145,11 +153,13 @@ def compute_circle_event_stats(
     total_events = events.count()
 
     # Attendees
-    attendee_links = CircleEvent.attendees.through.objects.filter(circleevent_id__in=events.values("id"))
+    attendee_through = Session.attendees.through
+    attendee_session_field = _session_fk_field_name(attendee_through)
+    attendee_links = attendee_through.objects.filter(**{f"{attendee_session_field}__in": events.values("id")})
     total_attendees = attendee_links.count()
     unique_attendees = attendee_links.values("user_id").distinct().count()
 
-    attendees_per_event = attendee_links.values("circleevent_id").annotate(attendee_count=Count("user_id"))
+    attendees_per_event = attendee_links.values(attendee_session_field).annotate(attendee_count=Count("user_id"))
     attendees_per_event_with_people = attendees_per_event.filter(attendee_count__gt=1)
     events_with_attendees = attendees_per_event_with_people.count()
     events_no_attendees = total_events - events_with_attendees
@@ -161,11 +171,13 @@ def compute_circle_event_stats(
     )
 
     # Joins
-    joined_links = CircleEvent.joined.through.objects.filter(circleevent_id__in=events.values("id"))
+    joined_through = Session.joined.through
+    joined_session_field = _session_fk_field_name(joined_through)
+    joined_links = joined_through.objects.filter(**{f"{joined_session_field}__in": events.values("id")})
     total_joins = joined_links.count()
     unique_joins = joined_links.values("user_id").distinct().count()
 
-    joins_per_event = joined_links.values("circleevent_id").annotate(joined_count=Count("user_id"))
+    joins_per_event = joined_links.values(joined_session_field).annotate(joined_count=Count("user_id"))
     joins_per_event_with_people = joins_per_event.filter(joined_count__gt=1)
     events_with_joins = joins_per_event_with_people.count()
     events_no_joins = total_events - events_with_joins
@@ -175,7 +187,7 @@ def compute_circle_event_stats(
     top_events_data: list[dict[str, Any]] = []
     if top_events > 0:
         for event in (
-            events.select_related("circle")
+            events.select_related("space")
             .annotate(
                 attendee_count=Count("attendees", distinct=True),
                 joined_count=Count("joined", distinct=True),
@@ -185,7 +197,7 @@ def compute_circle_event_stats(
         ):
             top_events_data.append(
                 {
-                    "circle_title": event.circle.title,
+                    "space_title": event.space.title,
                     "event_slug": event.slug,
                     "start": event.start.isoformat(),
                     "attendees": event.attendee_count,
@@ -193,7 +205,7 @@ def compute_circle_event_stats(
                 }
             )
 
-    return CircleEventStats(
+    return SessionStats(
         date_range=date_range,
         total_events=total_events,
         events_with_attendees=events_with_attendees,

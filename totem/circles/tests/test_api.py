@@ -4,11 +4,11 @@ from django.urls import reverse
 from django.utils import timezone
 
 from totem.circles.api import EventCalendarFilterSchema, EventsFilterSchema
-from totem.circles.tests.factories import CircleCategoryFactory, CircleEventFactory, CircleFactory
+from totem.circles.tests.factories import SessionFactory, SpaceCategoryFactory, SpaceFactory
 from totem.users.tests.factories import KeeperProfileFactory, UserFactory
 
 
-class TestCircleListAPI:
+class TestSpaceListAPI:
     def test_get_circle_list_bad_category(self, client, db):
         response = client.get(
             reverse("api-1:events_list"), EventsFilterSchema(category="empty", author=""), format="json"
@@ -17,18 +17,18 @@ class TestCircleListAPI:
         assert response.json() == {"count": 0, "items": []}
 
     def test_get_circle_list(self, client, db):
-        event = CircleEventFactory()
+        event = SessionFactory()
         event.save()
         response = client.get(reverse("api-1:events_list"), EventsFilterSchema(category="", author=""), format="json")
         assert response.status_code == 200
         assert len(response.json()["items"]) == 1
 
     def test_get_circle_list_filters_category(self, client, db):
-        category = CircleCategoryFactory()
-        circle = CircleFactory(categories=[category])
-        event = CircleEventFactory(circle=circle)
+        category = SpaceCategoryFactory()
+        circle = SpaceFactory(categories=[category])
+        event = SessionFactory(circle=circle)
         event.save()
-        event2 = CircleEventFactory()
+        event2 = SessionFactory()
         event2.save()
         response = client.get(
             reverse("api-1:events_list"),
@@ -39,10 +39,10 @@ class TestCircleListAPI:
         assert len(response.json()["items"]) == 1
 
     def test_get_circle_list_filters_author(self, client, db):
-        circle = CircleFactory()
-        event = CircleEventFactory(circle=circle)
+        circle = SpaceFactory()
+        event = SessionFactory(circle=circle)
         event.save()
-        event2 = CircleEventFactory()
+        event2 = SessionFactory()
         event2.save()
         response = client.get(
             reverse("api-1:events_list"),
@@ -53,9 +53,9 @@ class TestCircleListAPI:
         assert len(response.json()["items"]) == 1
 
     def test_get_circle_list_limit(self, client, db):
-        event = CircleEventFactory()
+        event = SessionFactory()
         event.save()
-        event2 = CircleEventFactory()
+        event2 = SessionFactory()
         event2.save()
         response = client.get(
             reverse("api-1:events_list"),
@@ -77,13 +77,13 @@ class TestCircleListAPI:
 class TestFilterOptions:
     def test_get_filter_options(self, client, db):
         # past events should not be included
-        past_event = CircleEventFactory(start=timezone.now() - timedelta(days=1))
+        past_event = SessionFactory(start=timezone.now() - timedelta(days=1))
         past_event.save()
-        category = CircleCategoryFactory()
-        circle = CircleFactory(categories=[category])
-        event = CircleEventFactory(circle=circle)
+        category = SpaceCategoryFactory()
+        circle = SpaceFactory(categories=[category])
+        event = SessionFactory(circle=circle)
         event.save()
-        event2 = CircleEventFactory()
+        event2 = SessionFactory()
         event2.save()
         response = client.get(reverse("api-1:events_filter_options"), format="json")
         assert response.status_code == 200
@@ -93,15 +93,15 @@ class TestFilterOptions:
         assert response.json()["categories"][0]["name"] == category.name
         slugs = [response.json()["authors"][0]["slug"], response.json()["authors"][1]["slug"]]
         assert circle.author.slug in slugs
-        assert event2.circle.author.slug in slugs
+        assert event2.space.author.slug in slugs
         names = [response.json()["authors"][0]["name"], response.json()["authors"][1]["name"]]
         assert circle.author.name in names
-        assert event2.circle.author.name in names
+        assert event2.space.author.name in names
 
 
 class TestEventDetail:
     def test_event_detail(self, client, db):
-        event = CircleEventFactory()
+        event = SessionFactory()
         url = reverse("api-1:event_detail", kwargs={"event_slug": event.slug})
         response = client.get(url)
         assert response.status_code == 200
@@ -116,7 +116,7 @@ class TestEventDetail:
         user = UserFactory()
         user.save()
         client.force_login(user)
-        event = CircleEventFactory()
+        event = SessionFactory()
         url = reverse("api-1:event_detail", kwargs={"event_slug": event.slug})
         response = client.get(url)
         assert response.status_code == 200
@@ -127,7 +127,7 @@ class TestEventDetail:
         user = UserFactory()
         user.save()
         client.force_login(user)
-        event = CircleEventFactory()
+        event = SessionFactory()
         event.attendees.add(user)
         url = reverse("api-1:event_detail", kwargs={"event_slug": event.slug})
         response = client.get(url)
@@ -140,7 +140,7 @@ class TestEventDetail:
         user.save()
         client.force_login(user)
         now_minus_one = timezone.now() - timedelta(days=1)
-        event = CircleEventFactory(start=now_minus_one)
+        event = SessionFactory(start=now_minus_one)
         event.attendees.add(user)
         url = reverse("api-1:event_detail", kwargs={"event_slug": event.slug})
         response = client.get(url)
@@ -152,12 +152,12 @@ class TestEventDetail:
 class TestEventCalendar:
     def test_event_calendar_future(self, client, db):
         now_plus_week = timezone.now() + timedelta(days=7)
-        event = CircleEventFactory(start=now_plus_week)
+        event = SessionFactory(start=now_plus_week)
         url = reverse("api-1:event_calendar")
         response = client.get(
             url,
             EventCalendarFilterSchema(
-                space_slug=event.circle.slug, month=now_plus_week.month, year=now_plus_week.year
+                space_slug=event.space.slug, month=now_plus_week.month, year=now_plus_week.year
             ).model_dump(),
         )
         assert response.status_code == 200
@@ -165,12 +165,12 @@ class TestEventCalendar:
 
     def test_event_calendar_now(self, client, db):
         now = timezone.now()
-        event = CircleEventFactory(start=now)
-        CircleEventFactory(start=now, cancelled=True)
+        event = SessionFactory(start=now)
+        SessionFactory(start=now, cancelled=True)
         url = reverse("api-1:event_calendar")
         response = client.get(
             url,
-            EventCalendarFilterSchema(space_slug=event.circle.slug, month=now.month, year=now.year).model_dump(),
+            EventCalendarFilterSchema(space_slug=event.space.slug, month=now.month, year=now.year).model_dump(),
         )
         assert response.status_code == 200
         assert response.json()[0]["title"] == event.title
@@ -187,13 +187,13 @@ class TestWebflowEventsAPI:
         now = timezone.now()
         keeper1 = UserFactory()
         KeeperProfileFactory(user=keeper1, username="keeper1")
-        circle1 = CircleFactory(author=keeper1)
-        event1 = CircleEventFactory(circle=circle1, start=now + timedelta(days=2))
+        circle1 = SpaceFactory(author=keeper1)
+        event1 = SessionFactory(circle=circle1, start=now + timedelta(days=2))
 
         keeper2 = UserFactory()
         KeeperProfileFactory(user=keeper2, username="keeper2")
-        circle2 = CircleFactory(author=keeper2)
-        event2 = CircleEventFactory(circle=circle2, start=now + timedelta(days=1))
+        circle2 = SpaceFactory(author=keeper2)
+        event2 = SessionFactory(circle=circle2, start=now + timedelta(days=1))
 
         response = client.get(reverse("api-1:webflow_events_list"))
 
@@ -207,13 +207,13 @@ class TestWebflowEventsAPI:
         # Create keepers with profiles
         keeper1 = UserFactory()
         KeeperProfileFactory(user=keeper1, username="keeper1")
-        circle1 = CircleFactory(author=keeper1)
-        CircleEventFactory(circle=circle1)
+        circle1 = SpaceFactory(author=keeper1)
+        SessionFactory(circle=circle1)
 
         keeper2 = UserFactory()
         KeeperProfileFactory(user=keeper2, username="keeper2")
-        circle2 = CircleFactory(author=keeper2)
-        CircleEventFactory(circle=circle2)
+        circle2 = SpaceFactory(author=keeper2)
+        SessionFactory(circle=circle2)
 
         # Test filter
         response = client.get(reverse("api-1:webflow_events_list"), {"keeper_username": "keeper1"})
@@ -224,19 +224,19 @@ class TestWebflowEventsAPI:
         assert data[0]["keeper_username"] == "keeper1"
 
     def test_webflow_past_events_excluded(self, client, db):
-        CircleEventFactory(start=timezone.now() - timedelta(days=1))
+        SessionFactory(start=timezone.now() - timedelta(days=1))
         response = client.get(reverse("api-1:webflow_events_list"))
         assert len(response.json()) == 0
 
 
 class TestListSpaces:
     def test_list_spaces(self, client, db):
-        event = CircleEventFactory()
+        event = SessionFactory()
         event.save()
         response = client.get(reverse("api-1:spaces_list"))
         assert response.status_code == 200
         assert len(response.json()) == 1
-        assert response.json()[0]["slug"] == event.circle.slug
+        assert response.json()[0]["slug"] == event.space.slug
 
     def test_list_spaces_no_events(self, client, db):
         response = client.get(reverse("api-1:spaces_list"))
@@ -244,18 +244,18 @@ class TestListSpaces:
         assert response.json() == []
 
     def test_list_spaces_multiple_events(self, client, db):
-        event1 = CircleEventFactory()
+        event1 = SessionFactory()
         event1.save()
-        event2 = CircleEventFactory()
+        event2 = SessionFactory()
         event2.save()
         response = client.get(reverse("api-1:spaces_list"))
         assert response.status_code == 200
         assert len(response.json()) == 2
 
     def test_list_spaces_with_category(self, client, db):
-        category = CircleCategoryFactory()
-        circle = CircleFactory(categories=[category])
-        event = CircleEventFactory(circle=circle)
+        category = SpaceCategoryFactory()
+        circle = SpaceFactory(categories=[category])
+        event = SessionFactory(circle=circle)
         event.save()
         response = client.get(reverse("api-1:spaces_list"))
         assert response.status_code == 200
@@ -268,14 +268,14 @@ class TestListSpaces:
         demonstrating that spaces with only full events don't appear in listings.
         """
         # Create a space with a full event
-        circle = CircleFactory()
-        event = CircleEventFactory(circle=circle, seats=1)
+        circle = SpaceFactory()
+        event = SessionFactory(circle=circle, seats=1)
         user = UserFactory()
         event.attendees.add(user)  # This makes the event full (1 seat, 1 attendee)
 
         # Create another space with a non-full event
-        circle2 = CircleFactory()
-        CircleEventFactory(circle=circle2)
+        circle2 = SpaceFactory()
+        SessionFactory(circle=circle2)
 
         response = client.get(reverse("api-1:spaces_list"))
         assert response.status_code == 200
@@ -296,20 +296,20 @@ class TestListSpaces:
 
         # Create three spaces with events having different seat availability
         # Space 1: All seats available (10 seats, 0 attendees)
-        circle1 = CircleFactory(title="All Seats Available")
-        CircleEventFactory(circle=circle1, seats=10, start=now + timedelta(days=1))
+        circle1 = SpaceFactory(title="All Seats Available")
+        SessionFactory(circle=circle1, seats=10, start=now + timedelta(days=1))
 
         # Space 2: Some seats taken (10 seats, 3 attendees = 7 seats left)
-        circle2 = CircleFactory(title="Some Seats Taken")
-        event2 = CircleEventFactory(circle=circle2, seats=10, start=now + timedelta(days=2))
+        circle2 = SpaceFactory(title="Some Seats Taken")
+        event2 = SessionFactory(circle=circle2, seats=10, start=now + timedelta(days=2))
         # Add 3 attendees
         for _ in range(3):
             user = UserFactory()
             event2.attendees.add(user)
 
         # Space 3: Full event (3 seats, 3 attendees = 0 seats left)
-        circle3 = CircleFactory(title="Full Event")
-        event3 = CircleEventFactory(circle=circle3, seats=3, start=now + timedelta(days=3))
+        circle3 = SpaceFactory(title="Full Event")
+        event3 = SessionFactory(circle=circle3, seats=3, start=now + timedelta(days=3))
         # Add 3 attendees (making it full)
         for _ in range(3):
             user = UserFactory()

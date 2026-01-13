@@ -7,14 +7,14 @@ from totem.circles.mobile_api.mobile_schemas import (
     MobileSpaceDetailSchema,
     NextEventSchema,
 )
-from totem.circles.models import Circle, CircleEvent
+from totem.circles.models import Session, Space
 from totem.users.models import User
 
 
-def get_upcoming_spaces_list() -> QuerySet[Circle]:
+def get_upcoming_spaces_list() -> QuerySet[Space]:
     """Get all published spaces with upcoming events."""
     return (
-        Circle.objects.filter(published=True, events__start__gte=timezone.now())
+        Space.objects.filter(published=True, events__start__gte=timezone.now())
         .distinct()
         .select_related("author")
         .prefetch_related(
@@ -22,7 +22,7 @@ def get_upcoming_spaces_list() -> QuerySet[Circle]:
             "subscribed",
             Prefetch(
                 "events",
-                queryset=CircleEvent.objects.filter(start__gte=timezone.now())
+                queryset=Session.objects.filter(start__gte=timezone.now())
                 .order_by("start")
                 .prefetch_related("attendees"),
                 to_attr="upcoming_events",
@@ -34,7 +34,7 @@ def get_upcoming_spaces_list() -> QuerySet[Circle]:
 
 def upcoming_recommended_spaces(user: User | None, categories: list[str] | None = None, author: str | None = None):
     spaces = (
-        Circle.objects.filter(events__start__gte=timezone.now())
+        Space.objects.filter(events__start__gte=timezone.now())
         .distinct()
         .select_related("author")
         .prefetch_related(
@@ -42,7 +42,7 @@ def upcoming_recommended_spaces(user: User | None, categories: list[str] | None 
             "subscribed",
             Prefetch(
                 "events",
-                queryset=CircleEvent.objects.filter(start__gte=timezone.now())
+                queryset=Session.objects.filter(start__gte=timezone.now())
                 .order_by("start")
                 .prefetch_related("attendees"),
                 to_attr="upcoming_events",
@@ -59,9 +59,9 @@ def upcoming_recommended_spaces(user: User | None, categories: list[str] | None 
     return spaces
 
 
-def upcoming_recommended_events(user: User | None, categories: list[str] | None = None, author: str | None = None):
+def upcoming_recommended_sessions(user: User | None, categories: list[str] | None = None, author: str | None = None):
     events = (
-        CircleEvent.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True)
+        Session.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True)
         .select_related("circle")
         .prefetch_related(
             "circle__author",
@@ -69,7 +69,7 @@ def upcoming_recommended_events(user: User | None, categories: list[str] | None 
             "circle__subscribed",
             Prefetch(
                 "circle__events",
-                queryset=CircleEvent.objects.filter(start__gte=timezone.now())
+                queryset=Session.objects.filter(start__gte=timezone.now())
                 .order_by("start")
                 .prefetch_related("attendees"),
                 to_attr="upcoming_events",
@@ -94,9 +94,9 @@ def upcoming_recommended_events(user: User | None, categories: list[str] | None 
     return events
 
 
-def event_detail_schema(event: CircleEvent, user: User):
-    space: Circle = event.circle
-    start = event.start
+def session_detail_schema(session: Session, user: User):
+    space: Space = session.space
+    start = session.start
 
     if user.is_authenticated:
         if hasattr(space, "_prefetched_objects_cache") and "subscribed" in space._prefetched_objects_cache:
@@ -105,30 +105,30 @@ def event_detail_schema(event: CircleEvent, user: User):
             subscribed = space.subscribed.filter(pk=user.pk).exists()
     else:
         subscribed = None
-    ended = event.ended()
+    ended = session.ended()
 
     if hasattr(space, "_prefetched_objects_cache") and "attendees" in space._prefetched_objects_cache:
-        attending = any(attendee.pk == user.pk for attendee in event.attendees.all())
+        attending = any(attendee.pk == user.pk for attendee in session.attendees.all())
     else:
-        attending = event.attendees.filter(pk=user.pk).exists()
+        attending = session.attendees.filter(pk=user.pk).exists()
 
     return EventDetailSchema(
-        slug=event.slug,
-        title=event.title,
+        slug=session.slug,
+        title=session.title,
         space=space_detail_schema(space, user),
-        content=event.content_html,
-        seats_left=event.seats_left(),
-        duration=event.duration_minutes,
+        content=session.content_html,
+        seats_left=session.seats_left(),
+        duration=session.duration_minutes,
         start=start,
         attending=attending,
-        open=event.open,
-        started=event.started(),
-        cancelled=event.cancelled,
-        joinable=event.can_join(user),
+        open=session.open,
+        started=session.started(),
+        cancelled=session.cancelled,
+        joinable=session.can_join(user),
         ended=ended,
-        rsvp_url=reverse("circles:rsvp", kwargs={"event_slug": event.slug}),
-        join_url=reverse("circles:join", kwargs={"event_slug": event.slug}),
-        cal_link=event.cal_link(),
+        rsvp_url=reverse("circles:rsvp", kwargs={"event_slug": session.slug}),
+        join_url=reverse("circles:join", kwargs={"event_slug": session.slug}),
+        cal_link=session.cal_link(),
         subscribe_url=reverse("mobile-api:spaces_subscribe", kwargs={"space_slug": space.slug}),
         subscribed=subscribed,
         user_timezone=str("UTC"),
@@ -136,56 +136,56 @@ def event_detail_schema(event: CircleEvent, user: User):
     )
 
 
-def next_event_schema(next_event: CircleEvent, user: User):
-    seats_left = next_event.seats_left()
+def next_session_schema(next_session: Session, user: User):
+    seats_left = next_session.seats_left()
 
-    if hasattr(next_event, "_prefetched_objects_cache") and "attendees" in next_event._prefetched_objects_cache:
-        attending = any(attendee.pk == user.pk for attendee in next_event.attendees.all())
+    if hasattr(next_session, "_prefetched_objects_cache") and "attendees" in next_session._prefetched_objects_cache:
+        attending = any(attendee.pk == user.pk for attendee in next_session.attendees.all())
     else:
-        attending = next_event.attendees.filter(pk=user.pk).exists()
+        attending = next_session.attendees.filter(pk=user.pk).exists()
 
     return NextEventSchema(
-        slug=next_event.slug,
-        start=next_event.start,
-        title=next_event.title,
-        link=next_event.get_absolute_url(),
+        slug=next_session.slug,
+        start=next_session.start,
+        title=next_session.title,
+        link=next_session.get_absolute_url(),
         seats_left=seats_left,
-        duration=next_event.duration_minutes,
-        meeting_provider=next_event.circle.meeting_provider,
-        cal_link=next_event.cal_link(),
+        duration=next_session.duration_minutes,
+        meeting_provider=next_session.space.meeting_provider,
+        cal_link=next_session.cal_link(),
         attending=attending,
-        cancelled=next_event.cancelled,
-        open=next_event.open,
-        joinable=next_event.can_join(user),
+        cancelled=next_session.cancelled,
+        open=next_session.open,
+        joinable=next_session.can_join(user),
     )
 
 
-def space_detail_schema(circle: Circle, user: User):
-    category = circle.categories.first()
+def space_detail_schema(space: Space, user: User):
+    category = space.categories.first()
     category_name = category.name if category else None
 
-    if hasattr(circle, "upcoming_events"):
-        upcoming_events = circle.upcoming_events
+    if hasattr(space, "upcoming_events"):
+        upcoming_events = space.upcoming_events
     else:
-        upcoming_events = circle.events.filter(start__gte=timezone.now()).order_by("start")
+        upcoming_events = space.sessions.filter(start__gte=timezone.now()).order_by("start")
 
-    next_events = [next_event_schema(event, user) for event in upcoming_events]
+    next_events = [next_session_schema(event, user) for event in upcoming_events]
 
-    if hasattr(circle, "subscriber_count"):
-        subscribers = circle.subscriber_count
+    if hasattr(space, "subscriber_count"):
+        subscribers = space.subscriber_count
     else:
-        subscribers = circle.subscribed.count()
+        subscribers = space.subscribed.count()
 
     return MobileSpaceDetailSchema(
-        slug=circle.slug,
-        title=circle.title,
-        image_link=circle.image.url if circle.image else None,
-        short_description=circle.short_description,
-        content=circle.content_html,
-        author=circle.author,
+        slug=space.slug,
+        title=space.title,
+        image_link=space.image.url if space.image else None,
+        short_description=space.short_description,
+        content=space.content_html,
+        author=space.author,
         category=category_name,
         subscribers=subscribers,
-        price=circle.price,
-        recurring=circle.recurring,
+        price=space.price,
+        recurring=space.recurring,
         next_events=next_events,
     )

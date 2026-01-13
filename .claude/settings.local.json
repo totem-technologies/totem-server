@@ -5,7 +5,11 @@
       "Bash(cat:*)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(curl:*)",
-      "Bash(python -m pytest:*)"
+      "Bash(python -m pytest:*)",
+      "Bash(python manage.py:*)",
+      "Bash(TOTEM_RUN_TASKS_TOKEN=test python manage.py makemigrations:*)",
+      "Bash(docker compose:*)",
+      "Bash(bun run test:ci:*)"
     ]
   }
 }

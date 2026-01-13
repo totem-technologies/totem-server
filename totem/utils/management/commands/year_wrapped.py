@@ -5,7 +5,7 @@ from io import StringIO
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from totem.utils.stats import compute_circle_event_stats, get_month_range, get_year_range
+from totem.utils.stats import compute_session_stats, get_month_range, get_year_range
 
 
 def _pct_change(current: int | float, previous: int | float) -> float | None:
@@ -48,7 +48,7 @@ class Command(BaseCommand):
             default=5,
             help="Number of top events to include in yearly totals (default: 5).",
         )
-        parser.add_argument("--circle-slug", type=int, help="Filter by specific circle id")
+        parser.add_argument("--space-slug", type=int, help="Filter by specific space id")
         parser.add_argument("--event-slug", type=int, help="Filter by specific event id")
         parser.add_argument("--author-slug", type=str, help="Filter by author slug")
 
@@ -57,7 +57,7 @@ class Command(BaseCommand):
         year = options["year"] or (now.year - 1)
         compare_year = options["compare_year"] or (year - 1)
 
-        circle_id = options["circle_slug"]
+        space_id = options["space_slug"]
         event_id = options["event_slug"]
         author_slug = options["author_slug"]
 
@@ -66,14 +66,14 @@ class Command(BaseCommand):
             "generated_at": now.isoformat(),
             "year": year,
             "compare_year": compare_year,
-            "filters": {"circle_id": circle_id, "event_id": event_id, "author_slug": author_slug},
+            "filters": {"space_id": space_id, "event_id": event_id, "author_slug": author_slug},
             "years": {},
         }
 
         for y in years:
-            year_stats = compute_circle_event_stats(
+            year_stats = compute_session_stats(
                 date_range=get_year_range(y),
-                circle_id=circle_id,
+                space_id=space_id,
                 event_id=event_id,
                 author_slug=author_slug,
                 top_events=options["top_events"],
@@ -82,9 +82,9 @@ class Command(BaseCommand):
             months: list[dict[str, object]] = []
             for month in range(1, 13):
                 month_range = get_month_range(y, month)
-                month_stats = compute_circle_event_stats(
+                month_stats = compute_session_stats(
                     date_range=month_range,
-                    circle_id=circle_id,
+                    space_id=space_id,
                     event_id=event_id,
                     author_slug=author_slug,
                     top_events=0,
@@ -129,14 +129,14 @@ class Command(BaseCommand):
         lines: list[str] = []
         lines.append("=== Totem Year Wrapped ===")
         lines.append(f"Years: {year} vs {compare_year}")
-        if circle_id or event_id or author_slug:
-            lines.append(f"Filters: circle_id={circle_id} event_id={event_id} author_slug={author_slug}")
+        if space_id or event_id or author_slug:
+            lines.append(f"Filters: space_id={space_id} event_id={event_id} author_slug={author_slug}")
 
         def _year_line(y: int, label: str) -> None:
             stats = recap["years"][str(y)]["year_total"]
             lines.append(
                 f"{label} {y}: "
-                f"{stats['total_events']} events, "
+                f"{stats['total_events']} sessions, "
                 f"{stats['unique_attendees']} unique attendees, "
                 f"{stats['unique_joins']} unique joins"
             )
@@ -152,7 +152,7 @@ class Command(BaseCommand):
             top_events = recap["years"][str(y)]["year_total"]["top_events"]
             if top_events:
                 lines.append("")
-                lines.append(f"Top events ({y}):")
+                lines.append(f"Top sessions ({y}):")
                 for event in top_events:
                     lines.append(
                         f"- {event['circle_title']} [{event['event_slug']}] ({event['start'][:10]}) - "

@@ -11,18 +11,18 @@ from django.utils import timezone
 
 from totem.users.models import User
 
-from .models import Circle, CircleCategory, CircleEvent, SessionFeedback
+from .models import Session, SessionFeedback, Space, SpaceCategory
 
 
 @final
 class SpaceDropdownFilter(admin.SimpleListFilter):
     template = "admin/dropdown_filter.html"
-    parameter_name = "circle"
-    title = "circle"
+    parameter_name = "space"
+    title = "space"
 
     @override
     def lookups(self, request, model_admin):
-        return Circle.objects.order_by("title").values_list("slug", "title")
+        return Space.objects.order_by("title").values_list("slug", "title")
 
     @override
     def queryset(self, request, queryset):
@@ -49,15 +49,15 @@ class AuthorDropdownFilter(admin.SimpleListFilter):
 
 
 @final
-@admin.register(CircleCategory)
-class CircleCategoryAdmin(admin.ModelAdmin):
+@admin.register(SpaceCategory)
+class SpaceCategoryAdmin(admin.ModelAdmin):
     list_display = ("name", "slug")
     search_fields = ("name", "description")
 
 
 @final
-class CircleEventInline(admin.StackedInline):
-    model = CircleEvent
+class SessionInline(admin.StackedInline):
+    model = Session
     extra = 0
     autocomplete_fields = ["attendees", "joined"]
     fieldsets = [
@@ -100,14 +100,14 @@ class CircleEventInline(admin.StackedInline):
 
 
 @final
-@admin.register(Circle)
-class CircleAdmin(admin.ModelAdmin):
+@admin.register(Space)
+class SpaceAdmin(admin.ModelAdmin):
     save_on_top = True
     list_display = ("title", "slug", "published")
     readonly_fields = ("subscribed_list", "date_created", "date_modified")
     autocomplete_fields = ["subscribed", "categories"]
     inlines = [
-        CircleEventInline,
+        SessionInline,
     ]
 
     def get_form(self, request, obj=None, change=False, **kwargs):
@@ -120,28 +120,28 @@ class CircleAdmin(admin.ModelAdmin):
         if change:
             obj_list = formset.save(commit=False)
             for obj in obj_list:
-                if isinstance(obj, CircleEvent):
+                if isinstance(obj, Session):
                     obj.save_to_calendar()
         super().save_formset(request, form, formset, change)
 
 
-def copy_event(modeladmin, request, queryset: QuerySet[CircleEvent]):
+def copy_session(modeladmin, request, queryset: QuerySet[Session]):
     if queryset.count() != 1:
         modeladmin.message_user(request, "Please select exactly one item to copy.", level=messages.ERROR)
         return
-    event = queryset.first()
-    if not event:
+    session = queryset.first()
+    if not session:
         return
-    obj = CircleEvent.objects.create(
-        title=event.title,
+    obj = Session.objects.create(
+        title=session.title,
         open=False,
         listed=False,
         # start now
         start=timezone.now(),
-        duration_minutes=event.duration_minutes,
-        seats=event.seats,
-        circle=event.circle,
-        content=event.content,
+        duration_minutes=session.duration_minutes,
+        seats=session.seats,
+        space=session.space,
+        content=session.content,
     )
     change_url = reverse(f"admin:{obj._meta.app_label}_{obj._meta.model_name}_change", args=[obj.pk])
     return redirect(change_url)
@@ -154,20 +154,20 @@ class SessionFeedbackInline(admin.TabularInline):
 
 
 @final
-@admin.register(CircleEvent)
-class CircleEventAdmin(admin.ModelAdmin):
-    list_display = ("start", "title", "circle", "slug")
+@admin.register(Session)
+class SessionAdmin(admin.ModelAdmin):
+    list_display = ("start", "title", "space", "slug")
     list_filter = [AuthorDropdownFilter, SpaceDropdownFilter, "start", "listed", "open", "cancelled"]
     autocomplete_fields = ["attendees", "joined"]
     readonly_fields = ("date_created", "date_modified")
-    actions = [copy_event]
+    actions = [copy_session]
     inlines = [SessionFeedbackInline]
     fieldsets = (
         (
             None,
             {
                 "fields": (
-                    "circle",
+                    "space",
                     "title",
                     "start",
                     "duration_minutes",
@@ -187,6 +187,6 @@ class CircleEventAdmin(admin.ModelAdmin):
     )
 
     @override
-    def save_model(self, request: HttpRequest, obj: CircleEvent, form: "ModelForm[CircleEvent]", change: bool):
+    def save_model(self, request: HttpRequest, obj: Session, form: "ModelForm[Session]", change: bool):
         obj.save_to_calendar()
         super().save_model(request, obj, form, change)

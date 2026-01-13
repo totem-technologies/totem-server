@@ -4,7 +4,7 @@ from typing import List
 
 from ninja import FilterSchema, ModelSchema, Schema
 
-from totem.circles.models import Circle, CircleEvent
+from totem.circles.models import Session, Space
 from totem.users.schemas import PublicUserSchema
 
 
@@ -12,7 +12,7 @@ class SpaceSchema(ModelSchema):
     author: PublicUserSchema
 
     class Meta:
-        model = Circle
+        model = Space
         fields = ["title", "slug", "date_created", "date_modified", "subtitle"]
 
 
@@ -21,15 +21,15 @@ class EventListSchema(ModelSchema):
     url: str
 
     @staticmethod
-    def resolve_url(obj: CircleEvent):
+    def resolve_url(obj: Session):
         return obj.get_absolute_url()
 
     @staticmethod
-    def resolve_space(obj: CircleEvent):
-        return obj.circle
+    def resolve_space(obj: Session):
+        return obj.space
 
     class Meta:
-        model = CircleEvent
+        model = Session
         fields = ["start", "slug", "date_created", "date_modified", "title"]
 
 
@@ -56,11 +56,11 @@ class FilterOptionsSchema(Schema):
 class EventSpaceSchema(ModelSchema):
     author: PublicUserSchema
 
-    def description(self, obj: Circle):
+    def description(self, obj: Space):
         return obj.content_html
 
     class Meta:
-        model = Circle
+        model = Space
         fields = [
             "title",
             "slug",

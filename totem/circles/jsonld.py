@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from django.urls import reverse
 
 if TYPE_CHECKING:
-    from totem.circles.models import CircleEvent
+    from totem.circles.models import Session
 from totem.utils.utils import full_url
 
 # example jsonld:
@@ -45,22 +45,22 @@ from totem.utils.utils import full_url
 #     }
 
 
-def _event_status(event: "CircleEvent"):
+def _event_status(event: "Session"):
     if event.cancelled:
         return "https://schema.org/EventCancelled"
     return "https://schema.org/EventScheduled"
 
 
-def _availability(event: "CircleEvent"):
+def _availability(event: "Session"):
     if event.can_attend(silent=True):
         return "https://schema.org/InStock"
     return "https://schema.org/SoldOut"
 
 
-def create_jsonld(event: "CircleEvent"):
+def create_jsonld(event: "Session"):
     # Create a JSON-LD object for a online virtual event
-    title = event.title or event.circle.title
-    description = event.content_text or event.circle.content_text
+    title = event.title or event.space.title
+    description = event.content_text or event.space.content_text
     absurl = full_url(event.get_absolute_url())
     jsonld = {
         "@context": "https://schema.org",
@@ -78,13 +78,13 @@ def create_jsonld(event: "CircleEvent"):
         "offers": {
             "@type": "Offer",
             "url": absurl,
-            "price": event.circle.price,
+            "price": event.space.price,
             "priceCurrency": "USD",
             "availability": _availability(event),
         },
         "performer": {
             "@type": "Person",
-            "name": event.circle.author.name,
+            "name": event.space.author.name,
         },
         "organizer": {
             "@type": "Organization",

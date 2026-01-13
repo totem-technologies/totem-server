@@ -4,7 +4,7 @@ from django.conf import settings
 from posthog import Posthog
 
 if TYPE_CHECKING:
-    from totem.circles.models import CircleEvent
+    from totem.circles.models import Session
     from totem.users.models import User
 
 _posthog = Posthog(project_api_key=settings.POSTHOG_API_KEY, host="https://us.i.posthog.com")
@@ -31,13 +31,15 @@ def user_onboarded(user: "User"):
     _posthog.capture("user_onboarded", distinct_id=user.analytics_id())
 
 
-def event_joined(user: "User", event: "CircleEvent"):
+def event_joined(user: "User", event: "Session"):
     _posthog.capture(
         "event_joined",
         distinct_id=user.analytics_id(),
         properties={
             "event_id": event.slug,
-            "circle_id": event.circle.slug,
-            "keeper_id": event.circle.author.analytics_id(),
+            "session_id": event.slug,
+            "circle_id": event.space.slug,
+            "space_id": event.space.slug,
+            "keeper_id": event.space.author.analytics_id(),
         },
     )
