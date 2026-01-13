@@ -6,7 +6,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    replaces = [('pages', '0004_initial'), ('pages', '0005_alter_redirect_slug'), ('pages', '0006_alter_redirect_slug'), ('pages', '0007_redirect_alternate_slug_and_more'), ('pages', '0008_remove_redirect_unique_redirect_url_and_more'), ('pages', '0009_alter_redirect_slug'), ('pages', '0010_alter_redirect_slug'), ('pages', '0011_alter_redirect_permanent')]
+    initial = True
 
     dependencies = [
     ]
