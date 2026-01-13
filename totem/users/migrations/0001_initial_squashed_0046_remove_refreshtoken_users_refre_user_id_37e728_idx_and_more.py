@@ -47,7 +47,7 @@ class Migration(migrations.Migration):
                 ('profile_image', models.CharField(blank=True, max_length=255, null=True)),
                 ('ics_key', models.UUIDField(db_index=True, default=uuid.uuid4, verbose_name='API Key')),
                 ('verified', models.BooleanField(default=False, verbose_name='Verified')),
-                ('slug', models.SlugField(blank=True, default=totem.utils.models.make_slug, editable=False, null=True)),
+                ('slug', models.SlugField(blank=True, default=totem.utils.models.make_slug, editable=False, unique=True)),
             ],
             options={
                 'abstract': False,
@@ -71,11 +71,6 @@ class Migration(migrations.Migration):
             model_name='user',
             name='date_modified',
             field=models.DateTimeField(auto_now=True),
-        ),
-        migrations.AlterField(
-            model_name='user',
-            name='slug',
-            field=models.SlugField(blank=True, default=totem.utils.models.make_slug, editable=False, unique=True),
         ),
         migrations.AddField(
             model_name='user',
