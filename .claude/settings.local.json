@@ -10,7 +10,8 @@
       "Bash(TOTEM_RUN_TASKS_TOKEN=test python manage.py makemigrations:*)",
       "Bash(docker compose:*)",
       "Bash(bun run test:ci:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(grep:*)"
     ]
   }
 }

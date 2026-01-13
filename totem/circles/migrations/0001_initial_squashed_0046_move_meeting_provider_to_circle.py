@@ -89,7 +89,6 @@ class Migration(migrations.Migration):
                 ('content', totem.utils.md.MarkdownField(blank=True, help_text='Optional description for this specific session. Markdown is supported.', max_length=10000, null=True, validators=[totem.utils.md.MarkdownMixin.validate_markdown, django.core.validators.MaxLengthValidator(10000)])),
                 ('title', models.CharField(blank=True, max_length=255)),
                 ('notified_missed', models.BooleanField(default=False)),
-                ('meeting_provider', models.CharField(choices=[('google_meet', 'Google Meet'), ('livekit', 'LiveKit')], default='google_meet', help_text='The video conferencing provider for this event.', max_length=20)),
             ],
             options={
                 'abstract': False,
@@ -114,14 +113,5 @@ class Migration(migrations.Migration):
                 'constraints': [models.UniqueConstraint(fields=('event', 'user'), name='unique_user_feedback_for_event')],
             },
             bases=(totem.utils.models.AdminURLMixin, models.Model),
-        ),
-        # Original: copy_meeting_provider_to_circle - not needed for fresh install (no existing data)
-        migrations.RunPython(
-            code=migrations.RunPython.noop,
-            reverse_code=migrations.RunPython.noop,
-        ),
-        migrations.RemoveField(
-            model_name='circleevent',
-            name='meeting_provider',
         ),
     ]

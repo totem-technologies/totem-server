@@ -43,9 +43,9 @@ class Migration(migrations.Migration):
                 ('name', models.CharField(blank=True, max_length=255, verbose_name='Name')),
                 ('groups', models.ManyToManyField(blank=True, help_text='The groups this user belongs to. A user will get all permissions granted to each of their groups.', related_name='user_set', related_query_name='user', to='auth.group', verbose_name='groups')),
                 ('user_permissions', models.ManyToManyField(blank=True, help_text='Specific permissions for this user.', related_name='user_set', related_query_name='user', to='auth.permission', verbose_name='user permissions')),
-                ('api_key', models.UUIDField(db_index=True, default=uuid.uuid4, verbose_name='API Key')),
-                ('profile_image', models.CharField(blank=True, max_length=255, null=True)),
-                ('ics_key', models.UUIDField(db_index=True, default=uuid.uuid4, verbose_name='API Key')),
+                ('api_key', models.UUIDField(db_index=True, default=uuid.uuid4, unique=True, verbose_name='API Key')),
+                ('profile_image', imagekit.models.fields.ProcessedImageField(blank=True, help_text='Profile image, must be under 5mb. Will be cropped to a square.', null=True, upload_to=totem.users.models.upload_to_id_image)),
+                ('ics_key', models.UUIDField(db_index=True, default=uuid.uuid4, verbose_name='ICS Key')),
                 ('verified', models.BooleanField(default=False, verbose_name='Verified')),
                 ('slug', models.SlugField(blank=True, default=totem.utils.models.make_slug, editable=False, unique=True)),
             ],
@@ -76,11 +76,6 @@ class Migration(migrations.Migration):
             model_name='user',
             name='timezone',
             field=timezone_field.fields.TimeZoneField(blank=True, choices_display='WITH_GMT_OFFSET'),
-        ),
-        migrations.AlterField(
-            model_name='user',
-            name='profile_image',
-            field=imagekit.models.fields.ProcessedImageField(blank=True, help_text='Profile image, must be under 5mb. Will be cropped to a square.', null=True, upload_to=totem.users.models.upload_to_id_image),
         ),
         migrations.AddField(
             model_name='user',
@@ -132,16 +127,6 @@ class Migration(migrations.Migration):
                 'indexes': [models.Index(fields=['user', 'pin', 'expires_at'], name='users_login_user_id_f0e42f_idx')],
             },
         ),
-        migrations.AlterField(
-            model_name='user',
-            name='ics_key',
-            field=models.UUIDField(db_index=True, default=uuid.uuid4, verbose_name='ICS Key'),
-        ),
-        migrations.AlterField(
-            model_name='user',
-            name='api_key',
-            field=models.UUIDField(db_index=True, default=uuid.uuid4, unique=True, verbose_name='API Key'),
-        ),
         migrations.AddField(
             model_name='user',
             name='fixed_pin',
@@ -173,7 +158,7 @@ class Migration(migrations.Migration):
             name='RefreshToken',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('token_hash', models.CharField(max_length=255)),
+                ('token_hash', models.CharField(max_length=64, unique=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('last_used_at', models.DateTimeField(auto_now=True)),
                 ('is_active', models.BooleanField(default=True)),
@@ -187,11 +172,6 @@ class Migration(migrations.Migration):
         migrations.RunPython(
             code=migrations.RunPython.noop,
             reverse_code=migrations.RunPython.noop,
-        ),
-        migrations.AlterField(
-            model_name='refreshtoken',
-            name='token_hash',
-            field=models.CharField(max_length=64, unique=True),
         ),
         migrations.AddIndex(
             model_name='refreshtoken',
