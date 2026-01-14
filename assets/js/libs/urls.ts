@@ -1,3 +1,3 @@
-const eventCalendarURL = "/spaces/events/"
+const eventCalendarURL = "/spaces/sessions/"
 
 export { eventCalendarURL }

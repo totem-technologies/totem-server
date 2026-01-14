@@ -21,8 +21,8 @@ import {
   type EventListSchema,
   type FilterOptionsSchema,
   type PagedEventListSchema,
-  totemCirclesApiFilterOptions,
-  totemCirclesApiListEvents,
+  totemSpacesApiFilterOptions,
+  totemSpacesApiListEvents,
 } from "../client/index"
 import Avatar from "./avatar"
 import ErrorBoundary from "./errors"
@@ -81,14 +81,14 @@ function CircleListProvider(props: { children: JSXElement }) {
     void refetch()
   })
   const [events, { refetch }] = createResource(async () => {
-    return (await totemCirclesApiListEvents({ query: params() })).data
+    return (await totemSpacesApiListEvents({ query: params() })).data
   })
   const refetch2 = () => {
     void refetch()
   }
   const [filters] = createResource(
     async () => {
-      return (await totemCirclesApiFilterOptions({})).data
+      return (await totemSpacesApiFilterOptions({})).data
     },
     {
       initialValue: { categories: [], authors: [] },
