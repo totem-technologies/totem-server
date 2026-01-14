@@ -367,3 +367,20 @@ class TestRSVPView:
         assert mail.outbox[0].to == [user.email]
         assert "Spot Saved" not in mail.outbox[0].body
         assert "Get Ready" in mail.outbox[0].body
+
+
+class TestLegacyRedirects:
+    """Tests for legacy URL redirects from the circles->spaces rename."""
+
+    def test_events_redirect(self, client, db):
+        """Test that /spaces/events/ redirects to /spaces/sessions/."""
+        response = client.get("/spaces/events/")
+        assert response.status_code == 301
+        assert response.url == reverse("spaces:sessions")
+
+    def test_event_detail_redirect(self, client, db):
+        """Test that /spaces/event/<slug>/ redirects to /spaces/session/<slug>/."""
+        event = SessionFactory()
+        response = client.get(f"/spaces/event/{event.slug}/")
+        assert response.status_code == 301
+        assert response.url == reverse("spaces:session_detail", kwargs={"session_slug": event.slug})

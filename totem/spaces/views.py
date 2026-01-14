@@ -158,7 +158,7 @@ def join(request, session_slug):
     session = _get_session(session_slug)
     if session.can_join(user):
         session.joined.add(user)
-        analytics.session_joined(user, session)
+        analytics.event_joined(user, session)
         return redirect(session.meeting_url, permanent=False)
 
     if session.started():
@@ -305,3 +305,8 @@ def _make_social_img(session: Session, start_day, start_time_pst, start_time_est
         height=image_size.height,
     )
     return generate_space_image(params)
+
+
+# Legacy redirect for old /spaces/event/<slug>/ URLs
+def event_detail_redirect(request: HttpRequest, event_slug: str):
+    return redirect("spaces:session_detail", session_slug=event_slug, permanent=True)

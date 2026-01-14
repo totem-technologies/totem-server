@@ -1,6 +1,7 @@
 from django.contrib.sitemaps import Sitemap
 from django.urls import path
 from django.utils import timezone
+from django.views.generic import RedirectView
 
 from . import views
 from .models import Session
@@ -33,5 +34,9 @@ urlpatterns = [
     ),
     path("calendar/<str:session_slug>/", views.calendar, name="calendar"),
     path("subscribe/<str:slug>/", views.subscribe, name="subscribe"),
+    # Legacy redirects for old URLs (circles -> spaces rename) - must be before the catch-all <str:slug>/
+    path("events/", RedirectView.as_view(pattern_name="spaces:sessions", permanent=True), name="events_redirect"),
+    path("event/<str:event_slug>/", views.event_detail_redirect, name="event_detail_redirect"),
+    # Catch-all for space detail - must be last
     path("<str:slug>/", views.detail, name="detail"),
 ]
