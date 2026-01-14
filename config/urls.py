@@ -11,10 +11,10 @@ from django.views.generic import RedirectView
 
 from totem.api.api import api, mobile_api
 from totem.blog.urls import BlogSitemap
-from totem.circles.urls import SpacesSitemap
 from totem.pages.urls import PagesSitemap
 from totem.plans.urls import PlansSitemap
 from totem.repos.urls import ReposSitemap
+from totem.spaces.urls import SpacesSitemap
 from totem.users import views as user_views
 
 sitemaps = {
@@ -68,7 +68,7 @@ urlpatterns = [
     path("course/", include("totem.course.urls", namespace="course")),
     path("repos/", include("totem.repos.urls", namespace="repos")),
     path("email/", include("totem.email.urls", namespace="email")),
-    path("spaces/", include("totem.circles.urls", namespace="circles")),
+    path("spaces/", include("totem.spaces.urls", namespace="spaces")),
     path("blog/", include("totem.blog.urls", namespace="blog")),
     # Django Admin, use {% url 'admin:index' %}
     path(f"admin/{settings.ADMIN_URL}", admin_urls),

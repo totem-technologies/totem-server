@@ -8,7 +8,7 @@ from django.conf import settings
 from django.urls import reverse
 
 if TYPE_CHECKING:
-    from totem.circles.models import Session
+    from totem.spaces.models import Session
     from totem.users.models import User
 
 import mrml
@@ -251,7 +251,7 @@ def notify_session_signup(event: Session, user: User) -> Email:
     start = _to_human_time(user, event.start)
     return SessionSignupEmail(
         recipient=user.email,
-        link=_make_email_url(reverse("circles:calendar", kwargs={"event_slug": event.slug})),
+        link=_make_email_url(reverse("spaces:calendar", kwargs={"event_slug": event.slug})),
         start=start,
         event_title=event.space.title,
     )

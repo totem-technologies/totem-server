@@ -31,8 +31,8 @@ from . import analytics
 if TYPE_CHECKING:
     from django.db.models.query import QuerySet
 
-    from totem.circles.models import Circle, CircleEvent
     from totem.onboard.models import OnboardModel
+    from totem.spaces.models import Circle, CircleEvent
 
 
 class ProfileImageSpec(ImageSpec):
@@ -59,8 +59,8 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
     objects: UserManager = UserManager()  # type: ignore
     # Related Types - use original related_names to match database
     onboard: "OnboardModel"
-    events_attending: "QuerySet[CircleEvent]"
-    events_joined: "QuerySet[CircleEvent]"
+    sessions_attending: "QuerySet[CircleEvent]"
+    sessions_joined: "QuerySet[CircleEvent]"
     created_circles: "QuerySet[Circle]"
     keeper_profile: "KeeperProfile"
 
@@ -138,13 +138,13 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
 
     @property
     def sessions_attending(self):
-        """Alias for events_attending - new terminology"""
-        return self.events_attending
+        """Alias for sessions_attending - new terminology"""
+        return self.sessions_attending
 
     @property
     def sessions_joined(self):
-        """Alias for events_joined - new terminology"""
-        return self.events_joined
+        """Alias for sessions_joined - new terminology"""
+        return self.sessions_joined
 
     def month_joined(self):
         return self.date_created.strftime("%B %Y")

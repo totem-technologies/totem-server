@@ -7,8 +7,8 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from totem.circles.tests.factories import SessionFactory, SpaceFactory
 from totem.onboard.tests.factories import OnboardModelFactory
+from totem.spaces.tests.factories import SessionFactory, SpaceFactory
 from totem.users.models import Feedback, LoginPin, User
 from totem.users.tests.factories import KeeperProfileFactory, UserFactory
 from totem.users.views import FEEDBACK_SUCCESS_MESSAGE
@@ -151,7 +151,7 @@ class UserProfileViewTest(TestCase):
     def setUp(self):
         self.user = user = UserFactory()
         space = SpaceFactory(author=user)
-        event = SessionFactory(circle=space)
+        event = SessionFactory(space=space)
         event.attendees.add(user)
         event.joined.add(user)
         space.subscribed.add(user)

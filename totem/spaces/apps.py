@@ -1,6 +1,6 @@
 from django.apps import AppConfig
 
 
-class CirclesConfig(AppConfig):
+class SpacesConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
-    name = "totem.circles"
+    name = "totem.spaces"

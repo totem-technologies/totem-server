@@ -2,8 +2,8 @@ from django.core import mail
 from django.test import Client, override_settings
 from django.urls import reverse
 
-from totem.circles.tests.factories import SessionFactory
 from totem.email.emails import login_pin_email, missed_session_email, notify_session_advertisement
+from totem.spaces.tests.factories import SessionFactory
 from totem.users.models import LoginPin
 from totem.users.tests.factories import UserFactory
 

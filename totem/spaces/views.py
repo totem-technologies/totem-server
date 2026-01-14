@@ -38,16 +38,16 @@ def _get_space(slug: str) -> Space:
 def _get_session(slug: str) -> Session:
     try:
         return (
-            Session.objects.select_related("circle", "circle__author")
-            .prefetch_related("attendees", "circle__subscribed")
+            Session.objects.select_related("space", "space__author")
+            .prefetch_related("attendees", "space__subscribed")
             .get(slug=slug)
         )
     except Session.DoesNotExist:
         raise Http404
 
 
-def session_detail(request, event_slug):
-    session = _get_session(event_slug)
+def session_detail(request, session_slug):
+    session = _get_session(session_slug)
     space = session.space
     return _space_detail(request, request.user, space, session)
 
@@ -57,7 +57,7 @@ def detail(request, slug):
     session = space.next_session()
     if not session:
         return _space_detail(request, request.user, space, session)
-    return redirect("circles:event_detail", event_slug=session.slug)
+    return redirect("spaces:session_detail", session_slug=session.slug)
 
 
 def _space_detail(request: HttpRequest, user: User, space: Space, session: Session | None):
@@ -104,11 +104,11 @@ def _add_or_remove_attendee(user, session: Session, add: bool):
         session.remove_attendee(user)
 
 
-def rsvp(request: HttpRequest, event_slug):
+def rsvp(request: HttpRequest, session_slug):
     if not request.user.is_authenticated:
-        request.session[AUTO_RSVP_SESSION_KEY] = event_slug
+        request.session[AUTO_RSVP_SESSION_KEY] = session_slug
         return redirect_to_login(request.get_full_path())
-    session = _get_session(event_slug)
+    session = _get_session(session_slug)
     error = ""
     if request.POST:
         try:
@@ -123,11 +123,11 @@ def rsvp(request: HttpRequest, event_slug):
     else:
         if error:
             messages.error(request, error)
-        return redirect("circles:event_detail", event_slug=session.slug)
+        return redirect("spaces:session_detail", session_slug=session.slug)
 
 
-def events(request):
-    return render(request, "spaces/events.html")
+def sessions(request):
+    return render(request, "spaces/sessions.html")
 
 
 def spaces(request):
@@ -135,37 +135,37 @@ def spaces(request):
 
 
 @transaction.atomic
-def join(request, event_slug):
+def join(request, session_slug):
     token = request.GET.get("token")
     if token:
         try:
             user, params = JoinSessionAction.resolve(token)
-            token_event_slug = params.get("session_slug") or params.get("event_slug")
-            if token_event_slug is None:
+            token_session_slug = params.get("session_slug") or params.get("event_slug")
+            if token_session_slug is None:
                 raise PermissionDenied
-            if token_event_slug != event_slug:
+            if token_session_slug != session_slug:
                 raise PermissionDenied
         except Exception:
             messages.error(
                 request, "Invalid or expired link. If you think this is an error, please contact us: help@totem.org."
             )
-            return redirect("circles:event_detail", event_slug=event_slug)
+            return redirect("spaces:session_detail", session_slug=session_slug)
     elif request.user.is_authenticated:
         user = request.user
     else:
         return redirect_to_login(request.get_full_path())
 
-    session = _get_session(event_slug)
+    session = _get_session(session_slug)
     if session.can_join(user):
         session.joined.add(user)
-        analytics.event_joined(user, session)
+        analytics.session_joined(user, session)
         return redirect(session.meeting_url, permanent=False)
 
     if session.started():
         messages.info(request, "This session has already started.")
     else:
         messages.info(request, "Cannot join at this time. Please try again later.")
-    return redirect("circles:event_detail", event_slug=session.slug)
+    return redirect("spaces:session_detail", session_slug=session.slug)
 
 
 @transaction.atomic
@@ -185,9 +185,9 @@ def subscribe(request: HttpRequest, slug: str):
         except Exception as e:
             capture_exception(e)
             messages.error(request, "Invalid or expired link. If you think this is an error, please contact us.")
-            return redirect("circles:detail", slug=slug)
+            return redirect("spaces:detail", slug=slug)
     else:
-        return redirect("circles:detail", slug=slug)
+        return redirect("spaces:detail", slug=slug)
     space = _get_space(slug)
     if sub:
         space.subscribe(user)
@@ -200,11 +200,11 @@ def subscribe(request: HttpRequest, slug: str):
         return HttpResponse("ok")
 
     messages.add_message(request, messages.SUCCESS, message)
-    return redirect("circles:detail", slug=slug)
+    return redirect("spaces:detail", slug=slug)
 
 
-def calendar(request: HttpRequest, event_slug: str):
-    session = _get_session(event_slug)
+def calendar(request: HttpRequest, session_slug: str):
+    session = _get_session(session_slug)
     user = request.user
 
     if not session.space.published and not user.is_staff:  # type: ignore
@@ -213,8 +213,8 @@ def calendar(request: HttpRequest, event_slug: str):
     return render(request, "spaces/calendaradd.html", {"event": session, "session": session})
 
 
-def session_social(request: HttpRequest, event_slug: str):
-    session = _get_session(event_slug)
+def session_social(request: HttpRequest, session_slug: str):
+    session = _get_session(session_slug)
     user: User = request.user  # type: ignore
     # start time in pst
     start_time_pst = session.start.astimezone(pytz.timezone("US/Pacific")).strftime("%I:%M %p") + " PST"
@@ -243,7 +243,7 @@ class SocialImage:
     width: int
 
 
-def session_social_img(request: HttpRequest, event_slug: str, image_format: str):
+def session_social_img(request: HttpRequest, session_slug: str, image_format: str):
     image_size = {
         "square": SocialImage(height=1080, width=1080),
         "2to1": SocialImage(width=1280, height=640),
@@ -252,7 +252,7 @@ def session_social_img(request: HttpRequest, event_slug: str, image_format: str)
     if not image_size:
         raise Http404
 
-    session = _get_session(event_slug)
+    session = _get_session(session_slug)
     pst: datetime.datetime = session.start.astimezone(pytz.timezone("US/Pacific"))
     est: datetime.datetime = session.start.astimezone(pytz.timezone("US/Eastern"))
     # start time in pst
@@ -280,7 +280,7 @@ def _make_social_img(session: Session, start_day, start_time_pst, start_time_est
         title = session.title
         subtitle = session.space.title
 
-    background_url = f"{settings.BASE_DIR}/totem/static/images/circles/default-bg.jpg"
+    background_url = f"{settings.BASE_DIR}/totem/static/images/spaces/default-bg.jpg"
     if session.space.image:
         background_url = session.space.image.url
         if background_url.startswith("/"):

@@ -27,14 +27,14 @@ class SpaceDropdownFilter(admin.SimpleListFilter):
     @override
     def queryset(self, request, queryset):
         if self.value():
-            return queryset.filter(circle__slug=self.value())
+            return queryset.filter(space__slug=self.value())
         return queryset
 
 
 @final
 class AuthorDropdownFilter(admin.SimpleListFilter):
     template = "admin/dropdown_filter.html"
-    parameter_name = "circle__author"
+    parameter_name = "space__author"
     title = "author"
 
     @override
@@ -44,7 +44,7 @@ class AuthorDropdownFilter(admin.SimpleListFilter):
     @override
     def queryset(self, request, queryset):
         if self.value():
-            return queryset.filter(circle__author__slug=self.value())
+            return queryset.filter(space__author__slug=self.value())
         return queryset
 
 
@@ -140,7 +140,7 @@ def copy_session(modeladmin, request, queryset: QuerySet[Session]):
         start=timezone.now(),
         duration_minutes=session.duration_minutes,
         seats=session.seats,
-        circle=session.circle,
+        space=session.space,
         content=session.content,
     )
     change_url = reverse(f"admin:{obj._meta.app_label}_{obj._meta.model_name}_change", args=[obj.pk])
@@ -167,7 +167,7 @@ class SessionAdmin(admin.ModelAdmin):
             None,
             {
                 "fields": (
-                    "circle",
+                    "space",
                     "title",
                     "start",
                     "duration_minutes",

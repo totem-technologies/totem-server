@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from django.urls import reverse
 
 if TYPE_CHECKING:
-    from totem.circles.models import Session
+    from totem.spaces.models import Session
 from totem.utils.utils import full_url
 
 # example jsonld:
@@ -93,6 +93,6 @@ def create_jsonld(event: "Session"):
         },
     }
     jsonld["image"] = [
-        full_url(reverse("circles:event_social_img", kwargs={"event_slug": event.slug, "image_format": "2to1"}))
+        full_url(reverse("spaces:event_social_img", kwargs={"event_slug": event.slug, "image_format": "2to1"}))
     ]
     return jsonld

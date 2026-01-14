@@ -17,7 +17,7 @@ class PublicUserSchema(ModelSchema):
 
     @staticmethod
     def resolve_circle_count(obj: User) -> int:
-        return obj.events_joined.count()
+        return obj.sessions_joined.count()
 
     class Meta:
         model = User
@@ -44,7 +44,7 @@ class UserSchema(ModelSchema):
 
     @staticmethod
     def resolve_circle_count(obj: User) -> int:
-        return obj.events_joined.count()
+        return obj.sessions_joined.count()
 
     class Meta:
         model = User
@@ -81,7 +81,7 @@ class KeeperProfileSchema(ModelSchema):
 
     @staticmethod
     def resolve_circle_count(obj: KeeperProfile) -> int:
-        return obj.user.events_joined.count()
+        return obj.user.sessions_joined.count()
 
     @staticmethod
     def resolve_month_joined(obj: KeeperProfile) -> str:

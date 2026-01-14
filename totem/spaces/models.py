@@ -16,7 +16,6 @@ from imagekit.models import ProcessedImageField
 from imagekit.processors import ResizeToFit
 from taggit.managers import TaggableManager
 
-from totem.circles import jsonld
 from totem.email.emails import (
     missed_session_email,
     notify_session_advertisement,
@@ -30,6 +29,7 @@ from totem.notifications.notifications import (
     session_advertisement_notification,
     session_starting_notification,
 )
+from totem.spaces import jsonld
 from totem.utils.fields import MaxLengthTextField
 from totem.utils.hash import basic_hash, hmac
 from totem.utils.md import MarkdownField, MarkdownMixin
@@ -46,7 +46,7 @@ if TYPE_CHECKING:
 _default_grace_period = datetime.timedelta(minutes=10)
 
 
-class CircleEventState(Enum):
+class SessionState(Enum):
     OPEN = "OPEN"
     CLOSED = "CLOSED"
     JOINABLE = "JOINABLE"
@@ -55,8 +55,7 @@ class CircleEventState(Enum):
     CANCELLED = "CANCELLED"
 
 
-# Create your models here.
-class CircleImageSpec(ImageSpec):
+class SpaceImageSpec(ImageSpec):
     processors = [ResizeToFit(1500, 1500)]
     format = "JPEG"
     options = {"quality": 80, "optimize": True}
@@ -67,10 +66,10 @@ def upload_to_id_image(instance, filename: str):
     epoch_time = int(time.time())
     new_filename = basic_hash(f"{filename}-{epoch_time}")
     user_slug = instance.author.slug
-    return f"circles/{user_slug}/{new_filename}.{extension}"
+    return f"spaces/{user_slug}/{new_filename}.{extension}"
 
 
-class CircleCategory(models.Model):
+class SpaceCategory(models.Model):
     name = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255, unique=True)
     description = models.CharField(max_length=2000, blank=True)
@@ -82,31 +81,29 @@ class CircleCategory(models.Model):
         verbose_name_plural = "categories"
 
 
-class Circle(AdminURLMixin, MarkdownMixin, SluggedModel):
+class Space(AdminURLMixin, MarkdownMixin, SluggedModel):
     class MeetingProviderChoices(models.TextChoices):
         GOOGLE_MEET = "google_meet", _("Google Meet")
         LIVEKIT = "livekit", _("LiveKit")
 
     title = models.CharField(max_length=255)
     subtitle = models.CharField(max_length=2000)
-    # Keep original related_name to avoid migration
-    categories = models.ManyToManyField(CircleCategory, blank=True)
+    categories = models.ManyToManyField(SpaceCategory, blank=True)
     image = ProcessedImageField(
         blank=True,
         null=True,
         upload_to=upload_to_id_image,
-        spec=CircleImageSpec,  # type: ignore
+        spec=SpaceImageSpec,  # type: ignore
         help_text="Image for the Space header, must be under 5mb",
     )
     tags = TaggableManager(blank=True)
     short_description = models.CharField(max_length=255, blank=True, help_text="Short description, max 255 characters")
     content = MarkdownField(default="")
-    # Keep original related_name="created_circles" to avoid migration
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         limit_choices_to={"is_staff": True},
-        related_name="created_circles",
+        related_name="created_spaces",
     )
     published = models.BooleanField(default=False, help_text="Is this listing visible?")
     open = models.BooleanField(default=True, help_text="Is this listing open for more attendees?")
@@ -127,32 +124,22 @@ class Circle(AdminURLMixin, MarkdownMixin, SluggedModel):
         max_length=20,
         choices=MeetingProviderChoices.choices,
         default=MeetingProviderChoices.GOOGLE_MEET,
-        help_text="The video conferencing provider for this circle.",
+        help_text="The video conferencing provider for this space.",
     )
-    # Keep original related_name="subscribed_circles" to avoid migration
-    subscribed = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="subscribed_circles")
-    # Type hint for reverse relation (sessions is the related_name on CircleEvent.circle)
-    events: QuerySet["CircleEvent"]
+    subscribed = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="subscribed_spaces")
+    sessions: QuerySet["Session"]
 
     def __str__(self):
         return self.title
 
     def get_absolute_url(self) -> str:
-        return reverse("circles:detail", kwargs={"slug": self.slug})
+        return reverse("spaces:detail", kwargs={"slug": self.slug})
 
     def subscribed_list(self):
         return ", ".join([str(attendee.email) for attendee in self.subscribed.all()])
 
     def next_session(self):
-        return self.events.filter(start__gte=timezone.now() - _default_grace_period).order_by("start").first()
-
-    def next_event(self):
-        return self.next_session()
-
-    @property
-    def sessions(self):
-        """Alias for events - new terminology"""
-        return self.events
+        return self.sessions.filter(start__gte=timezone.now() - _default_grace_period).order_by("start").first()
 
     def is_free(self):
         return self.price == 0
@@ -167,26 +154,23 @@ class Circle(AdminURLMixin, MarkdownMixin, SluggedModel):
         return SubscribeSpaceAction(user, parameters={"space_slug": self.slug, "subscribe": subscribe}).build_url()
 
 
-class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
+class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
     listed = models.BooleanField(
         default=True,
-        help_text="Is this session discoverable? False means events are only accessible via direct link, or to people attending.",
+        help_text="Is this session discoverable? False means sessions are only accessible via direct link, or to people attending.",
     )
     title = models.CharField(max_length=255, blank=True)
     advertised = models.BooleanField(default=False)
-    # Keep original related_name="events_attending" to avoid migration
-    attendees = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="events_attending")
+    attendees = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="sessions_attending")
     cancelled = models.BooleanField(default=False, help_text="Is this session canceled?")
-    # Keep original field name "circle" with related_name="events" to avoid migration
-    circle = models.ForeignKey(Circle, on_delete=models.CASCADE, related_name="events")
+    space = models.ForeignKey(Space, on_delete=models.CASCADE, related_name="sessions")
     content = MarkdownField(
         help_text="Optional description for this specific session. Markdown is supported.",
         null=True,
         blank=True,
     )
     duration_minutes = models.IntegerField(_("Minutes"), default=60)
-    # Keep original related_name="events_joined" to avoid migration
-    joined = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="events_joined")
+    joined = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="sessions_joined")
     meeting_url = models.CharField(max_length=255, blank=True)
     notified = models.BooleanField(default=False)
     notified_tomorrow = models.BooleanField(default=False)
@@ -197,19 +181,10 @@ class CircleEvent(AdminURLMixin, MarkdownMixin, SluggedModel):
 
     class Meta:  # pyright: ignore [reportIncompatibleVariableOverride]
         ordering = ["start"]
-        unique_together = [["circle", "start", "open", "title"]]
-
-    @property
-    def space(self):
-        """Alias for circle - new terminology"""
-        return self.circle
-
-    @space.setter
-    def space(self, value):
-        self.circle = value
+        unique_together = [["space", "start", "open", "title"]]
 
     def get_absolute_url(self) -> str:
-        return reverse("circles:event_detail", kwargs={"event_slug": self.slug})
+        return reverse("spaces:session_detail", kwargs={"session_slug": self.slug})
 
     def seats_left(self):
         return max(0, self.seats - self.attendees.count())
@@ -416,36 +391,16 @@ class SessionException(Exception):
     pass
 
 
-CircleEventException = SessionException
-
-
 class SessionFeedbackOptions(models.TextChoices):
     UP = "up", _("Thumbs Up")
     DOWN = "down", _("Thumbs Down")
 
 
 class SessionFeedback(AdminURLMixin, BaseModel):
-    # Keep original field name "event" to avoid migration
-    event = models.ForeignKey(CircleEvent, on_delete=models.CASCADE, related_name="feedback")
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="feedback")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="session_feedback")
     feedback = models.CharField(max_length=4, choices=SessionFeedbackOptions.choices)
     message = MaxLengthTextField(blank=True, max_length=2000)
 
     class Meta(BaseModel.Meta):
-        constraints = [models.UniqueConstraint(fields=["event", "user"], name="unique_user_feedback_for_event")]
-
-    @property
-    def session(self):
-        """Alias for event - new terminology"""
-        return self.event
-
-    @session.setter
-    def session(self, value):
-        self.event = value
-
-
-SpaceImageSpec = CircleImageSpec
-SpaceCategory = CircleCategory
-SessionState = CircleEventState
-Space = Circle
-Session = CircleEvent
+        constraints = [models.UniqueConstraint(fields=["session", "user"], name="unique_user_feedback_for_session")]

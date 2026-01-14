@@ -5,7 +5,7 @@ from typing import List
 
 from pydantic import BaseModel, ConfigDict
 
-import totem.circles.models as space_models
+import totem.spaces.models as space_models
 from totem.notifications.utils import notify_users
 from totem.users.models import User
 

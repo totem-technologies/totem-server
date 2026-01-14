@@ -4,14 +4,14 @@ from django.db.models import Count, F, OuterRef, Q, Subquery
 from django.urls import reverse
 from django.utils import timezone
 
-from totem.circles.schemas import EventDetailSchema, EventSpaceSchema, NextEventSchema, SpaceDetailSchema
+from totem.spaces.schemas import EventDetailSchema, EventSpaceSchema, NextEventSchema, SpaceDetailSchema
 from totem.users.models import User
 
 from .models import Session, Space, SpaceCategory
 
 
 def other_sessions_in_space(user: User | None, session: Session, limit: int = 10):
-    sessions = Session.objects.filter(circle=session.circle, start__gte=timezone.now(), cancelled=False).distinct()
+    sessions = Session.objects.filter(space=session.space, start__gte=timezone.now(), cancelled=False).distinct()
     if user and user.is_authenticated:
         # show users events they are already attending
         sessions = sessions.filter(Q(open=True, listed=True) | Q(attendees=user))
@@ -20,16 +20,14 @@ def other_sessions_in_space(user: User | None, session: Session, limit: int = 10
     sessions = sessions.exclude(slug=session.slug)
     sessions = sessions.order_by("start")
     if not user or not user.is_staff:
-        sessions = sessions.filter(circle__published=True)
+        sessions = sessions.filter(space__published=True)
     return sessions[:limit]
 
 
 def sessions_by_month(user: User | None, space_slug: str, month: int, year: int):
     startDate = datetime.datetime(year, month, 1, tzinfo=datetime.timezone.utc)
     endDate = startDate + datetime.timedelta(days=32)
-    sessions = Session.objects.filter(
-        start__gte=startDate, start__lte=endDate, cancelled=False, circle__slug=space_slug
-    )
+    sessions = Session.objects.filter(start__gte=startDate, start__lte=endDate, cancelled=False, space__slug=space_slug)
     if user and user.is_authenticated:
         # show users events they are already attending
         sessions = sessions.filter(Q(open=True, listed=True) | Q(attendees=user))
@@ -37,7 +35,7 @@ def sessions_by_month(user: User | None, space_slug: str, month: int, year: int)
         sessions = sessions.filter(open=True, listed=True)
     sessions = sessions.order_by("start")
     if not user or not user.is_staff:
-        sessions = sessions.filter(circle__published=True)
+        sessions = sessions.filter(space__published=True)
     return sessions
 
 
@@ -45,44 +43,42 @@ def all_upcoming_recommended_sessions(user: User | None, category: str | None = 
     sessions = Session.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True)
     sessions = sessions.order_by("start")
     if not user or not user.is_staff:
-        sessions = sessions.filter(circle__published=True)
+        sessions = sessions.filter(space__published=True)
     # are there any seats?
     sessions = sessions.annotate(attendee_count=Count("attendees")).filter(attendee_count__lt=F("seats"))
     # filter category
     if category:
-        sessions = sessions.filter(circle__categories__slug=category) | sessions.filter(
-            circle__categories__name=category
-        )
+        sessions = sessions.filter(space__categories__slug=category) | sessions.filter(space__categories__name=category)
     # filter author
     if author:
-        sessions = sessions.filter(circle__author__slug=author)
-    sessions = sessions.prefetch_related("circle__author")
+        sessions = sessions.filter(space__author__slug=author)
+    sessions = sessions.prefetch_related("space__author")
     return sessions
 
 
 def upcoming_recommended_sessions(user: User | None, categories: list[str] | None = None, author: str | None = None):
     sessions = (
         Session.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True)
-        .select_related("circle")
-        .prefetch_related("circle__author", "circle__categories", "circle__subscribed")
+        .select_related("space")
+        .prefetch_related("space__author", "space__categories", "space__subscribed")
         .annotate(
             attendee_count=Count("attendees", distinct=True),
-            subscriber_count=Count("circle__subscribed", distinct=True),
+            subscriber_count=Count("space__subscribed", distinct=True),
         )
         .order_by("start")
     )
     if not user or not user.is_staff:
-        sessions = sessions.filter(circle__published=True)
+        sessions = sessions.filter(space__published=True)
     # are there any seats?
     sessions = sessions.filter(attendee_count__lt=F("seats"))
     # filter category
     if categories:
         sessions = sessions.filter(
-            Q(circle__categories__slug__in=categories) | Q(circle__categories__name__in=categories)
+            Q(space__categories__slug__in=categories) | Q(space__categories__name__in=categories)
         )
     # filter author
     if author:
-        sessions = sessions.filter(circle__author__slug=author)
+        sessions = sessions.filter(space__author__slug=author)
     return sessions
 
 
@@ -92,15 +88,14 @@ def get_upcoming_sessions_for_spaces_list():
     Specifically designed for the spaces list API endpoint.
     Does NOT filter by seat availability, ensuring all spaces with upcoming events are shown.
     """
-    # Use original model name CircleCategory and M2M reverse accessor 'circle'
-    first_category_subquery = SpaceCategory.objects.filter(circle=OuterRef("circle_id")).values("name")[:1]
+    first_category_subquery = SpaceCategory.objects.filter(space=OuterRef("space_id")).values("name")[:1]
     return (
-        Session.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True, circle__published=True)
-        .select_related("circle")
-        .prefetch_related("circle__author", "circle__categories", "circle__subscribed")
+        Session.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True, space__published=True)
+        .select_related("space")
+        .prefetch_related("space__author", "space__categories", "space__subscribed")
         .annotate(
             attendee_count=Count("attendees", distinct=True),
-            subscriber_count=Count("circle__subscribed", distinct=True),
+            subscriber_count=Count("space__subscribed", distinct=True),
             first_category=Subquery(first_category_subquery),
         )
         .order_by("start")
@@ -111,39 +106,37 @@ def all_upcoming_recommended_spaces(user: User | None, category: str | None = No
     sessions = Session.objects.filter(start__gte=timezone.now(), cancelled=False, open=True, listed=True)
     sessions = sessions.order_by("start")
     if not user or not user.is_staff:
-        sessions = sessions.filter(circle__published=True)
+        sessions = sessions.filter(space__published=True)
     # are there any seats?
     sessions = sessions.annotate(attendee_count=Count("attendees")).filter(attendee_count__lt=F("seats"))
     # filter category
     if category:
-        sessions = sessions.filter(circle__categories__slug=category) | sessions.filter(
-            circle__categories__name=category
-        )
-    sessions = sessions.prefetch_related("circle__author")
+        sessions = sessions.filter(space__categories__slug=category) | sessions.filter(space__categories__name=category)
+    sessions = sessions.prefetch_related("space__author")
     return sessions
 
 
 def upcoming_attending_sessions(user: User, limit: int = 10):
     # 60 minutes in the past
     past = timezone.now() - datetime.timedelta(minutes=60)
-    return user.events_attending.filter(start__gte=past).filter(cancelled=False).order_by("start")[:limit]
+    return user.sessions_attending.filter(start__gte=past).filter(cancelled=False).order_by("start")[:limit]
 
 
 def upcoming_sessions_by_author(user: User, author: User, exclude_event: Session | None = None):
     upcoming_sessions = Session.objects.filter(
-        circle__author=author,
+        space__author=author,
         start__gt=timezone.now(),
         cancelled=False,
         listed=True,
     ).order_by("start")
 
     if not user or not user.is_staff:
-        upcoming_sessions = upcoming_sessions.filter(circle__published=True)
+        upcoming_sessions = upcoming_sessions.filter(space__published=True)
 
     if exclude_event:
         upcoming_sessions = upcoming_sessions.exclude(pk=exclude_event.pk)
 
-    upcoming_sessions = upcoming_sessions.select_related("circle__author")
+    upcoming_sessions = upcoming_sessions.select_related("space__author")
     return upcoming_sessions
 
 
@@ -173,8 +166,8 @@ def session_detail_schema(session: Session, user: User):
         cancelled=session.cancelled,
         joinable=session.can_join(user),
         ended=ended,
-        rsvp_url=reverse("circles:rsvp", kwargs={"event_slug": session.slug}),
-        join_url=reverse("circles:join", kwargs={"event_slug": session.slug}),
+        rsvp_url=reverse("spaces:rsvp", kwargs={"session_slug": session.slug}),
+        join_url=reverse("spaces:join", kwargs={"session_slug": session.slug}),
         cal_link=session.cal_link(),
         subscribe_url=reverse("mobile-api:spaces_subscribe", kwargs={"space_slug": space.slug}),
         subscribed=subscribed,

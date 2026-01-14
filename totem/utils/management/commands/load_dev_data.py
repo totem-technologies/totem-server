@@ -53,7 +53,7 @@ def load_fixtures_impl():
         )
 
     # Create Space Categories
-    from totem.circles.models import SpaceCategory
+    from totem.spaces.models import SpaceCategory
 
     categories = []
     for i in range(5):
@@ -66,7 +66,7 @@ def load_fixtures_impl():
         )
 
     # Create spaces
-    from totem.circles.models import Space
+    from totem.spaces.models import Space
 
     spaces = []
     for i in range(15):
@@ -83,7 +83,7 @@ def load_fixtures_impl():
         spaces.append(space)
 
     # Create sessions
-    from totem.circles.models import Session
+    from totem.spaces.models import Session
 
     for space in spaces:
         for i in range(15):

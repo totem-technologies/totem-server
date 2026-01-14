@@ -5,7 +5,7 @@ import django.db.models.deletion
 import django.utils.timezone
 import imagekit.models.fields
 import taggit.managers
-import totem.circles.models
+import totem.spaces.models
 import totem.utils.fields
 import totem.utils.md
 import totem.utils.models
@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='CircleCategory',
+            name='SpaceCategory',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(max_length=255)),
@@ -41,7 +41,7 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name='Circle',
+            name='Space',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('slug', models.SlugField(blank=True, default=totem.utils.models.make_slug, editable=False, unique=True)),
@@ -51,23 +51,23 @@ class Migration(migrations.Migration):
                 ('date_modified', models.DateTimeField(auto_now=True)),
                 ('published', models.BooleanField(default=False, help_text='Is this listing visible?')),
                 ('recurring', models.CharField(help_text='Example: Once a month (or week, day, etc). Do not put specific times or days of the week.', max_length=255)),
-                ('author', models.ForeignKey(limit_choices_to={'is_staff': True}, on_delete=django.db.models.deletion.CASCADE, related_name='created_circles', to=settings.AUTH_USER_MODEL)),
+                ('author', models.ForeignKey(limit_choices_to={'is_staff': True}, on_delete=django.db.models.deletion.CASCADE, related_name='created_spaces', to=settings.AUTH_USER_MODEL)),
                 ('tags', taggit.managers.TaggableManager(blank=True, help_text='A comma-separated list of tags.', through='taggit.TaggedItem', to='taggit.Tag', verbose_name='Tags')),
                 ('open', models.BooleanField(default=True, help_text='Is this listing open for more attendees?')),
                 ('content', totem.utils.md.MarkdownField(default='', max_length=10000, validators=[totem.utils.md.MarkdownMixin.validate_markdown, django.core.validators.MaxLengthValidator(10000)])),
-                ('subscribed', models.ManyToManyField(blank=True, related_name='subscribed_circles', to=settings.AUTH_USER_MODEL)),
+                ('subscribed', models.ManyToManyField(blank=True, related_name='subscribed_spaces', to=settings.AUTH_USER_MODEL)),
                 ('price', models.IntegerField(default=0, help_text='Price in USD dollars. If you want to offer this listing for free, enter 0.', validators=[django.core.validators.MinValueValidator(0, message='Price must be greater than or equal to 0'), django.core.validators.MaxValueValidator(1000, message='Price must be less than or equal to 1000')], verbose_name='Price (USD)')),
-                ('image', imagekit.models.fields.ProcessedImageField(blank=True, help_text='Image for the Space header, must be under 5mb', null=True, upload_to=totem.circles.models.upload_to_id_image)),
-                ('categories', models.ManyToManyField(blank=True, to='circles.circlecategory')),
+                ('image', imagekit.models.fields.ProcessedImageField(blank=True, help_text='Image for the Space header, must be under 5mb', null=True, upload_to=totem.spaces.models.upload_to_id_image)),
+                ('categories', models.ManyToManyField(blank=True, to='spaces.spacecategory')),
                 ('short_description', models.CharField(blank=True, help_text='Short description, max 255 characters', max_length=255)),
-                ('meeting_provider', models.CharField(choices=[('google_meet', 'Google Meet'), ('livekit', 'LiveKit')], default='google_meet', help_text='The video conferencing provider for this circle.', max_length=20)),
+                ('meeting_provider', models.CharField(choices=[('google_meet', 'Google Meet'), ('livekit', 'LiveKit')], default='google_meet', help_text='The video conferencing provider for this space.', max_length=20)),
             ],
             options={
                 'abstract': False,
             },
         ),
         migrations.CreateModel(
-            name='CircleEvent',
+            name='Session',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('slug', models.SlugField(blank=True, default=totem.utils.models.make_slug, editable=False, unique=True)),
@@ -77,14 +77,14 @@ class Migration(migrations.Migration):
                 ('seats', models.IntegerField(default=8)),
                 ('date_created', models.DateTimeField(auto_now_add=True)),
                 ('date_modified', models.DateTimeField(auto_now=True)),
-                ('attendees', models.ManyToManyField(blank=True, related_name='events_attending', to=settings.AUTH_USER_MODEL)),
-                ('circle', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='events', to='circles.circle')),
+                ('attendees', models.ManyToManyField(blank=True, related_name='sessions_attending', to=settings.AUTH_USER_MODEL)),
+                ('space', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='sessions', to='spaces.space')),
                 ('cancelled', models.BooleanField(default=False, help_text='Is this session canceled?')),
-                ('joined', models.ManyToManyField(blank=True, related_name='events_joined', to=settings.AUTH_USER_MODEL)),
+                ('joined', models.ManyToManyField(blank=True, related_name='sessions_joined', to=settings.AUTH_USER_MODEL)),
                 ('meeting_url', models.CharField(blank=True, max_length=255)),
                 ('advertised', models.BooleanField(default=False)),
                 ('notified', models.BooleanField(default=False)),
-                ('listed', models.BooleanField(default=True, help_text='Is this session discoverable? False means events are only accessible via direct link, or to people attending.')),
+                ('listed', models.BooleanField(default=True, help_text='Is this session discoverable? False means sessions are only accessible via direct link, or to people attending.')),
                 ('notified_tomorrow', models.BooleanField(default=False)),
                 ('content', totem.utils.md.MarkdownField(blank=True, help_text='Optional description for this specific session. Markdown is supported.', max_length=10000, null=True, validators=[totem.utils.md.MarkdownMixin.validate_markdown, django.core.validators.MaxLengthValidator(10000)])),
                 ('title', models.CharField(blank=True, max_length=255)),
@@ -93,7 +93,7 @@ class Migration(migrations.Migration):
             options={
                 'abstract': False,
                 'ordering': ['start'],
-                'unique_together': {('circle', 'start', 'open', 'title')},
+                'unique_together': {('space', 'start', 'open', 'title')},
             },
             bases=(totem.utils.md.MarkdownMixin, models.Model),
         ),
@@ -105,12 +105,12 @@ class Migration(migrations.Migration):
                 ('date_modified', models.DateTimeField(auto_now=True)),
                 ('feedback', models.CharField(choices=[('up', 'Thumbs Up'), ('down', 'Thumbs Down')], max_length=4)),
                 ('message', totem.utils.fields.MaxLengthTextField(blank=True, max_length=2000, validators=[django.core.validators.MaxLengthValidator(2000)])),
-                ('event', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='feedback', to='circles.circleevent')),
+                ('session', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='feedback', to='spaces.session')),
                 ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='session_feedback', to=settings.AUTH_USER_MODEL)),
             ],
             options={
                 'abstract': False,
-                'constraints': [models.UniqueConstraint(fields=('event', 'user'), name='unique_user_feedback_for_event')],
+                'constraints': [models.UniqueConstraint(fields=('session', 'user'), name='unique_user_feedback_for_session')],
             },
             bases=(totem.utils.models.AdminURLMixin, models.Model),
         ),

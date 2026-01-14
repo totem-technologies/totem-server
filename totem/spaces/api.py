@@ -7,7 +7,7 @@ from ninja import Field, FilterSchema, Router, Schema
 from ninja.pagination import paginate
 from ninja.params.functions import Query
 
-from totem.circles.schemas import (
+from totem.spaces.schemas import (
     EventDetailSchema,
     EventListSchema,
     EventsFilterSchema,
@@ -43,10 +43,10 @@ def list_events(request, filters: EventsFilterSchema = Query()):
 def filter_options(request):
     events = all_upcoming_recommended_sessions(request.user)
     # get distinct categories that have events
-    categories = set(events.values_list("circle__categories__name", "circle__categories__slug").distinct())
+    categories = set(events.values_list("space__categories__name", "space__categories__slug").distinct())
     categories = [{"name": name, "slug": slug} for name, slug in categories if name]
     # get distinct authors that have events
-    authors = set(events.values_list("circle__author__name", "circle__author__slug").distinct())
+    authors = set(events.values_list("space__author__name", "space__author__slug").distinct())
     authors = [{"name": name, "slug": slug} for name, slug in authors if name]
     return {"categories": categories, "authors": authors}
 
@@ -115,7 +115,7 @@ class WebflowEventSchema(Schema):
 def webflow_events_list(request, filters: WebflowEventsFilterSchema = Query()):
     events = all_upcoming_recommended_sessions(None)
     if filters.keeper_username:
-        events = events.filter(circle__author__keeper_profile__username=filters.keeper_username)
+        events = events.filter(space__author__keeper_profile__username=filters.keeper_username)
 
     results: list[WebflowEventSchema] = []
     for event in events:

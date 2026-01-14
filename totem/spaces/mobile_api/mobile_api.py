@@ -10,22 +10,22 @@ from ninja import Router
 from ninja.errors import AuthorizationError
 from ninja.pagination import paginate
 
-from totem.circles.mobile_api.mobile_filters import (
+from totem.onboard.models import OnboardModel
+from totem.spaces.mobile_api.mobile_filters import (
     get_upcoming_spaces_list,
     session_detail_schema,
     space_detail_schema,
     upcoming_recommended_sessions,
     upcoming_recommended_spaces,
 )
-from totem.circles.mobile_api.mobile_schemas import (
+from totem.spaces.mobile_api.mobile_schemas import (
     EventDetailSchema,
     MobileSpaceDetailSchema,
     SessionFeedbackSchema,
     SpaceSchema,
     SummarySpacesSchema,
 )
-from totem.circles.models import Session, SessionException, SessionFeedback, SessionFeedbackOptions, Space
-from totem.onboard.models import OnboardModel
+from totem.spaces.models import Session, SessionException, SessionFeedback, SessionFeedbackOptions, Space
 from totem.users.models import User
 
 spaces_router = Router(tags=["spaces"])
@@ -105,7 +105,7 @@ def post_session_feedback(request: HttpRequest, event_slug: str, payload: Sessio
 def get_sessions_history(request: HttpRequest):
     user: User = request.user  # type: ignore
 
-    session_history_query = user.events_joined.filter(circle__published=True, cancelled=False).order_by("-start")
+    session_history_query = user.sessions_joined.filter(space__published=True, cancelled=False).order_by("-start")
     session_history = session_history_query.all()[0:10]
 
     sessions = [session_detail_schema(session, user) for session in session_history]
@@ -143,10 +143,10 @@ def get_spaces_summary(request: HttpRequest):
         Session.objects.annotate(end_time=end_time_expression)
         .filter(attendees=user, cancelled=False, end_time__gt=timezone.now())
         .select_related("circle")
-        .prefetch_related("circle__author", "circle__categories", "attendees", "circle__subscribed")
+        .prefetch_related("space__author", "space__categories", "attendees", "space__subscribed")
         .annotate(
             attendee_count=Count("attendees", distinct=True),
-            subscriber_count=Count("circle__subscribed", distinct=True),
+            subscriber_count=Count("space__subscribed", distinct=True),
         )
         .order_by("start")
     )

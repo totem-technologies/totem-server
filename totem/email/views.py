@@ -3,7 +3,7 @@ from django.http import Http404
 from django.shortcuts import render
 from django.views.generic import TemplateView
 
-from totem.circles.models import Session
+from totem.spaces.models import Session
 from totem.users.models import User
 
 from . import emails

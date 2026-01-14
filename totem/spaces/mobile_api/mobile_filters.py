@@ -2,12 +2,12 @@ from django.db.models import Count, F, Prefetch, Q, QuerySet
 from django.urls import reverse
 from django.utils import timezone
 
-from totem.circles.mobile_api.mobile_schemas import (
+from totem.spaces.mobile_api.mobile_schemas import (
     EventDetailSchema,
     MobileSpaceDetailSchema,
     NextEventSchema,
 )
-from totem.circles.models import Session, Space
+from totem.spaces.models import Session, Space
 from totem.users.models import User
 
 
@@ -64,11 +64,11 @@ def upcoming_recommended_sessions(user: User | None, categories: list[str] | Non
         Session.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True)
         .select_related("circle")
         .prefetch_related(
-            "circle__author",
-            "circle__categories",
-            "circle__subscribed",
+            "space__author",
+            "space__categories",
+            "space__subscribed",
             Prefetch(
-                "circle__events",
+                "space__events",
                 queryset=Session.objects.filter(start__gte=timezone.now())
                 .order_by("start")
                 .prefetch_related("attendees"),
@@ -77,20 +77,20 @@ def upcoming_recommended_sessions(user: User | None, categories: list[str] | Non
         )
         .annotate(
             attendee_count=Count("attendees", distinct=True),
-            subscriber_count=Count("circle__subscribed", distinct=True),
+            subscriber_count=Count("space__subscribed", distinct=True),
         )
         .order_by("start")
     )
     if not user or not user.is_staff:
-        events = events.filter(circle__published=True)
+        events = events.filter(space__published=True)
     # are there any seats?
     events = events.filter(attendee_count__lt=F("seats"))
     # filter category
     if categories:
-        events = events.filter(Q(circle__categories__slug__in=categories) | Q(circle__categories__name__in=categories))
+        events = events.filter(Q(space__categories__slug__in=categories) | Q(space__categories__name__in=categories))
     # filter author
     if author:
-        events = events.filter(circle__author__slug=author)
+        events = events.filter(space__author__slug=author)
     return events
 
 
@@ -126,8 +126,8 @@ def session_detail_schema(session: Session, user: User):
         cancelled=session.cancelled,
         joinable=session.can_join(user),
         ended=ended,
-        rsvp_url=reverse("circles:rsvp", kwargs={"event_slug": session.slug}),
-        join_url=reverse("circles:join", kwargs={"event_slug": session.slug}),
+        rsvp_url=reverse("spaces:rsvp", kwargs={"event_slug": session.slug}),
+        join_url=reverse("spaces:join", kwargs={"event_slug": session.slug}),
         cal_link=session.cal_link(),
         subscribe_url=reverse("mobile-api:spaces_subscribe", kwargs={"space_slug": space.slug}),
         subscribed=subscribed,

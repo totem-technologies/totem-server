@@ -15,7 +15,7 @@ class TestActions:
         user = UserFactory()
         assert user.verified is False
         action = actions.JoinSessionAction(user, parameters={"event_slug": event_slug})
-        assert action.action_id == "circles:join"
+        assert action.action_id == "spaces:join"
         url = action.build_url()
         assert f"spaces/join/{event_slug}" in url
         assert "?token=" in url

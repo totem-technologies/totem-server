@@ -4,9 +4,9 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from sentry_sdk.crons.decorator import monitor
 
-from totem.circles.tasks import tasks as space_tasks
 from totem.email.tasks import tasks as email_tasks
 from totem.notifications.tasks import tasks as notification_tasks
+from totem.spaces.tasks import tasks as space_tasks
 from totem.users.tasks import tasks as user_tasks
 
 

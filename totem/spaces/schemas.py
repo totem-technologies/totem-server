@@ -4,7 +4,7 @@ from typing import List
 
 from ninja import FilterSchema, ModelSchema, Schema
 
-from totem.circles.models import Session, Space
+from totem.spaces.models import Session, Space
 from totem.users.schemas import PublicUserSchema
 
 

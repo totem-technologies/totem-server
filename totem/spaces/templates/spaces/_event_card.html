@@ -19,7 +19,7 @@
         </style>
       {% endif %}
       <!-- prettier-ignore-end -->
-    <a href="{% url "circles:event_detail" event_slug=session.slug %}">
+    <a href="{% url "spaces:event_detail" event_slug=session.slug %}">
       <div
         class="{% if session.space.image %}space-bg-image-{{ session.slug }}{% else %}no-image{% endif %} relative flex flex-col rounded-t-3xl p-5">
         <div class="flex min-h-[100px] justify-between">
@@ -43,7 +43,7 @@
           >
         </p>
         <a
-          href="{% url "circles:event_detail" event_slug=session.slug %}"
+          href="{% url "spaces:event_detail" event_slug=session.slug %}"
           class="btn btn-primary btn-sm inline-flex items-center px-5">
           Join
           <svg

@@ -3,8 +3,8 @@ from datetime import timedelta
 from django.urls import reverse
 from django.utils import timezone
 
-from totem.circles.api import EventCalendarFilterSchema, EventsFilterSchema
-from totem.circles.tests.factories import SessionFactory, SpaceCategoryFactory, SpaceFactory
+from totem.spaces.api import EventCalendarFilterSchema, EventsFilterSchema
+from totem.spaces.tests.factories import SessionFactory, SpaceCategoryFactory, SpaceFactory
 from totem.users.tests.factories import KeeperProfileFactory, UserFactory
 
 
@@ -26,7 +26,7 @@ class TestSpaceListAPI:
     def test_get_circle_list_filters_category(self, client, db):
         category = SpaceCategoryFactory()
         circle = SpaceFactory(categories=[category])
-        event = SessionFactory(circle=circle)
+        event = SessionFactory(space=circle)
         event.save()
         event2 = SessionFactory()
         event2.save()
@@ -40,7 +40,7 @@ class TestSpaceListAPI:
 
     def test_get_circle_list_filters_author(self, client, db):
         circle = SpaceFactory()
-        event = SessionFactory(circle=circle)
+        event = SessionFactory(space=circle)
         event.save()
         event2 = SessionFactory()
         event2.save()
@@ -81,7 +81,7 @@ class TestFilterOptions:
         past_event.save()
         category = SpaceCategoryFactory()
         circle = SpaceFactory(categories=[category])
-        event = SessionFactory(circle=circle)
+        event = SessionFactory(space=circle)
         event.save()
         event2 = SessionFactory()
         event2.save()
@@ -188,12 +188,12 @@ class TestWebflowEventsAPI:
         keeper1 = UserFactory()
         KeeperProfileFactory(user=keeper1, username="keeper1")
         circle1 = SpaceFactory(author=keeper1)
-        event1 = SessionFactory(circle=circle1, start=now + timedelta(days=2))
+        event1 = SessionFactory(space=circle1, start=now + timedelta(days=2))
 
         keeper2 = UserFactory()
         KeeperProfileFactory(user=keeper2, username="keeper2")
         circle2 = SpaceFactory(author=keeper2)
-        event2 = SessionFactory(circle=circle2, start=now + timedelta(days=1))
+        event2 = SessionFactory(space=circle2, start=now + timedelta(days=1))
 
         response = client.get(reverse("api-1:webflow_events_list"))
 
@@ -208,12 +208,12 @@ class TestWebflowEventsAPI:
         keeper1 = UserFactory()
         KeeperProfileFactory(user=keeper1, username="keeper1")
         circle1 = SpaceFactory(author=keeper1)
-        SessionFactory(circle=circle1)
+        SessionFactory(space=circle1)
 
         keeper2 = UserFactory()
         KeeperProfileFactory(user=keeper2, username="keeper2")
         circle2 = SpaceFactory(author=keeper2)
-        SessionFactory(circle=circle2)
+        SessionFactory(space=circle2)
 
         # Test filter
         response = client.get(reverse("api-1:webflow_events_list"), {"keeper_username": "keeper1"})
@@ -255,7 +255,7 @@ class TestListSpaces:
     def test_list_spaces_with_category(self, client, db):
         category = SpaceCategoryFactory()
         circle = SpaceFactory(categories=[category])
-        event = SessionFactory(circle=circle)
+        event = SessionFactory(space=circle)
         event.save()
         response = client.get(reverse("api-1:spaces_list"))
         assert response.status_code == 200
@@ -269,13 +269,13 @@ class TestListSpaces:
         """
         # Create a space with a full event
         circle = SpaceFactory()
-        event = SessionFactory(circle=circle, seats=1)
+        event = SessionFactory(space=circle, seats=1)
         user = UserFactory()
         event.attendees.add(user)  # This makes the event full (1 seat, 1 attendee)
 
         # Create another space with a non-full event
         circle2 = SpaceFactory()
-        SessionFactory(circle=circle2)
+        SessionFactory(space=circle2)
 
         response = client.get(reverse("api-1:spaces_list"))
         assert response.status_code == 200
@@ -297,11 +297,11 @@ class TestListSpaces:
         # Create three spaces with events having different seat availability
         # Space 1: All seats available (10 seats, 0 attendees)
         circle1 = SpaceFactory(title="All Seats Available")
-        SessionFactory(circle=circle1, seats=10, start=now + timedelta(days=1))
+        SessionFactory(space=circle1, seats=10, start=now + timedelta(days=1))
 
         # Space 2: Some seats taken (10 seats, 3 attendees = 7 seats left)
         circle2 = SpaceFactory(title="Some Seats Taken")
-        event2 = SessionFactory(circle=circle2, seats=10, start=now + timedelta(days=2))
+        event2 = SessionFactory(space=circle2, seats=10, start=now + timedelta(days=2))
         # Add 3 attendees
         for _ in range(3):
             user = UserFactory()
@@ -309,7 +309,7 @@ class TestListSpaces:
 
         # Space 3: Full event (3 seats, 3 attendees = 0 seats left)
         circle3 = SpaceFactory(title="Full Event")
-        event3 = SessionFactory(circle=circle3, seats=3, start=now + timedelta(days=3))
+        event3 = SessionFactory(space=circle3, seats=3, start=now + timedelta(days=3))
         # Add 3 attendees (making it full)
         for _ in range(3):
             user = UserFactory()

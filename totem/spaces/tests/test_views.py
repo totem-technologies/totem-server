@@ -19,28 +19,28 @@ class TestSpaceDetailView:
         client.force_login(user)
         circle = SessionFactory()
         circle.add_attendee(user)
-        url = reverse("circles:event_detail", kwargs={"event_slug": circle.slug})
+        url = reverse("spaces:event_detail", kwargs={"event_slug": circle.slug})
         response = client.get(url)
         assert response.status_code == 200
 
     def test_detail(self, client, db):
         circle = SessionFactory()
-        url = reverse("circles:event_detail", kwargs={"event_slug": circle.slug})
+        url = reverse("spaces:event_detail", kwargs={"event_slug": circle.slug})
         response = client.get(url)
         assert response.status_code == 200
         assert "About this Session" not in response.content.decode()
 
     def test_detail_circle(self, client, db):
         event = SessionFactory()
-        url = reverse("circles:detail", kwargs={"slug": event.space.slug})
+        url = reverse("spaces:detail", kwargs={"slug": event.space.slug})
         response = client.get(url)
         assert response.status_code == 302
-        assert response.url == reverse("circles:event_detail", kwargs={"event_slug": event.slug})
+        assert response.url == reverse("spaces:event_detail", kwargs={"event_slug": event.slug})
 
     def test_detail_next_event_circle(self, client, db):
         # Make sure the details page still shows an event while it's in the grace period
         event_now = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5))
-        url = reverse("circles:detail", kwargs={"slug": event_now.space.slug})
+        url = reverse("spaces:detail", kwargs={"slug": event_now.space.slug})
         response = client.get(url)
         assert response.status_code == 302
         assert "This Space has no upcoming" not in response.content.decode()
@@ -50,7 +50,7 @@ class TestSpaceDetailView:
         user.save()
         client.force_login(user)
         circle = SpaceFactory()
-        url = reverse("circles:detail", kwargs={"slug": circle.slug})
+        url = reverse("spaces:detail", kwargs={"slug": circle.slug})
         response = client.get(url)
         assert response.status_code == 200
 
@@ -62,25 +62,25 @@ class TestSessionView:
         client.force_login(user)
         event = SessionFactory()
         event.add_attendee(user)
-        url = reverse("circles:event_detail", kwargs={"event_slug": event.slug})
+        url = reverse("spaces:event_detail", kwargs={"event_slug": event.slug})
         response = client.get(url)
         assert response.status_code == 200
 
     def test_event(self, client, db):
         event = SessionFactory()
-        url = reverse("circles:event_detail", kwargs={"event_slug": event.slug})
+        url = reverse("spaces:event_detail", kwargs={"event_slug": event.slug})
         response = client.get(url)
         assert response.status_code == 200
 
     def test_event_no_attendee(self, client, db):
         event = SessionFactory()
-        url = reverse("circles:event_detail", kwargs={"event_slug": event.slug})
+        url = reverse("spaces:event_detail", kwargs={"event_slug": event.slug})
         response = client.get(url)
         assert response.status_code == 200
 
     def test_event_no_attendee_unauth(self, client, db):
         event = SessionFactory()
-        url = reverse("circles:event_detail", kwargs={"event_slug": event.slug})
+        url = reverse("spaces:event_detail", kwargs={"event_slug": event.slug})
         response = client.get(url)
         assert response.status_code == 200
 
@@ -140,7 +140,7 @@ class TestSessionView:
     #     session = client.session
     #     session[AUTO_RSVP_SESSION_KEY] = event.slug
     #     session.save()
-    #     response = client.get(reverse("circles:event_detail", kwargs={"event_slug": event.slug}))
+    #     response = client.get(reverse("spaces:event_detail", kwargs={"event_slug": event.slug}))
     #     assert response.status_code == 200
     #     assert user in event.attendees.all()
     #     assert list(get_messages(response.wsgi_request))[0].message == "You are already attending this session"
@@ -149,7 +149,7 @@ class TestSessionView:
 class TestJoinView:
     def test_join_unauth(self, client, db):
         event = SessionFactory()
-        response = client.get(reverse("circles:join", kwargs={"event_slug": event.slug}))
+        response = client.get(reverse("spaces:join", kwargs={"event_slug": event.slug}))
         assert response.status_code == 302
         assert "signup" in response.url
 
@@ -158,7 +158,7 @@ class TestJoinView:
         user = UserFactory()
         user.save()
         client.force_login(user)
-        response = client.get(reverse("circles:join", kwargs={"event_slug": event.slug}))
+        response = client.get(reverse("spaces:join", kwargs={"event_slug": event.slug}))
         assert response.status_code == 302
         assert event.slug in response.url
         assert user not in event.joined.all()
@@ -172,7 +172,7 @@ class TestJoinView:
         user.save()
         event.add_attendee(user)
         client.force_login(user)
-        response = client.get(reverse("circles:join", kwargs={"event_slug": event.slug}))
+        response = client.get(reverse("spaces:join", kwargs={"event_slug": event.slug}))
         assert response.status_code == 302
         assert event.meeting_url in response.url
         assert user in event.joined.all()
@@ -185,7 +185,7 @@ class TestJoinView:
         event.add_attendee(user)
         client.force_login(user)
         event.start = timezone.now() - datetime.timedelta(minutes=30)
-        response = client.get(reverse("circles:join", kwargs={"event_slug": event.slug}))
+        response = client.get(reverse("spaces:join", kwargs={"event_slug": event.slug}))
         assert response.status_code == 302
         assert event.slug in response.url
         assert user not in event.joined.all()
@@ -225,7 +225,7 @@ class AnonSubscribeViewTest(TestCase):
 
     def test_anon_subscribe_no_token(self):
         self.assertFalse(self.user in self.space.subscribed.all())
-        url = reverse("circles:subscribe", args=[self.space.slug])
+        url = reverse("spaces:subscribe", args=[self.space.slug])
         response = self.client.get(url)
         assert response.status_code == 302
         self.assertFalse(self.user in self.space.subscribed.all())
@@ -242,11 +242,11 @@ class CalendarViewTest(TestCase):
     def setUp(self):
         self.user = UserFactory()
         self.space = SpaceFactory()
-        self.event = SessionFactory(circle=self.space)
+        self.event = SessionFactory(space=self.space)
         self.event.add_attendee(self.user)
 
     def test_calendar(self):
-        url = reverse("circles:calendar", args=[self.event.slug])
+        url = reverse("spaces:calendar", args=[self.event.slug])
         response = self.client.get(url)
         assert response.status_code == 200
         self.assertTemplateUsed(response, "spaces/calendaradd.html")
@@ -254,14 +254,14 @@ class CalendarViewTest(TestCase):
 
     def test_calendar_unauth(self):
         self.client.logout()
-        url = reverse("circles:calendar", args=[self.event.slug])
+        url = reverse("spaces:calendar", args=[self.event.slug])
         response = self.client.get(url)
         assert response.status_code == 200
         assert self.space.title in response.content.decode()
 
     def test_calendar_unsubscribed(self):
         self.space.unsubscribe(self.user)
-        url = reverse("circles:calendar", args=[self.event.slug])
+        url = reverse("spaces:calendar", args=[self.event.slug])
         response = self.client.get(url)
         assert response.status_code == 200
         assert self.space.title in response.content.decode()
@@ -269,7 +269,7 @@ class CalendarViewTest(TestCase):
 
 class TestSpaceListView:
     def test_list(self, client, db):
-        url = reverse("circles:list")
+        url = reverse("spaces:list")
         response = client.get(url)
         assert response.status_code == 200
 
@@ -279,7 +279,7 @@ class TestSpaceListView:
         client.force_login(user)
         circle = SessionFactory()
         circle.add_attendee(user)
-        url = reverse("circles:list")
+        url = reverse("spaces:list")
         response = client.get(url)
         assert response.status_code == 200
 
@@ -287,7 +287,7 @@ class TestSpaceListView:
 class TestRSVPView:
     def test_rsvp_unauth(self, client, db):
         event = SessionFactory()
-        response = client.get(reverse("circles:rsvp", kwargs={"event_slug": event.slug}))
+        response = client.get(reverse("spaces:rsvp", kwargs={"event_slug": event.slug}))
         assert response.status_code == 302
         assert "signup" in response.url
 
@@ -297,7 +297,7 @@ class TestRSVPView:
         user.save()
         event.add_attendee(user)
         client.force_login(user)
-        response = client.post(reverse("circles:rsvp", kwargs={"event_slug": event.slug}), data={"action": "no"})
+        response = client.post(reverse("spaces:rsvp", kwargs={"event_slug": event.slug}), data={"action": "no"})
         assert response.status_code == 302
         assert event.slug in response.url
         assert user not in event.joined.all()
@@ -307,7 +307,7 @@ class TestRSVPView:
         user = UserFactory()
         user.save()
         client.force_login(user)
-        response = client.post(reverse("circles:rsvp", kwargs={"event_slug": event.slug}), data={"action": "yes"})
+        response = client.post(reverse("spaces:rsvp", kwargs={"event_slug": event.slug}), data={"action": "yes"})
         assert response.status_code == 302
         assert event.slug in response.url
         assert user in event.attendees.all()
@@ -318,7 +318,7 @@ class TestRSVPView:
         user = UserFactory()
         user.save()
         client.force_login(user)
-        response = client.post(reverse("circles:rsvp", kwargs={"event_slug": event.slug}), data={"action": "yes"})
+        response = client.post(reverse("spaces:rsvp", kwargs={"event_slug": event.slug}), data={"action": "yes"})
         message = list(get_messages(response.wsgi_request))
         assert "started" in message[0].message.lower()
         assert response.status_code == 302
@@ -329,7 +329,7 @@ class TestRSVPView:
     # def test_rsvp_auto_rsvp(self, client, db):
     #     """Test auto rsvp when user is not logged in, but then makes an account and goes back to the event page."""
     #     event = SessionFactory()
-    #     response = client.post(reverse("circles:rsvp", kwargs={"event_slug": event.slug}), data={"action": "yes"})
+    #     response = client.post(reverse("spaces:rsvp", kwargs={"event_slug": event.slug}), data={"action": "yes"})
     #     assert response.status_code == 302
     #     assert "signup" in response.url
     #     assert event.slug in response.url
@@ -338,7 +338,7 @@ class TestRSVPView:
     #     user = UserFactory()
     #     user.save()
     #     client.force_login(user)
-    #     response = client.get(reverse("circles:event_detail", kwargs={"event_slug": event.slug}))
+    #     response = client.get(reverse("spaces:event_detail", kwargs={"event_slug": event.slug}))
     #     assert response.status_code == 200
     #     assert user in event.attendees.all()
     #     message = list(get_messages(response.wsgi_request))
@@ -352,7 +352,7 @@ class TestRSVPView:
         user = UserFactory()
         user.save()
         client.force_login(user)
-        client.post(reverse("circles:rsvp", kwargs={"event_slug": event.slug}), data={"action": "yes"})
+        client.post(reverse("spaces:rsvp", kwargs={"event_slug": event.slug}), data={"action": "yes"})
         assert mail.outbox[0].to == [user.email]
         assert "Spot Saved" in mail.outbox[0].body
 
@@ -363,7 +363,7 @@ class TestRSVPView:
         user = UserFactory()
         user.save()
         client.force_login(user)
-        client.post(reverse("circles:rsvp", kwargs={"event_slug": event.slug}), data={"action": "yes"})
+        client.post(reverse("spaces:rsvp", kwargs={"event_slug": event.slug}), data={"action": "yes"})
         assert mail.outbox[0].to == [user.email]
         assert "Spot Saved" not in mail.outbox[0].body
         assert "Get Ready" in mail.outbox[0].body

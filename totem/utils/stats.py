@@ -8,7 +8,7 @@ from typing import Any
 from django.db.models import Count, Q, QuerySet, Sum
 from django.utils import timezone
 
-from totem.circles.models import Session
+from totem.spaces.models import Session
 
 UTC = dttz.utc
 
@@ -123,7 +123,7 @@ def session_queryset(
     if event_id is not None:
         filters &= Q(id=event_id)
     if author_slug is not None:
-        filters &= Q(circle__author__slug=author_slug)
+        filters &= Q(space__author__slug=author_slug)
     return Session.objects.filter(filters)
 
 

@@ -1,12 +1,12 @@
 from django.test import TestCase
 from django.utils import timezone
 
-from totem.circles.filters import (
+from totem.spaces.filters import (
     all_upcoming_recommended_sessions,
     other_sessions_in_space,
     sessions_by_month,
 )
-from totem.circles.tests.factories import SessionFactory, SpaceFactory
+from totem.spaces.tests.factories import SessionFactory, SpaceFactory
 from totem.users.tests.factories import UserFactory
 
 

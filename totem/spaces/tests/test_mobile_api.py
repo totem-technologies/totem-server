@@ -5,9 +5,9 @@ from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
 
-from totem.circles.models import SessionFeedback, SessionFeedbackOptions
-from totem.circles.tests.factories import SessionFactory, SpaceCategoryFactory, SpaceFactory
 from totem.onboard.tests.factories import OnboardModelFactory
+from totem.spaces.models import SessionFeedback, SessionFeedbackOptions
+from totem.spaces.tests.factories import SessionFactory, SpaceCategoryFactory, SpaceFactory
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
 
@@ -85,7 +85,7 @@ class TestMobileApiSpaces:
 
     def test_get_session_detail(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
-        event = SessionFactory(circle__published=True)
+        event = SessionFactory(space__published=True)
         space = event.space
 
         url = reverse("mobile-api:session_detail", kwargs={"event_slug": event.slug})
@@ -98,7 +98,7 @@ class TestMobileApiSpaces:
 
     def test_get_session_detail_unpublished_circle(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
-        event = SessionFactory(circle__published=False)
+        event = SessionFactory(space__published=False)
         space = event.space
 
         url = reverse("mobile-api:session_detail", kwargs={"event_slug": event.slug})
@@ -138,11 +138,11 @@ class TestMobileApiSpaces:
 
         keeper1 = UserFactory(is_staff=True)
         circle = SpaceFactory(author=keeper1, published=True)
-        SessionFactory(circle=circle)
+        SessionFactory(space=circle)
 
         # This circle should not appear as it is unpublished
         unpublished_circle = SpaceFactory(author=keeper1, published=False)
-        SessionFactory(circle=unpublished_circle)
+        SessionFactory(space=unpublished_circle)
 
         url = reverse("mobile-api:keeper_spaces", kwargs={"slug": keeper1.slug})
         response = client.get(url)
@@ -174,7 +174,7 @@ class TestMobileApiSpaces:
     def test_get_sessions_history(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         for _ in range(5):
-            event = SessionFactory(circle__published=True, cancelled=False)
+            event = SessionFactory(space__published=True, cancelled=False)
             event.joined.add(user)
 
         url = reverse("mobile-api:sessions_history")
@@ -195,13 +195,13 @@ class TestMobileApiSpaces:
     def test_sessions_history_filters_unpublished_and_cancelled(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
 
-        event1 = SessionFactory(circle__published=True, cancelled=False)
+        event1 = SessionFactory(space__published=True, cancelled=False)
         event1.joined.add(user)
 
-        event2 = SessionFactory(circle__published=False, cancelled=False)
+        event2 = SessionFactory(space__published=False, cancelled=False)
         event2.joined.add(user)
 
-        event3 = SessionFactory(circle__published=True, cancelled=False)
+        event3 = SessionFactory(space__published=True, cancelled=False)
         event3.joined.add(user)
         event3.cancelled = True
         event3.save()
@@ -217,7 +217,7 @@ class TestMobileApiSpaces:
     def test_sessions_history_limit(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         for _ in range(12):
-            event = SessionFactory(circle__published=True, cancelled=False)
+            event = SessionFactory(space__published=True, cancelled=False)
             event.joined.add(user)
 
         url = reverse("mobile-api:sessions_history")
@@ -230,10 +230,10 @@ class TestMobileApiSpaces:
         client, user = client_with_user
         url = reverse("mobile-api:recommended_spaces")
 
-        SessionFactory(circle__published=True)
-        SessionFactory(circle__published=True)
-        SessionFactory(circle__published=True)
-        SessionFactory(circle__published=True)
+        SessionFactory(space__published=True)
+        SessionFactory(space__published=True)
+        SessionFactory(space__published=True)
+        SessionFactory(space__published=True)
 
         response = client.get(url)
 
@@ -246,7 +246,7 @@ class TestMobileApiSpaces:
         url = reverse("mobile-api:recommended_spaces")
 
         for _ in range(5):
-            SessionFactory(circle__published=True, cancelled=False, listed=True)
+            SessionFactory(space__published=True, cancelled=False, listed=True)
 
         response = client.get(url, {"limit": 2})
 
@@ -314,7 +314,7 @@ class TestMobileApiSpaces:
         # Create a space the user is subscribed to with a different category
         subscribed_circle = SpaceFactory(categories=[self_category])
         subscribed_circle.subscribed.add(user)
-        SessionFactory(circle=subscribed_circle, start=timezone.now() + timedelta(days=3))
+        SessionFactory(space=subscribed_circle, start=timezone.now() + timedelta(days=3))
 
         # This event has a non-matching category and should not be recommended
         non_matching_circle = SpaceFactory(categories=[love_category])
@@ -335,15 +335,15 @@ class TestMobileApiSpaces:
 
         # This circle has an upcoming event and should appear in 'explore'
         explore_circle_1 = SpaceFactory()
-        SessionFactory(circle=explore_circle_1, start=timezone.now() + timedelta(days=10))
+        SessionFactory(space=explore_circle_1, start=timezone.now() + timedelta(days=10))
 
         # This circle only has past events and should NOT appear
         past_event_circle = SpaceFactory()
-        SessionFactory(circle=past_event_circle, start=timezone.now() - timedelta(days=1))
+        SessionFactory(space=past_event_circle, start=timezone.now() - timedelta(days=1))
 
         # This circle is unpublished and should NOT appear
         unpublished_circle = SpaceFactory(published=False)
-        SessionFactory(circle=unpublished_circle, start=timezone.now() + timedelta(days=5))
+        SessionFactory(space=unpublished_circle, start=timezone.now() + timedelta(days=5))
 
         url = reverse("mobile-api:spaces_summary")
         response = client.get(url)
@@ -360,7 +360,7 @@ class TestMobileApiSpaces:
         # Don't create OnboardModel
         # Create some spaces to ensure we have something to return
         circle = SpaceFactory(published=True)
-        SessionFactory(circle=circle, start=timezone.now() + timedelta(days=5))
+        SessionFactory(space=circle, start=timezone.now() + timedelta(days=5))
 
         url = reverse("mobile-api:spaces_summary")
         response = client.get(url)
@@ -382,17 +382,17 @@ class TestMobileApiSpaces:
         upcoming_circle.subscribed.add(user)
 
         # Create an upcoming event for this circle that the user is attending
-        upcoming_event = SessionFactory(circle=upcoming_circle, start=timezone.now() + timedelta(days=5))
+        upcoming_event = SessionFactory(space=upcoming_circle, start=timezone.now() + timedelta(days=5))
         upcoming_event.attendees.add(user)
 
         # Create another circle that should appear in for_you (to ensure for_you is not empty)
         for_you_circle = SpaceFactory(categories=[self_category], published=True)
         for_you_circle.subscribed.add(user)
-        SessionFactory(circle=for_you_circle, start=timezone.now() + timedelta(days=10))
+        SessionFactory(space=for_you_circle, start=timezone.now() + timedelta(days=10))
 
         # Create another circle that should appear in explore (to ensure explore is not empty)
         explore_circle = SpaceFactory(published=True)
-        SessionFactory(circle=explore_circle, start=timezone.now() + timedelta(days=7))
+        SessionFactory(space=explore_circle, start=timezone.now() + timedelta(days=7))
 
         url = reverse("mobile-api:spaces_summary")
         response = client.get(url)
@@ -412,7 +412,7 @@ class TestMobileApiSpaces:
 
     def test_rsvp_confirm(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = SessionFactory(circle__published=True)
+        event = SessionFactory(space__published=True)
         url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
 
         response = client.post(url)
@@ -428,7 +428,7 @@ class TestMobileApiSpaces:
 
     def test_rsvp_cancel(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = SessionFactory(circle__published=True)
+        event = SessionFactory(space__published=True)
         event.attendees.add(user)
         url = reverse("mobile-api:rsvp_cancel", kwargs={"event_slug": event.slug})
 
@@ -444,7 +444,7 @@ class TestMobileApiSpaces:
 
     def test_rsvp_cancel_event_started(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = SessionFactory(circle__published=True, cancelled=False, start=timezone.now() - timedelta(hours=1))
+        event = SessionFactory(space__published=True, cancelled=False, start=timezone.now() - timedelta(hours=1))
         event.attendees.add(user)
 
         url = reverse("mobile-api:rsvp_cancel", kwargs={"event_slug": event.slug})
@@ -456,7 +456,7 @@ class TestMobileApiSpaces:
 
     def test_rsvp_cancel_event_cancelled(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = SessionFactory(circle__published=True, cancelled=True)
+        event = SessionFactory(space__published=True, cancelled=True)
         event.attendees.add(user)
 
         url = reverse("mobile-api:rsvp_cancel", kwargs={"event_slug": event.slug})
@@ -468,7 +468,7 @@ class TestMobileApiSpaces:
 
     def test_rsvp_confirm_cannot_attend(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = SessionFactory(circle__published=True, cancelled=True)
+        event = SessionFactory(space__published=True, cancelled=True)
         url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
         response = client.post(url)
         assert response.status_code == 403
@@ -477,7 +477,7 @@ class TestMobileApiSpaces:
 
     def test_rsvp_confirm_already_attending(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = SessionFactory(circle__published=True, cancelled=False)
+        event = SessionFactory(space__published=True, cancelled=False)
         event.attendees.add(user)
 
         url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
@@ -488,7 +488,7 @@ class TestMobileApiSpaces:
 
     def test_rsvp_confirm_event_closed(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = SessionFactory(circle__published=True, cancelled=False, open=False)
+        event = SessionFactory(space__published=True, cancelled=False, open=False)
 
         url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
         response = client.post(url)
@@ -499,7 +499,7 @@ class TestMobileApiSpaces:
 
     def test_rsvp_confirm_event_started(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = SessionFactory(circle__published=True, cancelled=False, start=timezone.now() - timedelta(hours=1))
+        event = SessionFactory(space__published=True, cancelled=False, start=timezone.now() - timedelta(hours=1))
 
         url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
         response = client.post(url)
@@ -510,7 +510,7 @@ class TestMobileApiSpaces:
 
     def test_rsvp_confirm_no_seats_left(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        event = SessionFactory(circle__published=True, cancelled=False, seats=2)
+        event = SessionFactory(space__published=True, cancelled=False, seats=2)
         # Fill all seats
         other_user1 = UserFactory()
         other_user2 = UserFactory()

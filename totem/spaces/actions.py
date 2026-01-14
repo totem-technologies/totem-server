@@ -11,7 +11,7 @@ class SubscribeSpaceParameters(TypedDict):
 
 
 class SubscribeSpaceAction(ActionBase[SubscribeSpaceParameters]):
-    action_id = "circles:subscribe"
+    action_id = "spaces:subscribe"
 
     def get_url(self):
         slug = self.parameters.get("space_slug") or self.parameters.get("circle_slug")
@@ -25,13 +25,13 @@ class JoinSessionParameters(TypedDict):
 
 
 class JoinSessionAction(ActionBase[JoinSessionParameters]):
-    action_id = "circles:join"
+    action_id = "spaces:join"
 
     def get_url(self) -> str:
         slug = self.parameters.get("session_slug") or self.parameters.get("event_slug")
         if slug is None:
             raise KeyError("session_slug")
-        return reverse("circles:join", kwargs={"event_slug": slug})
+        return reverse("spaces:join", kwargs={"event_slug": slug})
 
 
 SubscribeActionParameters = SubscribeSpaceParameters
@@ -45,7 +45,7 @@ JoinCircleAction = JoinSessionAction
 
 
 # class AttendCircleAction(ActionBase[AttendCircleParameters]):
-#     action_id = "circles:event_detail"
+#     action_id = "spaces:event_detail"
 
 #     def get_url(self) -> str:
-#         return reverse("circles:event_detail", kwargs={"event_slug": self.parameters["event_slug"]})
+#         return reverse("spaces:event_detail", kwargs={"event_slug": self.parameters["event_slug"]})

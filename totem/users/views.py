@@ -14,12 +14,12 @@ from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 
-from totem.circles.filters import (
+from totem.email import emails
+from totem.spaces.filters import (
     all_upcoming_recommended_sessions,
     upcoming_attending_sessions,
     upcoming_sessions_by_author,
 )
-from totem.email import emails
 from totem.utils.slack import notify_slack
 
 from . import analytics
@@ -34,7 +34,7 @@ def user_detail_view(request, slug):
         user = User.objects.get(slug=slug)
         if user.keeper_profile:
             sessions = upcoming_sessions_by_author(request.user, user)[:10]
-            space_count = user.events_joined.count()
+            space_count = user.sessions_joined.count()
             return render(
                 request,
                 "users/user_detail.html",
@@ -55,7 +55,7 @@ def profiles(request, name):
         user = KeeperProfile.objects.get(username=name).user
         if user.keeper_profile:
             sessions = upcoming_sessions_by_author(request.user, user)[:10]
-            space_count = user.events_joined.count()
+            space_count = user.sessions_joined.count()
             return render(
                 request,
                 "users/user_detail.html",
@@ -268,7 +268,7 @@ def user_dashboard_view(request):
 @login_required
 def user_profile_view(request):
     subscribed_spaces = request.user.subscribed_circles.all()[0:10]
-    session_history_query = request.user.events_joined.order_by("-start")
+    session_history_query = request.user.sessions_joined.order_by("-start")
     session_history = session_history_query.all()[0:10]
     space_count = session_history_query.count()
     context = {
