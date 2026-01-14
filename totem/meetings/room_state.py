@@ -64,6 +64,9 @@ class SessionState(Schema):
         if self.totem_status != TotemStatus.PASSING:
             raise ValueError("Totem can only be accepted when it is being passed.")
 
+        if self.next_speaker is None:
+            raise ValueError("Cannot accept totem when there is no next speaker.")
+
         self.speaking_now = self.next_speaker
         self.totem_status = TotemStatus.ACCEPTED
         self._update_next_speaker()
@@ -80,6 +83,8 @@ class SessionState(Schema):
         self.speaking_order = new_order
         if self.speaking_now and self.speaking_now not in new_order:
             self.speaking_now = new_order[0] if new_order else None
+            if self.totem_status == TotemStatus.PASSING:
+                self.totem_status = TotemStatus.ACCEPTED
         self._update_next_speaker()
 
     def validate_order(self, users: list[str]):
@@ -113,11 +118,16 @@ class SessionState(Schema):
 
         if self.speaking_now is not None and self.speaking_now not in valid_order:
             self.speaking_now = valid_order[0] if valid_order else None
+            if self.totem_status == TotemStatus.PASSING:
+                self.totem_status = TotemStatus.ACCEPTED
         self._update_next_speaker()
 
     def _update_next_speaker(self):
         """
         Updates the next_speaker attribute based on the current speaking_now.
+
+        Note: If there's only one person in the order, they will be their own next speaker,
+        allowing them to continue speaking in subsequent rounds.
         """
         order = self.speaking_order
         if len(order) == 0:
