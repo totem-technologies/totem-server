@@ -34,7 +34,7 @@ from totem.meetings.livekit_provider import (
     reorder,
     start_room,
 )
-from totem.meetings.room_state import SessionState, SessionStatus, TotemStatus
+from totem.meetings.room_state import SessionStatus, TotemStatus
 from totem.users.tests.factories import UserFactory
 
 
