@@ -65,7 +65,7 @@ def get_livekit_token(request: HttpRequest, event_slug: str):
 
         # Record that the user has joined the event
         event.joined.add(user)
-        analytics.event_joined(user, event)
+        analytics.session_joined(user, event)
 
         return LivekitTokenResponseSchema(token=token)
     except LiveKitConfigurationError as e:

@@ -251,7 +251,7 @@ def notify_session_signup(event: Session, user: User) -> Email:
     start = _to_human_time(user, event.start)
     return SessionSignupEmail(
         recipient=user.email,
-        link=_make_email_url(reverse("spaces:calendar", kwargs={"event_slug": event.slug})),
+        link=_make_email_url(reverse("spaces:calendar", kwargs={"session_slug": event.slug})),
         start=start,
         event_title=event.space.title,
     )

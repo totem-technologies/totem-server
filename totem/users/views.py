@@ -267,7 +267,7 @@ def user_dashboard_view(request):
 
 @login_required
 def user_profile_view(request):
-    subscribed_spaces = request.user.subscribed_circles.all()[0:10]
+    subscribed_spaces = request.user.subscribed_spaces.all()[0:10]
     session_history_query = request.user.sessions_joined.order_by("-start")
     session_history = session_history_query.all()[0:10]
     space_count = session_history_query.count()

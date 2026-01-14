@@ -19,13 +19,13 @@ class TestSpaceDetailView:
         client.force_login(user)
         circle = SessionFactory()
         circle.add_attendee(user)
-        url = reverse("spaces:event_detail", kwargs={"event_slug": circle.slug})
+        url = reverse("spaces:session_detail", kwargs={"session_slug": circle.slug})
         response = client.get(url)
         assert response.status_code == 200
 
     def test_detail(self, client, db):
         circle = SessionFactory()
-        url = reverse("spaces:event_detail", kwargs={"event_slug": circle.slug})
+        url = reverse("spaces:session_detail", kwargs={"session_slug": circle.slug})
         response = client.get(url)
         assert response.status_code == 200
         assert "About this Session" not in response.content.decode()
@@ -35,7 +35,7 @@ class TestSpaceDetailView:
         url = reverse("spaces:detail", kwargs={"slug": event.space.slug})
         response = client.get(url)
         assert response.status_code == 302
-        assert response.url == reverse("spaces:event_detail", kwargs={"event_slug": event.slug})
+        assert response.url == reverse("spaces:session_detail", kwargs={"session_slug": event.slug})
 
     def test_detail_next_event_circle(self, client, db):
         # Make sure the details page still shows an event while it's in the grace period
@@ -62,25 +62,25 @@ class TestSessionView:
         client.force_login(user)
         event = SessionFactory()
         event.add_attendee(user)
-        url = reverse("spaces:event_detail", kwargs={"event_slug": event.slug})
+        url = reverse("spaces:session_detail", kwargs={"session_slug": event.slug})
         response = client.get(url)
         assert response.status_code == 200
 
     def test_event(self, client, db):
         event = SessionFactory()
-        url = reverse("spaces:event_detail", kwargs={"event_slug": event.slug})
+        url = reverse("spaces:session_detail", kwargs={"session_slug": event.slug})
         response = client.get(url)
         assert response.status_code == 200
 
     def test_event_no_attendee(self, client, db):
         event = SessionFactory()
-        url = reverse("spaces:event_detail", kwargs={"event_slug": event.slug})
+        url = reverse("spaces:session_detail", kwargs={"session_slug": event.slug})
         response = client.get(url)
         assert response.status_code == 200
 
     def test_event_no_attendee_unauth(self, client, db):
         event = SessionFactory()
-        url = reverse("spaces:event_detail", kwargs={"event_slug": event.slug})
+        url = reverse("spaces:session_detail", kwargs={"session_slug": event.slug})
         response = client.get(url)
         assert response.status_code == 200
 
@@ -88,7 +88,7 @@ class TestSessionView:
     #     event = SessionFactory()
     #     user = UserFactory()
     #     user.save()
-    #     url = AttendSpaceAction(user=user, parameters={"event_slug": event.slug}).build_url()
+    #     url = AttendSpaceAction(user=user, parameters={"session_slug": event.slug}).build_url()
     #     response = client.get(url)
     #     assert response.status_code == 200
     #     assert user in event.attendees.all()
@@ -101,7 +101,7 @@ class TestSessionView:
     #     client.force_login(user)
     #     user2 = UserFactory()
     #     user2.save()
-    #     url = AttendSpaceAction(user=user2, parameters={"event_slug": event.slug}).build_url()
+    #     url = AttendSpaceAction(user=user2, parameters={"session_slug": event.slug}).build_url()
     #     response = client.get(url)
     #     assert response.status_code == 200
     #     assert user not in event.attendees.all()
@@ -112,7 +112,7 @@ class TestSessionView:
     #     user = UserFactory()
     #     user.save()
     #     event.add_attendee(user)
-    #     url = AttendSpaceAction(user=user, parameters={"event_slug": event.slug}).build_url()
+    #     url = AttendSpaceAction(user=user, parameters={"session_slug": event.slug}).build_url()
     #     response = client.get(url)
     #     assert response.status_code == 200
     #     assert user in event.attendees.all()
@@ -122,7 +122,7 @@ class TestSessionView:
     #     event = SessionFactory()
     #     user = UserFactory()
     #     user.save()
-    #     url = AttendSpaceAction(user=user, parameters={"event_slug": "wrong"}).build_url()
+    #     url = AttendSpaceAction(user=user, parameters={"session_slug": "wrong"}).build_url()
     #     token = url.split("=")[-1]
     #     bad_url = event.get_absolute_url() + f"?token={token}"
     #     response = client.get(bad_url)
@@ -140,7 +140,7 @@ class TestSessionView:
     #     session = client.session
     #     session[AUTO_RSVP_SESSION_KEY] = event.slug
     #     session.save()
-    #     response = client.get(reverse("spaces:event_detail", kwargs={"event_slug": event.slug}))
+    #     response = client.get(reverse("spaces:session_detail", kwargs={"session_slug": event.slug}))
     #     assert response.status_code == 200
     #     assert user in event.attendees.all()
     #     assert list(get_messages(response.wsgi_request))[0].message == "You are already attending this session"
@@ -149,7 +149,7 @@ class TestSessionView:
 class TestJoinView:
     def test_join_unauth(self, client, db):
         event = SessionFactory()
-        response = client.get(reverse("spaces:join", kwargs={"event_slug": event.slug}))
+        response = client.get(reverse("spaces:join", kwargs={"session_slug": event.slug}))
         assert response.status_code == 302
         assert "signup" in response.url
 
@@ -158,7 +158,7 @@ class TestJoinView:
         user = UserFactory()
         user.save()
         client.force_login(user)
-        response = client.get(reverse("spaces:join", kwargs={"event_slug": event.slug}))
+        response = client.get(reverse("spaces:join", kwargs={"session_slug": event.slug}))
         assert response.status_code == 302
         assert event.slug in response.url
         assert user not in event.joined.all()
@@ -172,7 +172,7 @@ class TestJoinView:
         user.save()
         event.add_attendee(user)
         client.force_login(user)
-        response = client.get(reverse("spaces:join", kwargs={"event_slug": event.slug}))
+        response = client.get(reverse("spaces:join", kwargs={"session_slug": event.slug}))
         assert response.status_code == 302
         assert event.meeting_url in response.url
         assert user in event.joined.all()
@@ -185,7 +185,7 @@ class TestJoinView:
         event.add_attendee(user)
         client.force_login(user)
         event.start = timezone.now() - datetime.timedelta(minutes=30)
-        response = client.get(reverse("spaces:join", kwargs={"event_slug": event.slug}))
+        response = client.get(reverse("spaces:join", kwargs={"session_slug": event.slug}))
         assert response.status_code == 302
         assert event.slug in response.url
         assert user not in event.joined.all()
@@ -197,7 +197,7 @@ class TestJoinView:
         user.save()
         # Don't log in, just use the token
         event.add_attendee(user)
-        url = JoinSessionAction(user=user, parameters={"event_slug": event.slug}).build_url()
+        url = JoinSessionAction(user=user, parameters={"session_slug": event.slug}).build_url()
         response = client.get(url)
         assert response.status_code == 302
         assert event.meeting_url in response.url
@@ -287,7 +287,7 @@ class TestSpaceListView:
 class TestRSVPView:
     def test_rsvp_unauth(self, client, db):
         event = SessionFactory()
-        response = client.get(reverse("spaces:rsvp", kwargs={"event_slug": event.slug}))
+        response = client.get(reverse("spaces:rsvp", kwargs={"session_slug": event.slug}))
         assert response.status_code == 302
         assert "signup" in response.url
 
@@ -297,7 +297,7 @@ class TestRSVPView:
         user.save()
         event.add_attendee(user)
         client.force_login(user)
-        response = client.post(reverse("spaces:rsvp", kwargs={"event_slug": event.slug}), data={"action": "no"})
+        response = client.post(reverse("spaces:rsvp", kwargs={"session_slug": event.slug}), data={"action": "no"})
         assert response.status_code == 302
         assert event.slug in response.url
         assert user not in event.joined.all()
@@ -307,7 +307,7 @@ class TestRSVPView:
         user = UserFactory()
         user.save()
         client.force_login(user)
-        response = client.post(reverse("spaces:rsvp", kwargs={"event_slug": event.slug}), data={"action": "yes"})
+        response = client.post(reverse("spaces:rsvp", kwargs={"session_slug": event.slug}), data={"action": "yes"})
         assert response.status_code == 302
         assert event.slug in response.url
         assert user in event.attendees.all()
@@ -318,7 +318,7 @@ class TestRSVPView:
         user = UserFactory()
         user.save()
         client.force_login(user)
-        response = client.post(reverse("spaces:rsvp", kwargs={"event_slug": event.slug}), data={"action": "yes"})
+        response = client.post(reverse("spaces:rsvp", kwargs={"session_slug": event.slug}), data={"action": "yes"})
         message = list(get_messages(response.wsgi_request))
         assert "started" in message[0].message.lower()
         assert response.status_code == 302
@@ -329,7 +329,7 @@ class TestRSVPView:
     # def test_rsvp_auto_rsvp(self, client, db):
     #     """Test auto rsvp when user is not logged in, but then makes an account and goes back to the event page."""
     #     event = SessionFactory()
-    #     response = client.post(reverse("spaces:rsvp", kwargs={"event_slug": event.slug}), data={"action": "yes"})
+    #     response = client.post(reverse("spaces:rsvp", kwargs={"session_slug": event.slug}), data={"action": "yes"})
     #     assert response.status_code == 302
     #     assert "signup" in response.url
     #     assert event.slug in response.url
@@ -338,7 +338,7 @@ class TestRSVPView:
     #     user = UserFactory()
     #     user.save()
     #     client.force_login(user)
-    #     response = client.get(reverse("spaces:event_detail", kwargs={"event_slug": event.slug}))
+    #     response = client.get(reverse("spaces:session_detail", kwargs={"session_slug": event.slug}))
     #     assert response.status_code == 200
     #     assert user in event.attendees.all()
     #     message = list(get_messages(response.wsgi_request))
@@ -352,7 +352,7 @@ class TestRSVPView:
         user = UserFactory()
         user.save()
         client.force_login(user)
-        client.post(reverse("spaces:rsvp", kwargs={"event_slug": event.slug}), data={"action": "yes"})
+        client.post(reverse("spaces:rsvp", kwargs={"session_slug": event.slug}), data={"action": "yes"})
         assert mail.outbox[0].to == [user.email]
         assert "Spot Saved" in mail.outbox[0].body
 
@@ -363,7 +363,7 @@ class TestRSVPView:
         user = UserFactory()
         user.save()
         client.force_login(user)
-        client.post(reverse("spaces:rsvp", kwargs={"event_slug": event.slug}), data={"action": "yes"})
+        client.post(reverse("spaces:rsvp", kwargs={"session_slug": event.slug}), data={"action": "yes"})
         assert mail.outbox[0].to == [user.email]
         assert "Spot Saved" not in mail.outbox[0].body
         assert "Get Ready" in mail.outbox[0].body

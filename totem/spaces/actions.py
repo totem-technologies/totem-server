@@ -31,7 +31,7 @@ class JoinSessionAction(ActionBase[JoinSessionParameters]):
         slug = self.parameters.get("session_slug") or self.parameters.get("event_slug")
         if slug is None:
             raise KeyError("session_slug")
-        return reverse("spaces:join", kwargs={"event_slug": slug})
+        return reverse("spaces:join", kwargs={"session_slug": slug})
 
 
 SubscribeActionParameters = SubscribeSpaceParameters
@@ -48,4 +48,4 @@ JoinCircleAction = JoinSessionAction
 #     action_id = "spaces:event_detail"
 
 #     def get_url(self) -> str:
-#         return reverse("spaces:event_detail", kwargs={"event_slug": self.parameters["event_slug"]})
+#         return reverse("spaces:event_detail", kwargs={"session_slug": self.parameters["event_slug"]})

@@ -14,23 +14,23 @@ class TestActions:
         event_slug = "slug"
         user = UserFactory()
         assert user.verified is False
-        action = actions.JoinSessionAction(user, parameters={"event_slug": event_slug})
+        action = actions.JoinSessionAction(user, parameters={"session_slug": event_slug})
         assert action.action_id == "spaces:join"
         url = action.build_url()
         assert f"spaces/join/{event_slug}" in url
         assert "?token=" in url
         # get it back
         token = url.split("?token=")[1]
-        action = actions.JoinSessionAction(user, parameters={"event_slug": event_slug})
+        action = actions.JoinSessionAction(user, parameters={"session_slug": event_slug})
         user, parameters = action.resolve(token)
         assert user.verified is True
         assert user == user
-        assert parameters["event_slug"] == event_slug
+        assert parameters["session_slug"] == event_slug
 
     def test_join_expired(self, db):
         event_slug = "slug"
         user = UserFactory()
-        action = actions.JoinSessionAction(user, parameters={"event_slug": event_slug})
+        action = actions.JoinSessionAction(user, parameters={"session_slug": event_slug})
         url = action.build_url(expires_at="2021-01-01T00:00:00Z")
         token = url.split("?token=")[1]
         try:

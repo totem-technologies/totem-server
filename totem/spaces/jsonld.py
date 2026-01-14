@@ -93,6 +93,6 @@ def create_jsonld(event: "Session"):
         },
     }
     jsonld["image"] = [
-        full_url(reverse("spaces:event_social_img", kwargs={"event_slug": event.slug, "image_format": "2to1"}))
+        full_url(reverse("spaces:session_social_img", kwargs={"session_slug": event.slug, "image_format": "2to1"}))
     ]
     return jsonld

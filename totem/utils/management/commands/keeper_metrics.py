@@ -58,8 +58,8 @@ class Command(BaseCommand):
             self.style.NOTICE(f"Generating metrics for {days} days: {start_date.date()} to {end_date.date()}")
         )
 
-        # Get all keepers (users who have authored circles)
-        keepers = User.objects.filter(created_circles__isnull=False).distinct()
+        # Get all keepers (users who have authored spaces)
+        keepers = User.objects.filter(created_spaces__isnull=False).distinct()
 
         if keeper_filter:
             keepers = keepers.filter(Q(email__icontains=keeper_filter) | Q(slug__icontains=keeper_filter))

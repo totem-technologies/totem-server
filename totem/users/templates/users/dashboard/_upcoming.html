@@ -7,7 +7,7 @@
     {% for session_item in attending_sessions %}
       <li
         class="col-span-1 divide-y divide-gray-200 rounded-3xl bg-white shadow-sm transition-all duration-500 hover:shadow-xl">
-        <a href="{% url 'circles:event_detail' event_slug=session_item.slug %}">
+        <a href="{% url 'spaces:session_detail' session_slug=session_item.slug %}">
           <div class="flex w-full items-start justify-between space-x-6 p-4">
             <div class="flex-1">
               <h2 class="h2 text-lg text-gray-900">

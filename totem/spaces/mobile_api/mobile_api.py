@@ -93,7 +93,7 @@ def post_session_feedback(request: HttpRequest, event_slug: str, payload: Sessio
         defaults["message"] = ""
 
     SessionFeedback.objects.update_or_create(
-        event=session,
+        session=session,
         user=user,
         defaults=defaults,
     )
@@ -142,7 +142,7 @@ def get_spaces_summary(request: HttpRequest):
     upcoming_events = (
         Session.objects.annotate(end_time=end_time_expression)
         .filter(attendees=user, cancelled=False, end_time__gt=timezone.now())
-        .select_related("circle")
+        .select_related("space")
         .prefetch_related("space__author", "space__categories", "attendees", "space__subscribed")
         .annotate(
             attendee_count=Count("attendees", distinct=True),

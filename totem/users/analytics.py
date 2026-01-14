@@ -31,15 +31,13 @@ def user_onboarded(user: "User"):
     _posthog.capture("user_onboarded", distinct_id=user.analytics_id())
 
 
-def event_joined(user: "User", event: "Session"):
+def session_joined(user: "User", session: "Session"):
     _posthog.capture(
-        "event_joined",
+        "session_joined",
         distinct_id=user.analytics_id(),
         properties={
-            "event_id": event.slug,
-            "session_id": event.slug,
-            "circle_id": event.space.slug,
-            "space_id": event.space.slug,
-            "keeper_id": event.space.author.analytics_id(),
+            "session_id": session.slug,
+            "space_id": session.space.slug,
+            "keeper_id": session.space.author.analytics_id(),
         },
     )

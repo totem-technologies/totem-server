@@ -83,7 +83,7 @@ class TestSessionModel:
         email = mail.outbox[0]
         assert email.to == [user.email]
         message = str(email.message())
-        assert "http://testserver/spaces/event" in message
+        assert "http://testserver/spaces/session" in message
         assert "http://testserver/spaces/subscribe" in message
         event.refresh_from_db()
         assert event.advertised
@@ -100,6 +100,6 @@ class TestSessionModel:
         email = mail.outbox[0]
         assert email.to == [user.email]
         message = str(email.message())
-        assert "http://testserver/spaces/event" in message
+        assert "http://testserver/spaces/session" in message
         event.refresh_from_db()
         assert event.notified_tomorrow

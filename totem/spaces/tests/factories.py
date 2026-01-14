@@ -30,8 +30,8 @@ class SpaceFactory(DjangoModelFactory, metaclass=BaseMetaFactory[Space]):
 
 
 class SessionFactory(DjangoModelFactory, metaclass=BaseMetaFactory[Session]):
-    # Use actual field name 'circle' but keep 'space' as alias for backwards compat
-    circle = SubFactory(SpaceFactory)
+    # Use actual field name 'space' but keep 'space' as alias for backwards compat
+    space = SubFactory(SpaceFactory)
     start = Faker("future_datetime", tzinfo=datetime.UTC)
     meeting_url = "https://example.com"
     duration_minutes = 60

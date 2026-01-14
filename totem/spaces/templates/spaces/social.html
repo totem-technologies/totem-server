@@ -11,9 +11,9 @@
       <h2>Square Post</h2>
       <a
         download="{{ session.slug }}-square.jpg"
-        href="{% url 'circles:event_social_img' event_slug=session.slug image_format="square" %}">
+        href="{% url 'spaces:session_social_img' session_slug=session.slug image_format="square" %}">
         <img
-          src="{% url 'circles:event_social_img' event_slug=session.slug image_format="square" %}"
+          src="{% url 'spaces:session_social_img' session_slug=session.slug image_format="square" %}"
           alt="" />
       </a>
     </div>
@@ -21,9 +21,9 @@
       <h2>2:1 Post</h2>
       <a
         download="{{ session.slug }}-wide.jpg"
-        href="{% url 'circles:event_social_img' event_slug=session.slug image_format="2to1" %}">
+        href="{% url 'spaces:session_social_img' session_slug=session.slug image_format="2to1" %}">
         <img
-          src="{% url 'circles:event_social_img' event_slug=session.slug image_format="2to1" %}"
+          src="{% url 'spaces:session_social_img' session_slug=session.slug image_format="2to1" %}"
           alt="" />
       </a>
     </div>
@@ -31,9 +31,9 @@
       <h2>4:5 Post</h2>
       <a
         download="{{ session.slug }}-tall.jpg"
-        href="{% url 'circles:event_social_img' event_slug=session.slug image_format="4to5" %}">
+        href="{% url 'spaces:session_social_img' session_slug=session.slug image_format="4to5" %}">
         <img
-          src="{% url 'circles:event_social_img' event_slug=session.slug image_format="4to5" %}"
+          src="{% url 'spaces:session_social_img' session_slug=session.slug image_format="4to5" %}"
           alt="" />
       </a>
     </div>

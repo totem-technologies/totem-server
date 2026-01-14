@@ -14,14 +14,14 @@ from totem.users.models import User
 def get_upcoming_spaces_list() -> QuerySet[Space]:
     """Get all published spaces with upcoming events."""
     return (
-        Space.objects.filter(published=True, events__start__gte=timezone.now())
+        Space.objects.filter(published=True, sessions__start__gte=timezone.now())
         .distinct()
         .select_related("author")
         .prefetch_related(
             "categories",
             "subscribed",
             Prefetch(
-                "events",
+                "sessions",
                 queryset=Session.objects.filter(start__gte=timezone.now())
                 .order_by("start")
                 .prefetch_related("attendees"),
@@ -34,14 +34,14 @@ def get_upcoming_spaces_list() -> QuerySet[Space]:
 
 def upcoming_recommended_spaces(user: User | None, categories: list[str] | None = None, author: str | None = None):
     spaces = (
-        Space.objects.filter(events__start__gte=timezone.now())
+        Space.objects.filter(sessions__start__gte=timezone.now())
         .distinct()
         .select_related("author")
         .prefetch_related(
             "categories",
             "subscribed",
             Prefetch(
-                "events",
+                "sessions",
                 queryset=Session.objects.filter(start__gte=timezone.now())
                 .order_by("start")
                 .prefetch_related("attendees"),
@@ -62,13 +62,13 @@ def upcoming_recommended_spaces(user: User | None, categories: list[str] | None 
 def upcoming_recommended_sessions(user: User | None, categories: list[str] | None = None, author: str | None = None):
     events = (
         Session.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True)
-        .select_related("circle")
+        .select_related("space")
         .prefetch_related(
             "space__author",
             "space__categories",
             "space__subscribed",
             Prefetch(
-                "space__events",
+                "space__sessions",
                 queryset=Session.objects.filter(start__gte=timezone.now())
                 .order_by("start")
                 .prefetch_related("attendees"),
@@ -126,8 +126,8 @@ def session_detail_schema(session: Session, user: User):
         cancelled=session.cancelled,
         joinable=session.can_join(user),
         ended=ended,
-        rsvp_url=reverse("spaces:rsvp", kwargs={"event_slug": session.slug}),
-        join_url=reverse("spaces:join", kwargs={"event_slug": session.slug}),
+        rsvp_url=reverse("spaces:rsvp", kwargs={"session_slug": session.slug}),
+        join_url=reverse("spaces:join", kwargs={"session_slug": session.slug}),
         cal_link=session.cal_link(),
         subscribe_url=reverse("mobile-api:spaces_subscribe", kwargs={"space_slug": space.slug}),
         subscribed=subscribed,

@@ -536,7 +536,7 @@ class TestMobileApiSpaces:
         )
 
         assert response.status_code == 204
-        feedback = SessionFeedback.objects.get(event=event, user=user)
+        feedback = SessionFeedback.objects.get(session=event, user=user)
         assert feedback.feedback == SessionFeedbackOptions.UP
         assert feedback.message == ""
 
@@ -553,7 +553,7 @@ class TestMobileApiSpaces:
         )
 
         assert response.status_code == 204
-        feedback = SessionFeedback.objects.get(event=event, user=user)
+        feedback = SessionFeedback.objects.get(session=event, user=user)
         assert feedback.feedback == SessionFeedbackOptions.DOWN
         assert feedback.message == "It was not good."
 
@@ -570,7 +570,7 @@ class TestMobileApiSpaces:
         )
 
         assert response.status_code == 204
-        feedback = SessionFeedback.objects.get(event=event, user=user)
+        feedback = SessionFeedback.objects.get(session=event, user=user)
         assert feedback.feedback == SessionFeedbackOptions.DOWN
         assert feedback.message == ""
 
@@ -592,7 +592,7 @@ class TestMobileApiSpaces:
         client, user = client_with_user
         event = SessionFactory()
         event.attendees.add(user)
-        SessionFeedback.objects.create(event=event, user=user, feedback=SessionFeedbackOptions.DOWN, message="old")
+        SessionFeedback.objects.create(session=event, user=user, feedback=SessionFeedbackOptions.DOWN, message="old")
 
         url = reverse("mobile-api:session_feedback", kwargs={"event_slug": event.slug})
         response = client.post(
@@ -602,7 +602,7 @@ class TestMobileApiSpaces:
         )
 
         assert response.status_code == 204
-        feedback = SessionFeedback.objects.get(event=event, user=user)
+        feedback = SessionFeedback.objects.get(session=event, user=user)
         assert feedback.feedback == SessionFeedbackOptions.UP
         assert feedback.message == ""
         assert SessionFeedback.objects.count() == 1

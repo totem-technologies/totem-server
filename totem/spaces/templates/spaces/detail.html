@@ -9,7 +9,7 @@
 {# djlint:off #}
 {% block title %}{{ object.title }}{% endblock title %}
 {% block description %}{{ object.content_text|truncatechars:140 }}{% endblock description %}
-{% block ogimage %}{% if session %}{% absurl 'circles:event_social_img' event_slug=session.slug image_format="2to1" %}{% endif %}{% endblock ogimage %}
+{% block ogimage %}{% if session %}{% absurl 'spaces:session_social_img' session_slug=session.slug image_format="2to1" %}{% endif %}{% endblock ogimage %}
 {# djlint:on #}
 {% block jsonld %}
   {{ session.jsonld|jsonld }}
@@ -17,7 +17,7 @@
 {% block content %}
   <div class="h-2"></div>
   <div class="m-auto flex max-w-5xl px-5 pb-2">
-    <a class="hover:text-tblue" href="{% url 'circles:list' %}">
+    <a class="hover:text-tblue" href="{% url 'spaces:list' %}">
       <h2 class="font-semibold">← All Spaces</h2>
     </a>
   </div>

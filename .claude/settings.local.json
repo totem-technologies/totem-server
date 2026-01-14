@@ -14,7 +14,10 @@
       "Bash(grep:*)",
       "Bash(find:*)",
       "Bash(git log:*)",
-      "Bash(xargs perl:*)"
+      "Bash(xargs perl:*)",
+      "Bash(perl -pi -e:*)",
+      "Bash(command make test ARGS=\"totem/spaces/tests/test_views.py -v --tb=short\")",
+      "Bash(command make test:*)"
     ]
   }
 }
