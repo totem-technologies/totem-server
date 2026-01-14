@@ -1,5 +1,6 @@
 import json
 import logging
+import threading
 from contextlib import asynccontextmanager
 from typing import Optional
 
@@ -95,11 +96,72 @@ async def _get_lk_api_client():
         await lkapi.aclose()
 
 
+async def _validate_and_update_room_on_join(room_name: str, user_slug: str) -> None:
+    """
+    Background task to validate speaking order and update room metadata when a user joins.
+
+    This is called asynchronously when an access token is created to detect user joins
+    and reorder participants accordingly.
+
+    Args:
+        room_name: The name of the room.
+        user_slug: The slug of the user joining.
+    """
+    try:
+        async with _get_lk_api_client() as lkapi:
+            room = await _get_room(room_name, lkapi)
+            if not room:
+                return
+
+            state = await _parse_room_state(room)
+
+            participants = await lkapi.room.list_participants(api.ListParticipantsRequest(room=room_name))
+            participant_identities = [p.identity for p in participants.participants]
+
+            if user_slug not in participant_identities:
+                participant_identities.append(user_slug)
+
+            state.validate_order(participant_identities)
+            await _update_room_metadata(room_name, state, lkapi)
+
+            logging.info(f"Updated room {room_name} speaking order on join: {state.speaking_order}")
+    except Exception as e:
+        # Don't fail token creation if background validation fails
+        logging.error(f"Failed to validate room state for {room_name} on join by {user_slug}: {e}")
+
+
+def _run_async_in_thread(coro):
+    """
+    Runs an async coroutine in a background thread.
+
+    Args:
+        coro: The coroutine to run.
+    """
+    import asyncio
+
+    def run():
+        try:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                loop.run_until_complete(coro)
+            finally:
+                loop.close()
+        except Exception as e:
+            logging.error(f"Error in background task: {e}")
+
+    thread = threading.Thread(target=run, daemon=True)
+    thread.start()
+
+
 def create_access_token(user: User, event: Session) -> str:
     """
     Create a LiveKit access token for a user to join a specific event room.
 
     If the room doesn't exist, it will be created automatically when the user joins.
+
+    This function also triggers a background task to validate the speaking order
+    and update room metadata, serving as a workaround to detect user joins.
     """
 
     participant_identity = user.slug
@@ -125,6 +187,9 @@ def create_access_token(user: User, event: Session) -> str:
             )
         )
     )
+
+    validation_task = _validate_and_update_room_on_join(room_name, participant_identity)
+    _run_async_in_thread(validation_task)
 
     return token.to_jwt()
 
@@ -520,7 +585,12 @@ async def _mute_everyone(room_name: str, lkapi: api.LiveKitAPI, except_identity:
                         )
                     )
                 except api.TwirpError as e:
-                    logging.error("Failed to mute participant %s in room %s: %s", participant.identity, room_name, e)
+                    logging.error(
+                        "Failed to mute participant %s in room %s: %s",
+                        participant.identity,
+                        room_name,
+                        e,
+                    )
                     continue
 
 
