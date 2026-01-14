@@ -126,7 +126,6 @@ async def _validate_and_update_room_on_join(room_name: str, user_slug: str) -> N
 
             logging.info(f"Updated room {room_name} speaking order on join: {state.speaking_order}")
     except Exception as e:
-        # Don't fail token creation if background validation fails
         logging.error(f"Failed to validate room state for {room_name} on join by {user_slug}: {e}")
 
 
