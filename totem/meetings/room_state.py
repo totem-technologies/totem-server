@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Optional
 
 from ninja import Schema
 
@@ -19,8 +20,8 @@ class SessionState(Schema):
     keeper_slug: str
     status: SessionStatus = SessionStatus.WAITING
     speaking_order: list[str]
-    speaking_now: str | None = None
-    next_speaker: str | None = None
+    speaking_now: Optional[str] = None
+    next_speaker: Optional[str] = None
     totem_status: TotemStatus = TotemStatus.NONE
 
     def start(self):
