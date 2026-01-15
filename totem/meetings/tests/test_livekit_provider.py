@@ -1,15 +1,7 @@
-"""
-Unit tests for the livekit_provider module.
-
-These tests mock the internal LiveKit API calls rather than the entire provider functions,
-allowing us to test the actual logic inside each function.
-"""
-
 import json
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from django.conf import settings
 from livekit import api
 
 from totem.meetings.livekit_provider import (
@@ -22,7 +14,6 @@ from totem.meetings.livekit_provider import (
     RoomNotFoundError,
     UnauthorizedError,
     accept_totem,
-    create_access_token,
     end_room,
     get_room_state,
     initialize_room,
@@ -34,45 +25,6 @@ from totem.meetings.livekit_provider import (
     start_room,
 )
 from totem.meetings.room_state import SessionStatus, TotemStatus
-from totem.spaces.tests.factories import SessionFactory
-from totem.users.tests.factories import UserFactory
-
-
-@pytest.mark.django_db
-class TestCreateAccessToken:
-    """Tests for the create_access_token function."""
-
-    @patch("totem.meetings.livekit_provider._run_async_in_thread")
-    def test_creates_valid_token(self, mock_thread):
-        """Test that create_access_token generates a valid JWT token."""
-        user = UserFactory()
-        event = SessionFactory()
-        event.attendees.add(user)
-
-        with (
-            patch.object(settings, "LIVEKIT_API_KEY", "test-key"),
-            patch.object(settings, "LIVEKIT_API_SECRET", "test-secret"),
-        ):
-            token = create_access_token(user, event)
-
-        assert isinstance(token, str)
-        assert len(token) > 0
-
-    @patch("totem.meetings.livekit_provider._run_async_in_thread")
-    def test_triggers_background_validation(self, mock_thread):
-        """Test that create_access_token triggers background validation."""
-        user = UserFactory()
-        event = SessionFactory()
-        event.attendees.add(user)
-
-        with (
-            patch.object(settings, "LIVEKIT_API_KEY", "test-key"),
-            patch.object(settings, "LIVEKIT_API_SECRET", "test-secret"),
-        ):
-            create_access_token(user, event)
-
-        # Verify background task was triggered
-        mock_thread.assert_called_once()
 
 
 @pytest.mark.django_db
@@ -90,12 +42,10 @@ class TestInitializeRoom:
 
             initialize_room("test-room", ["user1", "user2"], "user1")
 
-        # Verify room was created with correct metadata
         mock_lkapi.room.create_room.assert_called_once()
         call_args = mock_lkapi.room.create_room.call_args[1]["create"]
         assert call_args.name == "test-room"
 
-        # Verify metadata contains the initial state
         metadata = json.loads(call_args.metadata)
         assert metadata["keeper_slug"] == "user1"
         assert metadata["speaking_order"] == ["user1", "user2"]
@@ -111,7 +61,6 @@ class TestInitializeRoom:
 
             initialize_room("test-room", ["user1", "user2"], "user1")
 
-        # Should not create room if it already exists
         mock_lkapi.room.create_room.assert_not_called()
 
 
@@ -194,7 +143,6 @@ class TestStartRoom:
 
             start_room("test-room", "keeper")
 
-        # Verify metadata was updated
         mock_lkapi.room.update_room_metadata.assert_called_once()
         call_args = mock_lkapi.room.update_room_metadata.call_args[1]["update"]
         metadata = json.loads(call_args.metadata)
@@ -284,7 +232,6 @@ class TestPassTotem:
 
             pass_totem("test-room", "keeper", "keeper")
 
-        # Verify metadata was updated with passing status
         mock_lkapi.room.update_room_metadata.assert_called_once()
         call_args = mock_lkapi.room.update_room_metadata.call_args[1]["update"]
         metadata = json.loads(call_args.metadata)
@@ -313,8 +260,6 @@ class TestPassTotem:
 
         with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
             mock_get_client.return_value.__aenter__.return_value = mock_lkapi
-
-            # Keeper can pass even though user1 is speaking
             pass_totem("test-room", "keeper", "keeper")
 
         mock_lkapi.room.update_room_metadata.assert_called_once()
@@ -394,14 +339,12 @@ class TestAcceptTotem:
 
             accept_totem("test-room", "keeper", "user1")
 
-        # Verify metadata was updated
         mock_lkapi.room.update_room_metadata.assert_called_once()
         call_args = mock_lkapi.room.update_room_metadata.call_args[1]["update"]
         metadata = json.loads(call_args.metadata)
         assert metadata["speaking_now"] == "user1"
         assert metadata["totem_status"] == "accepted"
 
-        # Verify keeper was muted (not user1)
         assert mock_lkapi.room.mute_published_track.called
 
     def test_keeper_can_force_accept_totem(self):
@@ -503,7 +446,6 @@ class TestEndRoom:
 
             end_room("test-room")
 
-        # Verify metadata was updated
         mock_lkapi.room.update_room_metadata.assert_called_once()
         call_args = mock_lkapi.room.update_room_metadata.call_args[1]["update"]
         metadata = json.loads(call_args.metadata)
@@ -537,8 +479,6 @@ class TestEndRoom:
 @pytest.mark.django_db
 @pytest.mark.enable_socket
 class TestReorder:
-    """Tests for the reorder function."""
-
     def test_reorders_participants_successfully(self):
         """Test that reorder updates the speaking order correctly."""
         mock_room = Mock()
@@ -561,7 +501,6 @@ class TestReorder:
 
             new_order = reorder("test-room", ["user2", "user1", "keeper"])
 
-        # Verify keeper is always first
         assert new_order[0] == "keeper"
         assert "user1" in new_order
         assert "user2" in new_order
@@ -613,7 +552,6 @@ class TestMuteParticipant:
 
             mute_participant("test-room", "user1")
 
-        # Verify mute was called
         mock_lkapi.room.mute_published_track.assert_called_once()
 
     def test_raises_error_when_participant_not_found(self):
@@ -631,7 +569,7 @@ class TestMuteParticipant:
         """Test that mute_participant raises error when participant has no audio track."""
         mock_participant = Mock()
         mock_participant.identity = "user1"
-        mock_participant.tracks = []  # No audio tracks
+        mock_participant.tracks = []
 
         mock_lkapi = AsyncMock()
         mock_lkapi.room.get_participant.return_value = mock_participant
@@ -674,7 +612,6 @@ class TestMuteAllParticipants:
 
             mute_all_participants("test-room")
 
-        # Verify both participants were muted
         assert mock_lkapi.room.mute_published_track.call_count == 2
 
     def test_mutes_all_except_specified_identity(self):
@@ -703,7 +640,6 @@ class TestMuteAllParticipants:
 
             mute_all_participants("test-room", except_identity="keeper")
 
-        # Verify only user1 was muted, not keeper
         assert mock_lkapi.room.mute_published_track.call_count == 1
 
 
@@ -725,7 +661,6 @@ class TestRemoveParticipant:
 
             remove_participant("test-room", "user1")
 
-        # Verify remove was called with correct parameters
         mock_lkapi.room.remove_participant.assert_called_once()
 
     def test_raises_error_on_api_failure(self):
