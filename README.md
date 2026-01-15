@@ -7,23 +7,24 @@
 
 ## Basic Commands
 
-- make
-- make assets
-- make test
-- make deploy
+- `make install_local` - Install Python (via uv) and JS dependencies for local tooling (linting, type checking, etc.)
+- `make` - Start the dev environment (Docker, asset watching, livereload)
+- `make assets` - Build frontend assets (Tailwind CSS, JS bundles)
+- `make test` - Run Python and JS test suites
+- `make deploy` - Deploy to staging server
 
 ### Setting Up
 
 Requirements:
 
 - Docker Compose
-- Node.js
-- Bun
+- [uv](https://docs.astral.sh/uv/)
+- [Bun](https://bun.sh/)
 
 Steps:
 
-- Run `bun install` to install the JavaScript dependencies.
-- Run `make` to bring up the dev environment. You may need to make a blank `.env` file in the root directory.
+- Run `make install_local` to install dependencies.
+- Run `make` to bring up the dev environment. You may need to create a blank `.env` file in the root directory.
 - Run `make assets` to compile the assets.
 
 ### Running Tests
