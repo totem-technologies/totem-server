@@ -1,6 +1,7 @@
 import json
 import logging
 from contextlib import asynccontextmanager
+from typing import Optional
 
 from asgiref.sync import async_to_sync
 from django.conf import settings
@@ -99,6 +100,9 @@ def create_access_token(user: User, event: Session) -> str:
     Create a LiveKit access token for a user to join a specific event room.
 
     If the room doesn't exist, it will be created automatically when the user joins.
+
+    This function also triggers a background task to validate the speaking order
+    and update room metadata, serving as a workaround to detect user joins.
     """
 
     participant_identity = user.slug
@@ -128,7 +132,7 @@ def create_access_token(user: User, event: Session) -> str:
     return token.to_jwt()
 
 
-async def _get_room(room_name: str, lkapi: api.LiveKitAPI) -> api.Room | None:
+async def _get_room(room_name: str, lkapi: api.LiveKitAPI) -> Optional[api.Room]:
     """
     Retrieves room information.
 
@@ -330,8 +334,8 @@ async def accept_totem(room_name: str, keeper_slug: str, user_identity: str) -> 
 
         state = await _parse_room_state(room)
 
-        if state.speaking_now != user_identity:
-            raise NotCurrentSpeakerError(f"User {user_identity} is not the current speaker. Cannot accept the totem.")
+        if state.next_speaker != user_identity and keeper_slug != user_identity:
+            raise NotCurrentSpeakerError(f"User {user_identity} is not the next speaker. Cannot accept the totem.")
 
         state.accept_totem()
         await _update_room_metadata(room_name, state, lkapi)
@@ -477,7 +481,7 @@ async def mute_participant(room_name: str, user_identity: str) -> None:
 
 
 @async_to_sync
-async def mute_all_participants(room_name: str, except_identity: str | None = None) -> None:
+async def mute_all_participants(room_name: str, except_identity: Optional[str] = None) -> None:
     """
     Mutes all participants in the room.
     Args:
@@ -491,7 +495,7 @@ async def mute_all_participants(room_name: str, except_identity: str | None = No
         await _mute_everyone(room_name=room_name, lkapi=lkapi, except_identity=except_identity)
 
 
-async def _mute_everyone(room_name: str, lkapi: api.LiveKitAPI, except_identity: str | None = None):
+async def _mute_everyone(room_name: str, lkapi: api.LiveKitAPI, except_identity: Optional[str] = None):
     """
     Mutes everyone in the room.
 
@@ -519,7 +523,12 @@ async def _mute_everyone(room_name: str, lkapi: api.LiveKitAPI, except_identity:
                         )
                     )
                 except api.TwirpError as e:
-                    logging.error("Failed to mute participant %s in room %s: %s", participant.identity, room_name, e)
+                    logging.error(
+                        "Failed to mute participant %s in room %s: %s",
+                        participant.identity,
+                        room_name,
+                        e,
+                    )
                     continue
 
 
