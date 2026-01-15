@@ -38,4 +38,19 @@ Steps:
 ## Deployment notes
 
 - Totem used `dokku` for deployment. The `Dockerfile` is used to build the image.
-  - Configure `dokku` to use the production Dockerfile: `dokku builder:set totem selected dockerfile` and `dokku builder-dockerfile:set totem dockerfile-path compose/production/django/Dockerfile`
+  - Configure `dokku` to use the production Dockerfile: `dokku builder:set totem selected dockerfile` and `dokku builder-dockerfile:set totem dockerfile-path compose/production/django/Dockerfile`.
+
+## Restore DB from backup
+
+- Download backup locally
+- Take app offline: `dokku ps:stop totem`
+- `scp` backup into VM home folder
+- `tar -xf backup.tgz`
+- `docker cp backup/export dokku.postgres.totemdb:/tmp/export`
+- `docker exec -i dokku.postgres.totemdb bash`
+
+To do a full wipe and restore:
+- `dropdb -U postgres totemdb`
+- `createdb -U postgres -T template0 totemdb`
+- `pg_restore -U postgres -d totemdb < /tmp/export`
+- Then redeploy or `dokku ps:start totem`

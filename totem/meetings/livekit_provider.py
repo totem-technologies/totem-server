@@ -11,7 +11,7 @@ from livekit import api
 from totem.meetings.room_state import SessionState, SessionStatus
 from totem.users.models import User
 
-from ..circles.models import Session
+from ..spaces.models import Session
 
 # Constants
 ROOM_EMPTY_TIMEOUT_SECONDS = 60 * 60  # 1 hour

@@ -2,8 +2,8 @@ from django.core import mail
 from django.test import Client, override_settings
 from django.urls import reverse
 
-from totem.circles.tests.factories import SessionFactory
 from totem.email.emails import login_pin_email, missed_session_email, notify_session_advertisement
+from totem.spaces.tests.factories import SessionFactory
 from totem.users.models import LoginPin
 from totem.users.tests.factories import UserFactory
 
@@ -60,7 +60,7 @@ class TestAdvertEmail:
         email = mail.outbox[0]
         assert email.to == [user.email]
         message = str(email.message())
-        assert "http://testserver/spaces/event" in message
+        assert "http://testserver/spaces/session" in message
         assert event.space.title in message
         assert "http://testserver/spaces/subscribe" in message
         assert event.space.slug in message
@@ -118,7 +118,7 @@ class TestMissedSessionEmail:
         email = mail.outbox[0]
         assert email.to == [user.email]
         message = str(email.message())
-        assert "http://testserver/spaces/event" in message
+        assert "http://testserver/spaces/session" in message
         assert event.title in message
         assert "missed you" in message
         assert "forms.gle" in message

@@ -31,8 +31,8 @@ from . import analytics
 if TYPE_CHECKING:
     from django.db.models.query import QuerySet
 
-    from totem.circles.models import Circle, CircleEvent
     from totem.onboard.models import OnboardModel
+    from totem.spaces.models import Session, Space
 
 
 class ProfileImageSpec(ImageSpec):
@@ -57,11 +57,12 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
     """
 
     objects: UserManager = UserManager()  # type: ignore
-    # Related Types - use original related_names to match database
+    # Related Types
     onboard: "OnboardModel"
-    events_attending: "QuerySet[CircleEvent]"
-    events_joined: "QuerySet[CircleEvent]"
-    created_circles: "QuerySet[Circle]"
+    sessions_attending: "QuerySet[Session]"
+    sessions_joined: "QuerySet[Session]"
+    created_spaces: "QuerySet[Space]"
+    subscribed_spaces: "QuerySet[Space]"
     keeper_profile: "KeeperProfile"
 
     class ProfileChoices(TextChoices):
@@ -124,27 +125,6 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
 
     def is_keeper(self):
         return hasattr(self, "keeper_profile")
-
-    # New terminology aliases - point to the original database field names
-    @property
-    def created_spaces(self):
-        """Alias for created_circles - new terminology"""
-        return self.created_circles
-
-    @property
-    def subscribed_spaces(self):
-        """Alias for subscribed_circles - new terminology"""
-        return self.subscribed_circles
-
-    @property
-    def sessions_attending(self):
-        """Alias for events_attending - new terminology"""
-        return self.events_attending
-
-    @property
-    def sessions_joined(self):
-        """Alias for events_joined - new terminology"""
-        return self.events_joined
 
     def month_joined(self):
         return self.date_created.strftime("%B %Y")

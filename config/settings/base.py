@@ -88,7 +88,7 @@ THIRD_PARTY_APPS = [
 LOCAL_APPS = [
     "totem.api",
     "totem.blog",
-    "totem.circles",
+    "totem.spaces",
     "totem.course",
     "totem.dev",
     "totem.email",

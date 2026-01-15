@@ -649,7 +649,7 @@ export type TotemApiApiDevVersionResponses = {
 
 export type TotemApiApiDevVersionResponse = TotemApiApiDevVersionResponses[keyof TotemApiApiDevVersionResponses];
 
-export type TotemCirclesApiListEventsData = {
+export type TotemSpacesApiListEventsData = {
     body?: never;
     path?: never;
     query: {
@@ -673,32 +673,32 @@ export type TotemCirclesApiListEventsData = {
     url: '/api/v1/spaces/';
 };
 
-export type TotemCirclesApiListEventsResponses = {
+export type TotemSpacesApiListEventsResponses = {
     /**
      * OK
      */
     200: PagedEventListSchema;
 };
 
-export type TotemCirclesApiListEventsResponse = TotemCirclesApiListEventsResponses[keyof TotemCirclesApiListEventsResponses];
+export type TotemSpacesApiListEventsResponse = TotemSpacesApiListEventsResponses[keyof TotemSpacesApiListEventsResponses];
 
-export type TotemCirclesApiFilterOptionsData = {
+export type TotemSpacesApiFilterOptionsData = {
     body?: never;
     path?: never;
     query?: never;
     url: '/api/v1/spaces/filter-options';
 };
 
-export type TotemCirclesApiFilterOptionsResponses = {
+export type TotemSpacesApiFilterOptionsResponses = {
     /**
      * OK
      */
     200: FilterOptionsSchema;
 };
 
-export type TotemCirclesApiFilterOptionsResponse = TotemCirclesApiFilterOptionsResponses[keyof TotemCirclesApiFilterOptionsResponses];
+export type TotemSpacesApiFilterOptionsResponse = TotemSpacesApiFilterOptionsResponses[keyof TotemSpacesApiFilterOptionsResponses];
 
-export type TotemCirclesApiEventDetailData = {
+export type TotemSpacesApiEventDetailData = {
     body?: never;
     path: {
         /**
@@ -710,16 +710,16 @@ export type TotemCirclesApiEventDetailData = {
     url: '/api/v1/spaces/event/{event_slug}';
 };
 
-export type TotemCirclesApiEventDetailResponses = {
+export type TotemSpacesApiEventDetailResponses = {
     /**
      * OK
      */
     200: EventDetailSchema;
 };
 
-export type TotemCirclesApiEventDetailResponse = TotemCirclesApiEventDetailResponses[keyof TotemCirclesApiEventDetailResponses];
+export type TotemSpacesApiEventDetailResponse = TotemSpacesApiEventDetailResponses[keyof TotemSpacesApiEventDetailResponses];
 
-export type TotemCirclesApiUpcomingEventsData = {
+export type TotemSpacesApiUpcomingEventsData = {
     body?: never;
     path?: never;
     query?: {
@@ -745,7 +745,7 @@ export type TotemCirclesApiUpcomingEventsData = {
     url: '/api/v1/spaces/calendar';
 };
 
-export type TotemCirclesApiUpcomingEventsResponses = {
+export type TotemSpacesApiUpcomingEventsResponses = {
     /**
      * Response
      *
@@ -754,9 +754,9 @@ export type TotemCirclesApiUpcomingEventsResponses = {
     200: Array<EventCalendarSchema>;
 };
 
-export type TotemCirclesApiUpcomingEventsResponse = TotemCirclesApiUpcomingEventsResponses[keyof TotemCirclesApiUpcomingEventsResponses];
+export type TotemSpacesApiUpcomingEventsResponse = TotemSpacesApiUpcomingEventsResponses[keyof TotemSpacesApiUpcomingEventsResponses];
 
-export type TotemCirclesApiWebflowEventsListData = {
+export type TotemSpacesApiWebflowEventsListData = {
     body?: never;
     path?: never;
     query?: {
@@ -770,7 +770,7 @@ export type TotemCirclesApiWebflowEventsListData = {
     url: '/api/v1/spaces/webflow/list_events';
 };
 
-export type TotemCirclesApiWebflowEventsListResponses = {
+export type TotemSpacesApiWebflowEventsListResponses = {
     /**
      * Response
      *
@@ -779,16 +779,16 @@ export type TotemCirclesApiWebflowEventsListResponses = {
     200: Array<WebflowEventSchema>;
 };
 
-export type TotemCirclesApiWebflowEventsListResponse = TotemCirclesApiWebflowEventsListResponses[keyof TotemCirclesApiWebflowEventsListResponses];
+export type TotemSpacesApiWebflowEventsListResponse = TotemSpacesApiWebflowEventsListResponses[keyof TotemSpacesApiWebflowEventsListResponses];
 
-export type TotemCirclesApiListSpacesData = {
+export type TotemSpacesApiListSpacesData = {
     body?: never;
     path?: never;
     query?: never;
     url: '/api/v1/spaces/list';
 };
 
-export type TotemCirclesApiListSpacesResponses = {
+export type TotemSpacesApiListSpacesResponses = {
     /**
      * Response
      *
@@ -797,4 +797,4 @@ export type TotemCirclesApiListSpacesResponses = {
     200: Array<SpaceDetailSchema>;
 };
 
-export type TotemCirclesApiListSpacesResponse = TotemCirclesApiListSpacesResponses[keyof TotemCirclesApiListSpacesResponses];
+export type TotemSpacesApiListSpacesResponse = TotemSpacesApiListSpacesResponses[keyof TotemSpacesApiListSpacesResponses];

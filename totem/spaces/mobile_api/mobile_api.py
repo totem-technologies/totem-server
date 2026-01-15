@@ -1,0 +1,217 @@
+import datetime
+from typing import List
+
+from django.db import transaction
+from django.db.models import Count, DateTimeField, ExpressionWrapper, F
+from django.http import HttpRequest
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+from ninja import Router
+from ninja.errors import AuthorizationError
+from ninja.pagination import paginate
+
+from totem.onboard.models import OnboardModel
+from totem.spaces.mobile_api.mobile_filters import (
+    get_upcoming_spaces_list,
+    session_detail_schema,
+    space_detail_schema,
+    upcoming_recommended_sessions,
+    upcoming_recommended_spaces,
+)
+from totem.spaces.mobile_api.mobile_schemas import (
+    EventDetailSchema,
+    MobileSpaceDetailSchema,
+    SessionFeedbackSchema,
+    SpaceSchema,
+    SummarySpacesSchema,
+)
+from totem.spaces.models import Session, SessionException, SessionFeedback, SessionFeedbackOptions, Space
+from totem.users.models import User
+
+spaces_router = Router(tags=["spaces"])
+
+
+@spaces_router.post("/subscribe/{space_slug}", response={200: bool}, url_name="spaces_subscribe")
+def subscribe_to_space(request: HttpRequest, space_slug: str):
+    space = get_object_or_404(Space, slug=space_slug, published=True)
+    space.subscribe(request.user)
+    return True
+
+
+@spaces_router.delete("/subscribe/{space_slug}", response={200: bool}, url_name="spaces_unsubscribe")
+def unsubscribe_to_space(request: HttpRequest, space_slug: str):
+    space = get_object_or_404(Space, slug=space_slug)
+    space.unsubscribe(request.user)
+    return True
+
+
+@spaces_router.get("/subscribe", response={200: List[SpaceSchema]}, url_name="spaces_subscriptions")
+def list_subscriptions(request: HttpRequest):
+    return Space.objects.filter(subscribed=request.user)
+
+
+@spaces_router.get("/", response={200: List[MobileSpaceDetailSchema]}, url_name="mobile_spaces_list")
+@paginate
+def list_spaces(request):
+    spaces = get_upcoming_spaces_list()
+    return [space_detail_schema(space, request.user) for space in spaces]
+
+
+@spaces_router.get("/space/{space_slug}", response={200: MobileSpaceDetailSchema}, url_name="spaces_detail")
+def get_space_detail(request: HttpRequest, space_slug: str):
+    user: User = request.user  # type: ignore
+    space = get_object_or_404(Space, slug=space_slug)
+    return space_detail_schema(space, user)
+
+
+@spaces_router.get("/keeper/{slug}/", response={200: List[MobileSpaceDetailSchema]}, url_name="keeper_spaces")
+def get_keeper_spaces(request: HttpRequest, slug: str):
+    user: User = request.user  # type: ignore
+    spaces = get_upcoming_spaces_list().filter(author__slug=slug)
+    return [space_detail_schema(space, user) for space in spaces]
+
+
+@spaces_router.get("/session/{event_slug}", response={200: EventDetailSchema}, url_name="session_detail")
+def get_session_detail(request: HttpRequest, event_slug: str):
+    user: User = request.user  # type: ignore
+    session = get_object_or_404(Session, slug=event_slug)
+    return session_detail_schema(session, user)
+
+
+@spaces_router.post("/session/{event_slug}/feedback", response={204: None}, url_name="session_feedback")
+def post_session_feedback(request: HttpRequest, event_slug: str, payload: SessionFeedbackSchema):
+    user: User = request.user  # type: ignore
+    session = get_object_or_404(Session, slug=event_slug)
+
+    if not session.attendees.filter(pk=user.pk).exists():
+        raise AuthorizationError(message="User is not an attendee of this event.")
+
+    defaults: dict[str, str] = {"feedback": payload.feedback.value}
+    if payload.feedback == SessionFeedbackOptions.DOWN:
+        defaults["message"] = payload.message or ""
+    else:
+        defaults["message"] = ""
+
+    SessionFeedback.objects.update_or_create(
+        session=session,
+        user=user,
+        defaults=defaults,
+    )
+
+    return 204, None
+
+
+@spaces_router.get("/sessions/history", response={200: List[EventDetailSchema]}, url_name="sessions_history")
+def get_sessions_history(request: HttpRequest):
+    user: User = request.user  # type: ignore
+
+    session_history_query = user.sessions_joined.filter(space__published=True, cancelled=False).order_by("-start")
+    session_history = session_history_query.all()[0:10]
+
+    sessions = [session_detail_schema(session, user) for session in session_history]
+
+    return sessions
+
+
+@spaces_router.get("/sessions/recommended", response={200: List[EventDetailSchema]}, url_name="recommended_spaces")
+def get_recommended_spaces(request: HttpRequest, limit: int = 3, categories: list[str] | None = None):
+    user: User = request.user  # type: ignore
+
+    recommended_sessions = upcoming_recommended_sessions(user, categories=categories)[:limit]
+
+    sessions = [session_detail_schema(session, user) for session in recommended_sessions]
+    return sessions
+
+
+@spaces_router.get(
+    "/summary",
+    response={200: SummarySpacesSchema},
+    tags=["spaces"],
+    url_name="spaces_summary",
+)
+def get_spaces_summary(request: HttpRequest):
+    user: User = request.user  # type: ignore
+
+    spaces_qs = get_upcoming_spaces_list()
+
+    # The upcoming events that the user is subscribed to
+    end_time_expression = ExpressionWrapper(
+        F("start") + F("duration_minutes") * datetime.timedelta(minutes=1),
+        output_field=DateTimeField(),
+    )
+    upcoming_events = (
+        Session.objects.annotate(end_time=end_time_expression)
+        .filter(attendees=user, cancelled=False, end_time__gt=timezone.now())
+        .select_related("space")
+        .prefetch_related("space__author", "space__categories", "attendees", "space__subscribed")
+        .annotate(
+            attendee_count=Count("attendees", distinct=True),
+            subscriber_count=Count("space__subscribed", distinct=True),
+        )
+        .order_by("start")
+    )
+    upcoming = [session_detail_schema(event, user) for event in upcoming_events]
+    upcoming_space_slugs = {event.space.slug for event in upcoming_events}
+
+    # The recommended spaces based on the user's onboarding.
+    categories_set = set()
+    try:
+        onboard_model = OnboardModel.objects.get(user=user)
+        if onboard_model.hopes:
+            for hope in onboard_model.hopes.split(","):
+                name = hope.strip()
+                if name:
+                    categories_set.add(name)
+    except OnboardModel.DoesNotExist:
+        # If no onboard model, just use empty categories set
+        pass
+    # Add categories from user's previously joined spaces (single query)
+    previous_category_names = spaces_qs.filter(subscribed=user).values_list("categories__name", flat=True).distinct()
+    categories_set.update(name for name in previous_category_names if name)
+    recommended_spaces = upcoming_recommended_spaces(user, categories=list(categories_set))
+    for_you = [
+        space_detail_schema(space, user) for space in recommended_spaces if space.slug not in upcoming_space_slugs
+    ]
+
+    spaces = spaces_qs
+    explore = [space_detail_schema(space, user) for space in spaces if space.slug not in upcoming_space_slugs]
+
+    return SummarySpacesSchema(
+        upcoming=upcoming,
+        for_you=for_you,
+        explore=explore,
+    )
+
+
+@spaces_router.post(
+    "/rsvp/{event_slug}",
+    response={200: EventDetailSchema},
+    tags=["spaces"],
+    url_name="rsvp_confirm",
+)
+def rsvp_confirm(request: HttpRequest, event_slug: str):
+    user: User = request.user  # type: ignore
+    event = get_object_or_404(Session, slug=event_slug)
+    try:
+        with transaction.atomic():
+            event.add_attendee(user)
+            event.space.subscribe(user)
+    except SessionException as e:
+        raise AuthorizationError(message=str(e))
+    return session_detail_schema(event, user)
+
+
+@spaces_router.delete(
+    "/rsvp/{event_slug}",
+    response={200: EventDetailSchema},
+    tags=["spaces"],
+    url_name="rsvp_cancel",
+)
+def rsvp_cancel(request: HttpRequest, event_slug: str):
+    user: User = request.user  # type: ignore
+    event = get_object_or_404(Session, slug=event_slug)
+    try:
+        event.remove_attendee(user)
+    except SessionException as e:
+        raise AuthorizationError(message=str(e))
+    return session_detail_schema(event, user)

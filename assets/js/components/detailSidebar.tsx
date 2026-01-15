@@ -12,7 +12,7 @@ import {
 } from "solid-js"
 import { postData } from "@/libs/postData"
 import { timestampToDateString, timestampToTimeString } from "@/libs/time"
-import { type EventDetailSchema, totemCirclesApiEventDetail } from "../client"
+import { type EventDetailSchema, totemSpacesApiEventDetail } from "../client"
 import AddToCalendarButton from "./AddToCalendarButton"
 import ErrorBoundary from "./errors"
 import Icon, { type IconName } from "./icons"
@@ -412,7 +412,7 @@ function DetailSidebar(props: DetailSidebarProps) {
   const query = useQuery(() => ({
     queryKey: ["eventData"],
     queryFn: async () => {
-      const response = await totemCirclesApiEventDetail({
+      const response = await totemSpacesApiEventDetail({
         path: { event_slug: props.eventid || "" },
       })
       if (response.error) {

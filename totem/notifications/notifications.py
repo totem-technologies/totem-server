@@ -5,7 +5,7 @@ from typing import List
 
 from pydantic import BaseModel, ConfigDict
 
-import totem.circles.models as space_models
+import totem.spaces.models as space_models
 from totem.notifications.utils import notify_users
 from totem.users.models import User
 
@@ -65,7 +65,7 @@ def session_starting_notification(event: space_models.Session, user: User) -> No
         message=event.space.title,
         extra_data={
             "space_slug": event.space.slug,
-            "event_slug": event.slug,
+            "session_slug": event.slug,
         },
     )
 
@@ -82,7 +82,7 @@ def session_advertisement_notification(event: space_models.Session, user: User) 
         message=f"A new session by {author_name} has been posted. Reserve a spot now!",
         extra_data={
             "space_slug": event.space.slug,
-            "event_slug": event.slug,
+            "session_slug": event.slug,
             "image_url": image_url,
         },
     )
@@ -97,7 +97,7 @@ def missed_session_notification(event: space_models.Session, user: User) -> Noti
         message=f"We missed you at the {title} session.",
         extra_data={
             "space_slug": event.space.slug,
-            "event_slug": event.slug,
+            "session_slug": event.slug,
         },
     )
 

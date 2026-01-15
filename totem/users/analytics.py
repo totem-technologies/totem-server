@@ -4,7 +4,7 @@ from django.conf import settings
 from posthog import Posthog
 
 if TYPE_CHECKING:
-    from totem.circles.models import Session
+    from totem.spaces.models import Session
     from totem.users.models import User
 
 _posthog = Posthog(project_api_key=settings.POSTHOG_API_KEY, host="https://us.i.posthog.com")

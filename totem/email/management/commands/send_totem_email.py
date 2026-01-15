@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 
-from totem.circles.models import Session
 from totem.email import emails
+from totem.spaces.models import Session
 from totem.users.models import User
 
 session_maps = {
