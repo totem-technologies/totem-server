@@ -24,12 +24,13 @@ jobs:
     steps:
       - name: Checkout Code Repository
         uses: actions/checkout@v4
-      - uses: jdx/mise-action@v2
+      - uses: astral-sh/setup-uv@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
       - run: bun install --frozen-lockfile
       - name: Run pre-commit
-        run: |
-          pip install pipx
-          pipx run --spec 'pre-commit<5' pre-commit run --show-diff-on-failure --color=always --all-files
+        run: uvx pre-commit run --show-diff-on-failure --color=always --all-files
 
   pytest:
     runs-on: ubuntu-latest

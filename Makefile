@@ -52,11 +52,8 @@ livereload:
 assets:
 	bun run build
 
-.venv:
-	python3 -m venv .venv
-
-install_local: .venv
-	source .venv/bin/activate && uv sync --frozen
+install_local:
+	uv sync --frozen
 	bun install
 
 fixtures:
