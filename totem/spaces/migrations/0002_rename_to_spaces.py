@@ -18,6 +18,24 @@ def rename_circles_to_spaces(apps, schema_editor):
             # Fresh install - tables were already created with new names by 0001_initial
             return
 
+        # Check if BOTH old and new tables exist (mixed state from 0001_initial running first)
+        cursor.execute(
+            "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'spaces_space');"
+        )
+        new_tables_exist = cursor.fetchone()[0]
+
+        if new_tables_exist:
+            # Mixed state: 0001_initial created empty spaces_* tables, but circles_* still has data
+            # Drop the empty spaces_* tables so we can rename circles_* to spaces_*
+            cursor.execute("DROP TABLE IF EXISTS spaces_session_attendees CASCADE;")
+            cursor.execute("DROP TABLE IF EXISTS spaces_session_joined CASCADE;")
+            cursor.execute("DROP TABLE IF EXISTS spaces_sessionfeedback CASCADE;")
+            cursor.execute("DROP TABLE IF EXISTS spaces_session CASCADE;")
+            cursor.execute("DROP TABLE IF EXISTS spaces_space_categories CASCADE;")
+            cursor.execute("DROP TABLE IF EXISTS spaces_space_subscribed CASCADE;")
+            cursor.execute("DROP TABLE IF EXISTS spaces_space CASCADE;")
+            cursor.execute("DROP TABLE IF EXISTS spaces_spacecategory CASCADE;")
+
         # =====================================================
         # PHASE 1: Update django_content_type (CRITICAL FIRST)
         # This preserves taggit tags, auditlog, permissions
