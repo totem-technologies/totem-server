@@ -1,6 +1,34 @@
 from django.db import migrations
 
 
+def safe_rename_constraint(cursor, table, old_name, new_name):
+    """Safely rename a constraint, ignoring if it doesn't exist."""
+    cursor.execute(
+        f"""
+        DO $$
+        BEGIN
+            ALTER TABLE {table} RENAME CONSTRAINT {old_name} TO {new_name};
+        EXCEPTION
+            WHEN undefined_object THEN NULL;
+        END $$;
+        """
+    )
+
+
+def safe_rename_index(cursor, old_name, new_name):
+    """Safely rename an index, ignoring if it doesn't exist."""
+    cursor.execute(
+        f"""
+        DO $$
+        BEGIN
+            ALTER INDEX {old_name} RENAME TO {new_name};
+        EXCEPTION
+            WHEN undefined_object THEN NULL;
+        END $$;
+        """
+    )
+
+
 def rename_circles_to_spaces(apps, schema_editor):
     """Rename circles app to spaces with all tables, columns, constraints, and indexes.
 
@@ -132,92 +160,50 @@ def rename_circles_to_spaces(apps, schema_editor):
         cursor.execute("ALTER SEQUENCE circles_circleevent_joined_id_seq RENAME TO spaces_session_joined_id_seq;")
 
         # =====================================================
-        # PHASE 7: Rename primary key constraints
+        # PHASE 7: Rename primary key constraints (safe - ignores missing)
         # =====================================================
-        cursor.execute(
-            "ALTER TABLE spaces_spacecategory RENAME CONSTRAINT circles_circlecategory_pkey TO spaces_spacecategory_pkey;"
-        )
-        cursor.execute("ALTER TABLE spaces_space RENAME CONSTRAINT circles_circle_pkey TO spaces_space_pkey;")
-        cursor.execute("ALTER TABLE spaces_session RENAME CONSTRAINT circles_circleevent_pkey TO spaces_session_pkey;")
-        cursor.execute(
-            "ALTER TABLE spaces_sessionfeedback RENAME CONSTRAINT circles_sessionfeedback_pkey TO spaces_sessionfeedback_pkey;"
-        )
-        cursor.execute(
-            "ALTER TABLE spaces_space_categories RENAME CONSTRAINT circles_circle_categories_pkey TO spaces_space_categories_pkey;"
-        )
-        cursor.execute(
-            "ALTER TABLE spaces_space_subscribed RENAME CONSTRAINT circles_circle_subscribed_pkey TO spaces_space_subscribed_pkey;"
-        )
-        cursor.execute(
-            "ALTER TABLE spaces_session_attendees RENAME CONSTRAINT circles_circleevent_attendees_pkey TO spaces_session_attendees_pkey;"
-        )
-        cursor.execute(
-            "ALTER TABLE spaces_session_joined RENAME CONSTRAINT circles_circleevent_joined_pkey TO spaces_session_joined_pkey;"
-        )
+        safe_rename_constraint(cursor, "spaces_spacecategory", "circles_circlecategory_pkey", "spaces_spacecategory_pkey")
+        safe_rename_constraint(cursor, "spaces_space", "circles_circle_pkey", "spaces_space_pkey")
+        safe_rename_constraint(cursor, "spaces_session", "circles_circleevent_pkey", "spaces_session_pkey")
+        safe_rename_constraint(cursor, "spaces_sessionfeedback", "circles_sessionfeedback_pkey", "spaces_sessionfeedback_pkey")
+        safe_rename_constraint(cursor, "spaces_space_categories", "circles_circle_categories_pkey", "spaces_space_categories_pkey")
+        safe_rename_constraint(cursor, "spaces_space_subscribed", "circles_circle_subscribed_pkey", "spaces_space_subscribed_pkey")
+        safe_rename_constraint(cursor, "spaces_session_attendees", "circles_circleevent_attendees_pkey", "spaces_session_attendees_pkey")
+        safe_rename_constraint(cursor, "spaces_session_joined", "circles_circleevent_joined_pkey", "spaces_session_joined_pkey")
 
         # =====================================================
-        # PHASE 8: Rename unique constraints
+        # PHASE 8: Rename unique constraints (safe - ignores missing)
         # =====================================================
-        cursor.execute(
-            "ALTER TABLE spaces_spacecategory RENAME CONSTRAINT circles_circlecategory_slug_key TO spaces_spacecategory_slug_key;"
-        )
-        cursor.execute("ALTER TABLE spaces_space RENAME CONSTRAINT circles_circle_slug_key TO spaces_space_slug_key;")
-        cursor.execute(
-            "ALTER TABLE spaces_session RENAME CONSTRAINT circles_circleevent_slug_key TO spaces_session_slug_key;"
-        )
-        cursor.execute(
-            "ALTER TABLE spaces_session RENAME CONSTRAINT circles_circleevent_circle_id_start_open_title_345e6ff2_uniq TO spaces_session_space_id_start_open_title_uniq;"
-        )
-        cursor.execute(
-            "ALTER TABLE spaces_sessionfeedback RENAME CONSTRAINT unique_user_feedback_for_event TO unique_user_feedback_for_session;"
-        )
-        cursor.execute(
-            "ALTER TABLE spaces_space_categories RENAME CONSTRAINT circles_circle_categorie_circle_id_circlecategory_931ab1f2_uniq TO spaces_space_categories_space_id_spacecategory_id_uniq;"
-        )
-        cursor.execute(
-            "ALTER TABLE spaces_space_subscribed RENAME CONSTRAINT circles_circle_subscribed_circle_id_user_id_32dcc4a4_uniq TO spaces_space_subscribed_space_id_user_id_uniq;"
-        )
-        cursor.execute(
-            "ALTER TABLE spaces_session_attendees RENAME CONSTRAINT circles_circleevent_atte_circleevent_id_user_id_6eee231f_uniq TO spaces_session_attendees_session_id_user_id_uniq;"
-        )
-        cursor.execute(
-            "ALTER TABLE spaces_session_joined RENAME CONSTRAINT circles_circleevent_joined_circleevent_id_user_id_f11f0553_uniq TO spaces_session_joined_session_id_user_id_uniq;"
-        )
+        safe_rename_constraint(cursor, "spaces_spacecategory", "circles_circlecategory_slug_key", "spaces_spacecategory_slug_key")
+        safe_rename_constraint(cursor, "spaces_space", "circles_circle_slug_key", "spaces_space_slug_key")
+        safe_rename_constraint(cursor, "spaces_session", "circles_circleevent_slug_key", "spaces_session_slug_key")
+        # Handle both possible constraint names (schema evolved over time)
+        safe_rename_constraint(cursor, "spaces_session", "circles_circleevent_circle_id_start_open_title_345e6ff2_uniq", "spaces_session_space_id_start_open_title_uniq")
+        safe_rename_constraint(cursor, "spaces_session", "circles_circleevent_circle_id_start_open_a18d2760_uniq", "spaces_session_space_id_start_open_uniq")
+        safe_rename_constraint(cursor, "spaces_sessionfeedback", "unique_user_feedback_for_event", "unique_user_feedback_for_session")
+        safe_rename_constraint(cursor, "spaces_space_categories", "circles_circle_categorie_circle_id_circlecategory_931ab1f2_uniq", "spaces_space_categories_space_id_spacecategory_id_uniq")
+        safe_rename_constraint(cursor, "spaces_space_subscribed", "circles_circle_subscribed_circle_id_user_id_32dcc4a4_uniq", "spaces_space_subscribed_space_id_user_id_uniq")
+        safe_rename_constraint(cursor, "spaces_session_attendees", "circles_circleevent_atte_circleevent_id_user_id_6eee231f_uniq", "spaces_session_attendees_session_id_user_id_uniq")
+        safe_rename_constraint(cursor, "spaces_session_joined", "circles_circleevent_joined_circleevent_id_user_id_f11f0553_uniq", "spaces_session_joined_session_id_user_id_uniq")
 
         # =====================================================
-        # PHASE 9: Rename indexes
+        # PHASE 9: Rename indexes (safe - ignores missing)
         # =====================================================
-        cursor.execute("ALTER INDEX circles_circle_author_id_3be3d6f7 RENAME TO spaces_space_author_id;")
-        cursor.execute("ALTER INDEX circles_circle_slug_82f7c047_like RENAME TO spaces_space_slug_like;")
-        cursor.execute("ALTER INDEX circles_circleevent_circle_id_816ee437 RENAME TO spaces_session_space_id;")
-        cursor.execute("ALTER INDEX circles_circleevent_slug_8bcc62e3_like RENAME TO spaces_session_slug_like;")
-        cursor.execute("ALTER INDEX circles_circlecategory_slug_ed0f0770_like RENAME TO spaces_spacecategory_slug_like;")
-        cursor.execute("ALTER INDEX circles_sessionfeedback_event_id_b0305c8d RENAME TO spaces_sessionfeedback_session_id;")
-        cursor.execute("ALTER INDEX circles_sessionfeedback_user_id_88d17eec RENAME TO spaces_sessionfeedback_user_id;")
-        cursor.execute(
-            "ALTER INDEX circles_circle_categories_circle_id_8ef9be67 RENAME TO spaces_space_categories_space_id;"
-        )
-        cursor.execute(
-            "ALTER INDEX circles_circle_categories_circlecategory_id_ab707200 RENAME TO spaces_space_categories_spacecategory_id;"
-        )
-        cursor.execute(
-            "ALTER INDEX circles_circle_subscribed_circle_id_3da57f69 RENAME TO spaces_space_subscribed_space_id;"
-        )
-        cursor.execute(
-            "ALTER INDEX circles_circle_subscribed_user_id_99082b2c RENAME TO spaces_space_subscribed_user_id;"
-        )
-        cursor.execute(
-            "ALTER INDEX circles_circleevent_attendees_circleevent_id_324eacfb RENAME TO spaces_session_attendees_session_id;"
-        )
-        cursor.execute(
-            "ALTER INDEX circles_circleevent_attendees_user_id_c0299166 RENAME TO spaces_session_attendees_user_id;"
-        )
-        cursor.execute(
-            "ALTER INDEX circles_circleevent_joined_circleevent_id_a7966a11 RENAME TO spaces_session_joined_session_id;"
-        )
-        cursor.execute(
-            "ALTER INDEX circles_circleevent_joined_user_id_38fe1c26 RENAME TO spaces_session_joined_user_id;"
-        )
+        safe_rename_index(cursor, "circles_circle_author_id_3be3d6f7", "spaces_space_author_id")
+        safe_rename_index(cursor, "circles_circle_slug_82f7c047_like", "spaces_space_slug_like")
+        safe_rename_index(cursor, "circles_circleevent_circle_id_816ee437", "spaces_session_space_id")
+        safe_rename_index(cursor, "circles_circleevent_slug_8bcc62e3_like", "spaces_session_slug_like")
+        safe_rename_index(cursor, "circles_circlecategory_slug_ed0f0770_like", "spaces_spacecategory_slug_like")
+        safe_rename_index(cursor, "circles_sessionfeedback_event_id_b0305c8d", "spaces_sessionfeedback_session_id")
+        safe_rename_index(cursor, "circles_sessionfeedback_user_id_88d17eec", "spaces_sessionfeedback_user_id")
+        safe_rename_index(cursor, "circles_circle_categories_circle_id_8ef9be67", "spaces_space_categories_space_id")
+        safe_rename_index(cursor, "circles_circle_categories_circlecategory_id_ab707200", "spaces_space_categories_spacecategory_id")
+        safe_rename_index(cursor, "circles_circle_subscribed_circle_id_3da57f69", "spaces_space_subscribed_space_id")
+        safe_rename_index(cursor, "circles_circle_subscribed_user_id_99082b2c", "spaces_space_subscribed_user_id")
+        safe_rename_index(cursor, "circles_circleevent_attendees_circleevent_id_324eacfb", "spaces_session_attendees_session_id")
+        safe_rename_index(cursor, "circles_circleevent_attendees_user_id_c0299166", "spaces_session_attendees_user_id")
+        safe_rename_index(cursor, "circles_circleevent_joined_circleevent_id_a7966a11", "spaces_session_joined_session_id")
+        safe_rename_index(cursor, "circles_circleevent_joined_user_id_38fe1c26", "spaces_session_joined_user_id")
 
         # =====================================================
         # PHASE 10: Recreate FK constraints with new names
