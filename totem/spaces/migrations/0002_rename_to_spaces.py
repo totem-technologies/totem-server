@@ -8,13 +8,13 @@ def rename_circles_to_spaces(apps, schema_editor):
     Fresh installs will create 'spaces_*' tables directly and skip the rename operations.
     """
     with schema_editor.connection.cursor() as cursor:
-        # Check if the new tables already exist (fresh installs will have them)
+        # Check if the OLD circles_circle table exists - if not, this is a fresh install
         cursor.execute(
-            "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'spaces_space');"
+            "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'circles_circle');"
         )
-        new_tables_exist = cursor.fetchone()[0]
+        old_tables_exist = cursor.fetchone()[0]
 
-        if new_tables_exist:
+        if not old_tables_exist:
             # Fresh install - tables were already created with new names by 0001_initial
             return
 
