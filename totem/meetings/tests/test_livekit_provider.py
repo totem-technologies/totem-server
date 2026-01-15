@@ -12,7 +12,6 @@ import pytest
 from django.conf import settings
 from livekit import api
 
-from totem.circles.tests.factories import SessionFactory
 from totem.meetings.livekit_provider import (
     KeeperNotInRoomError,
     NoAudioTrackError,
@@ -35,6 +34,7 @@ from totem.meetings.livekit_provider import (
     start_room,
 )
 from totem.meetings.room_state import SessionStatus, TotemStatus
+from totem.spaces.tests.factories import SessionFactory
 from totem.users.tests.factories import UserFactory
 
 
