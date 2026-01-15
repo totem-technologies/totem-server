@@ -20,7 +20,7 @@ from django.core.management.base import BaseCommand
 from django.db.models import Q
 from django.utils import timezone
 
-from totem.circles.models import CircleEvent
+from totem.spaces.models import CircleEvent
 from totem.users.models import User
 
 
@@ -58,8 +58,8 @@ class Command(BaseCommand):
             self.style.NOTICE(f"Generating metrics for {days} days: {start_date.date()} to {end_date.date()}")
         )
 
-        # Get all keepers (users who have authored circles)
-        keepers = User.objects.filter(created_circles__isnull=False).distinct()
+        # Get all keepers (users who have authored spaces)
+        keepers = User.objects.filter(created_spaces__isnull=False).distinct()
 
         if keeper_filter:
             keepers = keepers.filter(Q(email__icontains=keeper_filter) | Q(slug__icontains=keeper_filter))
@@ -92,7 +92,7 @@ class Command(BaseCommand):
         # A session is "completed" if it has ended and wasn't cancelled
         sessions = (
             CircleEvent.objects.filter(
-                circle__author=keeper,
+                space__author=keeper,
                 start__gte=start_date,
                 start__lte=end_date,
                 cancelled=False,

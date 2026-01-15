@@ -16,7 +16,7 @@ import {
   Show,
   useContext,
 } from "solid-js"
-import { type SpaceDetailSchema, totemCirclesApiListSpaces } from "@/client"
+import { type SpaceDetailSchema, totemSpacesApiListSpaces } from "@/client"
 import { timestampToDateStringShort, timestampToTimeString } from "@/libs/time"
 import { eventCalendarURL } from "@/libs/urls"
 import Avatar from "./avatar"
@@ -85,7 +85,7 @@ function SpacesListProvider(props: { children: JSXElement }) {
     void refetch()
   })
   const [spaces, { refetch }] = createResource(async () => {
-    return (await totemCirclesApiListSpaces()).data || []
+    return (await totemSpacesApiListSpaces()).data || []
   })
   const setCategory = (category: string) => {
     setParams({

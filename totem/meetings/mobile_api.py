@@ -6,7 +6,6 @@ from livekit import api
 from ninja import Router
 
 import totem.meetings.livekit_provider as livekit
-from totem.circles.models import Session
 from totem.meetings.livekit_provider import (
     KeeperNotInRoomError,
     LiveKitConfigurationError,
@@ -20,6 +19,7 @@ from totem.meetings.livekit_provider import (
 )
 from totem.meetings.room_state import SessionState
 from totem.meetings.schemas import ErrorResponseSchema, LivekitMuteParticipantSchema, LivekitTokenResponseSchema
+from totem.spaces.models import Session
 from totem.users import analytics
 from totem.users.models import User
 

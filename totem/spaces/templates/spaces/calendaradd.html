@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load static %}
+{% load avatar %}
+{% load markdown %}
+{# djlint:off #}
+{% block title %}Add to Calendar - {{ object.title }}{% endblock title %}
+{% block description %}{{ object.content_html|striptags|truncatewords:30 }}{% endblock description %}
+{# djlint:on #}
+{% block content %}
+  <div class="m-auto pt-10">
+    <div class="card m-auto max-w-2xl border-gray-200 bg-white p-10">
+      <h1 class="h2 text-center">{{ session.space.title }}</h1>
+      <div class="h-5"></div>
+      <p class="text-center">
+        <strong
+          >{{ session.start|date:'l, F j' }}
+          <span class="inline-block"
+            >@ {{ session.start|date:'P T' }}</span
+          ></strong
+        >
+      </p>
+      <div class="h-5"></div>
+      <p class="text-center">Add this Session to your calendar</p>
+      <div class="h-5"></div>
+      {# djlint:off #}
+      <add-to-calendar-button
+        class="m-auto"
+        styleLight="--btn-shadow:none; --btn-shadow-hover:none"
+        hideBranding
+        {% if debug %}debug{% endif %}
+        buttonStyle="round"
+        name="Totem - {{ session.space.title }}"
+        options="'Apple','Google','Outlook.com'"
+        buttonsList
+        location="{{ session.cal_link }}?r=cal_link"
+        startDate="{{ session.start|date:"Y-m-d" }}"
+        endDate="{{ session.end|date:"Y-m-d" }}"
+        startTime="{{ session.start|date:"H:i" }}"
+        endTime="{{ session.end|date:"H:i" }}"
+        timeZone="{{ user.timezone }}"></add-to-calendar-button>
+      {# djlint:on #}
+      <div class="h-5"></div>
+      <a
+        class="link text-center"
+        href="{% url "spaces:session_detail" session_slug=session.slug %}"
+        >See session details</a
+      >
+    </div>
+  </div>
+{% endblock content %}
+{% block inline_javascript %}
+  <script src="{% static 'js/atcb.min.js' %}" defer></script>
+{% endblock inline_javascript %}

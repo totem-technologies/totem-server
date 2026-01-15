@@ -25,7 +25,7 @@
               <td class="text-right">
                 <form
                   method="post"
-                  action="{% url 'circles:subscribe' slug=space.slug %}">
+                  action="{% url 'spaces:subscribe' slug=space.slug %}">
                   <input type="hidden" name="action" value="unsubscribe" />
                   <input
                     type="hidden"
@@ -45,7 +45,7 @@
   {% else %}
     <p>
       You are not subscribed to any Spaces.
-      <a class="link" href="{% url 'circles:list' %}">Go sign up for some!</a>
+      <a class="link" href="{% url 'spaces:list' %}">Go sign up for some!</a>
     </p>
   {% endif %}
 </div>
