@@ -17,4 +17,5 @@
     "isolatedModules": true,
     "plugins": [],
   },
+  "exclude": ["totem/**", "staticfiles/**"],
 }
