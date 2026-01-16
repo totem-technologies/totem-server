@@ -4,7 +4,7 @@ from django.db.models import Count, F, OuterRef, Q, Subquery
 from django.urls import reverse
 from django.utils import timezone
 
-from totem.spaces.schemas import EventDetailSchema, EventSpaceSchema, NextEventSchema, SpaceDetailSchema
+from totem.spaces.schemas import NextSessionSchema, SessionDetailSchema, SessionSpaceSchema, SpaceDetailSchema
 from totem.users.models import User
 
 from .models import Session, Space, SpaceCategory
@@ -148,11 +148,11 @@ def session_detail_schema(session: Session, user: User):
 
     attending = session.attendees.filter(pk=user.pk).exists()
 
-    return EventDetailSchema(
+    return SessionDetailSchema(
         slug=session.slug,
         title=session.title,
         space_title=space.title,
-        space=EventSpaceSchema.from_orm(space),
+        space=SessionSpaceSchema.from_orm(space),
         description=session.content_html,
         price=space.price,
         seats_left=session.seats_left(),
@@ -181,10 +181,10 @@ def space_detail_schema(space: Space, user: User, session: Session | None = None
     category_name = category.name if category else None
 
     next_session = session or space.next_session()
-    next_session_schema: NextEventSchema | None = None
+    next_session_schema: NextSessionSchema | None = None
     if next_session:
         seats_left = next_session.seats_left()
-        next_session_schema = NextEventSchema(
+        next_session_schema = NextSessionSchema(
             slug=next_session.slug,
             start=next_session.start,
             title=next_session.title,

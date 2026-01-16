@@ -4,7 +4,7 @@
     "target": "ESNext",
     "module": "ESNext",
     "allowJs": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "jsx": "preserve",
@@ -12,9 +12,10 @@
     "types": ["vite/client", "@testing-library/jest-dom", "@types/bun"],
     "noEmit": true,
     "paths": {
-      "@/*": ["./assets/js/*"]
+      "@/*": ["./assets/js/*"],
     },
     "isolatedModules": true,
-    "plugins": []
-  }
+    "plugins": [],
+  },
+  "exclude": ["totem/**", "staticfiles/**"],
 }

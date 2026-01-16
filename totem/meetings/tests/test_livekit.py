@@ -139,8 +139,8 @@ class TestGetLiveKitToken:
         user.is_staff = True
         user.save()
 
-        circle = SpaceFactory(author=user)
-        event = SessionFactory(space=circle)
+        space = SpaceFactory(author=user)
+        event = SessionFactory(space=space)
 
         with patch(f"{self.LIVEKIT_PROVIDER_PATH}.start_room", new_callable=Mock) as mock_start_room:
             url = reverse("mobile-api:start_room", kwargs={"event_slug": event.slug})
@@ -168,8 +168,8 @@ class TestGetLiveKitToken:
         user.is_staff = True
         user.save()
 
-        circle = SpaceFactory(author=user)
-        event = SessionFactory(space=circle)
+        space = SpaceFactory(author=user)
+        event = SessionFactory(space=space)
 
         with patch(f"{self.LIVEKIT_PROVIDER_PATH}.end_room", new_callable=Mock) as mock_end_room:
             url = reverse("mobile-api:end_room", kwargs={"event_slug": event.slug})
@@ -194,8 +194,8 @@ class TestGetLiveKitToken:
         user.is_staff = True
         user.save()
 
-        circle = SpaceFactory(author=user)
-        event = SessionFactory(space=circle)
+        space = SpaceFactory(author=user)
+        event = SessionFactory(space=space)
         participant_to_mute = "participant-slug-to-mute"
 
         with patch(f"{self.LIVEKIT_PROVIDER_PATH}.mute_participant", new_callable=Mock) as mock_mute:
@@ -225,8 +225,8 @@ class TestGetLiveKitToken:
 
     def test_mute_all_participants_success_by_keeper(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        circle = SpaceFactory(author=user)
-        event = SessionFactory(space=circle)
+        space = SpaceFactory(author=user)
+        event = SessionFactory(space=space)
 
         with patch(f"{self.LIVEKIT_PROVIDER_PATH}.mute_all_participants", new_callable=Mock) as mock_mute_all:
             url = reverse("mobile-api:mute_all_participants", kwargs={"event_slug": event.slug})
@@ -257,8 +257,8 @@ class TestGetLiveKitToken:
 
     def test_mute_all_participants_livekit_api_error(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        circle = SpaceFactory(author=user)
-        event = SessionFactory(space=circle)
+        space = SpaceFactory(author=user)
+        event = SessionFactory(space=space)
 
         from livekit import api
 
@@ -275,8 +275,8 @@ class TestGetLiveKitToken:
 
     def test_mute_all_participants_unexpected_error(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        circle = SpaceFactory(author=user)
-        event = SessionFactory(space=circle)
+        space = SpaceFactory(author=user)
+        event = SessionFactory(space=space)
 
         with patch(
             f"{self.LIVEKIT_PROVIDER_PATH}.mute_all_participants",
@@ -294,8 +294,8 @@ class TestGetLiveKitToken:
         user.is_staff = True
         user.save()
 
-        circle = SpaceFactory(author=user)
-        event = SessionFactory(space=circle)
+        space = SpaceFactory(author=user)
+        event = SessionFactory(space=space)
         participant_to_remove = "participant-slug-to-remove"
 
         with patch(f"{self.LIVEKIT_PROVIDER_PATH}.remove_participant", new_callable=Mock) as mock_remove:
@@ -313,8 +313,8 @@ class TestGetLiveKitToken:
         user.is_staff = True
         user.save()
 
-        circle = SpaceFactory(author=user)
-        event = SessionFactory(space=circle)
+        space = SpaceFactory(author=user)
+        event = SessionFactory(space=space)
         participant_to_remove = event.space.author.slug
 
         url = reverse(
@@ -360,8 +360,8 @@ class TestGetLiveKitToken:
         user.is_staff = True
         user.save()
 
-        circle = SpaceFactory(author=user)
-        event = SessionFactory(space=circle)
+        space = SpaceFactory(author=user)
+        event = SessionFactory(space=space)
         event.save()
 
         new_order = ["participant1-slug", "participant2-slug", user.slug]
@@ -405,8 +405,8 @@ class TestGetLiveKitToken:
         user.is_staff = True
         user.save()
 
-        circle = SpaceFactory(author=user)
-        event = SessionFactory(space=circle)
+        space = SpaceFactory(author=user)
+        event = SessionFactory(space=space)
         new_order = ["invalid-slug"]
         payload = {"order": new_order}
 
@@ -426,8 +426,8 @@ class TestGetLiveKitToken:
         user.is_staff = True
         user.save()
 
-        circle = SpaceFactory(author=user)
-        event = SessionFactory(space=circle)
+        space = SpaceFactory(author=user)
+        event = SessionFactory(space=space)
         new_order = ["invalid-slug"]
         payload = {"order": new_order}
 

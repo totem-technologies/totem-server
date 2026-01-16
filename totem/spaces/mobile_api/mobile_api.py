@@ -19,8 +19,8 @@ from totem.spaces.mobile_api.mobile_filters import (
     upcoming_recommended_spaces,
 )
 from totem.spaces.mobile_api.mobile_schemas import (
-    EventDetailSchema,
     MobileSpaceDetailSchema,
+    SessionDetailSchema,
     SessionFeedbackSchema,
     SpaceSchema,
     SummarySpacesSchema,
@@ -71,7 +71,7 @@ def get_keeper_spaces(request: HttpRequest, slug: str):
     return [space_detail_schema(space, user) for space in spaces]
 
 
-@spaces_router.get("/session/{event_slug}", response={200: EventDetailSchema}, url_name="session_detail")
+@spaces_router.get("/session/{event_slug}", response={200: SessionDetailSchema}, url_name="session_detail")
 def get_session_detail(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
     session = get_object_or_404(Session, slug=event_slug)
@@ -101,7 +101,7 @@ def post_session_feedback(request: HttpRequest, event_slug: str, payload: Sessio
     return 204, None
 
 
-@spaces_router.get("/sessions/history", response={200: List[EventDetailSchema]}, url_name="sessions_history")
+@spaces_router.get("/sessions/history", response={200: List[SessionDetailSchema]}, url_name="sessions_history")
 def get_sessions_history(request: HttpRequest):
     user: User = request.user  # type: ignore
 
@@ -113,7 +113,7 @@ def get_sessions_history(request: HttpRequest):
     return sessions
 
 
-@spaces_router.get("/sessions/recommended", response={200: List[EventDetailSchema]}, url_name="recommended_spaces")
+@spaces_router.get("/sessions/recommended", response={200: List[SessionDetailSchema]}, url_name="recommended_spaces")
 def get_recommended_spaces(request: HttpRequest, limit: int = 3, categories: list[str] | None = None):
     user: User = request.user  # type: ignore
 
@@ -139,7 +139,7 @@ def get_spaces_summary(request: HttpRequest):
         F("start") + F("duration_minutes") * datetime.timedelta(minutes=1),
         output_field=DateTimeField(),
     )
-    upcoming_events = (
+    upcoming_sessions = (
         Session.objects.annotate(end_time=end_time_expression)
         .filter(attendees=user, cancelled=False, end_time__gt=timezone.now())
         .select_related("space")
@@ -150,8 +150,8 @@ def get_spaces_summary(request: HttpRequest):
         )
         .order_by("start")
     )
-    upcoming = [session_detail_schema(event, user) for event in upcoming_events]
-    upcoming_space_slugs = {event.space.slug for event in upcoming_events}
+    upcoming = [session_detail_schema(event, user) for event in upcoming_sessions]
+    upcoming_space_slugs = {event.space.slug for event in upcoming_sessions}
 
     # The recommended spaces based on the user's onboarding.
     categories_set = set()
@@ -185,7 +185,7 @@ def get_spaces_summary(request: HttpRequest):
 
 @spaces_router.post(
     "/rsvp/{event_slug}",
-    response={200: EventDetailSchema},
+    response={200: SessionDetailSchema},
     tags=["spaces"],
     url_name="rsvp_confirm",
 )
@@ -203,7 +203,7 @@ def rsvp_confirm(request: HttpRequest, event_slug: str):
 
 @spaces_router.delete(
     "/rsvp/{event_slug}",
-    response={200: EventDetailSchema},
+    response={200: SessionDetailSchema},
     tags=["spaces"],
     url_name="rsvp_cancel",
 )

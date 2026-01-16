@@ -38,14 +38,3 @@ SubscribeActionParameters = SubscribeSpaceParameters
 SubscribeAction = SubscribeSpaceAction
 JoinCircleParameters = JoinSessionParameters
 JoinCircleAction = JoinSessionAction
-
-
-# class AttendCircleParameters(TypedDict):
-#     event_slug: str
-
-
-# class AttendCircleAction(ActionBase[AttendCircleParameters]):
-#     action_id = "spaces:event_detail"
-
-#     def get_url(self) -> str:
-#         return reverse("spaces:event_detail", kwargs={"session_slug": self.parameters["event_slug"]})

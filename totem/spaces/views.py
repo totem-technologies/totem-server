@@ -83,7 +83,6 @@ def _space_detail(request: HttpRequest, user: User, space: Space, session: Sessi
             "attending": attending,
             "joinable": joinable,
             "subscribed": subscribed,
-            "event": session,
             "session": session,
             "other_spaces": other_spaces,
         },
@@ -280,7 +279,7 @@ def _make_social_img(session: Session, start_day, start_time_pst, start_time_est
         title = session.title
         subtitle = session.space.title
 
-    background_url = f"{settings.BASE_DIR}/totem/static/images/circles/default-bg.jpg"
+    background_url = f"{settings.BASE_DIR}/totem/static/images/spaces/default-bg.jpg"
     if session.space.image:
         background_url = session.space.image.url
         if background_url.startswith("/"):

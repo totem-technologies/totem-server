@@ -8,10 +8,10 @@ from ninja.pagination import paginate
 from ninja.params.functions import Query
 
 from totem.spaces.schemas import (
-    EventDetailSchema,
-    EventListSchema,
-    EventsFilterSchema,
     FilterOptionsSchema,
+    SessionDetailSchema,
+    SessionListSchema,
+    SessionsFilterSchema,
     SpaceDetailSchema,
 )
 from totem.users.models import User
@@ -28,9 +28,9 @@ from .models import Session, Space
 router = Router()
 
 
-@router.get("/", response={200: List[EventListSchema]}, tags=["events"], url_name="events_list")
+@router.get("/", response={200: List[SessionListSchema]}, tags=["events"], url_name="events_list")
 @paginate
-def list_events(request, filters: EventsFilterSchema = Query()):
+def list_events(request, filters: SessionsFilterSchema = Query()):
     return all_upcoming_recommended_sessions(request.user, category=filters.category, author=filters.author)
 
 
@@ -53,7 +53,7 @@ def filter_options(request):
 
 @router.get(
     "/event/{event_slug}",
-    response={200: EventDetailSchema},
+    response={200: SessionDetailSchema},
     tags=["events"],
     url_name="event_detail",
 )

@@ -3,9 +3,9 @@ from django.urls import reverse
 from django.utils import timezone
 
 from totem.spaces.mobile_api.mobile_schemas import (
-    EventDetailSchema,
     MobileSpaceDetailSchema,
-    NextEventSchema,
+    NextSessionSchema,
+    SessionDetailSchema,
 )
 from totem.spaces.models import Session, Space
 from totem.users.models import User
@@ -25,7 +25,7 @@ def get_upcoming_spaces_list() -> QuerySet[Space]:
                 queryset=Session.objects.filter(start__gte=timezone.now())
                 .order_by("start")
                 .prefetch_related("attendees"),
-                to_attr="upcoming_events",
+                to_attr="upcoming_sessions",
             ),
         )
         .annotate(subscriber_count=Count("subscribed", distinct=True))
@@ -45,7 +45,7 @@ def upcoming_recommended_spaces(user: User | None, categories: list[str] | None 
                 queryset=Session.objects.filter(start__gte=timezone.now())
                 .order_by("start")
                 .prefetch_related("attendees"),
-                to_attr="upcoming_events",
+                to_attr="upcoming_sessions",
             ),
         )
         .annotate(subscriber_count=Count("subscribed", distinct=True))
@@ -72,7 +72,7 @@ def upcoming_recommended_sessions(user: User | None, categories: list[str] | Non
                 queryset=Session.objects.filter(start__gte=timezone.now())
                 .order_by("start")
                 .prefetch_related("attendees"),
-                to_attr="upcoming_events",
+                to_attr="upcoming_sessions",
             ),
         )
         .annotate(
@@ -112,7 +112,7 @@ def session_detail_schema(session: Session, user: User):
     else:
         attending = session.attendees.filter(pk=user.pk).exists()
 
-    return EventDetailSchema(
+    return SessionDetailSchema(
         slug=session.slug,
         title=session.title,
         space=space_detail_schema(space, user),
@@ -144,7 +144,7 @@ def next_session_schema(next_session: Session, user: User):
     else:
         attending = next_session.attendees.filter(pk=user.pk).exists()
 
-    return NextEventSchema(
+    return NextSessionSchema(
         slug=next_session.slug,
         start=next_session.start,
         title=next_session.title,
@@ -164,12 +164,12 @@ def space_detail_schema(space: Space, user: User):
     category = space.categories.first()
     category_name = category.name if category else None
 
-    if hasattr(space, "upcoming_events"):
-        upcoming_events = space.upcoming_events
+    if hasattr(space, "upcoming_sessions"):
+        upcoming_sessions = space.upcoming_sessions
     else:
-        upcoming_events = space.sessions.filter(start__gte=timezone.now()).order_by("start")
+        upcoming_sessions = space.sessions.filter(start__gte=timezone.now()).order_by("start")
 
-    next_events = [next_session_schema(event, user) for event in upcoming_events]
+    next_events = [next_session_schema(event, user) for event in upcoming_sessions]
 
     if hasattr(space, "subscriber_count"):
         subscribers = space.subscriber_count

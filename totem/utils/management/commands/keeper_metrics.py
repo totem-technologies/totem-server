@@ -20,7 +20,7 @@ from django.core.management.base import BaseCommand
 from django.db.models import Q
 from django.utils import timezone
 
-from totem.spaces.models import CircleEvent
+from totem.spaces.models import Session
 from totem.users.models import User
 
 
@@ -91,7 +91,7 @@ class Command(BaseCommand):
         # Get all completed (not cancelled, ended) sessions for this keeper
         # A session is "completed" if it has ended and wasn't cancelled
         sessions = (
-            CircleEvent.objects.filter(
+            Session.objects.filter(
                 space__author=keeper,
                 start__gte=start_date,
                 start__lte=end_date,
@@ -101,7 +101,7 @@ class Command(BaseCommand):
                 # Session has ended (start + duration is in the past)
                 start__lte=timezone.now() - timedelta(minutes=1)
             )
-            .prefetch_related("attendees", "joined", "circle")
+            .prefetch_related("attendees", "joined", "space")
         )
 
         # Filter to only truly completed sessions (ended)
@@ -111,7 +111,7 @@ class Command(BaseCommand):
         sessions_hosted = len(completed_sessions)
 
         # 2. Spaces Hosted (unique)
-        spaces_hosted = len(set(s.circle_id for s in completed_sessions))
+        spaces_hosted = len(set(s.space_id for s in completed_sessions))
 
         # 3a. Total Sign-Ups
         total_signups = sum(s.attendees.count() for s in completed_sessions)

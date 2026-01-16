@@ -11,12 +11,13 @@
     "dev": "concurrently --kill-others-on-fail \"bun run dev:js\" \"bun run dev:tailwind\" \"bun run build:atcb\"",
     "livereload": "livereload ./totem/ -e 'html,css,js,py,mjml' --wait 200",
     "openapi-ts": "openapi-ts",
+    "typecheck": "bunx @typescript/native-preview --noEmit --skipLibCheck",
     "start": "bun run dev",
     "tw": "tailwindcss -i ./assets/css/styles.css -o ./totem/static/js/bundles/styles.css",
     "dev:js": "bun run build.ts -- dev",
     "dev:tailwind": "NODE_ENV=development bun run tw",
     "test": "vitest",
-    "test:ci": "vitest run"
+    "test:ci": "bun run typecheck && vitest run"
   },
   "keywords": [],
   "author": "",

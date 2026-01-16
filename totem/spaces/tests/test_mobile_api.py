@@ -111,38 +111,38 @@ class TestMobileApiSpaces:
 
     def test_get_space_detail(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
-        circle = SpaceFactory(published=True)
+        space = SpaceFactory(published=True)
 
-        url = reverse("mobile-api:spaces_detail", kwargs={"space_slug": circle.slug})
+        url = reverse("mobile-api:spaces_detail", kwargs={"space_slug": space.slug})
         response = client.get(url)
 
         assert response.status_code == 200
         data = response.json()
-        assert data["slug"] == circle.slug
-        assert data["title"] == circle.title
-        assert data["slug"] == circle.slug
+        assert data["slug"] == space.slug
+        assert data["title"] == space.title
+        assert data["slug"] == space.slug
 
     def test_get_space_detail_unpublished(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
-        circle = SpaceFactory(published=False)
+        space = SpaceFactory(published=False)
 
-        url = reverse("mobile-api:spaces_detail", kwargs={"space_slug": circle.slug})
+        url = reverse("mobile-api:spaces_detail", kwargs={"space_slug": space.slug})
         response = client.get(url)
 
         assert response.status_code == 200
         data = response.json()
-        assert data["slug"] == circle.slug
+        assert data["slug"] == space.slug
 
     def test_get_keeper_spaces(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
 
         keeper1 = UserFactory(is_staff=True)
-        circle = SpaceFactory(author=keeper1, published=True)
-        SessionFactory(space=circle)
+        space = SpaceFactory(author=keeper1, published=True)
+        SessionFactory(space=space)
 
-        # This circle should not appear as it is unpublished
-        unpublished_circle = SpaceFactory(author=keeper1, published=False)
-        SessionFactory(space=unpublished_circle)
+        # This space should not appear as it is unpublished
+        unpublished_space = SpaceFactory(author=keeper1, published=False)
+        SessionFactory(space=unpublished_space)
 
         url = reverse("mobile-api:keeper_spaces", kwargs={"slug": keeper1.slug})
         response = client.get(url)
@@ -150,7 +150,7 @@ class TestMobileApiSpaces:
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 1
-        assert data[0]["slug"] == circle.slug
+        assert data[0]["slug"] == space.slug
 
     def test_get_keeper_spaces_no_spaces(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
@@ -273,7 +273,7 @@ class TestMobileApiSpaces:
         assert len(data["upcoming"]) == 1
         assert data["upcoming"][0]["slug"] == attending_event.slug
 
-    def test_upcoming_events_includes_in_progress_and_future(self, client_with_user: tuple[Client, User]):
+    def test_upcoming_session_includes_in_progress_and_future(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         now = timezone.now()
 
@@ -301,9 +301,9 @@ class TestMobileApiSpaces:
         assert response.status_code == 200
         data = response.json()
 
-        upcoming_events_context = data["upcoming"]
+        upcoming_sessions_context = data["upcoming"]
 
-        assert len(upcoming_events_context) == 2
+        assert len(upcoming_sessions_context) == 2
 
     def test_summary_for_you_section(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -312,13 +312,13 @@ class TestMobileApiSpaces:
         love_category = SpaceCategoryFactory(name="love")
 
         # Create a space the user is subscribed to with a different category
-        subscribed_circle = SpaceFactory(categories=[self_category])
-        subscribed_circle.subscribed.add(user)
-        SessionFactory(space=subscribed_circle, start=timezone.now() + timedelta(days=3))
+        subscribed_space = SpaceFactory(categories=[self_category])
+        subscribed_space.subscribed.add(user)
+        SessionFactory(space=subscribed_space, start=timezone.now() + timedelta(days=3))
 
-        # This event has a non-matching category and should not be recommended
-        non_matching_circle = SpaceFactory(categories=[love_category])
-        SessionFactory(start=timezone.now() + timedelta(days=4), space=non_matching_circle)
+        # This session has a non-matching category and should not be recommended
+        non_matching_space = SpaceFactory(categories=[love_category])
+        SessionFactory(start=timezone.now() + timedelta(days=4), space=non_matching_space)
 
         url = reverse("mobile-api:spaces_summary")
         response = client.get(url)
@@ -327,23 +327,23 @@ class TestMobileApiSpaces:
 
         assert len(data["for_you"]) == 1
         for_you_slugs = {item["slug"] for item in data["for_you"]}
-        assert subscribed_circle.slug in for_you_slugs
+        assert subscribed_space.slug in for_you_slugs
 
     def test_summary_explore_section(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         OnboardModelFactory(user=user)
 
-        # This circle has an upcoming event and should appear in 'explore'
-        explore_circle_1 = SpaceFactory()
-        SessionFactory(space=explore_circle_1, start=timezone.now() + timedelta(days=10))
+        # This space has an upcoming session and should appear in 'explore'
+        explore_space_1 = SpaceFactory()
+        SessionFactory(space=explore_space_1, start=timezone.now() + timedelta(days=10))
 
-        # This circle only has past events and should NOT appear
-        past_event_circle = SpaceFactory()
-        SessionFactory(space=past_event_circle, start=timezone.now() - timedelta(days=1))
+        # This space only has past sessions and should NOT appear
+        past_session_space = SpaceFactory()
+        SessionFactory(space=past_session_space, start=timezone.now() - timedelta(days=1))
 
-        # This circle is unpublished and should NOT appear
-        unpublished_circle = SpaceFactory(published=False)
-        SessionFactory(space=unpublished_circle, start=timezone.now() + timedelta(days=5))
+        # This space is unpublished and should NOT appear
+        unpublished_space = SpaceFactory(published=False)
+        SessionFactory(space=unpublished_space, start=timezone.now() + timedelta(days=5))
 
         url = reverse("mobile-api:spaces_summary")
         response = client.get(url)
@@ -351,16 +351,16 @@ class TestMobileApiSpaces:
         data = response.json()
 
         explore_slugs = {item["slug"] for item in data["explore"]}
-        assert explore_circle_1.slug in explore_slugs
-        assert past_event_circle.slug not in explore_slugs
-        assert unpublished_circle.slug not in explore_slugs
+        assert explore_space_1.slug in explore_slugs
+        assert past_session_space.slug not in explore_slugs
+        assert unpublished_space.slug not in explore_slugs
 
     def test_summary_no_onboard_model(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         # Don't create OnboardModel
         # Create some spaces to ensure we have something to return
-        circle = SpaceFactory(published=True)
-        SessionFactory(space=circle, start=timezone.now() + timedelta(days=5))
+        space = SpaceFactory(published=True)
+        SessionFactory(space=space, start=timezone.now() + timedelta(days=5))
 
         url = reverse("mobile-api:spaces_summary")
         response = client.get(url)
@@ -372,27 +372,27 @@ class TestMobileApiSpaces:
         assert "explore" in data
         assert "upcoming" in data
 
-    def test_summary_upcoming_circles_excluded_from_for_you_and_explore(self, client_with_user: tuple[Client, User]):
+    def test_summary_upcoming_spaces_excluded_from_for_you_and_explore(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         OnboardModelFactory(user=user)
         self_category = SpaceCategoryFactory(name="self")
 
-        # Create a circle that would normally appear in for_you (user is subscribed and has matching category)
-        upcoming_circle = SpaceFactory(categories=[self_category], published=True)
-        upcoming_circle.subscribed.add(user)
+        # Create a space that would normally appear in for_you (user is subscribed and has matching category)
+        upcoming_space = SpaceFactory(categories=[self_category], published=True)
+        upcoming_space.subscribed.add(user)
 
-        # Create an upcoming event for this circle that the user is attending
-        upcoming_event = SessionFactory(space=upcoming_circle, start=timezone.now() + timedelta(days=5))
-        upcoming_event.attendees.add(user)
+        # Create an upcoming session for this space that the user is attending
+        upcoming_session = SessionFactory(space=upcoming_space, start=timezone.now() + timedelta(days=5))
+        upcoming_session.attendees.add(user)
 
-        # Create another circle that should appear in for_you (to ensure for_you is not empty)
-        for_you_circle = SpaceFactory(categories=[self_category], published=True)
-        for_you_circle.subscribed.add(user)
-        SessionFactory(space=for_you_circle, start=timezone.now() + timedelta(days=10))
+        # Create another space that should appear in for_you (to ensure for_you is not empty)
+        for_you_space = SpaceFactory(categories=[self_category], published=True)
+        for_you_space.subscribed.add(user)
+        SessionFactory(space=for_you_space, start=timezone.now() + timedelta(days=10))
 
-        # Create another circle that should appear in explore (to ensure explore is not empty)
-        explore_circle = SpaceFactory(published=True)
-        SessionFactory(space=explore_circle, start=timezone.now() + timedelta(days=7))
+        # Create another space that should appear in explore (to ensure explore is not empty)
+        explore_space = SpaceFactory(published=True)
+        SessionFactory(space=explore_space, start=timezone.now() + timedelta(days=7))
 
         url = reverse("mobile-api:spaces_summary")
         response = client.get(url)
@@ -400,15 +400,15 @@ class TestMobileApiSpaces:
         data = response.json()
 
         upcoming_slugs = {item["slug"] for item in data["upcoming"]}
-        assert upcoming_event.slug in upcoming_slugs
+        assert upcoming_session.slug in upcoming_slugs
 
         for_you_slugs = {item["slug"] for item in data["for_you"]}
-        assert upcoming_circle.slug not in for_you_slugs
-        assert for_you_circle.slug in for_you_slugs
+        assert upcoming_space.slug not in for_you_slugs
+        assert for_you_space.slug in for_you_slugs
 
         explore_slugs = {item["slug"] for item in data["explore"]}
-        assert upcoming_circle.slug not in explore_slugs
-        assert explore_circle.slug in explore_slugs
+        assert upcoming_space.slug not in explore_slugs
+        assert explore_space.slug in explore_slugs
 
     def test_rsvp_confirm(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user

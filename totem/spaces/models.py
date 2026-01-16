@@ -375,8 +375,6 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
     def jsonld(self):
         return jsonld.create_jsonld(self)
 
-    # def attend_url(self, user):
-    #     return AttendCircleAction(user=user, parameters={"event_slug": self.slug}).build_url()
     def session_title_or_title(self):
         return self.title or self.space.title
 

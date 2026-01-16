@@ -18,7 +18,8 @@
       "Bash(perl -pi -e:*)",
       "Bash(command make test ARGS=\"totem/spaces/tests/test_views.py -v --tb=short\")",
       "Bash(command make test:*)",
-      "Bash(command make assets:*)"
+      "Bash(command make assets:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

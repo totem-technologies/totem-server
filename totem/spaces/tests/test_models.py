@@ -17,89 +17,89 @@ def test_ics_hash():
 
 class SpaceModelTest(TestCase):
     def test_title_label(self):
-        circle = SpaceFactory()
-        field_label = circle._meta.get_field("title").verbose_name  # type: ignore
+        space = SpaceFactory()
+        field_label = space._meta.get_field("title").verbose_name  # type: ignore
         self.assertEqual(field_label, "title")
 
     def test_get_absolute_url(self):
-        circle = SpaceFactory()
+        space = SpaceFactory()
         # This will also fail if the urlconf is not defined.
-        self.assertEqual(circle.get_absolute_url(), f"/spaces/{circle.slug}/")
+        self.assertEqual(space.get_absolute_url(), f"/spaces/{space.slug}/")
 
     def test_subscribed_list(self):
-        circle = SpaceFactory()
-        self.assertEqual(circle.subscribed_list(), "")
+        space = SpaceFactory()
+        self.assertEqual(space.subscribed_list(), "")
 
     def test_price_min_value(self):
-        circle = SpaceFactory()
-        circle.price = -1
+        space = SpaceFactory()
+        space.price = -1
         with self.assertRaisesMessage(ValidationError, "Price must be greater than or equal to 0"):
-            circle.full_clean()
+            space.full_clean()
 
     def test_price_max_value(self):
-        circle = SpaceFactory()
-        circle.price = 1001
+        space = SpaceFactory()
+        space.price = 1001
         with self.assertRaisesMessage(ValidationError, "Price must be less than or equal to 1000"):
-            circle.full_clean()
+            space.full_clean()
 
     def test_subscribed(self):
-        circle = SpaceFactory()
-        self.assertEqual(circle.subscribed.count(), 0)
+        space = SpaceFactory()
+        self.assertEqual(space.subscribed.count(), 0)
         user = UserFactory()
-        circle.subscribed.add(user)
-        self.assertEqual(circle.subscribed.count(), 1)
-        circle.subscribed.add(user)
-        self.assertEqual(circle.subscribed.count(), 1)
-        circle.subscribed.remove(user)
-        self.assertEqual(circle.subscribed.count(), 0)
+        space.subscribed.add(user)
+        self.assertEqual(space.subscribed.count(), 1)
+        space.subscribed.add(user)
+        self.assertEqual(space.subscribed.count(), 1)
+        space.subscribed.remove(user)
+        self.assertEqual(space.subscribed.count(), 0)
 
 
 class TestSessionModel:
     def test_notify(self, db):
         user = UserFactory()
-        event = SessionFactory()
-        event.attendees.add(user)
+        session = SessionFactory()
+        session.attendees.add(user)
         assert mail.outbox == []
-        event.save()
-        assert not event.notified
-        event.notify()
+        session.save()
+        assert not session.notified
+        session.notify()
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
         message = str(email.message())
         assert "http://testserver/spaces/join/" in message
-        event.refresh_from_db()
-        assert event.notified
+        session.refresh_from_db()
+        assert session.notified
 
     def test_advertise(self, db):
         user = UserFactory()
-        event = SessionFactory()
-        event.space.subscribed.add(user)
+        session = SessionFactory()
+        session.space.subscribed.add(user)
         assert mail.outbox == []
-        event.save()
-        assert not event.advertised
-        event.advertise()
+        session.save()
+        assert not session.advertised
+        session.advertise()
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
         message = str(email.message())
         assert "http://testserver/spaces/session" in message
         assert "http://testserver/spaces/subscribe" in message
-        event.refresh_from_db()
-        assert event.advertised
+        session.refresh_from_db()
+        assert session.advertised
 
     def test_notify_tomorrow(self, db):
         user = UserFactory()
-        event = SessionFactory()
-        event.attendees.add(user)
+        session = SessionFactory()
+        session.attendees.add(user)
         assert mail.outbox == []
-        event.save()
-        assert not event.notified_tomorrow
-        event.notify_tomorrow()
+        session.save()
+        assert not session.notified_tomorrow
+        session.notify_tomorrow()
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
         message = str(email.message())
         assert "http://testserver/spaces/session" in message
-        event.refresh_from_db()
-        assert event.notified_tomorrow
+        session.refresh_from_db()
+        assert session.notified_tomorrow

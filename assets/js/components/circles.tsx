@@ -18,9 +18,9 @@ import {
 import { timestampToDateString, timestampToTimeString } from "@/libs/time"
 import {
   type CategoryFilterSchema,
-  type EventListSchema,
   type FilterOptionsSchema,
-  type PagedEventListSchema,
+  type PagedSessionListSchema,
+  type SessionListSchema,
   totemSpacesApiFilterOptions,
   totemSpacesApiListEvents,
 } from "../client/index"
@@ -38,7 +38,7 @@ interface DateChunk {
   day: number
   month: string
   weekdayShort: string
-  events: EventListSchema[]
+  events: SessionListSchema[]
   dateId: string
 }
 
@@ -47,7 +47,7 @@ interface CircleListContextType {
   setParams: (params: QueryParams) => void
   reset: () => void
   refetch: () => void
-  events: Resource<PagedEventListSchema | undefined>
+  events: Resource<PagedSessionListSchema | undefined>
   chunkedEvents: () => DateChunk[]
   getMore: () => void
   activeID: Accessor<string>
@@ -134,7 +134,7 @@ function CircleListProvider(props: { children: JSXElement }) {
   )
 }
 
-function chunkEventsByDate(events: PagedEventListSchema) {
+function chunkEventsByDate(events: PagedSessionListSchema) {
   const dateChunks: DateChunk[] = []
   for (const event of events.items) {
     const start = event.start
@@ -285,7 +285,7 @@ function EventsChunkedByDate() {
   )
 }
 
-function Event(props: { event: EventListSchema }) {
+function Event(props: { event: SessionListSchema }) {
   const isSmall = createMediaQuery("(max-width: 767px)")
   return (
     <>
@@ -299,7 +299,7 @@ function Event(props: { event: EventListSchema }) {
   )
 }
 
-export function MobileEvent(props: { event: EventListSchema }) {
+export function MobileEvent(props: { event: SessionListSchema }) {
   const start = () => {
     const s = props.event.start
     if (s) return timestampToTimeString(s)
@@ -333,7 +333,7 @@ export function MobileEvent(props: { event: EventListSchema }) {
   )
 }
 
-function DesktopEvent(props: { event: EventListSchema }) {
+function DesktopEvent(props: { event: SessionListSchema }) {
   return (
     <a
       href={props.event.url}
@@ -371,7 +371,7 @@ function DesktopEvent(props: { event: EventListSchema }) {
   )
 }
 
-function getAvatar(event: EventListSchema) {
+function getAvatar(event: SessionListSchema) {
   return (
     <Avatar
       size={70}

@@ -16,7 +16,7 @@ class SpaceSchema(ModelSchema):
         fields = ["title", "slug", "date_created", "date_modified", "subtitle"]
 
 
-class EventListSchema(ModelSchema):
+class SessionListSchema(ModelSchema):
     space: SpaceSchema
     url: str
 
@@ -33,7 +33,7 @@ class EventListSchema(ModelSchema):
         fields = ["start", "slug", "date_created", "date_modified", "title"]
 
 
-class EventsFilterSchema(FilterSchema):
+class SessionsFilterSchema(FilterSchema):
     category: str | None
     author: str | None
 
@@ -53,7 +53,7 @@ class FilterOptionsSchema(Schema):
     authors: List[AuthorFilterSchema]
 
 
-class EventSpaceSchema(ModelSchema):
+class SessionSpaceSchema(ModelSchema):
     author: PublicUserSchema
 
     def description(self, obj: Space):
@@ -80,10 +80,10 @@ class MeetingProviderEnum(str, Enum):
     LIVEKIT = "livekit"
 
 
-class EventDetailSchema(Schema):
+class SessionDetailSchema(Schema):
     slug: str
     title: str
-    space: EventSpaceSchema
+    space: SessionSpaceSchema
     space_title: str
     description: str
     price: int
@@ -107,7 +107,7 @@ class EventDetailSchema(Schema):
     meeting_provider: MeetingProviderEnum
 
 
-class NextEventSchema(Schema):
+class NextSessionSchema(Schema):
     slug: str
     start: datetime
     link: str
@@ -129,7 +129,7 @@ class SpaceDetailSchema(Schema):
     short_description: str
     content: str
     author: PublicUserSchema
-    next_event: NextEventSchema | None
+    next_event: NextSessionSchema | None
     category: str | None
     subscribers: int
     recurring: str | None
@@ -137,6 +137,6 @@ class SpaceDetailSchema(Schema):
 
 
 class SummarySpacesSchema(Schema):
-    upcoming: List[EventDetailSchema]
+    upcoming: List[SessionDetailSchema]
     for_you: List[SpaceDetailSchema]
     explore: List[SpaceDetailSchema]
