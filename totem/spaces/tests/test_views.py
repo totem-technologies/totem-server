@@ -17,40 +17,40 @@ class TestSpaceDetailView:
         user = UserFactory()
         user.save()
         client.force_login(user)
-        circle = SessionFactory()
-        circle.add_attendee(user)
-        url = reverse("spaces:session_detail", kwargs={"session_slug": circle.slug})
+        session = SessionFactory()
+        session.add_attendee(user)
+        url = reverse("spaces:session_detail", kwargs={"session_slug": session.slug})
         response = client.get(url)
         assert response.status_code == 200
 
     def test_detail(self, client, db):
-        circle = SessionFactory()
-        url = reverse("spaces:session_detail", kwargs={"session_slug": circle.slug})
+        session = SessionFactory()
+        url = reverse("spaces:session_detail", kwargs={"session_slug": session.slug})
         response = client.get(url)
         assert response.status_code == 200
         assert "About this Session" not in response.content.decode()
 
-    def test_detail_circle(self, client, db):
-        event = SessionFactory()
-        url = reverse("spaces:detail", kwargs={"slug": event.space.slug})
+    def test_detail_space(self, client, db):
+        session = SessionFactory()
+        url = reverse("spaces:detail", kwargs={"slug": session.space.slug})
         response = client.get(url)
         assert response.status_code == 302
-        assert response.url == reverse("spaces:session_detail", kwargs={"session_slug": event.slug})
+        assert response.url == reverse("spaces:session_detail", kwargs={"session_slug": session.slug})
 
-    def test_detail_next_event_circle(self, client, db):
-        # Make sure the details page still shows an event while it's in the grace period
-        event_now = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5))
-        url = reverse("spaces:detail", kwargs={"slug": event_now.space.slug})
+    def test_detail_next_session_space(self, client, db):
+        # Make sure the details page still shows a session while it's in the grace period
+        session_now = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5))
+        url = reverse("spaces:detail", kwargs={"slug": session_now.space.slug})
         response = client.get(url)
         assert response.status_code == 302
         assert "This Space has no upcoming" not in response.content.decode()
 
-    def test_detail_circle_no_event(self, client, db):
+    def test_detail_space_no_session(self, client, db):
         user = UserFactory()
         user.save()
         client.force_login(user)
-        circle = SpaceFactory()
-        url = reverse("spaces:detail", kwargs={"slug": circle.slug})
+        space = SpaceFactory()
+        url = reverse("spaces:detail", kwargs={"slug": space.slug})
         response = client.get(url)
         assert response.status_code == 200
 
@@ -277,8 +277,8 @@ class TestSpaceListView:
         user = UserFactory()
         user.save()
         client.force_login(user)
-        circle = SessionFactory()
-        circle.add_attendee(user)
+        session = SessionFactory()
+        session.add_attendee(user)
         url = reverse("spaces:list")
         response = client.get(url)
         assert response.status_code == 200

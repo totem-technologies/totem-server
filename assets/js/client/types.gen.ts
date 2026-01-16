@@ -70,20 +70,6 @@ export type AvatarUpdate = {
 };
 
 /**
- * EventsFilterSchema
- */
-export type EventsFilterSchema = {
-    /**
-     * Category
-     */
-    category: string | null;
-    /**
-     * Author
-     */
-    author: string | null;
-};
-
-/**
  * Input
  */
 export type Input = {
@@ -98,9 +84,37 @@ export type Input = {
 };
 
 /**
- * EventListSchema
+ * SessionsFilterSchema
  */
-export type EventListSchema = {
+export type SessionsFilterSchema = {
+    /**
+     * Category
+     */
+    category: string | null;
+    /**
+     * Author
+     */
+    author: string | null;
+};
+
+/**
+ * PagedSessionListSchema
+ */
+export type PagedSessionListSchema = {
+    /**
+     * Items
+     */
+    items: Array<SessionListSchema>;
+    /**
+     * Count
+     */
+    count: number;
+};
+
+/**
+ * SessionListSchema
+ */
+export type SessionListSchema = {
     space: SpaceSchema;
     /**
      * Url
@@ -126,20 +140,6 @@ export type EventListSchema = {
      * Title
      */
     title?: string | null;
-};
-
-/**
- * PagedEventListSchema
- */
-export type PagedEventListSchema = {
-    /**
-     * Items
-     */
-    items: Array<EventListSchema>;
-    /**
-     * Count
-     */
-    count: number;
 };
 
 /**
@@ -212,9 +212,14 @@ export type FilterOptionsSchema = {
 };
 
 /**
- * EventDetailSchema
+ * MeetingProviderEnum
  */
-export type EventDetailSchema = {
+export type MeetingProviderEnum = 'google_meet' | 'livekit';
+
+/**
+ * SessionDetailSchema
+ */
+export type SessionDetailSchema = {
     /**
      * Slug
      */
@@ -223,7 +228,7 @@ export type EventDetailSchema = {
      * Title
      */
     title: string;
-    space: EventSpaceSchema;
+    space: SessionSpaceSchema;
     /**
      * Space Title
      */
@@ -308,9 +313,9 @@ export type EventDetailSchema = {
 };
 
 /**
- * EventSpaceSchema
+ * SessionSpaceSchema
  */
-export type EventSpaceSchema = {
+export type SessionSpaceSchema = {
     author: PublicUserSchema;
     /**
      * Title
@@ -359,11 +364,6 @@ export type EventSpaceSchema = {
      */
     content?: string;
 };
-
-/**
- * MeetingProviderEnum
- */
-export type MeetingProviderEnum = 'google_meet' | 'livekit';
 
 /**
  * EventCalendarFilterSchema
@@ -458,9 +458,9 @@ export type WebflowEventSchema = {
 };
 
 /**
- * NextEventSchema
+ * NextSessionSchema
  */
-export type NextEventSchema = {
+export type NextSessionSchema = {
     /**
      * Slug
      */
@@ -533,7 +533,7 @@ export type SpaceDetailSchema = {
      */
     content: string;
     author: PublicUserSchema;
-    next_event: NextEventSchema | null;
+    next_event: NextSessionSchema | null;
     /**
      * Category
      */
@@ -677,7 +677,7 @@ export type TotemSpacesApiListEventsResponses = {
     /**
      * OK
      */
-    200: PagedEventListSchema;
+    200: PagedSessionListSchema;
 };
 
 export type TotemSpacesApiListEventsResponse = TotemSpacesApiListEventsResponses[keyof TotemSpacesApiListEventsResponses];
@@ -714,7 +714,7 @@ export type TotemSpacesApiEventDetailResponses = {
     /**
      * OK
      */
-    200: EventDetailSchema;
+    200: SessionDetailSchema;
 };
 
 export type TotemSpacesApiEventDetailResponse = TotemSpacesApiEventDetailResponses[keyof TotemSpacesApiEventDetailResponses];

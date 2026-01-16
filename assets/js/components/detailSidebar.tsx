@@ -12,7 +12,7 @@ import {
 } from "solid-js"
 import { postData } from "@/libs/postData"
 import { timestampToDateString, timestampToTimeString } from "@/libs/time"
-import { type EventDetailSchema, totemSpacesApiEventDetail } from "../client"
+import { type SessionDetailSchema, totemSpacesApiEventDetail } from "../client"
 import AddToCalendarButton from "./AddToCalendarButton"
 import ErrorBoundary from "./errors"
 import Icon, { type IconName } from "./icons"
@@ -83,7 +83,7 @@ function LoginPopup() {
   )
 }
 
-function createCalendarButton(eventStore: EventDetailSchema) {
+function createCalendarButton(eventStore: SessionDetailSchema) {
   return (
     <AddToCalendarButton
       name={`${eventStore.title} - ${eventStore.space_title}`}
@@ -94,7 +94,7 @@ function createCalendarButton(eventStore: EventDetailSchema) {
   )
 }
 
-function AttendingPopup(props: { eventStore: EventDetailSchema | undefined }) {
+function AttendingPopup(props: { eventStore: SessionDetailSchema | undefined }) {
   let modalRef: HTMLDialogElement | undefined // eslint-disable-line no-unassigned-vars
   createEffect(() => {
     if (showAttendingPopup()) {
@@ -186,7 +186,7 @@ function plural(number: number) {
 }
 
 function EventInfo(props: {
-  eventStore: EventDetailSchema
+  eventStore: SessionDetailSchema
   refetchEvent: () => void
 }) {
   const [error, setError] = createSignal("")
@@ -326,7 +326,7 @@ function EventInfo(props: {
 }
 
 function Subscribe(props: {
-  event: EventDetailSchema
+  event: SessionDetailSchema
   refetchEvent: () => void
 }) {
   const subscribe_url = `/spaces/subscribe/${props.event.space.slug}/`

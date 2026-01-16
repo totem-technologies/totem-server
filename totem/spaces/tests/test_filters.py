@@ -15,41 +15,41 @@ class TestFilters(TestCase):
         self.user = UserFactory(name="testuser", is_staff=False)
         self.staff_user = UserFactory(name="staffuser", is_staff=True)
         self.space = SpaceFactory(title="Test Space", published=True)
-        self.unpublished_circle = SpaceFactory(title="Unpublished Space", published=False)
+        self.unpublished_space = SpaceFactory(title="Unpublished Space", published=False)
         days = 1
 
-        # Published circle events
-        self.future_event = SessionFactory(
+        # Published space sessions
+        self.future_session = SessionFactory(
             space=self.space,
             start=timezone.now() + timezone.timedelta(days=(days := days + 1)),
             cancelled=False,
             open=True,
         )
-        self.future_event2 = SessionFactory(
+        self.future_session2 = SessionFactory(
             space=self.space,
             start=timezone.now() + timezone.timedelta(days=(days := days + 1)),
             cancelled=False,
             open=True,
         )
-        self.past_event = SessionFactory(
+        self.past_session = SessionFactory(
             space=self.space,
             start=timezone.now() - timezone.timedelta(days=(days := days + 1)),
             cancelled=False,
             open=True,
         )
-        self.cancelled_event = SessionFactory(
+        self.cancelled_session = SessionFactory(
             space=self.space,
             start=timezone.now() + timezone.timedelta(days=(days := days + 2)),
             cancelled=True,
             open=True,
         )
-        self.closed_event = SessionFactory(
+        self.closed_session = SessionFactory(
             space=self.space,
             start=timezone.now() + timezone.timedelta(days=(days := days + 1)),
             cancelled=False,
             open=False,
         )
-        self.unlisted_event = SessionFactory(
+        self.unlisted_session = SessionFactory(
             space=self.space,
             start=timezone.now() + timezone.timedelta(days=(days := days + 1)),
             cancelled=False,
@@ -57,115 +57,117 @@ class TestFilters(TestCase):
             listed=False,
         )
 
-        # Unpublished circle events
-        self.unpublished_event = SessionFactory(
-            space=self.unpublished_circle,
+        # Unpublished space sessions
+        self.unpublished_session = SessionFactory(
+            space=self.unpublished_space,
             start=timezone.now() + timezone.timedelta(days=(days := days + 1)),
             cancelled=False,
             open=True,
         )
-        self.unlisted__unpublished_event = SessionFactory(
-            space=self.unpublished_circle,
+        self.unlisted_unpublished_session = SessionFactory(
+            space=self.unpublished_space,
             start=timezone.now() + timezone.timedelta(days=(days := days + 1)),
             cancelled=False,
             open=True,
         )
 
     def test_other_sessions_in_space_unauth(self):
-        events = other_sessions_in_space(None, self.future_event)
-        self.assertNotIn(self.future_event, events)
-        self.assertIn(self.future_event2, events)
-        self.assertNotIn(self.past_event, events)
-        self.assertNotIn(self.cancelled_event, events)
-        self.assertNotIn(self.closed_event, events)
-        self.assertNotIn(self.unlisted_event, events)
+        sessions = other_sessions_in_space(None, self.future_session)
+        self.assertNotIn(self.future_session, sessions)
+        self.assertIn(self.future_session2, sessions)
+        self.assertNotIn(self.past_session, sessions)
+        self.assertNotIn(self.cancelled_session, sessions)
+        self.assertNotIn(self.closed_session, sessions)
+        self.assertNotIn(self.unlisted_session, sessions)
 
-        events = other_sessions_in_space(None, self.unpublished_event)
-        assert len(events) == 0
+        sessions = other_sessions_in_space(None, self.unpublished_session)
+        assert len(sessions) == 0
 
     def test_other_sessions_in_space_user(self):
-        events = other_sessions_in_space(self.user, self.future_event)
-        self.assertNotIn(self.future_event, events)
-        self.assertIn(self.future_event2, events)
-        self.assertNotIn(self.past_event, events)
-        self.assertNotIn(self.cancelled_event, events)
-        self.assertNotIn(self.closed_event, events)
-        self.assertNotIn(self.unlisted_event, events)
+        sessions = other_sessions_in_space(self.user, self.future_session)
+        self.assertNotIn(self.future_session, sessions)
+        self.assertIn(self.future_session2, sessions)
+        self.assertNotIn(self.past_session, sessions)
+        self.assertNotIn(self.cancelled_session, sessions)
+        self.assertNotIn(self.closed_session, sessions)
+        self.assertNotIn(self.unlisted_session, sessions)
 
-        self.closed_event.attendees.add(self.user)
-        self.unlisted_event.add_attendee(self.user)
+        self.closed_session.attendees.add(self.user)
+        self.unlisted_session.add_attendee(self.user)
 
-        events = other_sessions_in_space(self.user, self.future_event)
-        self.assertNotIn(self.future_event, events)
-        self.assertIn(self.future_event2, events)
-        self.assertNotIn(self.past_event, events)
-        self.assertNotIn(self.cancelled_event, events)
-        self.assertIn(self.closed_event, events)
-        self.assertIn(self.unlisted_event, events)
+        sessions = other_sessions_in_space(self.user, self.future_session)
+        self.assertNotIn(self.future_session, sessions)
+        self.assertIn(self.future_session2, sessions)
+        self.assertNotIn(self.past_session, sessions)
+        self.assertNotIn(self.cancelled_session, sessions)
+        self.assertIn(self.closed_session, sessions)
+        self.assertIn(self.unlisted_session, sessions)
 
-        events = other_sessions_in_space(self.user, self.unpublished_event)
-        assert len(events) == 0
+        sessions = other_sessions_in_space(self.user, self.unpublished_session)
+        assert len(sessions) == 0
 
     def test_all_upcoming_recommended_sessions_unauth(self):
-        events = all_upcoming_recommended_sessions(None)
-        self.assertIn(self.future_event, events)
-        self.assertIn(self.future_event2, events)
-        self.assertNotIn(self.past_event, events)
-        self.assertNotIn(self.cancelled_event, events)
-        self.assertIn(self.closed_event, events)
-        self.assertNotIn(self.unlisted_event, events)
-        self.assertNotIn(self.unpublished_event, events)
-        self.assertNotIn(self.unlisted__unpublished_event, events)
+        sessions = all_upcoming_recommended_sessions(None)
+        self.assertIn(self.future_session, sessions)
+        self.assertIn(self.future_session2, sessions)
+        self.assertNotIn(self.past_session, sessions)
+        self.assertNotIn(self.cancelled_session, sessions)
+        self.assertIn(self.closed_session, sessions)
+        self.assertNotIn(self.unlisted_session, sessions)
+        self.assertNotIn(self.unpublished_session, sessions)
+        self.assertNotIn(self.unlisted_unpublished_session, sessions)
 
     def test_all_upcoming_recommended_sessions_user(self):
-        self.future_event.attendees.add(self.user)
-        self.future_event2.attendees.add(self.user)
-        events = all_upcoming_recommended_sessions(self.user)
-        self.assertIn(self.future_event, events)
-        self.assertIn(self.future_event2, events)
-        self.assertNotIn(self.past_event, events)
-        self.assertNotIn(self.cancelled_event, events)
-        self.assertIn(self.closed_event, events)
-        self.assertNotIn(self.unlisted_event, events)
-        self.assertNotIn(self.unpublished_event, events)
-        self.assertNotIn(self.unlisted__unpublished_event, events)
+        self.future_session.attendees.add(self.user)
+        self.future_session2.attendees.add(self.user)
+        sessions = all_upcoming_recommended_sessions(self.user)
+        self.assertIn(self.future_session, sessions)
+        self.assertIn(self.future_session2, sessions)
+        self.assertNotIn(self.past_session, sessions)
+        self.assertNotIn(self.cancelled_session, sessions)
+        self.assertIn(self.closed_session, sessions)
+        self.assertNotIn(self.unlisted_session, sessions)
+        self.assertNotIn(self.unpublished_session, sessions)
+        self.assertNotIn(self.unlisted_unpublished_session, sessions)
 
     def test_all_upcoming_recommended_sessions_staff(self):
-        self.future_event.attendees.add(self.staff_user)
-        self.future_event2.attendees.add(self.staff_user)
-        events = all_upcoming_recommended_sessions(self.staff_user)
-        self.assertIn(self.future_event, events)
-        self.assertIn(self.future_event2, events)
-        self.assertNotIn(self.past_event, events)
-        self.assertNotIn(self.cancelled_event, events)
-        self.assertIn(self.closed_event, events)
-        self.assertNotIn(self.unlisted_event, events)
-        self.assertIn(self.unpublished_event, events)
-        self.assertIn(self.unlisted__unpublished_event, events)
+        self.future_session.attendees.add(self.staff_user)
+        self.future_session2.attendees.add(self.staff_user)
+        sessions = all_upcoming_recommended_sessions(self.staff_user)
+        self.assertIn(self.future_session, sessions)
+        self.assertIn(self.future_session2, sessions)
+        self.assertNotIn(self.past_session, sessions)
+        self.assertNotIn(self.cancelled_session, sessions)
+        self.assertIn(self.closed_session, sessions)
+        self.assertNotIn(self.unlisted_session, sessions)
+        self.assertIn(self.unpublished_session, sessions)
+        self.assertIn(self.unlisted_unpublished_session, sessions)
 
-    def test_recommended_full_event(self):
-        users = [UserFactory() for _ in range(self.future_event.seats)]
+    def test_recommended_full_session(self):
+        users = [UserFactory() for _ in range(self.future_session.seats)]
         for user in users:
-            self.future_event.add_attendee(user)
-        events = all_upcoming_recommended_sessions(None)
-        self.assertNotIn(self.future_event, events)
-        self.assertIn(self.future_event2, events)
+            self.future_session.add_attendee(user)
+        sessions = all_upcoming_recommended_sessions(None)
+        self.assertNotIn(self.future_session, sessions)
+        self.assertIn(self.future_session2, sessions)
 
-    def test_events_by_month(self):
-        events = sessions_by_month(None, self.space.slug, self.future_event.start.month, self.future_event.start.year)
-        self.assertIn(self.future_event, events)
-        events = sessions_by_month(
-            None, self.space.slug, self.cancelled_event.start.month, self.cancelled_event.start.year
+    def test_sessions_by_month(self):
+        sessions = sessions_by_month(
+            None, self.space.slug, self.future_session.start.month, self.future_session.start.year
         )
-        self.assertNotIn(self.cancelled_event, events)
-        self.cancelled_event.attendees.add(self.user)
-        events = sessions_by_month(
-            self.user, self.space.slug, self.cancelled_event.start.month, self.cancelled_event.start.year
+        self.assertIn(self.future_session, sessions)
+        sessions = sessions_by_month(
+            None, self.space.slug, self.cancelled_session.start.month, self.cancelled_session.start.year
         )
-        self.assertNotIn(self.cancelled_event, events)
-        self.assertNotIn(self.closed_event, events)
-        self.closed_event.attendees.add(self.user)
-        events = sessions_by_month(
-            self.user, self.space.slug, self.closed_event.start.month, self.closed_event.start.year
+        self.assertNotIn(self.cancelled_session, sessions)
+        self.cancelled_session.attendees.add(self.user)
+        sessions = sessions_by_month(
+            self.user, self.space.slug, self.cancelled_session.start.month, self.cancelled_session.start.year
         )
-        self.assertIn(self.closed_event, events)
+        self.assertNotIn(self.cancelled_session, sessions)
+        self.assertNotIn(self.closed_session, sessions)
+        self.closed_session.attendees.add(self.user)
+        sessions = sessions_by_month(
+            self.user, self.space.slug, self.closed_session.start.month, self.closed_session.start.year
+        )
+        self.assertIn(self.closed_session, sessions)

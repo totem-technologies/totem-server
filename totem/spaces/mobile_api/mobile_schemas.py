@@ -15,7 +15,7 @@ class SpaceSchema(ModelSchema):
         fields = ["title", "slug", "date_created", "date_modified", "subtitle"]
 
 
-class EventListSchema(ModelSchema):
+class SessionListSchema(ModelSchema):
     space: SpaceSchema
     url: str
 
@@ -37,7 +37,7 @@ class MeetingProviderEnum(str, Enum):
     LIVEKIT = "livekit"
 
 
-class NextEventSchema(Schema):
+class NextSessionSchema(Schema):
     slug: str
     start: datetime
     link: str
@@ -63,10 +63,10 @@ class MobileSpaceDetailSchema(Schema):
     subscribers: int
     recurring: str | None
     price: int
-    next_events: list[NextEventSchema]
+    next_events: list[NextSessionSchema]
 
 
-class EventDetailSchema(Schema):
+class SessionDetailSchema(Schema):
     slug: str
     title: str
     space: MobileSpaceDetailSchema
@@ -90,7 +90,7 @@ class EventDetailSchema(Schema):
 
 
 class SummarySpacesSchema(Schema):
-    upcoming: list[EventDetailSchema]
+    upcoming: list[SessionDetailSchema]
     for_you: list[MobileSpaceDetailSchema]
     explore: list[MobileSpaceDetailSchema]
 

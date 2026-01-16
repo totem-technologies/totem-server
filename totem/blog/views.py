@@ -57,7 +57,7 @@ def post_social(request: HttpRequest, slug: str):
 
 
 def _make_social_img_post(post: BlogPost, image_size: SocialImage, show_new: bool):
-    background_url = f"{settings.BASE_DIR}/totem/static/images/circles/default-bg.jpg"
+    background_url = f"{settings.BASE_DIR}/totem/static/images/spaces/default-bg.jpg"
     if post.header_image:
         background_url = post.header_image.url
         if background_url.startswith("/"):
