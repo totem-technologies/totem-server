@@ -90,6 +90,19 @@ class TestGetLivekitToken:
         assert response.status_code == 500
         assert "Failed to create access token" in response.json()["error"]
 
+    def test_returns_403_when_session_has_ended(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        session = SessionFactory(space__published=True, open=True, start=timezone.now() + timedelta(minutes=5))
+        session.attendees.add(user)
+        session.ended_at = timezone.now()
+        session.save()
+
+        url = reverse("mobile-api:get_livekit_token", kwargs={"event_slug": session.slug})
+        response = client.get(url)
+
+        assert response.status_code == 403
+        assert "not joinable" in response.json()["error"]
+
 
 @pytest.mark.django_db
 class TestPassTotem:
@@ -124,6 +137,18 @@ class TestPassTotem:
 
         assert response.status_code == 403
         assert "Unauthorized" in response.json()["error"]
+
+    def test_returns_400_when_session_ended(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        session = SessionFactory(space__author=user)
+        session.ended_at = timezone.now()
+        session.save()
+
+        url = reverse("mobile-api:pass_totem", kwargs={"event_slug": session.slug})
+        response = client.post(url)
+
+        assert response.status_code == 400
+        assert "already ended" in response.json()["error"]
 
 
 @pytest.mark.django_db
@@ -165,6 +190,18 @@ class TestAcceptTotem:
 
         assert response.status_code == 403
         assert "Not next speaker" in response.json()["error"]
+
+    def test_returns_400_when_session_ended(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        session = SessionFactory()
+        session.ended_at = timezone.now()
+        session.save()
+
+        url = reverse("mobile-api:accept_totem", kwargs={"event_slug": session.slug})
+        response = client.post(url)
+
+        assert response.status_code == 400
+        assert "already ended" in response.json()["error"]
 
 
 @pytest.mark.django_db
@@ -217,6 +254,18 @@ class TestStartRoom:
         assert response.status_code == 404
         assert "Keeper not in room" in response.json()["error"]
 
+    def test_returns_400_when_session_ended(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        session = SessionFactory(space__author=user)
+        session.ended_at = timezone.now()
+        session.save()
+
+        url = reverse("mobile-api:start_room", kwargs={"event_slug": session.slug})
+        response = client.post(url)
+
+        assert response.status_code == 400
+        assert "already ended" in response.json()["error"]
+
 
 @pytest.mark.django_db
 class TestEndRoom:
@@ -229,6 +278,9 @@ class TestEndRoom:
             response = client.post(url)
 
         assert response.status_code == 200
+        session.refresh_from_db()
+        assert session.ended_at is not None
+        assert session.ended() is True
 
     def test_returns_403_when_not_keeper(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
@@ -322,6 +374,20 @@ class TestMuteParticipant:
         assert response.status_code == 404
         assert "No audio track" in response.json()["error"]
 
+    def test_returns_400_when_session_ended(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        session = SessionFactory(space__author=user)
+        session.ended_at = timezone.now()
+        session.save()
+
+        url = reverse(
+            "mobile-api:mute_participant", kwargs={"event_slug": session.slug, "participant_identity": "user1"}
+        )
+        response = client.post(url)
+
+        assert response.status_code == 400
+        assert "already ended" in response.json()["error"]
+
 
 @pytest.mark.django_db
 class TestMuteAllParticipants:
@@ -359,6 +425,18 @@ class TestMuteAllParticipants:
 
         assert response.status_code == 500
         assert "Failed to mute all participants" in response.json()["error"]
+
+    def test_returns_400_when_session_ended(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        session = SessionFactory(space__author=user)
+        session.ended_at = timezone.now()
+        session.save()
+
+        url = reverse("mobile-api:mute_all_participants", kwargs={"event_slug": session.slug})
+        response = client.post(url)
+
+        assert response.status_code == 400
+        assert "already ended" in response.json()["error"]
 
 
 @pytest.mark.django_db
@@ -417,6 +495,20 @@ class TestRemoveParticipant:
         assert response.status_code == 404
         assert "Participant not found" in response.json()["error"]
 
+    def test_returns_400_when_session_ended(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        session = SessionFactory(space__author=user)
+        session.ended_at = timezone.now()
+        session.save()
+
+        url = reverse(
+            "mobile-api:remove_participant", kwargs={"event_slug": session.slug, "participant_identity": "user1"}
+        )
+        response = client.post(url)
+
+        assert response.status_code == 400
+        assert "already ended" in response.json()["error"]
+
 
 @pytest.mark.django_db
 class TestReorderParticipants:
@@ -452,6 +544,18 @@ class TestReorderParticipants:
 
         assert response.status_code == 400
         assert "Room ended" in response.json()["error"]
+
+    def test_returns_400_when_session_ended(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        session = SessionFactory(space__author=user)
+        session.ended_at = timezone.now()
+        session.save()
+
+        url = reverse("mobile-api:reorder_participants", kwargs={"event_slug": session.slug})
+        response = client.post(url, data={"order": ["user1", "user2"]}, content_type="application/json")
+
+        assert response.status_code == 400
+        assert "already ended" in response.json()["error"]
 
 
 @pytest.mark.django_db
