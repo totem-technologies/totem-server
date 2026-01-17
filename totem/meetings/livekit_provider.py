@@ -337,7 +337,9 @@ async def accept_totem(room_name: str, keeper_slug: str, user_identity: str) -> 
             room, lkapi, validate=True, keeper_slug=keeper_slug, participants=participant_list
         )
 
-        if state.next_speaker != user_identity and keeper_slug != user_identity:
+        is_next_speaker = state.next_speaker == user_identity
+        is_keeper = user_identity == keeper_slug
+        if not is_next_speaker and not is_keeper:
             raise NotCurrentSpeakerError(f"User {user_identity} is not the next speaker. Cannot accept the totem.")
 
         state.accept_totem()
