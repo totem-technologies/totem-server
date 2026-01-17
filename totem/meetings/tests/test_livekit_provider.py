@@ -82,6 +82,7 @@ class TestGetRoomState:
                 "totem_status": "accepted",
             }
         )
+        mock_room.name = "test-room"
 
         mock_lkapi = AsyncMock()
         mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
@@ -127,15 +128,17 @@ class TestStartRoom:
                 "totem_status": "none",
             }
         )
+        mock_room.name = "test-room"
 
         mock_participant1 = Mock()
         mock_participant1.identity = "keeper"
+        mock_participant1.tracks = []
         mock_participant2 = Mock()
         mock_participant2.identity = "user1"
+        mock_participant2.tracks = []
 
         mock_lkapi = AsyncMock()
         mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
-        mock_lkapi.room.get_participant.return_value = mock_participant1
         mock_lkapi.room.list_participants.return_value = Mock(participants=[mock_participant1, mock_participant2])
 
         with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
@@ -162,13 +165,14 @@ class TestStartRoom:
                 "totem_status": "accepted",
             }
         )
+        mock_room.name = "test-room"
 
         mock_participant = Mock()
         mock_participant.identity = "keeper"
 
         mock_lkapi = AsyncMock()
         mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
-        mock_lkapi.room.get_participant.return_value = mock_participant
+        mock_lkapi.room.list_participants.return_value = Mock(participants=[mock_participant])
 
         with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
             mock_get_client.return_value.__aenter__.return_value = mock_lkapi
@@ -189,16 +193,74 @@ class TestStartRoom:
                 "totem_status": "none",
             }
         )
+        mock_room.name = "test-room"
+
+        mock_user = Mock()
+        mock_user.identity = "user1"
 
         mock_lkapi = AsyncMock()
         mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
-        mock_lkapi.room.get_participant.return_value = None
+        mock_lkapi.room.list_participants.return_value = Mock(participants=[mock_user])
 
         with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
             mock_get_client.return_value.__aenter__.return_value = mock_lkapi
 
             with pytest.raises(KeeperNotInRoomError):
                 start_room("test-room", "keeper")
+
+    def test_mutes_all_participants_except_keeper(self):
+        """Test that start_room mutes all participants except the keeper."""
+        mock_room = Mock()
+        mock_room.metadata = json.dumps(
+            {
+                "keeper_slug": "keeper",
+                "status": "waiting",
+                "speaking_order": ["keeper", "user1", "user2"],
+                "speaking_now": None,
+                "next_speaker": None,
+                "totem_status": "none",
+            }
+        )
+        mock_room.name = "test-room"
+
+        mock_keeper_track = Mock()
+        mock_keeper_track.type = api.TrackType.AUDIO
+        mock_keeper_track.sid = "keeper-track"
+
+        mock_keeper = Mock()
+        mock_keeper.identity = "keeper"
+        mock_keeper.tracks = [mock_keeper_track]
+
+        mock_user1_track = Mock()
+        mock_user1_track.type = api.TrackType.AUDIO
+        mock_user1_track.sid = "user1-track"
+
+        mock_user1 = Mock()
+        mock_user1.identity = "user1"
+        mock_user1.tracks = [mock_user1_track]
+
+        mock_user2_track = Mock()
+        mock_user2_track.type = api.TrackType.AUDIO
+        mock_user2_track.sid = "user2-track"
+
+        mock_user2 = Mock()
+        mock_user2.identity = "user2"
+        mock_user2.tracks = [mock_user2_track]
+
+        mock_lkapi = AsyncMock()
+        mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
+        mock_lkapi.room.list_participants.return_value = Mock(participants=[mock_keeper, mock_user1, mock_user2])
+
+        with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
+            mock_get_client.return_value.__aenter__.return_value = mock_lkapi
+
+            start_room("test-room", "keeper")
+
+        assert mock_lkapi.room.mute_published_track.call_count == 2
+        muted_tracks = [call[0][0].track_sid for call in mock_lkapi.room.mute_published_track.call_args_list]
+        assert "user1-track" in muted_tracks
+        assert "user2-track" in muted_tracks
+        assert "keeper-track" not in muted_tracks
 
 
 @pytest.mark.django_db
@@ -219,13 +281,16 @@ class TestPassTotem:
                 "totem_status": "accepted",
             }
         )
+        mock_room.name = "test-room"
 
-        mock_participant = Mock()
-        mock_participant.identity = "keeper"
+        mock_keeper = Mock()
+        mock_keeper.identity = "keeper"
+        mock_user1 = Mock()
+        mock_user1.identity = "user1"
 
         mock_lkapi = AsyncMock()
         mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
-        mock_lkapi.room.get_participant.return_value = mock_participant
+        mock_lkapi.room.list_participants.return_value = Mock(participants=[mock_keeper, mock_user1])
 
         with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
             mock_get_client.return_value.__aenter__.return_value = mock_lkapi
@@ -250,13 +315,16 @@ class TestPassTotem:
                 "totem_status": "accepted",
             }
         )
+        mock_room.name = "test-room"
 
-        mock_participant = Mock()
-        mock_participant.identity = "keeper"
+        mock_keeper = Mock()
+        mock_keeper.identity = "keeper"
+        mock_user1 = Mock()
+        mock_user1.identity = "user1"
 
         mock_lkapi = AsyncMock()
         mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
-        mock_lkapi.room.get_participant.return_value = mock_participant
+        mock_lkapi.room.list_participants.return_value = Mock(participants=[mock_keeper, mock_user1])
 
         with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
             mock_get_client.return_value.__aenter__.return_value = mock_lkapi
@@ -277,13 +345,18 @@ class TestPassTotem:
                 "totem_status": "accepted",
             }
         )
+        mock_room.name = "test-room"
 
-        mock_participant = Mock()
-        mock_participant.identity = "keeper"
+        mock_keeper = Mock()
+        mock_keeper.identity = "keeper"
+        mock_user1 = Mock()
+        mock_user1.identity = "user1"
+        mock_user2 = Mock()
+        mock_user2.identity = "user2"
 
         mock_lkapi = AsyncMock()
         mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
-        mock_lkapi.room.get_participant.return_value = mock_participant
+        mock_lkapi.room.list_participants.return_value = Mock(participants=[mock_keeper, mock_user1, mock_user2])
 
         with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
             mock_get_client.return_value.__aenter__.return_value = mock_lkapi
@@ -310,8 +383,8 @@ class TestAcceptTotem:
                 "totem_status": "passing",
             }
         )
+        mock_room.name = "test-room"
 
-        # Mock tracks for keeper
         mock_keeper_track = Mock()
         mock_keeper_track.type = api.TrackType.AUDIO
         mock_keeper_track.sid = "keeper-track"
@@ -320,7 +393,6 @@ class TestAcceptTotem:
         mock_keeper.identity = "keeper"
         mock_keeper.tracks = [mock_keeper_track]
 
-        # Mock tracks for user1
         mock_user1_track = Mock()
         mock_user1_track.type = api.TrackType.AUDIO
         mock_user1_track.sid = "user1-track"
@@ -331,7 +403,6 @@ class TestAcceptTotem:
 
         mock_lkapi = AsyncMock()
         mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
-        mock_lkapi.room.get_participant.return_value = mock_keeper
         mock_lkapi.room.list_participants.return_value = Mock(participants=[mock_keeper, mock_user1])
 
         with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
@@ -360,8 +431,8 @@ class TestAcceptTotem:
                 "totem_status": "passing",
             }
         )
+        mock_room.name = "test-room"
 
-        # Mock user1 track
         mock_user1_track = Mock()
         mock_user1_track.type = api.TrackType.AUDIO
         mock_user1_track.sid = "user1-track"
@@ -376,7 +447,6 @@ class TestAcceptTotem:
 
         mock_lkapi = AsyncMock()
         mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
-        mock_lkapi.room.get_participant.return_value = mock_keeper
         mock_lkapi.room.list_participants.return_value = Mock(participants=[mock_keeper, mock_user1])
 
         with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
@@ -399,13 +469,18 @@ class TestAcceptTotem:
                 "totem_status": "passing",
             }
         )
+        mock_room.name = "test-room"
 
         mock_keeper = Mock()
         mock_keeper.identity = "keeper"
+        mock_user1 = Mock()
+        mock_user1.identity = "user1"
+        mock_user2 = Mock()
+        mock_user2.identity = "user2"
 
         mock_lkapi = AsyncMock()
         mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
-        mock_lkapi.room.get_participant.return_value = mock_keeper
+        mock_lkapi.room.list_participants.return_value = Mock(participants=[mock_keeper, mock_user1, mock_user2])
 
         with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
             mock_get_client.return_value.__aenter__.return_value = mock_lkapi
@@ -432,6 +507,7 @@ class TestEndRoom:
                 "totem_status": "accepted",
             }
         )
+        mock_room.name = "test-room"
 
         mock_participant = Mock()
         mock_participant.identity = "keeper"
@@ -465,6 +541,7 @@ class TestEndRoom:
                 "totem_status": "none",
             }
         )
+        mock_room.name = "test-room"
 
         mock_lkapi = AsyncMock()
         mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
@@ -492,9 +569,20 @@ class TestReorder:
                 "totem_status": "accepted",
             }
         )
+        mock_room.name = "test-room"
+
+        mock_participant_keeper = Mock()
+        mock_participant_keeper.identity = "keeper"
+        mock_participant_user1 = Mock()
+        mock_participant_user1.identity = "user1"
+        mock_participant_user2 = Mock()
+        mock_participant_user2.identity = "user2"
 
         mock_lkapi = AsyncMock()
         mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
+        mock_lkapi.room.list_participants.return_value = Mock(
+            participants=[mock_participant_keeper, mock_participant_user1, mock_participant_user2]
+        )
 
         with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
             mock_get_client.return_value.__aenter__.return_value = mock_lkapi
@@ -504,6 +592,41 @@ class TestReorder:
         assert new_order[0] == "keeper"
         assert "user1" in new_order
         assert "user2" in new_order
+
+    def test_filters_disconnected_participants(self):
+        """Test that reorder filters out participants not connected to the room."""
+        mock_room = Mock()
+        mock_room.metadata = json.dumps(
+            {
+                "keeper_slug": "keeper",
+                "status": "started",
+                "speaking_order": ["keeper", "user1"],
+                "speaking_now": "keeper",
+                "next_speaker": "user1",
+                "totem_status": "accepted",
+            }
+        )
+        mock_room.name = "test-room"
+
+        mock_participant_keeper = Mock()
+        mock_participant_keeper.identity = "keeper"
+        mock_participant_user1 = Mock()
+        mock_participant_user1.identity = "user1"
+
+        mock_lkapi = AsyncMock()
+        mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
+        mock_lkapi.room.list_participants.return_value = Mock(
+            participants=[mock_participant_keeper, mock_participant_user1]
+        )
+
+        with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
+            mock_get_client.return_value.__aenter__.return_value = mock_lkapi
+            new_order = reorder("test-room", ["user2", "user1", "keeper"])
+
+        assert len(new_order) == 2
+        assert "keeper" in new_order
+        assert "user1" in new_order
+        assert "user2" not in new_order
 
     def test_raises_error_when_room_ended(self):
         """Test that reorder raises error when room is already ended."""
@@ -518,9 +641,14 @@ class TestReorder:
                 "totem_status": "none",
             }
         )
+        mock_room.name = "test-room"
+
+        mock_participant_keeper = Mock()
+        mock_participant_keeper.identity = "keeper"
 
         mock_lkapi = AsyncMock()
         mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
+        mock_lkapi.room.list_participants.return_value = Mock(participants=[mock_participant_keeper])
 
         with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
             mock_get_client.return_value.__aenter__.return_value = mock_lkapi
