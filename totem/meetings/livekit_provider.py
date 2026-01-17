@@ -1,7 +1,6 @@
 import json
 import logging
 from contextlib import asynccontextmanager
-from typing import Optional
 
 from asgiref.sync import async_to_sync
 from django.conf import settings
@@ -132,7 +131,7 @@ def create_access_token(user: User, event: Session) -> str:
     return token.to_jwt()
 
 
-async def _get_room(room_name: str, lkapi: api.LiveKitAPI) -> Optional[api.Room]:
+async def _get_room(room_name: str, lkapi: api.LiveKitAPI) -> api.Room | None:
     """
     Retrieves room information.
 
@@ -481,7 +480,7 @@ async def mute_participant(room_name: str, user_identity: str) -> None:
 
 
 @async_to_sync
-async def mute_all_participants(room_name: str, except_identity: Optional[str] = None) -> None:
+async def mute_all_participants(room_name: str, except_identity: str | None = None) -> None:
     """
     Mutes all participants in the room.
     Args:
@@ -495,7 +494,7 @@ async def mute_all_participants(room_name: str, except_identity: Optional[str] =
         await _mute_everyone(room_name=room_name, lkapi=lkapi, except_identity=except_identity)
 
 
-async def _mute_everyone(room_name: str, lkapi: api.LiveKitAPI, except_identity: Optional[str] = None):
+async def _mute_everyone(room_name: str, lkapi: api.LiveKitAPI, except_identity: str | None = None):
     """
     Mutes everyone in the room.
 

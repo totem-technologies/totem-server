@@ -1,5 +1,4 @@
 import logging
-from typing import Dict, Optional
 
 import requests
 from django.conf import settings
@@ -13,7 +12,7 @@ SLACK_BOT_TOKEN = settings.SLACK_BOT_TOKEN
 SLACK_CHANNEL_ID = settings.SLACK_CHANNEL_ID
 
 # Simple in-memory cache for email -> user_id mapping
-USER_ID_CACHE: Dict[str, str] = {}
+USER_ID_CACHE: dict[str, str] = {}
 
 requests_session = requests.Session()
 
@@ -30,7 +29,7 @@ def _notify_task(message: str, email_to_mention: str | None):
     )
 
 
-def _get_user_id_from_email(email: str) -> Optional[str]:
+def _get_user_id_from_email(email: str) -> str | None:
     """
     Looks up a Slack User ID by email, using a cache.
 
@@ -78,7 +77,7 @@ def _get_user_id_from_email(email: str) -> Optional[str]:
         raise ValueError(f"Slack API error looking up email {email}: {error_message}")
 
 
-def _send_slack_message(message: str, email_to_mention: Optional[str] = None) -> None:
+def _send_slack_message(message: str, email_to_mention: str | None = None) -> None:
     """
     Sends a message to a Slack channel, optionally mentioning a user by email.
 

@@ -1,5 +1,4 @@
 import logging
-from typing import Dict, List, Optional
 
 import firebase_admin
 from django.conf import settings
@@ -39,7 +38,7 @@ def initialize_firebase():
         return False
 
 
-def send_notification_to_user(user: User, title: str, body: str, data: Optional[Dict[str, str]] = None) -> bool:
+def send_notification_to_user(user: User, title: str, body: str, data: dict[str, str] | None = None) -> bool:
     """
     Send notification to all active devices of a specific user
 
@@ -61,12 +60,12 @@ def send_notification_to_user(user: User, title: str, body: str, data: Optional[
     return send_notification(tokens, title, body, data)
 
 
-def send_notification(tokens: List[str], title: str, body: str, data: Optional[Dict[str, str]] = None) -> bool:
+def send_notification(tokens: list[str], title: str, body: str, data: dict[str, str] | None = None) -> bool:
     """
     Send notification to specific FCM tokens
 
     Args:
-        tokens: List of FCM tokens
+        tokens: list of FCM tokens
         title: Notification title
         body: Notification body
         data: Additional data payload

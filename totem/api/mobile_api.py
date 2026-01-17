@@ -1,5 +1,3 @@
-from typing import Optional
-
 import jwt
 from django.conf import settings
 from django.http import HttpRequest
@@ -22,7 +20,7 @@ from .auth import JWTSchema
 
 
 class JWTAuth(HttpBearer):
-    def authenticate(self, request: HttpRequest, token: str) -> Optional[User]:
+    def authenticate(self, request: HttpRequest, token: str) -> User | None:
         try:
             # Decode JWT token
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
