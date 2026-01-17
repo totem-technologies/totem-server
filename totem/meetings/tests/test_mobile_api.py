@@ -557,6 +557,19 @@ class TestReorderParticipants:
         assert response.status_code == 400
         assert "already ended" in response.json()["error"]
 
+    def test_returns_404_when_participant_not_in_room(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        session = SessionFactory(space__author=user)
+
+        with patch("totem.meetings.mobile_api.livekit.reorder", return_value=["keeper", "user2"]):
+            url = reverse("mobile-api:reorder_participants", kwargs={"event_slug": session.slug})
+            response = client.post(
+                url, data={"order": ["nonexistent", "user2", "keeper"]}, content_type="application/json"
+            )
+
+        assert response.status_code == 200
+        assert response.json()["order"] == ["keeper", "user2"]
+
 
 @pytest.mark.django_db
 class TestGetRoomState:

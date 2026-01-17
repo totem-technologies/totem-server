@@ -421,12 +421,15 @@ async def reorder(room_name: str, new_order: list[str]) -> list[str]:
     """
     Reorders the participants in the room.
 
+    Only participants who are currently connected to the room will be included in the new order.
+    Participants in new_order who are not connected are silently filtered out.
+
     Args:
         room_name: The name of the room.
         new_order: The new speaking order.
 
     Returns:
-        The updated speaking order.
+        The updated speaking order (containing only connected participants).
 
     Raises:
         RoomNotFoundError: If the room doesn't exist.
@@ -435,12 +438,19 @@ async def reorder(room_name: str, new_order: list[str]) -> list[str]:
     async with _get_lk_api_client() as lkapi:
         room = await _get_room_or_raise(room_name, lkapi)
 
-        state = await _parse_validate_room_state(room, lkapi, validate=False)
+        participants_response = await lkapi.room.list_participants(api.ListParticipantsRequest(room=room_name))
+        participant_list = list(participants_response.participants)
+        participant_identities = [p.identity for p in participant_list]
+
+        state = await _parse_validate_room_state(room, lkapi, participants=participant_list)
 
         if state.status == SessionStatus.ENDED:
             raise RoomAlreadyEndedError(f"Room {room_name} has already ended.")
 
-        state.reorder(new_order)
+        filtered_order = [identity for identity in new_order if identity in participant_identities]
+
+        state.reorder(filtered_order)
+        state = await _parse_validate_room_state(room, lkapi, validate=True, participants=participant_list)
         await _update_room_metadata(room_name, state, lkapi)
 
         return state.speaking_order

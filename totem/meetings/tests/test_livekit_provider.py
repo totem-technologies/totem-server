@@ -571,8 +571,18 @@ class TestReorder:
         )
         mock_room.name = "test-room"
 
+        mock_participant_keeper = Mock()
+        mock_participant_keeper.identity = "keeper"
+        mock_participant_user1 = Mock()
+        mock_participant_user1.identity = "user1"
+        mock_participant_user2 = Mock()
+        mock_participant_user2.identity = "user2"
+
         mock_lkapi = AsyncMock()
         mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
+        mock_lkapi.room.list_participants.return_value = Mock(
+            participants=[mock_participant_keeper, mock_participant_user1, mock_participant_user2]
+        )
 
         with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
             mock_get_client.return_value.__aenter__.return_value = mock_lkapi
@@ -582,6 +592,41 @@ class TestReorder:
         assert new_order[0] == "keeper"
         assert "user1" in new_order
         assert "user2" in new_order
+
+    def test_filters_disconnected_participants(self):
+        """Test that reorder filters out participants not connected to the room."""
+        mock_room = Mock()
+        mock_room.metadata = json.dumps(
+            {
+                "keeper_slug": "keeper",
+                "status": "started",
+                "speaking_order": ["keeper", "user1"],
+                "speaking_now": "keeper",
+                "next_speaker": "user1",
+                "totem_status": "accepted",
+            }
+        )
+        mock_room.name = "test-room"
+
+        mock_participant_keeper = Mock()
+        mock_participant_keeper.identity = "keeper"
+        mock_participant_user1 = Mock()
+        mock_participant_user1.identity = "user1"
+
+        mock_lkapi = AsyncMock()
+        mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
+        mock_lkapi.room.list_participants.return_value = Mock(
+            participants=[mock_participant_keeper, mock_participant_user1]
+        )
+
+        with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
+            mock_get_client.return_value.__aenter__.return_value = mock_lkapi
+            new_order = reorder("test-room", ["user2", "user1", "keeper"])
+
+        assert len(new_order) == 2
+        assert "keeper" in new_order
+        assert "user1" in new_order
+        assert "user2" not in new_order
 
     def test_raises_error_when_room_ended(self):
         """Test that reorder raises error when room is already ended."""
@@ -598,8 +643,12 @@ class TestReorder:
         )
         mock_room.name = "test-room"
 
+        mock_participant_keeper = Mock()
+        mock_participant_keeper.identity = "keeper"
+
         mock_lkapi = AsyncMock()
         mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
+        mock_lkapi.room.list_participants.return_value = Mock(participants=[mock_participant_keeper])
 
         with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
             mock_get_client.return_value.__aenter__.return_value = mock_lkapi
