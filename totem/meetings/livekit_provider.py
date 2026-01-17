@@ -143,11 +143,7 @@ async def _get_room(room_name: str, lkapi: api.LiveKitAPI) -> Optional[api.Room]
     Returns:
         The room object if found, None otherwise.
     """
-    rooms = await lkapi.room.list_rooms(
-        list=api.ListRoomsRequest(
-            names=[room_name],
-        )
-    )
+    rooms = await lkapi.room.list_rooms(list=api.ListRoomsRequest(names=[room_name]))
     if not rooms.rooms:
         return None
     return rooms.rooms[0]
@@ -173,25 +169,6 @@ async def _get_room_or_raise(room_name: str, lkapi: api.LiveKitAPI) -> api.Room:
     return room
 
 
-@async_to_sync
-async def get_room_state(room_name: str) -> SessionState:
-    """
-    Retrieves the current session state for a room.
-
-    Args:
-        room_name: The name of the room.
-
-    Returns:
-        The current SessionState for the room.
-
-    Raises:
-        RoomNotFoundError: If the room does not exist.
-    """
-    async with _get_lk_api_client() as lkapi:
-        room = await _get_room_or_raise(room_name, lkapi)
-        return await _parse_room_state(room)
-
-
 async def _parse_room_state(room: api.Room) -> SessionState:
     """
     Parses the session state from room metadata.
@@ -208,6 +185,11 @@ async def _parse_room_state(room: api.Room) -> SessionState:
 
     try:
         current_state = json.loads(room.metadata)
+
+        async with _get_lk_api_client() as lkapi:
+            participants = await lkapi.room.list_participants(api.ListParticipantsRequest(room=room.name))
+            current_state.validate_order([participant.identity for participant in participants.participants])
+
         return SessionState(**current_state)
     except (json.JSONDecodeError, TypeError, ValueError) as e:
         logging.error("Failed to parse room metadata for room %s: %s", room.name, e)
@@ -227,10 +209,7 @@ async def _update_room_metadata(room_name: str, state: SessionState, lkapi: api.
         api.TwirpError: If the API call fails.
     """
     await lkapi.room.update_room_metadata(
-        update=api.UpdateRoomMetadataRequest(
-            room=room_name,
-            metadata=json.dumps(state.dict()),
-        )
+        update=api.UpdateRoomMetadataRequest(room=room_name, metadata=json.dumps(state.dict()))
     )
 
 
@@ -246,14 +225,28 @@ async def _ensure_keeper_in_room(room_name: str, keeper_slug: str, lkapi: api.Li
     Raises:
         KeeperNotInRoomError: If the keeper is not in the room.
     """
-    participant = await lkapi.room.get_participant(
-        api.RoomParticipantIdentity(
-            room=room_name,
-            identity=keeper_slug,
-        )
-    )
+    participant = await lkapi.room.get_participant(api.RoomParticipantIdentity(room=room_name, identity=keeper_slug))
     if not participant:
         raise KeeperNotInRoomError(f"Keeper {keeper_slug} is not in room {room_name}.")
+
+
+@async_to_sync
+async def get_room_state(room_name: str) -> SessionState:
+    """
+    Retrieves the current session state for a room.
+
+    Args:
+        room_name: The name of the room.
+
+    Returns:
+        The current SessionState for the room.
+
+    Raises:
+        RoomNotFoundError: If the room does not exist.
+    """
+    async with _get_lk_api_client() as lkapi:
+        room = await _get_room_or_raise(room_name, lkapi)
+        return await _parse_room_state(room)
 
 
 @async_to_sync
@@ -369,12 +362,6 @@ async def start_room(room_name: str, keeper_slug: str) -> None:
         if state.status == SessionStatus.STARTED:
             raise RoomAlreadyStartedError(f"Room {room_name} has already been started.")
 
-        participants = await lkapi.room.list_participants(
-            api.ListParticipantsRequest(
-                room=room_name,
-            )
-        )
-        state.validate_order([participant.identity for participant in participants.participants])
         state.start()
         await _update_room_metadata(room_name, state, lkapi)
 
@@ -452,10 +439,7 @@ async def mute_participant(room_name: str, user_identity: str) -> None:
     """
     async with _get_lk_api_client() as lkapi:
         participant = await lkapi.room.get_participant(
-            api.RoomParticipantIdentity(
-                room=room_name,
-                identity=user_identity,
-            )
+            api.RoomParticipantIdentity(room=room_name, identity=user_identity)
         )
 
         if not participant:
@@ -503,11 +487,7 @@ async def _mute_everyone(room_name: str, lkapi: api.LiveKitAPI, except_identity:
 
     If the participant is not found, it is not muted.
     """
-    participants = await lkapi.room.list_participants(
-        api.ListParticipantsRequest(
-            room=room_name,
-        )
-    )
+    participants = await lkapi.room.list_participants(api.ListParticipantsRequest(room=room_name))
     for participant in participants.participants:
         if except_identity and participant.identity == except_identity:
             continue
@@ -547,10 +527,7 @@ async def remove_participant(room_name: str, user_identity: str) -> None:
     async with _get_lk_api_client() as lkapi:
         try:
             participant = await lkapi.room.remove_participant(
-                api.RoomParticipantIdentity(
-                    room=room_name,
-                    identity=user_identity,
-                )
+                api.RoomParticipantIdentity(room=room_name, identity=user_identity)
             )
         except api.TwirpError as e:
             raise ParticipantNotFoundError(
