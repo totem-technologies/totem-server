@@ -19,7 +19,7 @@ from totem.meetings.livekit_provider import (
     UnauthorizedError,
 )
 from totem.meetings.room_state import SessionState
-from totem.meetings.schemas import ErrorResponseSchema, LivekitMuteParticipantSchema, LivekitTokenResponseSchema
+from totem.meetings.schemas import ErrorResponseSchema, LivekitOrderSchema, LivekitTokenResponseSchema
 from totem.spaces.models import Session
 from totem.users import analytics
 from totem.users.models import User
@@ -345,7 +345,7 @@ def remove_participant_endpoint(request: HttpRequest, event_slug: str, participa
 @meetings_router.post(
     "/event/{event_slug}/reorder",
     response={
-        200: LivekitMuteParticipantSchema,
+        200: LivekitOrderSchema,
         400: ErrorResponseSchema,
         403: ErrorResponseSchema,
         404: ErrorResponseSchema,
@@ -353,7 +353,7 @@ def remove_participant_endpoint(request: HttpRequest, event_slug: str, participa
     },
     url_name="reorder_participants",
 )
-def reorder_participants_endpoint(request: HttpRequest, event_slug: str, order: LivekitMuteParticipantSchema):
+def reorder_participants_endpoint(request: HttpRequest, event_slug: str, order: LivekitOrderSchema):
     user: User = request.user  # type: ignore
     event: Session = get_object_or_404(Session, slug=event_slug)
     is_keeper = event.space.author.slug == user.slug
@@ -367,7 +367,7 @@ def reorder_participants_endpoint(request: HttpRequest, event_slug: str, order: 
 
     try:
         new_order = livekit.reorder(event.slug, order.order)
-        return LivekitMuteParticipantSchema(order=new_order)
+        return LivekitOrderSchema(order=new_order)
     except RoomNotFoundError as e:
         return 404, ErrorResponseSchema(error=str(e))
     except RoomAlreadyEndedError as e:
