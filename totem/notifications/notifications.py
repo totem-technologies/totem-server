@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List
 
 from pydantic import BaseModel, ConfigDict
 
@@ -24,7 +23,7 @@ class NotificationType(str, Enum):
 
 class Notification(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    recipients: List[User]
+    recipients: list[User]
     title: str
     message: str
     category: str

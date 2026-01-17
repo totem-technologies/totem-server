@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import List
 
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
@@ -28,7 +27,7 @@ from .models import Session, Space
 router = Router()
 
 
-@router.get("/", response={200: List[SessionListSchema]}, tags=["events"], url_name="events_list")
+@router.get("/", response={200: list[SessionListSchema]}, tags=["events"], url_name="events_list")
 @paginate
 def list_events(request, filters: SessionsFilterSchema = Query()):
     return all_upcoming_recommended_sessions(request.user, category=filters.category, author=filters.author)
@@ -77,7 +76,7 @@ class EventCalendarFilterSchema(FilterSchema):
     year: int = Field(default=datetime.now().year, description="Year of the month, e.g. 2024", gt=1000, lt=3000)
 
 
-@router.get("/calendar", response={200: List[EventCalendarSchema]}, tags=["events"], url_name="event_calendar")
+@router.get("/calendar", response={200: list[EventCalendarSchema]}, tags=["events"], url_name="event_calendar")
 def upcoming_events(request, filters: EventCalendarFilterSchema = Query()):
     events = sessions_by_month(request.user, filters.space_slug, filters.month, filters.year)
     return [
@@ -107,7 +106,7 @@ class WebflowEventSchema(Schema):
 
 @router.get(
     "/webflow/list_events",
-    response={200: List[WebflowEventSchema]},
+    response={200: list[WebflowEventSchema]},
     tags=["events"],
     url_name="webflow_events_list",
     auth=None,
@@ -144,7 +143,7 @@ def webflow_events_list(request, filters: WebflowEventsFilterSchema = Query()):
     return results
 
 
-@router.get("/list", response={200: List[SpaceDetailSchema]}, tags=["spaces"], url_name="spaces_list")
+@router.get("/list", response={200: list[SpaceDetailSchema]}, tags=["spaces"], url_name="spaces_list")
 def list_spaces(request):
     # Get events with availability information
     events = get_upcoming_sessions_for_spaces_list()
