@@ -367,13 +367,24 @@ async def start_room(room_name: str, keeper_slug: str) -> None:
     async with _get_lk_api_client() as lkapi:
         room = await _get_room_or_raise(room_name, lkapi)
 
-        state = await _parse_validate_room_state(room, lkapi, validate=True, keeper_slug=keeper_slug)
+        participants_response = await lkapi.room.list_participants(api.ListParticipantsRequest(room=room_name))
+        participant_list = list(participants_response.participants)
+
+        state = await _parse_validate_room_state(
+            room, lkapi, validate=True, keeper_slug=keeper_slug, participants=participant_list
+        )
 
         if state.status == SessionStatus.STARTED:
             raise RoomAlreadyStartedError(f"Room {room_name} has already been started.")
 
         state.start()
         await _update_room_metadata(room_name, state, lkapi)
+        await _mute_everyone(
+            room_name=room_name,
+            lkapi=lkapi,
+            except_identity=state.speaking_now or keeper_slug,
+            participants=participant_list,
+        )
 
 
 @async_to_sync
