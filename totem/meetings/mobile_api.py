@@ -2,6 +2,7 @@ import logging
 
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from livekit import api
 from ninja import Router
 
@@ -18,7 +19,7 @@ from totem.meetings.livekit_provider import (
     UnauthorizedError,
 )
 from totem.meetings.room_state import SessionState
-from totem.meetings.schemas import ErrorResponseSchema, LivekitMuteParticipantSchema, LivekitTokenResponseSchema
+from totem.meetings.schemas import ErrorResponseSchema, LivekitOrderSchema, LivekitTokenResponseSchema
 from totem.spaces.models import Session
 from totem.users import analytics
 from totem.users.models import User
@@ -94,6 +95,9 @@ def pass_totem_endpoint(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
     event: Session = get_object_or_404(Session, slug=event_slug)
 
+    if event.ended():
+        return 400, ErrorResponseSchema(error="Session has already ended.")
+
     try:
         livekit.pass_totem(event_slug, event.space.author.slug, user.slug)
         return HttpResponse(status=200)
@@ -125,6 +129,9 @@ def pass_totem_endpoint(request: HttpRequest, event_slug: str):
 def accept_totem_endpoint(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
     event: Session = get_object_or_404(Session, slug=event_slug)
+
+    if event.ended():
+        return 400, ErrorResponseSchema(error="Session has already ended.")
 
     try:
         livekit.accept_totem(
@@ -167,6 +174,9 @@ def start_room_endpoint(request: HttpRequest, event_slug: str):
         logging.warning("User %s attempted to start room for event %s", user.slug, event.slug)
         return 403, ErrorResponseSchema(error="Only the Keeper can start the room.")
 
+    if event.ended():
+        return 400, ErrorResponseSchema(error="Session has already ended.")
+
     try:
         livekit.start_room(room_name=event.slug, keeper_slug=event.space.author.slug)
         return HttpResponse(status=200)
@@ -206,6 +216,8 @@ def end_room_endpoint(request: HttpRequest, event_slug: str):
 
     try:
         livekit.end_room(event.slug)
+        event.ended_at = timezone.now()
+        event.save()
         return HttpResponse(status=200)
     except RoomNotFoundError as e:
         return 404, ErrorResponseSchema(error=str(e))
@@ -239,6 +251,9 @@ def mute_participant_endpoint(request: HttpRequest, event_slug: str, participant
         logging.warning("User %s attempted to mute participant in event %s", user.slug, event_slug)
         return 403, ErrorResponseSchema(error="Only the Keeper can mute participants.")
 
+    if event.ended():
+        return 400, ErrorResponseSchema(error="Session has already ended.")
+
     try:
         livekit.mute_participant(event.slug, participant_identity)
         return HttpResponse(status=200)
@@ -258,6 +273,7 @@ def mute_participant_endpoint(request: HttpRequest, event_slug: str, participant
     "/event/{event_slug}/mute-all",
     response={
         200: None,
+        400: ErrorResponseSchema,
         403: ErrorResponseSchema,
         404: ErrorResponseSchema,
         500: ErrorResponseSchema,
@@ -272,6 +288,9 @@ def mute_all_participants_endpoint(request: HttpRequest, event_slug: str):
     if not is_keeper:
         logging.warning("User %s attempted to mute all participants in event %s", user.slug, event_slug)
         return 403, ErrorResponseSchema(error="Only the Keeper can mute participants.")
+
+    if event.ended():
+        return 400, ErrorResponseSchema(error="Session has already ended.")
 
     try:
         livekit.mute_all_participants(event.slug, except_identity=user.slug)
@@ -307,6 +326,9 @@ def remove_participant_endpoint(request: HttpRequest, event_slug: str, participa
     if event.space.author.slug == participant_identity:
         return 403, ErrorResponseSchema(error="Cannot remove the keeper from the room.")
 
+    if event.ended():
+        return 400, ErrorResponseSchema(error="Session has already ended.")
+
     try:
         livekit.remove_participant(event.slug, participant_identity)
         return HttpResponse(status=200)
@@ -323,7 +345,7 @@ def remove_participant_endpoint(request: HttpRequest, event_slug: str, participa
 @meetings_router.post(
     "/event/{event_slug}/reorder",
     response={
-        200: LivekitMuteParticipantSchema,
+        200: LivekitOrderSchema,
         400: ErrorResponseSchema,
         403: ErrorResponseSchema,
         404: ErrorResponseSchema,
@@ -331,7 +353,7 @@ def remove_participant_endpoint(request: HttpRequest, event_slug: str, participa
     },
     url_name="reorder_participants",
 )
-def reorder_participants_endpoint(request: HttpRequest, event_slug: str, order: LivekitMuteParticipantSchema):
+def reorder_participants_endpoint(request: HttpRequest, event_slug: str, order: LivekitOrderSchema):
     user: User = request.user  # type: ignore
     event: Session = get_object_or_404(Session, slug=event_slug)
     is_keeper = event.space.author.slug == user.slug
@@ -340,9 +362,12 @@ def reorder_participants_endpoint(request: HttpRequest, event_slug: str, order: 
         logging.warning("User %s attempted to reorder participants in event %s", user.slug, event_slug)
         return 403, ErrorResponseSchema(error="Only the Keeper can reorder participants.")
 
+    if event.ended():
+        return 400, ErrorResponseSchema(error="Session has already ended.")
+
     try:
         new_order = livekit.reorder(event.slug, order.order)
-        return LivekitMuteParticipantSchema(order=new_order)
+        return LivekitOrderSchema(order=new_order)
     except RoomNotFoundError as e:
         return 404, ErrorResponseSchema(error=str(e))
     except RoomAlreadyEndedError as e:

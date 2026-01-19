@@ -170,6 +170,7 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         blank=True,
     )
     duration_minutes = models.IntegerField(_("Minutes"), default=60)
+    ended_at = models.DateTimeField(null=True, blank=True, help_text="When the session was explicitly ended")
     joined = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="sessions_joined")
     meeting_url = models.CharField(max_length=255, blank=True)
     notified = models.BooleanField(default=False)
@@ -265,6 +266,8 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         return self.start - grace_before < now < self.start + grace_after
 
     def ended(self):
+        if self.ended_at is not None:
+            return True
         return self.start + datetime.timedelta(minutes=self.duration_minutes) < timezone.now()
 
     def remove_attendee(self, user):
