@@ -12,6 +12,7 @@ from fontTools.ttLib import TTFont  # pyright: ignore[reportMissingTypeStubs]
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from PIL.ImageFile import ImageFile
 from typing_extensions import override
+from uniseg.graphemecluster import grapheme_clusters
 
 folder_path = os.path.dirname(os.path.realpath(__file__))
 font_path = f"{folder_path}/../static/fonts/Montserrat-VariableFont_wght.ttf"
@@ -22,15 +23,21 @@ client = requests.session()
 PADDING = 20
 
 
-def load_fonts(*font_paths: str) -> dict[str, TTFont]:
+def load_fonts(*font_paths: str) -> dict[str, set[int]]:
     """
-    Loads font files specified by paths into memory and returns a dictionary of font objects.
+    Loads font files and extracts cmap codepoints as simple sets.
+    This avoids thread-safety issues with TTFont's lazy loading.
     """
-    fonts = {}
+    fonts: dict[str, set[int]] = {}
     for path in font_paths:
         font = TTFont(path)
-        fonts[path] = font
-    return cast(dict[str, TTFont], fonts)
+        codepoints: set[int] = set()
+        for table in font["cmap"].tables:  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType, reportUnknownVariableType]
+            if hasattr(table, "cmap") and table.cmap:
+                codepoints.update(table.cmap.keys())  # pyright: ignore[reportUnknownMemberType]
+        fonts[path] = codepoints
+        font.close()
+    return fonts
 
 
 fonts = load_fonts(font_path, font_fallback_path, font_emoji_path)
@@ -235,29 +242,29 @@ def _load_img(path: str):
         return Image.open(path)
 
 
-def has_glyph(font: TTFont, glyph: str) -> bool:
+def has_glyph(codepoints: set[int], glyph: str) -> bool:
     """
-    Checks if the given font contains a glyph for the specified character.
+    Checks if the given font codepoint set contains all codepoints in the grapheme cluster.
+    For ZWJ sequences like family emojis, all component codepoints must be present.
     """
-    for table in font["cmap"].tables:  # pyright: ignore[reportAttributeAccessIssue, reportUnknownMemberType, reportUnknownVariableType]
-        if table.cmap.get(ord(glyph)):  # pyright: ignore[reportUnknownMemberType]
-            return True
-    return False
+    return all(ord(char) in codepoints for char in glyph)
 
 
-def merge_chunks(text: str, fonts: dict[str, TTFont]) -> list[tuple[str, str]]:
+def merge_chunks(text: str, fonts: dict[str, set[int]]) -> list[tuple[str, str]]:
     """
-    Merges consecutive characters with the same font into clusters,
+    Merges consecutive grapheme clusters with the same font into chunks,
     optimizing font lookup.
-    Mostly used to switch to the emoji font when a emoji is detected to avoid
+    Uses grapheme clusters to properly handle ZWJ emoji sequences like 👨‍👨‍👧‍👦.
+    Mostly used to switch to the emoji font when an emoji is detected to avoid
     the dreaded empty square.
     """
     chunks: list[tuple[str, str]] = []
 
-    for char in text:
-        for font_path, font in fonts.items():
-            if has_glyph(font, char):
-                chunks.append((char, font_path))
+    for cluster in grapheme_clusters(text):
+        print(cluster)
+        for path, codepoints in fonts.items():
+            if has_glyph(codepoints, cluster):
+                chunks.append((cluster, path))
                 break
 
     cluster = chunks[:1]
@@ -276,7 +283,7 @@ def draw_text(
     xy: tuple[int, int],
     text: str,
     color: tuple[int, int, int],
-    fonts: dict[str, TTFont],
+    fonts: dict[str, set[int]],
     variation: str,
     size: int,
     anchor: str | None = None,

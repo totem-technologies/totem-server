@@ -8,6 +8,7 @@ dependencies = [
     "argon2-cffi<26",
     "cssselect<2",
     "fonttools>=4.55.3",
+    "uniseg<=0.11.0",
     "environs[django]<15",
     "google-api-python-client<3",
     "google-auth-oauthlib<2",
