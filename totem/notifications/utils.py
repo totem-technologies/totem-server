@@ -1,10 +1,8 @@
-from typing import Dict, List, Optional
-
 from totem.notifications.services import send_notification_to_user
 from totem.users.models import User
 
 
-def notify_users(users: List[User], title: str, body: str, data: Optional[Dict[str, str]] = None) -> Dict[int, bool]:
+def notify_users(users: list[User], title: str, body: str, data: dict[str, str] | None = None) -> dict[int, bool]:
     """
     Send a notification to multiple users
 

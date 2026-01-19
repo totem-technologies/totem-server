@@ -11,7 +11,9 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     # dependencies for building Python packages
     build-essential \
     # psycopg2 dependencies
-    libpq-dev
+    libpq-dev \
+    # Pillow dependencies for text shaping (ZWJ emoji sequences)
+    libraqm-dev libfribidi-dev libharfbuzz-dev
 
 RUN pip install uv
 ENV UV_COMPILE_BYTECODE=1
@@ -56,6 +58,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     libpq-dev \
     # Translations dependencies
     gettext \
+    # Pillow text shaping runtime (ZWJ emoji sequences)
+    libraqm0 \
     # cleaning up unused files
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && rm -rf /var/lib/apt/lists/*

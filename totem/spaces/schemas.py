@@ -1,6 +1,5 @@
 from datetime import datetime
 from enum import Enum
-from typing import List
 
 from ninja import FilterSchema, ModelSchema, Schema
 
@@ -49,8 +48,8 @@ class AuthorFilterSchema(Schema):
 
 
 class FilterOptionsSchema(Schema):
-    categories: List[CategoryFilterSchema]
-    authors: List[AuthorFilterSchema]
+    categories: list[CategoryFilterSchema]
+    authors: list[AuthorFilterSchema]
 
 
 class SessionSpaceSchema(ModelSchema):
@@ -137,6 +136,6 @@ class SpaceDetailSchema(Schema):
 
 
 class SummarySpacesSchema(Schema):
-    upcoming: List[SessionDetailSchema]
-    for_you: List[SpaceDetailSchema]
-    explore: List[SpaceDetailSchema]
+    upcoming: list[SessionDetailSchema]
+    for_you: list[SpaceDetailSchema]
+    explore: list[SpaceDetailSchema]

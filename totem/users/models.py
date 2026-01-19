@@ -36,8 +36,8 @@ if TYPE_CHECKING:
 
 
 class ProfileImageSpec(ImageSpec):
-    processors = [ResizeToFill(400, 400)]
-    format = "JPEG"
+    processors = [ResizeToFill(1000, 1000)]
+    format = "WEBP"
     options = {"quality": 80, "optimize": True}
 
 

@@ -17,7 +17,7 @@ User = get_user_model()
 
 class BlogImageSpec(ImageSpec):
     processors = [ResizeToFit(1500, 1500)]
-    format = "JPEG"
+    format = "WEBP"
     options = {"quality": 80, "optimize": True}
 
 
