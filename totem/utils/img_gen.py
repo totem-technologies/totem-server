@@ -261,7 +261,6 @@ def merge_chunks(text: str, fonts: dict[str, set[int]]) -> list[tuple[str, str]]
     chunks: list[tuple[str, str]] = []
 
     for cluster in grapheme_clusters(text):
-        print(cluster)
         for path, codepoints in fonts.items():
             if has_glyph(codepoints, cluster):
                 chunks.append((cluster, path))
