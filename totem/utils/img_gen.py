@@ -325,10 +325,10 @@ def draw_text(
 
 
 @lru_cache(maxsize=100)
-def generate_circle_image(params: CircleImageParams):  
+def generate_circle_image(params: CircleImageParams):
     """
     Generates a circle/event promotional image following the Figma design.
-    
+
     Layout structure:
     - Top: Centered title and subtitle
     - Middle: Rounded rectangle featured image with shadow
@@ -336,25 +336,25 @@ def generate_circle_image(params: CircleImageParams):
     - Bottom: Date on left, times on right
     - Background: Radial gradient from top-left (warm yellow) to bottom-center (cool purple/pink)
     """
-    
+
     # Create canvas with gradient background
     # Gradient flows from top-left (warm yellow) to bottom-center (cool purple/pink)
     canvas = Image.new("RGB", (params.width, params.height), (0, 0, 0))
-    
+
     # Generate radial gradient from top-left to bottom-center using efficient Pillow methods
     # Start color: warm yellow/gold (#F5D67A)
     # End color: purple/pink (#C49BA8)
     start_color = (245, 214, 122)  # Yellow/gold at top-left
-    end_color = (196, 155, 168)    # Purple/pink at bottom-center
-    
+    end_color = (196, 155, 168)  # Purple/pink at bottom-center
+
     # Origin point (top-left)
     origin_x, origin_y = 0, 0
     # Target point (bottom-center)
     target_x, target_y = params.width // 2, params.height
-    
+
     # Calculate maximum distance for gradient spread
     max_distance = ((target_x - origin_x) ** 2 + (target_y - origin_y) ** 2) ** 0.5
-    
+
     # Pre-calculate all pixel colors efficiently using list comprehension
     # This is much faster than calling draw.point() for each pixel
     pixels = []
@@ -364,43 +364,43 @@ def generate_circle_image(params: CircleImageParams):
             distance = ((x - origin_x) ** 2 + (y - origin_y) ** 2) ** 0.5
             # Normalize distance to 0-1 range
             ratio = min(distance / max_distance, 1.0)
-            
+
             # Interpolate color based on distance
             r = int(start_color[0] * (1 - ratio) + end_color[0] * ratio)
             g = int(start_color[1] * (1 - ratio) + end_color[1] * ratio)
             b = int(start_color[2] * (1 - ratio) + end_color[2] * ratio)
-            
+
             pixels.append((r, g, b))
-    
+
     # Use Pillow's efficient putdata method to set all pixels at once
     canvas.putdata(pixels)  # pyright: ignore[reportUnknownMemberType]
-    
+
     # Convert to RGBA for compositing with alpha channel support
     canvas = canvas.convert("RGBA")
     draw = ImageDraw.Draw(canvas)
-    
+
     # Scale factor for responsive sizing (based on 1080px design)
     scale_factor = params.width / 1080
-    
+
     # === TOP SECTION: Title and Subtitle (Centered) ===
     title_font_size = int(63 * scale_factor)
     subtitle_font_size = int(44 * scale_factor)
     title_y = int(84 * scale_factor)  # Top padding + space
-    
+
     # Draw centered title
     title_font = ImageFont.truetype(font_path, title_font_size)
     title_font.set_variation_by_name("SemiBold")
-    
+
     # Wrap title text for centering
     title_lines = _wrap_text(params.title, params.width - 40, title_font)
     title_line_height = int(title_font_size * 1.2)
-    
+
     current_y = title_y
     for line in title_lines:
         bbox = draw.textbbox((0, 0), line, font=title_font)
-        text_width = bbox[2] - bbox[0]
+        text_width = int(bbox[2] - bbox[0])
         x_centered = (params.width - text_width) // 2
-        
+
         draw_text(
             draw,
             xy=(x_centered, current_y),
@@ -413,20 +413,20 @@ def generate_circle_image(params: CircleImageParams):
             align="center",
         )
         current_y += title_line_height
-    
+
     # Draw centered subtitle
     subtitle_y = current_y + int(20 * scale_factor)
     subtitle_font = ImageFont.truetype(font_path, subtitle_font_size)
     subtitle_font.set_variation_by_name("SemiBold")
-    
+
     subtitle_lines = _wrap_text(params.subtitle, params.width - 40, subtitle_font)
     subtitle_line_height = int(subtitle_font_size * 2)  # Line height 2 per design
-    
+
     for line in subtitle_lines:
         bbox = draw.textbbox((0, 0), line, font=subtitle_font)
-        text_width = bbox[2] - bbox[0]
+        text_width = int(bbox[2] - bbox[0])
         x_centered = (params.width - text_width) // 2
-        
+
         draw_text(
             draw,
             xy=(x_centered, subtitle_y),
@@ -439,38 +439,31 @@ def generate_circle_image(params: CircleImageParams):
             align="center",
         )
         subtitle_y += subtitle_line_height
-    
+
     # === MIDDLE SECTION: Featured Image (Rounded Rectangle with Shadow) ===
     featured_img = _load_img(params.background_path)
     img_width = int(602 * scale_factor)
     img_height = int(380 * scale_factor)
     border_radius = int(30 * scale_factor)
-    
+
     # Resize and crop featured image
     featured_img = ImageOps.fit(
-        featured_img,
-        (img_width, img_height),
-        centering=(0.5, 0.5),
-        method=Image.Resampling.LANCZOS
+        featured_img, (img_width, img_height), centering=(0.5, 0.5), method=Image.Resampling.LANCZOS
     ).convert("RGBA")
-    
+
     # Create rounded rectangle mask for the image
     mask = Image.new("L", (img_width, img_height), 0)
     mask_draw = ImageDraw.Draw(mask)
-    mask_draw.rounded_rectangle(
-        [(0, 0), (img_width, img_height)],
-        radius=border_radius,
-        fill=255
-    )
-    
+    mask_draw.rounded_rectangle([(0, 0), (img_width, img_height)], radius=border_radius, fill=255)
+
     # Apply mask to create rounded image
     rounded_img = Image.new("RGBA", (img_width, img_height), (0, 0, 0, 0))
     rounded_img.paste(featured_img, (0, 0), mask)
-    
+
     # Position image centered horizontally, below subtitle
     img_x = (params.width - img_width) // 2
     img_y = subtitle_y + int(20 * scale_factor)
-    
+
     # Create shadow effect (simple dark rectangle behind, slightly offset)
     shadow_offset = int(5 * scale_factor)
     shadow_blur = int(12 * scale_factor)
@@ -479,41 +472,38 @@ def generate_circle_image(params: CircleImageParams):
     shadow_draw.rounded_rectangle(
         [(shadow_blur, shadow_blur), (img_width + shadow_blur, img_height + shadow_blur)],
         radius=border_radius,
-        fill=(0, 0, 0, 64)  # Semi-transparent black
+        fill=(0, 0, 0, 64),  # Semi-transparent black
     )
-    
+
     # Composite shadow and image onto canvas
-    canvas.alpha_composite(
-        shadow,
-        dest=(img_x - shadow_blur + shadow_offset, img_y - shadow_blur + shadow_offset)
-    )
+    canvas.alpha_composite(shadow, dest=(img_x - shadow_blur + shadow_offset, img_y - shadow_blur + shadow_offset))
     canvas.alpha_composite(rounded_img, dest=(img_x, img_y))
-    
+
     # === AUTHOR SECTION: Name + Avatar (Horizontal) ===
     author_section_y = img_y + img_height + int(20 * scale_factor)
     author_font_size = int(35 * scale_factor)
     avatar_size = int(150 * scale_factor)
-    
+
     # Calculate center position for author section
-    author_section_width = int(500 * scale_factor)  # Approximate width for text + avatar + gap
-    author_x = (params.width - author_section_width) // 2
-    
+    # author_section_width = int(500 * scale_factor)  # Approximate width for text + avatar + gap
+    # author_x = (params.width - author_section_width) // 2
+
     # Draw author text (right-aligned to avatar)
     author_font = ImageFont.truetype(font_path, author_font_size)
     author_font.set_variation_by_name("SemiBold")
-    
+
     author_line1 = f"with {params.author_name}"
     author_line2 = "@totem.org"
-    
+
     # Get text dimensions for positioning
     bbox1 = draw.textbbox((0, 0), author_line1, font=author_font)
     bbox2 = draw.textbbox((0, 0), author_line2, font=author_font)
     text_width = max(bbox2[2] - bbox2[0], bbox1[2] - bbox1[0])
-    
+
     # Position text to the left of avatar
-    text_x = (params.width - text_width - int(20 * scale_factor) - avatar_size) // 2
+    text_x = int((params.width - text_width - int(20 * scale_factor) - avatar_size) // 2)
     text_y = author_section_y + (avatar_size - int(author_font_size * 2.2)) // 2
-    
+
     draw_text(
         draw,
         xy=(text_x, text_y),
@@ -525,7 +515,7 @@ def generate_circle_image(params: CircleImageParams):
         anchor=None,
         align="left",
     )
-    
+
     draw_text(
         draw,
         xy=(text_x, text_y + int(author_font_size * 1.2)),
@@ -537,58 +527,52 @@ def generate_circle_image(params: CircleImageParams):
         anchor=None,
         align="left",
     )
-    
+
     # Draw avatar (circular, to the right of text)
-    avatar_x = text_x + text_width + int(20 * scale_factor)
+    avatar_x = int(text_x + text_width + int(20 * scale_factor))
     avatar_y = author_section_y
-    
+
     # Load and create circular avatar
     avatar_img = _load_img(params.author_img_path)
     avatar_img = ImageOps.fit(
-        avatar_img,
-        (avatar_size, avatar_size),
-        centering=(0.5, 0.5),
-        method=Image.Resampling.LANCZOS
+        avatar_img, (avatar_size, avatar_size), centering=(0.5, 0.5), method=Image.Resampling.LANCZOS
     ).convert("RGBA")
-    
+
     # Create circular mask with white border
     border_width = int(4 * scale_factor)
     avatar_with_border = Image.new("RGBA", (avatar_size, avatar_size), (0, 0, 0, 0))
     avatar_draw = ImageDraw.Draw(avatar_with_border)
-    
+
     # Draw white circle border
     avatar_draw.ellipse([(0, 0), (avatar_size, avatar_size)], fill=(255, 255, 255))
-    
+
     # Create inner mask for avatar
     inner_size = avatar_size - border_width * 2
     inner_mask = Image.new("L", (inner_size, inner_size), 0)
     inner_draw = ImageDraw.Draw(inner_mask)
     inner_draw.ellipse([(0, 0), (inner_size, inner_size)], fill=255)
-    
+
     # Resize avatar to fit inside border
     avatar_inner = ImageOps.fit(
-        avatar_img,
-        (inner_size, inner_size),
-        centering=(0.5, 0.5),
-        method=Image.Resampling.LANCZOS
+        avatar_img, (inner_size, inner_size), centering=(0.5, 0.5), method=Image.Resampling.LANCZOS
     )
-    
+
     # Composite avatar onto white circle
     avatar_with_border.paste(avatar_inner, (border_width, border_width), inner_mask)
-    
+
     # Add avatar to canvas
     canvas.alpha_composite(avatar_with_border, dest=(avatar_x, avatar_y))
-    
+
     # === BOTTOM SECTION: Date and Times ===
     bottom_y = author_section_y + avatar_size + int(40 * scale_factor)
     date_time_font_size = int(35 * scale_factor)
     date_time_font = ImageFont.truetype(font_path, date_time_font_size)
     date_time_font.set_variation_by_name("SemiBold")
-    
+
     # Left side: Date (split into two lines if needed)
     date_parts = params.day.split()  # e.g., "27 October"
     date_x = int(50 * scale_factor)
-    
+
     # Draw date line 1 (e.g., "27 October")
     draw_text(
         draw,
@@ -601,13 +585,13 @@ def generate_circle_image(params: CircleImageParams):
         anchor=None,
         align="left",
     )
-    
+
     # Draw year on second line (extract year if present, otherwise use "2025")
     year_text = "2025"  # Default
     for part in date_parts:
         if part.isdigit() and len(part) == 4:
             year_text = part
-    
+
     draw_text(
         draw,
         xy=(date_x, bottom_y + int(date_time_font_size * 1.2)),
@@ -619,16 +603,16 @@ def generate_circle_image(params: CircleImageParams):
         anchor=None,
         align="left",
     )
-    
+
     # Right side: Times (right-aligned)
     time_x = params.width - int(50 * scale_factor)
-    
+
     # Get text widths for right alignment
     bbox_est = draw.textbbox((0, 0), params.time_est, font=date_time_font)
     bbox_pst = draw.textbbox((0, 0), params.time_pst, font=date_time_font)
-    est_width = bbox_est[2] - bbox_est[0]
-    pst_width = bbox_pst[2] - bbox_pst[0]
-    
+    est_width = int(bbox_est[2] - bbox_est[0])
+    pst_width = int(bbox_pst[2] - bbox_pst[0])
+
     # Draw EST time (top)
     draw_text(
         draw,
@@ -641,7 +625,7 @@ def generate_circle_image(params: CircleImageParams):
         anchor=None,
         align="right",
     )
-    
+
     # Draw PST time (bottom)
     draw_text(
         draw,
@@ -654,7 +638,7 @@ def generate_circle_image(params: CircleImageParams):
         anchor=None,
         align="right",
     )
-    
+
     return canvas.convert("RGB")
 
 
