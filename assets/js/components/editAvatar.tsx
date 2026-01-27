@@ -12,7 +12,7 @@ import Avatar from "./avatar"
 const defaults = {}
 
 function EditAvatar() {
-  let modalRef: HTMLDialogElement | undefined
+  let modalRef: HTMLDialogElement | undefined // eslint-disable-line no-unassigned-vars
   const query = useQuery(() => ({
     queryKey: ["userData"],
     queryFn: async () => {
@@ -33,7 +33,7 @@ function EditAvatar() {
     <div
       onClick={() => modalRef?.showModal()}
       onKeyDown={() => modalRef?.showModal()}
-      class="relative h-[150px] w-[150px] rounded-full p-1 transition hover:shadow-md">
+      class="relative h-37.5 w-37.5 rounded-full p-1 transition hover:shadow-md">
       <Suspense fallback={"Loading..."}>
         <Avatar
           seed={user()?.profile_avatar_seed}
@@ -105,7 +105,7 @@ async function getFile() {
 }
 
 async function uploadProfileImage() {
-  // propmpt user to select a file and upload it
+  // prompt user to select a file and upload it
   const file = await getFile()
   await totemApiApiUserUploadProfileImage({
     body: {

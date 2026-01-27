@@ -14,8 +14,8 @@ SECRET_KEY = env(
     default="ug27gQVlBLKLnF2a09adWFdgWWZPG6s8PZWnCdjzDjJoNrUnr0oSosLwjwZudNSt",  # type: ignore
 )
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
-# 10.0.2.2 for android emulator
-ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1", "10.0.2.2", SITE_HOST]
+# Allow all hosts in local dev (OrbStack uses dynamic IPs)
+ALLOWED_HOSTS = ["*"]
 CSRF_TRUSTED_ORIGINS = [f"https://{SITE_HOST}", f"http://{SITE_HOST}"]
 
 # CACHES

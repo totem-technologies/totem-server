@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import Optional
 
 from ninja import Field, ModelSchema, Schema
 
@@ -13,11 +12,11 @@ class ProfileAvatarTypeEnum(str, Enum):
 
 class PublicUserSchema(ModelSchema):
     profile_avatar_type: ProfileAvatarTypeEnum
-    circle_count: Optional[int] = None
+    circle_count: int | None = None
 
     @staticmethod
     def resolve_circle_count(obj: User) -> int:
-        return obj.events_joined.count()
+        return obj.sessions_joined.count()
 
     class Meta:
         model = User
@@ -44,7 +43,7 @@ class UserSchema(ModelSchema):
 
     @staticmethod
     def resolve_circle_count(obj: User) -> int:
-        return obj.events_joined.count()
+        return obj.sessions_joined.count()
 
     class Meta:
         model = User
@@ -63,12 +62,12 @@ class UserSchema(ModelSchema):
 
 # New schema for user updates
 class UserUpdateSchema(Schema):
-    name: Optional[str] = None
-    email: Optional[str] = None
-    timezone: Optional[str] = None
-    newsletter_consent: Optional[bool] = None
-    profile_avatar_type: Optional[ProfileAvatarTypeEnum] = None
-    profile_avatar_seed: Optional[str] = Field(None, description="Should be a random UUID")
+    name: str | None = None
+    email: str | None = None
+    timezone: str | None = None
+    newsletter_consent: bool | None = None
+    profile_avatar_type: ProfileAvatarTypeEnum | None = None
+    profile_avatar_seed: str | None = Field(None, description="Should be a random UUID")
     # Note: profile_image will be handled as a separate File(...) parameter in the endpoint
     # to support multipart/form-data uploads.
 
@@ -77,18 +76,18 @@ class KeeperProfileSchema(ModelSchema):
     user: PublicUserSchema
     circle_count: int
     month_joined: str
-    bio_html: Optional[str] = None
+    bio_html: str | None = None
 
     @staticmethod
     def resolve_circle_count(obj: KeeperProfile) -> int:
-        return obj.user.events_joined.count()
+        return obj.user.sessions_joined.count()
 
     @staticmethod
     def resolve_month_joined(obj: KeeperProfile) -> str:
         return obj.user.month_joined()
 
     @staticmethod
-    def resolve_bio_html(obj: KeeperProfile) -> Optional[str]:
+    def resolve_bio_html(obj: KeeperProfile) -> str | None:
         if obj.bio:
             return obj.render_markdown(obj.bio)
         return None

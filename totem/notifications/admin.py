@@ -1,11 +1,10 @@
-from django.contrib import admin
 from django import forms
-from django.contrib import messages
+from django.contrib import admin, messages
+from django.db.models import QuerySet
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
-from django.urls import reverse, path
+from django.urls import path, reverse
 from django.utils.translation import gettext_lazy as _
-from django.db.models import QuerySet
 
 from .models import FCMDevice
 from .services import send_notification

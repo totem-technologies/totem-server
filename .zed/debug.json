@@ -1,0 +1,21 @@
+// Project-local debug tasks
+//
+// For more documentation on how to configure debug tasks,
+// see: https://zed.dev/docs/debugger
+[
+  {
+    "label": "Totem: Remote Attach",
+    "adapter": "Debugpy",
+    "request": "attach",
+    "tcp_connection": {
+      "host": "127.0.0.1",
+      "port": 5678
+    },
+    "path_mappings": [
+      {
+        "remote_root": "/app",
+        "local_root": "${ZED_WORKTREE_ROOT}"
+      }
+    ]
+  }
+]

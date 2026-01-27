@@ -9,7 +9,7 @@ from livekit import api
 from totem.meetings.room_state import SessionState, SessionStatus
 from totem.users.models import User
 
-from ..circles.models import CircleEvent
+from ..spaces.models import Session
 
 # Constants
 ROOM_EMPTY_TIMEOUT_SECONDS = 60 * 60  # 1 hour
@@ -79,7 +79,21 @@ class NoAudioTrackError(LiveKitException):
 
 @asynccontextmanager
 async def _get_lk_api_client():
-    """Provides an initialized and automatically closed LiveKitAPI client."""
+    """Provides an initialized and automatically closed LiveKitAPI client.
+
+    This context manager handles LiveKit API client creation and cleanup,
+    ensuring proper resource management and error handling.
+
+    Yields:
+        api.LiveKitAPI: An authenticated LiveKit API client instance.
+
+    Raises:
+        LiveKitConfigurationError: If LIVEKIT_API_KEY or LIVEKIT_API_SECRET are not configured.
+
+    Example:
+        async with _get_lk_api_client() as lkapi:
+            room = await lkapi.room.list_rooms(...)
+    """
     if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
         raise LiveKitConfigurationError("LiveKit API key and secret are not configured.")
 
@@ -94,11 +108,24 @@ async def _get_lk_api_client():
         await lkapi.aclose()
 
 
-def create_access_token(user: User, event: CircleEvent) -> str:
+def create_access_token(user: User, event: Session) -> str:
     """
     Create a LiveKit access token for a user to join a specific event room.
 
+    Generates a JWT token that allows a user to participate in a live session.
     If the room doesn't exist, it will be created automatically when the user joins.
+    The token is configured with appropriate permissions and room settings.
+
+    Args:
+        user: The User object attempting to join the session.
+        event: The Session object representing the event/room.
+
+    Returns:
+        str: A JWT token that can be used to authenticate with LiveKit.
+
+    Note:
+        The maximum number of participants is set to the event's attendee count
+        plus a buffer to accommodate late joiners.
     """
 
     participant_identity = user.slug
@@ -130,20 +157,22 @@ def create_access_token(user: User, event: CircleEvent) -> str:
 
 async def _get_room(room_name: str, lkapi: api.LiveKitAPI) -> api.Room | None:
     """
-    Retrieves room information.
+    Retrieves room information from LiveKit.
+
+    Queries the LiveKit API for a room with the specified name and returns
+    the first matching room, or None if no room is found.
 
     Args:
-        room_name: The name of the room to retrieve.
-        lkapi: The LiveKit API client.
+        room_name: The unique identifier/name of the room to retrieve.
+        lkapi: An authenticated LiveKit API client instance.
 
     Returns:
-        The room object if found, None otherwise.
+        api.Room | None: The room object if found, None otherwise.
+
+    Raises:
+        api.TwirpError: If the API call fails.
     """
-    rooms = await lkapi.room.list_rooms(
-        list=api.ListRoomsRequest(
-            names=[room_name],
-        )
-    )
+    rooms = await lkapi.room.list_rooms(list=api.ListRoomsRequest(names=[room_name]))
     if not rooms.rooms:
         return None
     return rooms.rooms[0]
@@ -151,17 +180,21 @@ async def _get_room(room_name: str, lkapi: api.LiveKitAPI) -> api.Room | None:
 
 async def _get_room_or_raise(room_name: str, lkapi: api.LiveKitAPI) -> api.Room:
     """
-    Retrieves room information or raises an error if not found.
+    Retrieves room information, raising an error if not found.
+
+    A convenience wrapper around _get_room that converts a None result
+    into an exception for easier error handling.
 
     Args:
-        room_name: The name of the room to retrieve.
-        lkapi: The LiveKit API client.
+        room_name: The unique identifier/name of the room to retrieve.
+        lkapi: An authenticated LiveKit API client instance.
 
     Returns:
-        The room object.
+        api.Room: The room object if found.
 
     Raises:
         RoomNotFoundError: If the room does not exist.
+        api.TwirpError: If the API call fails.
     """
     room = await _get_room(room_name, lkapi)
     if not room:
@@ -169,103 +202,142 @@ async def _get_room_or_raise(room_name: str, lkapi: api.LiveKitAPI) -> api.Room:
     return room
 
 
-@async_to_sync
-async def get_room_state(room_name: str) -> SessionState:
+async def _parse_validate_room_state(
+    room: api.Room,
+    lkapi: api.LiveKitAPI,
+    validate: bool = True,
+    keeper_slug: str | None = None,
+    participants: list[api.ParticipantInfo] | None = None,
+) -> SessionState:
     """
-    Retrieves the current session state for a room.
+    Parses the session state from room metadata and optionally validates it.
+
+    Deserializes the session state from room metadata JSON. If validation is enabled,
+    the speaking order is verified against current participants. The keeper's presence
+    can be verified if required.
 
     Args:
-        room_name: The name of the room.
+        room: The room object containing metadata to parse.
+        lkapi: An authenticated LiveKit API client instance.
+        validate: Whether to validate speaking order against current participants. Defaults to True.
+        keeper_slug: Optional keeper slug to verify is in the room. If provided, checks that
+                     the keeper is present in the participant list.
+        participants: Optional pre-fetched list of participants. If not provided and needed,
+                     will be fetched from the API.
 
     Returns:
-        The current SessionState for the room.
+        SessionState: A SessionState object parsed from the room metadata. If metadata is
+                     missing or invalid, returns a default SessionState with empty speaking order.
 
     Raises:
-        RoomNotFoundError: If the room does not exist.
-    """
-    async with _get_lk_api_client() as lkapi:
-        room = await _get_room_or_raise(room_name, lkapi)
-        return await _parse_room_state(room)
+        KeeperNotInRoomError: If keeper_slug is provided and the keeper is not in the room.
+        api.TwirpError: If API calls fail when fetching participants.
 
-
-async def _parse_room_state(room: api.Room) -> SessionState:
-    """
-    Parses the session state from room metadata.
-
-    Args:
-        room: The room object containing metadata.
-
-    Returns:
-        A SessionState object parsed from the room metadata. If the metadata is missing or invalid,
-        returns a default SessionState with an empty speaking order.
+    Note:
+        Parse errors are logged but don't raise exceptions; instead a default state is returned.
     """
     if not room.metadata:
-        return SessionState(speaking_order=[])
+        return SessionState(speaking_order=[], keeper_slug="")
 
     try:
-        current_state = json.loads(room.metadata)
-        return SessionState(**current_state)
+        metadata_dict = json.loads(room.metadata)
+
+        participant_list = participants
+        if (validate or keeper_slug) and participant_list is None:
+            participants_response = await lkapi.room.list_participants(api.ListParticipantsRequest(room=room.name))
+            participant_list = participants_response.participants
+
+        if keeper_slug and participant_list is not None:
+            participant_identities = [p.identity for p in participant_list]
+            if keeper_slug not in participant_identities:
+                raise KeeperNotInRoomError(f"Keeper {keeper_slug} is not in room {room.name}.")
+
+        state = SessionState(**metadata_dict)
+
+        if validate and participant_list is not None:
+            participant_identities = [p.identity for p in participant_list]
+            state.validate_order(participant_identities)
+
+        return state
     except (json.JSONDecodeError, TypeError, ValueError) as e:
         logging.error("Failed to parse room metadata for room %s: %s", room.name, e)
-        # Return a default state if parsing fails
-        return SessionState(speaking_order=[])
+        return SessionState(speaking_order=[], keeper_slug="")
 
 
 async def _update_room_metadata(room_name: str, state: SessionState, lkapi: api.LiveKitAPI) -> None:
     """
     Updates the room metadata with the current session state.
 
+    Serializes the SessionState to JSON and updates the room's metadata in LiveKit.
+    This persists the session state (speaking order, status, totem state, etc.)
+    for retrieval by other clients.
+
     Args:
-        room_name: The name of the room to update.
-        state: The session state to save.
-        lkapi: The LiveKit API client.
+        room_name: The unique identifier/name of the room to update.
+        state: The SessionState object to persist in room metadata.
+        lkapi: An authenticated LiveKit API client instance.
 
     Raises:
-        api.TwirpError: If the API call fails.
+        api.TwirpError: If the API call to update metadata fails.
+
+    Note:
+        This is a critical operation for maintaining session state across clients.
     """
     await lkapi.room.update_room_metadata(
-        update=api.UpdateRoomMetadataRequest(
-            room=room_name,
-            metadata=json.dumps(state.dict()),
-        )
+        update=api.UpdateRoomMetadataRequest(room=room_name, metadata=json.dumps(state.dict()))
     )
-
-
-async def _ensure_keeper_in_room(room_name: str, keeper_slug: str, lkapi: api.LiveKitAPI) -> None:
-    """
-    Ensures that the keeper is in the room.
-
-    Args:
-        room_name: The name of the room.
-        keeper_slug: The slug of the keeper to verify.
-        lkapi: The LiveKit API client.
-
-    Raises:
-        KeeperNotInRoomError: If the keeper is not in the room.
-    """
-    participant = await lkapi.room.get_participant(
-        api.RoomParticipantIdentity(
-            room=room_name,
-            identity=keeper_slug,
-        )
-    )
-    if not participant:
-        raise KeeperNotInRoomError(f"Keeper {keeper_slug} is not in room {room_name}.")
 
 
 @async_to_sync
-async def initialize_room(room_name: str, speaking_order: list[str]) -> None:
+async def get_room_state(room_name: str) -> SessionState:
     """
-    Initializes a room with default metadata if it doesn't exist.
+    Retrieves the current session state for a room.
+
+    Fetches the room from LiveKit and deserializes its metadata into a SessionState object.
+    This provides clients with the current room status, speaking order, and totem state.
 
     Args:
-        room_name: The name of the room to initialize.
-        speaking_order: The initial speaking order for the room.
+        room_name: The unique identifier/name of the room.
+
+    Returns:
+        SessionState: The current session state for the room.
+
+    Raises:
+        RoomNotFoundError: If the room does not exist.
+        api.TwirpError: If the API call fails.
+
+    Note:
+        This is a synchronous wrapper around async code using @async_to_sync.
+    """
+    async with _get_lk_api_client() as lkapi:
+        room = await _get_room_or_raise(room_name, lkapi)
+        return await _parse_validate_room_state(room, lkapi, validate=False)
+
+
+@async_to_sync
+async def initialize_room(room_name: str, speaking_order: list[str], keeper_slug: str) -> None:
+    """
+    Initializes a room with default metadata if it doesn't already exist.
+
+    Creates a new LiveKit room with initial session state including the speaking order,
+    keeper information, and room configuration. Only creates the room if it doesn't exist.
+
+    Args:
+        room_name: The unique identifier/name for the new room.
+        speaking_order: A list of participant identities in speaking order.
+        keeper_slug: The unique identifier of the keeper/session facilitator.
+
+    Returns:
+        None
+
+    Note:
+        If the room already exists, this function does nothing (idempotent).
+        This is a synchronous wrapper around async code using @async_to_sync.
     """
     async with _get_lk_api_client() as lkapi:
         room = await _get_room(room_name, lkapi)
         if not room:
-            state = SessionState(speaking_order=speaking_order)
+            state = SessionState(speaking_order=speaking_order, keeper_slug=keeper_slug)
             await lkapi.room.create_room(
                 create=api.CreateRoomRequest(
                     name=room_name,
@@ -279,23 +351,34 @@ async def initialize_room(room_name: str, speaking_order: list[str]) -> None:
 @async_to_sync
 async def pass_totem(room_name: str, keeper_slug: str, user_identity: str) -> None:
     """
-    Passes the totem to the next participant in the room.
+    Passes the totem to the next participant in the speaking order.
+
+    Transfers the current speaker role to the next person in the speaking order.
+    Only the current speaker or the keeper can pass the totem. Updates the room
+    metadata to reflect the new speaker.
 
     Args:
-        room_name: The name of the room.
-        keeper_slug: The slug of the keeper (who can always pass the totem).
-        user_identity: The identity of the user attempting to pass the totem.
+        room_name: The unique identifier/name of the room.
+        keeper_slug: The unique identifier of the keeper/session facilitator.
+        user_identity: The unique identifier of the user attempting to pass the totem.
+
+    Returns:
+        None
 
     Raises:
-        RoomNotFoundError: If the room doesn't exist.
-        KeeperNotInRoomError: If the keeper is not in room.
-        UnauthorizedError: If user is not authorized to pass the totem.
+        RoomNotFoundError: If the room does not exist.
+        KeeperNotInRoomError: If the keeper is not currently in the room.
+        UnauthorizedError: If the user is neither the current speaker nor the keeper.
+        api.TwirpError: If the API call fails.
+
+    Note:
+        The keeper can always pass the totem regardless of who is currently speaking.
+        This is a synchronous wrapper around async code using @async_to_sync.
     """
     async with _get_lk_api_client() as lkapi:
         room = await _get_room_or_raise(room_name, lkapi)
-        await _ensure_keeper_in_room(room_name, keeper_slug, lkapi)
 
-        state = await _parse_room_state(room)
+        state = await _parse_validate_room_state(room, lkapi, validate=True, keeper_slug=keeper_slug)
 
         is_speaking_now = state.speaking_now == user_identity
         is_keeper = user_identity == keeper_slug
@@ -313,32 +396,50 @@ async def accept_totem(room_name: str, keeper_slug: str, user_identity: str) -> 
     """
     Accepts the totem from the current speaker in the room.
 
-    When accepting the totem, all other participants are muted.
+    Allows the next person in the speaking order to accept their turn to speak.
+    When a totem is accepted, all other participants are automatically muted to
+    ensure clear audio from the speaker. Updates the room metadata and mutes others.
 
     Args:
-        room_name: The name of the room.
-        keeper_slug: The slug of the keeper.
-        user_identity: The identity of the user accepting the totem.
+        room_name: The unique identifier/name of the room.
+        keeper_slug: The unique identifier of the keeper/session facilitator.
+        user_identity: The unique identifier of the user accepting the totem.
+
+    Returns:
+        None
 
     Raises:
-        RoomNotFoundError: If the room doesn't exist.
-        KeeperNotInRoomError: If the keeper is not in room.
-        NotCurrentSpeakerError: If user is not the current speaker.
+        RoomNotFoundError: If the room does not exist.
+        KeeperNotInRoomError: If the keeper is not currently in the room.
+        NotCurrentSpeakerError: If the user is neither the next speaker nor the keeper.
+        api.TwirpError: If the API call fails.
+
+    Note:
+        All other participants will be muted when the totem is accepted.
+        The keeper can always accept the totem regardless of speaking order.
+        This is a synchronous wrapper around async code using @async_to_sync.
     """
     async with _get_lk_api_client() as lkapi:
         room = await _get_room_or_raise(room_name, lkapi)
-        await _ensure_keeper_in_room(room_name, keeper_slug, lkapi)
 
-        state = await _parse_room_state(room)
+        participants_response = await lkapi.room.list_participants(api.ListParticipantsRequest(room=room_name))
+        participant_list = list(participants_response.participants)
 
-        if state.speaking_now != user_identity:
-            raise NotCurrentSpeakerError(f"User {user_identity} is not the current speaker. Cannot accept the totem.")
+        state = await _parse_validate_room_state(
+            room, lkapi, validate=True, keeper_slug=keeper_slug, participants=participant_list
+        )
+
+        is_next_speaker = state.next_speaker == user_identity
+        is_keeper = user_identity == keeper_slug
+        if not is_next_speaker and not is_keeper:
+            raise NotCurrentSpeakerError(f"User {user_identity} is not the next speaker. Cannot accept the totem.")
 
         state.accept_totem()
         await _update_room_metadata(room_name, state, lkapi)
 
-        # Mute all other participants except the one accepting the totem
-        await _mute_everyone(room_name=room_name, lkapi=lkapi, except_identity=user_identity)
+        await _mute_everyone(
+            room_name=room_name, lkapi=lkapi, except_identity=user_identity, participants=participant_list
+        )
 
 
 @async_to_sync
@@ -346,34 +447,48 @@ async def start_room(room_name: str, keeper_slug: str) -> None:
     """
     Starts the session in the room by updating its status to 'started'.
 
-    The speaking order is validated against current participants before starting.
+    Transitions the room from initialized state to started state. The speaking order
+    is validated against current participants, and all participants except the first
+    speaker are muted. Only the keeper can start a room.
 
     Args:
-        room_name: The name of the room to start.
-        keeper_slug: The slug of the keeper.
+        room_name: The unique identifier/name of the room to start.
+        keeper_slug: The unique identifier of the keeper/session facilitator.
+
+    Returns:
+        None
 
     Raises:
-        RoomNotFoundError: If the room doesn't exist.
-        KeeperNotInRoomError: If the keeper is not in room.
+        RoomNotFoundError: If the room does not exist.
+        KeeperNotInRoomError: If the keeper is not currently in the room.
         RoomAlreadyStartedError: If the room has already been started.
+        api.TwirpError: If the API call fails.
+
+    Note:
+        All participants except the first speaker will be muted when the room starts.
+        This is a synchronous wrapper around async code using @async_to_sync.
     """
     async with _get_lk_api_client() as lkapi:
         room = await _get_room_or_raise(room_name, lkapi)
-        await _ensure_keeper_in_room(room_name, keeper_slug, lkapi)
 
-        state = await _parse_room_state(room)
+        participants_response = await lkapi.room.list_participants(api.ListParticipantsRequest(room=room_name))
+        participant_list = list(participants_response.participants)
+
+        state = await _parse_validate_room_state(
+            room, lkapi, validate=True, keeper_slug=keeper_slug, participants=participant_list
+        )
 
         if state.status == SessionStatus.STARTED:
             raise RoomAlreadyStartedError(f"Room {room_name} has already been started.")
 
-        participants = await lkapi.room.list_participants(
-            api.ListParticipantsRequest(
-                room=room_name,
-            )
-        )
-        state.validate_order([participant.identity for participant in participants.participants])
         state.start()
         await _update_room_metadata(room_name, state, lkapi)
+        await _mute_everyone(
+            room_name=room_name,
+            lkapi=lkapi,
+            except_identity=state.speaking_now or keeper_slug,
+            participants=participant_list,
+        )
 
 
 @async_to_sync
@@ -381,19 +496,30 @@ async def end_room(room_name: str) -> None:
     """
     Ends the session in the room by updating its status to 'ended'.
 
-    All participants are muted when the room ends.
+    Transitions the room to ended state, preventing further participant actions.
+    All participants are muted when the room ends. No further operations can be
+    performed on an ended room.
 
     Args:
-        room_name: The name of the room to end.
+        room_name: The unique identifier/name of the room to end.
+
+    Returns:
+        None
 
     Raises:
-        RoomNotFoundError: If the room doesn't exist.
-        RoomAlreadyEndedError: If the room has already ended.
+        RoomNotFoundError: If the room does not exist.
+        RoomAlreadyEndedError: If the room has already been ended.
+        api.TwirpError: If the API call fails.
+
+    Note:
+        All participants will be muted when the room ends.
+        Once ended, a room cannot be restarted.
+        This is a synchronous wrapper around async code using @async_to_sync.
     """
     async with _get_lk_api_client() as lkapi:
         room = await _get_room_or_raise(room_name, lkapi)
 
-        state = await _parse_room_state(room)
+        state = await _parse_validate_room_state(room, lkapi, validate=False)
 
         if state.status == SessionStatus.ENDED:
             raise RoomAlreadyEndedError(f"Room {room_name} has already ended.")
@@ -406,28 +532,47 @@ async def end_room(room_name: str) -> None:
 @async_to_sync
 async def reorder(room_name: str, new_order: list[str]) -> list[str]:
     """
-    Reorders the participants in the room.
+    Reorders the participants in the room's speaking order.
+
+    Updates the speaking order while ensuring only participants currently connected
+    to the room are included. Participants in the new_order list who are not
+    currently connected are silently filtered out. Updates room metadata with
+    the new order.
 
     Args:
-        room_name: The name of the room.
-        new_order: The new speaking order.
+        room_name: The unique identifier/name of the room.
+        new_order: A list of participant identities in the desired speaking order.
 
     Returns:
-        The updated speaking order.
+        list[str]: The updated speaking order containing only connected participants.
 
     Raises:
-        RoomNotFoundError: If the room doesn't exist.
-        RoomAlreadyEndedError: If the room has already ended.
+        RoomNotFoundError: If the room does not exist.
+        RoomAlreadyEndedError: If the room has already been ended.
+        api.TwirpError: If the API call fails.
+
+    Note:
+        Disconnected participants in new_order are filtered out without raising errors.
+        The actual returned order may be shorter than new_order if some participants
+        are not connected.
+        This is a synchronous wrapper around async code using @async_to_sync.
     """
     async with _get_lk_api_client() as lkapi:
         room = await _get_room_or_raise(room_name, lkapi)
 
-        state = await _parse_room_state(room)
+        participants_response = await lkapi.room.list_participants(api.ListParticipantsRequest(room=room_name))
+        participant_list = list(participants_response.participants)
+        participant_identities = [p.identity for p in participant_list]
+
+        state = await _parse_validate_room_state(room, lkapi, participants=participant_list)
 
         if state.status == SessionStatus.ENDED:
             raise RoomAlreadyEndedError(f"Room {room_name} has already ended.")
 
-        state.reorder(new_order)
+        filtered_order = [identity for identity in new_order if identity in participant_identities]
+
+        state.reorder(filtered_order)
+        state = await _parse_validate_room_state(room, lkapi, validate=True, participants=participant_list)
         await _update_room_metadata(room_name, state, lkapi)
 
         return state.speaking_order
@@ -436,23 +581,30 @@ async def reorder(room_name: str, new_order: list[str]) -> list[str]:
 @async_to_sync
 async def mute_participant(room_name: str, user_identity: str) -> None:
     """
-    Mutes a participant in the room.
+    Mutes audio for a specific participant in the room.
+
+    Finds the participant's audio track and mutes it. This prevents the participant
+    from being heard by others, though they can still hear the session.
 
     Args:
-        room_name: The name of the room.
-        user_identity: The identity of the participant to mute.
+        room_name: The unique identifier/name of the room.
+        user_identity: The unique identifier of the participant to mute.
+
+    Returns:
+        None
 
     Raises:
-        ParticipantNotFoundError: If the participant is not found.
-        NoAudioTrackError: If the participant has no audio track.
+        ParticipantNotFoundError: If the participant is not found in the room.
+        NoAudioTrackError: If the participant has no audio track to mute.
         api.TwirpError: If the API call fails.
+
+    Note:
+        This operation is one-way; use the LiveKit API directly to unmute.
+        This is a synchronous wrapper around async code using @async_to_sync.
     """
     async with _get_lk_api_client() as lkapi:
         participant = await lkapi.room.get_participant(
-            api.RoomParticipantIdentity(
-                room=room_name,
-                identity=user_identity,
-            )
+            api.RoomParticipantIdentity(room=room_name, identity=user_identity)
         )
 
         if not participant:
@@ -477,20 +629,67 @@ async def mute_participant(room_name: str, user_identity: str) -> None:
         )
 
 
-async def _mute_everyone(room_name: str, lkapi: api.LiveKitAPI, except_identity: str | None = None):
+@async_to_sync
+async def mute_all_participants(room_name: str, except_identity: str | None = None) -> None:
     """
-    Mutes everyone in the room.
+    Mutes audio for all participants in the room.
 
-    If except_identity is provided, the participant with that identity is not muted.
+    Mutes all participants' audio tracks, optionally excluding one participant.
+    Useful for ensuring silence when transitioning between speakers or ending sessions.
 
-    If the participant is not found, it is not muted.
+    Args:
+        room_name: The unique identifier/name of the room.
+        except_identity: Optional participant identity to exclude from muting.
+                        If None, all participants are muted. Defaults to None.
+
+    Returns:
+        None
+
+    Note:
+        This is a synchronous wrapper around async code using @async_to_sync.
+        Muting errors for individual participants are logged but don't stop the operation.
     """
-    participants = await lkapi.room.list_participants(
-        api.ListParticipantsRequest(
-            room=room_name,
-        )
-    )
-    for participant in participants.participants:
+    async with _get_lk_api_client() as lkapi:
+        await _mute_everyone(room_name=room_name, lkapi=lkapi, except_identity=except_identity)
+
+
+async def _mute_everyone(
+    room_name: str,
+    lkapi: api.LiveKitAPI,
+    except_identity: str | None = None,
+    participants: list[api.ParticipantInfo] | None = None,
+):
+    """
+    Mutes all audio in a room, optionally excluding one participant.
+
+    Internal helper function that mutes all participants' audio tracks in a room.
+    Accepts pre-fetched participants to avoid redundant API calls. Errors during
+    individual participant muting are logged but don't interrupt the operation.
+
+    Args:
+        room_name: The unique identifier/name of the room.
+        lkapi: An authenticated LiveKit API client instance.
+        except_identity: Optional participant identity to exclude from muting.
+                        If provided, this participant will not be muted. Defaults to None.
+        participants: Optional pre-fetched list of participants. If not provided,
+                     will be fetched from the API. Defaults to None.
+
+    Returns:
+        None
+
+    Raises:
+        api.TwirpError: If fetching participants fails (only if participants not provided).
+
+    Note:
+        Errors while muting individual participants are logged but don't raise exceptions.
+        This allows the operation to continue for other participants even if some fail.
+    """
+    participant_list = participants
+    if participant_list is None:
+        participants_response = await lkapi.room.list_participants(api.ListParticipantsRequest(room=room_name))
+        participant_list = list(participants_response.participants)
+
+    for participant in participant_list:
         if except_identity and participant.identity == except_identity:
             continue
         for track in participant.tracks:
@@ -505,29 +704,44 @@ async def _mute_everyone(room_name: str, lkapi: api.LiveKitAPI, except_identity:
                         )
                     )
                 except api.TwirpError as e:
-                    logging.error("Failed to mute participant %s in room %s: %s", participant.identity, room_name, e)
+                    logging.error(
+                        "Failed to mute participant %s in room %s: %s",
+                        participant.identity,
+                        room_name,
+                        e,
+                    )
                     continue
 
 
 @async_to_sync
 async def remove_participant(room_name: str, user_identity: str) -> None:
     """
-    Removes a participant from the room.
+    Removes a participant from the room, disconnecting them.
+
+    Forcibly disconnects a participant from the room. Once removed, the participant
+    must obtain a new access token to rejoin the session.
 
     Args:
-        room_name: The name of the room.
-        user_identity: The identity of the participant to remove.
+        room_name: The unique identifier/name of the room.
+        user_identity: The unique identifier of the participant to remove.
+
+    Returns:
+        None
 
     Raises:
-        ParticipantNotFoundError: If the participant removal fails, the participant is not found, or the API call fails.
+        ParticipantNotFoundError: If the participant is not found in the room or if
+                                the removal API call fails.
+        api.TwirpError: If the API call fails.
+
+    Note:
+        This is a permanent removal; the participant cannot continue in the session
+        without explicitly rejoining.
+        This is a synchronous wrapper around async code using @async_to_sync.
     """
     async with _get_lk_api_client() as lkapi:
         try:
             participant = await lkapi.room.remove_participant(
-                api.RoomParticipantIdentity(
-                    room=room_name,
-                    identity=user_identity,
-                )
+                api.RoomParticipantIdentity(room=room_name, identity=user_identity)
             )
         except api.TwirpError as e:
             raise ParticipantNotFoundError(

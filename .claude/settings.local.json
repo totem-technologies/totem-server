@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(command make test-python)",
+      "Bash(cat:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(curl:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(python manage.py:*)",
+      "Bash(TOTEM_RUN_TASKS_TOKEN=test python manage.py makemigrations:*)",
+      "Bash(docker compose:*)",
+      "Bash(bun run test:ci:*)",
+      "Bash(ls:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(git log:*)",
+      "Bash(xargs perl:*)",
+      "Bash(perl -pi -e:*)",
+      "Bash(command make test ARGS=\"totem/spaces/tests/test_views.py -v --tb=short\")",
+      "Bash(command make test:*)",
+      "Bash(command make assets:*)",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}

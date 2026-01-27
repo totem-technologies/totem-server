@@ -1,5 +1,6 @@
-from .models import OnboardModel, ReferralChoices
 from ninja import ModelSchema
+
+from .models import OnboardModel, ReferralChoices
 
 
 class OnboardSchema(ModelSchema):

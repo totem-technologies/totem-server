@@ -2,9 +2,9 @@ import pytest
 from django.test import Client
 from django.urls import reverse
 
+from totem.api.auth import generate_jwt_token
 from totem.blog.tests.factories import BlogPostFactory
 from totem.users.models import User
-from totem.api.auth import generate_jwt_token
 
 
 @pytest.mark.django_db

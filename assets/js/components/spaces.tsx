@@ -16,13 +16,13 @@ import {
   Show,
   useContext,
 } from "solid-js"
-import { type SpaceDetailSchema, totemCirclesApiListSpaces } from "@/client"
+import { type SpaceDetailSchema, totemSpacesApiListSpaces } from "@/client"
 import { timestampToDateStringShort, timestampToTimeString } from "@/libs/time"
 import { eventCalendarURL } from "@/libs/urls"
 import Avatar from "./avatar"
 import ErrorBoundary from "./errors"
 
-const testCategories = [
+const _testCategories = [
   "Technology",
   "Design",
   "Business",
@@ -85,7 +85,7 @@ function SpacesListProvider(props: { children: JSXElement }) {
     void refetch()
   })
   const [spaces, { refetch }] = createResource(async () => {
-    return (await totemCirclesApiListSpaces()).data || []
+    return (await totemSpacesApiListSpaces()).data || []
   })
   const setCategory = (category: string) => {
     setParams({
@@ -183,7 +183,7 @@ function SpacesListInner() {
                       <div class="flex flex-col gap-4 md:flex-row md:gap-6">
                         {/* Space Image */}
                         <Show when={space.image_link}>
-                          <div class="relative h-32 w-full flex-shrink-0 overflow-hidden rounded-md md:h-28 md:w-48">
+                          <div class="relative h-32 w-full shrink-0 overflow-hidden rounded-md md:h-28 md:w-48">
                             <img
                               src={space.image_link || ""}
                               alt={space.title}

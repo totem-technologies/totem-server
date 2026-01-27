@@ -18,11 +18,11 @@ import {
 import { timestampToDateString, timestampToTimeString } from "@/libs/time"
 import {
   type CategoryFilterSchema,
-  type EventListSchema,
   type FilterOptionsSchema,
-  type PagedEventListSchema,
-  totemCirclesApiFilterOptions,
-  totemCirclesApiListEvents,
+  type PagedSessionListSchema,
+  type SessionListSchema,
+  totemSpacesApiFilterOptions,
+  totemSpacesApiListEvents,
 } from "../client/index"
 import Avatar from "./avatar"
 import ErrorBoundary from "./errors"
@@ -38,7 +38,7 @@ interface DateChunk {
   day: number
   month: string
   weekdayShort: string
-  events: EventListSchema[]
+  events: SessionListSchema[]
   dateId: string
 }
 
@@ -47,7 +47,7 @@ interface CircleListContextType {
   setParams: (params: QueryParams) => void
   reset: () => void
   refetch: () => void
-  events: Resource<PagedEventListSchema | undefined>
+  events: Resource<PagedSessionListSchema | undefined>
   chunkedEvents: () => DateChunk[]
   getMore: () => void
   activeID: Accessor<string>
@@ -81,14 +81,14 @@ function CircleListProvider(props: { children: JSXElement }) {
     void refetch()
   })
   const [events, { refetch }] = createResource(async () => {
-    return (await totemCirclesApiListEvents({ query: params() })).data
+    return (await totemSpacesApiListEvents({ query: params() })).data
   })
   const refetch2 = () => {
     void refetch()
   }
   const [filters] = createResource(
     async () => {
-      return (await totemCirclesApiFilterOptions({})).data
+      return (await totemSpacesApiFilterOptions({})).data
     },
     {
       initialValue: { categories: [], authors: [] },
@@ -134,7 +134,7 @@ function CircleListProvider(props: { children: JSXElement }) {
   )
 }
 
-function chunkEventsByDate(events: PagedEventListSchema) {
+function chunkEventsByDate(events: PagedSessionListSchema) {
   const dateChunks: DateChunk[] = []
   for (const event of events.items) {
     const start = event.start
@@ -202,7 +202,7 @@ function CirclesInner() {
   return (
     <Show when={context}>
       <div class="m-auto max-w-7xl">
-        <Switch fallback={<div>No Circles yet.</div>}>
+        <Switch fallback={<div>No Spaces yet.</div>}>
           <Match when={context?.events.state === "errored"}>
             <div>Error: {context?.events.error}</div>
           </Match>
@@ -261,7 +261,7 @@ function EventsChunkedByDate() {
     })
     context?.setActiveID(closest.dateId)
   }
-  const [intersectionObserver] = createViewportObserver([], handleIntersection)
+  const [intersectionObserver] = createViewportObserver([], handleIntersection) // eslint-disable-line no-unused-vars
   return (
     <ul>
       <For each={context?.chunkedEvents()}>
@@ -285,7 +285,7 @@ function EventsChunkedByDate() {
   )
 }
 
-function Event(props: { event: EventListSchema }) {
+function Event(props: { event: SessionListSchema }) {
   const isSmall = createMediaQuery("(max-width: 767px)")
   return (
     <>
@@ -299,7 +299,7 @@ function Event(props: { event: EventListSchema }) {
   )
 }
 
-export function MobileEvent(props: { event: EventListSchema }) {
+export function MobileEvent(props: { event: SessionListSchema }) {
   const start = () => {
     const s = props.event.start
     if (s) return timestampToTimeString(s)
@@ -333,7 +333,7 @@ export function MobileEvent(props: { event: EventListSchema }) {
   )
 }
 
-function DesktopEvent(props: { event: EventListSchema }) {
+function DesktopEvent(props: { event: SessionListSchema }) {
   return (
     <a
       href={props.event.url}
@@ -371,7 +371,7 @@ function DesktopEvent(props: { event: EventListSchema }) {
   )
 }
 
-function getAvatar(event: EventListSchema) {
+function getAvatar(event: SessionListSchema) {
   return (
     <Avatar
       size={70}
@@ -418,11 +418,11 @@ function FilterBar() {
 function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
   const context = useContext(CircleListContext)
   const [refs, setRefs] = createSignal<HTMLAnchorElement[]>([])
-  let scrollableRef: HTMLDivElement | undefined
-  let containerRef: HTMLDivElement | undefined
+  let scrollableRef: HTMLDivElement | undefined // eslint-disable-line no-unassigned-vars
+  let containerRef: HTMLDivElement | undefined // eslint-disable-line no-unassigned-vars
   createEffect(() => {
     if (context?.scrolling()) return
-    // scroll active date into view, dont use scrollIntoView
+    // scroll active date into view, don't use scrollIntoView
     const active = refs().find((ref) => ref.dataset.dateid === props.activeID)
     if (active) {
       // avoid scrollIntoView, try to keep the active date in the center
@@ -506,7 +506,7 @@ function FilterModal() {
           class="drawer-overlay"
         />
         <div class="bg-tcreme flex min-h-full w-[90vw] max-w-80 flex-col gap-5 p-4 text-left">
-          <h3 class="text-lg font-bold">Filter Circles</h3>
+          <h3 class="text-lg font-bold">Filter Spaces</h3>
           <div>
             <label class="form-label" for="category">
               Category

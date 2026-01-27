@@ -9,4 +9,9 @@ python manage.py migrate
 echo "----------------------------------------"
 echo "URL: https://totem.local"
 echo "----------------------------------------"
-exec gunicorn config.wsgi --workers 1 --bind 0.0.0.0:8000 --reload
+exec granian --interface wsgi config.wsgi:application --reload --reload-paths 'totem' \
+--host 0.0.0.0 --port 8000 --workers=1 --http 1 --backpressure 30
+
+# We use 'python -m debugpy' to wrap the granian execution.
+# --wait-for-client is optional; remove it if you want the app to start immediately.
+# exec python -m debugpy --listen 0.0.0.0:5678 manage.py runserver 0.0.0.0:8000 --noreload

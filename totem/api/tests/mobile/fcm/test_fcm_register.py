@@ -1,7 +1,8 @@
+import random
+
 import pytest
 from django.test import Client
 from django.urls import reverse
-import random
 
 from totem.api.auth import generate_jwt_token
 from totem.notifications.models import FCMDevice

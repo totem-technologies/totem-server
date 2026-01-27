@@ -7,8 +7,8 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from totem.circles.tests.factories import CircleEventFactory, CircleFactory
 from totem.onboard.tests.factories import OnboardModelFactory
+from totem.spaces.tests.factories import SessionFactory, SpaceFactory
 from totem.users.models import Feedback, LoginPin, User
 from totem.users.tests.factories import KeeperProfileFactory, UserFactory
 from totem.users.views import FEEDBACK_SUCCESS_MESSAGE
@@ -150,11 +150,11 @@ class TestPinVerification:
 class UserProfileViewTest(TestCase):
     def setUp(self):
         self.user = user = UserFactory()
-        circle = CircleFactory(author=user)
-        event = CircleEventFactory(circle=circle)
+        space = SpaceFactory(author=user)
+        event = SessionFactory(space=space)
         event.attendees.add(user)
         event.joined.add(user)
-        circle.subscribed.add(user)
+        space.subscribed.add(user)
         self.client.force_login(user)
 
     def test_user_profile_view(self):
@@ -163,9 +163,9 @@ class UserProfileViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "users/profile.html")
         self.assertEqual(response.context["object"], self.user)
-        self.assertEqual(len(response.context["subscribed_circles"]), 1)
-        self.assertEqual(len(response.context["circle_history"]), 1)
-        self.assertEqual(response.context["circle_count"], 1)
+        self.assertEqual(len(response.context["subscribed_spaces"]), 1)
+        self.assertEqual(len(response.context["session_history"]), 1)
+        self.assertEqual(response.context["space_count"], 1)
 
 
 class UserFeedbackViewTest(TestCase):

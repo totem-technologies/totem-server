@@ -2,8 +2,8 @@ from django.core import mail
 from django.test import Client, override_settings
 from django.urls import reverse
 
-from totem.circles.tests.factories import CircleEventFactory
-from totem.email.emails import missed_event_email, notify_circle_advertisement, login_pin_email
+from totem.email.emails import login_pin_email, missed_session_email, notify_session_advertisement
+from totem.spaces.tests.factories import SessionFactory
 from totem.users.models import LoginPin
 from totem.users.tests.factories import UserFactory
 
@@ -17,13 +17,13 @@ class TestTemplateDevEmail:
     @override_settings(DEBUG=True)
     def test_template_view_debug(self, client: Client, db):
         UserFactory()
-        CircleEventFactory()
+        SessionFactory()
         self._test_templates(client)
 
     def test_template_view_staff(self, client: Client, db):
         user = UserFactory()
         user = UserFactory(is_staff=True)
-        CircleEventFactory()
+        SessionFactory()
         client.force_login(user)
         self._test_templates(client)
 
@@ -53,43 +53,43 @@ class TestAdvertEmail:
     def test_advert_email(self, client, db):
         user = UserFactory()
         user.save()
-        event = CircleEventFactory()
+        event = SessionFactory()
         event.save()
-        notify_circle_advertisement(event, user).send()
+        notify_session_advertisement(event, user).send()
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
         message = str(email.message())
-        assert "http://testserver/spaces/event" in message
-        assert event.circle.title in message
+        assert "http://testserver/spaces/session" in message
+        assert event.space.title in message
         assert "http://testserver/spaces/subscribe" in message
-        assert event.circle.slug in message
+        assert event.space.slug in message
 
     def test_advert_email_with_content(self, client, db):
         user = UserFactory()
         user.save()
-        event = CircleEventFactory(content="This is a test content")
+        event = SessionFactory(content="This is a test content")
         event.save()
-        notify_circle_advertisement(event, user).send()
+        notify_session_advertisement(event, user).send()
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
         message = str(email.message())
         assert "This is a test" in message
 
-    def test_advert_email_with_circle_content(self, client, db):
+    def test_advert_email_with_space_content(self, client, db):
         user = UserFactory()
         user.save()
-        event = CircleEventFactory()
+        event = SessionFactory()
         event.save()
-        event.circle.content = "This is a circle test"
-        event.circle.save()
-        notify_circle_advertisement(event, user).send()
+        event.space.content = "This is a space test"
+        event.space.save()
+        notify_session_advertisement(event, user).send()
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
         message = str(email.message())
-        assert "This is a circle" in message
+        assert "This is a space" in message
 
 
 class TestAuthEmails:
@@ -105,20 +105,20 @@ class TestAuthEmails:
         assert "PIN" in message
 
 
-class TestMissedEventEmail:
-    def test_missed_event_email(self, client, db):
+class TestMissedSessionEmail:
+    def test_missed_session_email(self, client, db):
         user = UserFactory()
         user.save()
-        event = CircleEventFactory(title="Test Event")
+        event = SessionFactory(title="Test Event")
         event.save()
         event.attendees.add(user)
         assert len(mail.outbox) == 0
-        missed_event_email(event, user).send()
+        missed_session_email(event, user).send()
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
         message = str(email.message())
-        assert "http://testserver/spaces/event" in message
+        assert "http://testserver/spaces/session" in message
         assert event.title in message
         assert "missed you" in message
         assert "forms.gle" in message

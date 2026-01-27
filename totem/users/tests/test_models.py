@@ -1,7 +1,7 @@
 import pytest
 from django.core.exceptions import ValidationError
 
-from totem.users.models import User, LoginPin
+from totem.users.models import LoginPin, User
 from totem.users.tests.factories import UserFactory
 
 

@@ -2,8 +2,12 @@
 With these settings, tests run faster.
 """
 
+import sentry_sdk
+
+sentry_sdk.init(dsn=None)  # Disable Sentry before anything else
+
 from .base import *  # noqa
-from .base import env
+from .base import env  # noqa
 
 del STORAGES  # noqa: F821
 
@@ -42,4 +46,4 @@ SAVE_TO_GOOGLE_CALENDAR = False
 MAILERLITE_API_KEY = None
 SLACK_BOT_TOKEN = None
 SLACK_CHANNEL_ID = "fpksdfksdf"
-FIREBASE_FCM_CREDENTIALS_JSON_B64 = None
+FIREBASE_FCM_CREDENTIALS_SECRET_JSON_B64 = None

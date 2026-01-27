@@ -3,12 +3,12 @@ default_stages: [pre-commit]
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
         exclude: ".min."
       - id: check-json
-        exclude: ".zed"
+        exclude: "tsconfig.json|.zed"
       - id: check-toml
       - id: check-xml
       - id: check-yaml
@@ -19,7 +19,7 @@ repos:
       - id: detect-private-key
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.2
+    rev: v0.14.10
     hooks:
       - id: ruff
         args: [--fix]

@@ -12,7 +12,7 @@ import {
 } from "solid-js"
 import { postData } from "@/libs/postData"
 import { timestampToDateString, timestampToTimeString } from "@/libs/time"
-import { type EventDetailSchema, totemCirclesApiEventDetail } from "../client"
+import { type SessionDetailSchema, totemSpacesApiEventDetail } from "../client"
 import AddToCalendarButton from "./AddToCalendarButton"
 import ErrorBoundary from "./errors"
 import Icon, { type IconName } from "./icons"
@@ -83,7 +83,7 @@ function LoginPopup() {
   )
 }
 
-function createCalendarButton(eventStore: EventDetailSchema) {
+function createCalendarButton(eventStore: SessionDetailSchema) {
   return (
     <AddToCalendarButton
       name={`${eventStore.title} - ${eventStore.space_title}`}
@@ -94,8 +94,8 @@ function createCalendarButton(eventStore: EventDetailSchema) {
   )
 }
 
-function AttendingPopup(props: { eventStore: EventDetailSchema | undefined }) {
-  let modalRef: HTMLDialogElement | undefined
+function AttendingPopup(props: { eventStore: SessionDetailSchema | undefined }) {
+  let modalRef: HTMLDialogElement | undefined // eslint-disable-line no-unassigned-vars
   createEffect(() => {
     if (showAttendingPopup()) {
       modalRef?.showModal()
@@ -108,7 +108,7 @@ function AttendingPopup(props: { eventStore: EventDetailSchema | undefined }) {
       <div class="modal-box">
         <Show when={showAttendingPopup()}>
           <video
-            class="m-auto max-w-[200px]"
+            class="m-auto max-w-50"
             src="/static/video/success.webm"
             muted
             playsinline
@@ -186,7 +186,7 @@ function plural(number: number) {
 }
 
 function EventInfo(props: {
-  eventStore: EventDetailSchema
+  eventStore: SessionDetailSchema
   refetchEvent: () => void
 }) {
   const [error, setError] = createSignal("")
@@ -326,20 +326,19 @@ function EventInfo(props: {
 }
 
 function Subscribe(props: {
-  event: EventDetailSchema
+  event: SessionDetailSchema
   refetchEvent: () => void
 }) {
+  const subscribe_url = `/spaces/subscribe/${props.event.space.slug}/`
   async function handleSubscribe(e: Event) {
-    if (!props.event.subscribe_url) return
     e.preventDefault()
-    await postData(props.event.subscribe_url, { action: "subscribe" })
+    await postData(subscribe_url, { action: "subscribe" })
     props.refetchEvent()
   }
 
   async function handleUnsubscribe(e: Event) {
-    if (!props.event.subscribe_url) return
     e.preventDefault()
-    await postData(props.event.subscribe_url, { action: "unsubscribe" })
+    await postData(subscribe_url, { action: "unsubscribe" })
     props.refetchEvent()
   }
 
@@ -413,7 +412,7 @@ function DetailSidebar(props: DetailSidebarProps) {
   const query = useQuery(() => ({
     queryKey: ["eventData"],
     queryFn: async () => {
-      const response = await totemCirclesApiEventDetail({
+      const response = await totemSpacesApiEventDetail({
         path: { event_slug: props.eventid || "" },
       })
       if (response.error) {

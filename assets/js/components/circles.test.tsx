@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { expect, test } from "vitest"
 import { MobileEvent } from "./circles"
 
-const user = userEvent.setup()
+const _ = userEvent.setup()
 
 test("increments value", async () => {
   const result = render(() => (

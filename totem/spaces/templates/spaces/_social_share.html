@@ -1,0 +1,59 @@
+{% load icons %}
+{% load absurl %}
+<div class="pt-3">
+  <h3 class="font-bold">Share with friends and family</h3>
+  {% comment %}
+    for facebook, messanger, whatsapp, bluesky, linkedin, email, sms, and copy
+    link
+  {% endcomment %}
+  <div class="grid grid-cols-2 gap-4 pt-5 text-left">
+    <a
+      href="{% sharelink 'facebook' space.get_absolute_url space.title %}"
+      target="_blank"
+      class="btn">
+      {% icons "facebook" %} Facebook</a
+    >
+    <a
+      href="{% sharelink 'messenger' space.get_absolute_url space.title %}"
+      target="_blank"
+      class="btn">
+      {% icons "messenger" %} Messenger</a
+    >
+    <a
+      href="{% sharelink 'whatsapp' space.get_absolute_url space.title %}"
+      target="_blank"
+      class="btn">
+      {% icons "whatsapp" %} WhatsApp</a
+    >
+    <a
+      href="{% sharelink 'bluesky' space.get_absolute_url space.title %}"
+      target="_blank"
+      class="btn">
+      {% icons "bluesky" %} Bluesky</a
+    >
+    <a
+      href="{% sharelink 'linkedin' space.get_absolute_url space.title %}"
+      target="_blank"
+      class="btn">
+      {% icons "linkedin" %} LinkedIn</a
+    >
+    <a
+      href="{% sharelink 'email' space.get_absolute_url space.title %}"
+      target="_blank"
+      class="btn">
+      {% icons "email" %} Email</a
+    >
+    <a
+      href="{% sharelink 'sms' space.get_absolute_url space.title %}"
+      target="_blank"
+      class="btn">
+      {% icons "sms" %} SMS</a
+    >
+    <a
+      data-copy="{% sharelink 'link' space.get_absolute_url space.title %}"
+      onclick="copyTextToClipboard(this)"
+      class="btn">
+      {% icons "link" %} Copy link</a
+    >
+  </div>
+</div>

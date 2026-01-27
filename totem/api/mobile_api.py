@@ -1,5 +1,3 @@
-from typing import Optional
-
 import jwt
 from django.conf import settings
 from django.http import HttpRequest
@@ -9,12 +7,12 @@ from ninja.errors import ValidationError
 from ninja.security import HttpBearer
 
 from totem.blog.mobile_api import blog_router
-from totem.circles.mobile_api.mobile_api import spaces_router
 from totem.meetings.mobile_api import meetings_router
 from totem.notifications.models import FCMDevice
 from totem.notifications.schemas import FCMTokenRegisterSchema, FCMTokenResponseSchema
 from totem.notifications.validators import validate_fcm_token
 from totem.onboard.mobile_api import onboard_router
+from totem.spaces.mobile_api.mobile_api import spaces_router
 from totem.users.mobile_api import user_router
 from totem.users.models import User
 
@@ -22,7 +20,7 @@ from .auth import JWTSchema
 
 
 class JWTAuth(HttpBearer):
-    def authenticate(self, request: HttpRequest, token: str) -> Optional[User]:
+    def authenticate(self, request: HttpRequest, token: str) -> User | None:
         try:
             # Decode JWT token
             payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])

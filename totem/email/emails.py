@@ -8,7 +8,7 @@ from django.conf import settings
 from django.urls import reverse
 
 if TYPE_CHECKING:
-    from totem.circles.models import CircleEvent
+    from totem.spaces.models import Session
     from totem.users.models import User
 
 import mrml
@@ -104,7 +104,7 @@ class LoginPinEmail(Email):
     pin: str
 
 
-class CircleStartingEmail(Email):
+class SessionStartingEmail(Email):
     template: str = "circle_starting"
     start: str
     event_title: str
@@ -115,7 +115,7 @@ class CircleStartingEmail(Email):
     title: str = "Get Ready!"
 
 
-class CircleAdvertisementEmail(Email):
+class SessionAdvertisementEmail(Email):
     template: str = "circle_ad"
     start: str
     event_title: str
@@ -133,7 +133,7 @@ class CircleAdvertisementEmail(Email):
     author_image_url: str | None
 
 
-class CircleTomorrowReminderEmail(Email):
+class SessionTomorrowReminderEmail(Email):
     template: str = "circle_tomorrow_reminder"
     start: str
     event_title: str
@@ -143,7 +143,7 @@ class CircleTomorrowReminderEmail(Email):
     title: str = "Space Tomorrow"
 
 
-class CircleSignupEmail(Email):
+class SessionSignupEmail(Email):
     template: str = "circle_signup"
     start: str
     event_title: str
@@ -163,7 +163,7 @@ class TestEmail(Email):
     title: str = "Spot Saved"
 
 
-class MissedEventEmail(Email):
+class MissedSessionEmail(Email):
     template: str = "missed_event"
     start: str
     event_title: str
@@ -193,76 +193,83 @@ def welcome_email(user: User) -> BrevoEmail:
     return WelcomeEmail(recipient=user.email)
 
 
-def notify_circle_starting(event: CircleEvent, user: User) -> Email:
+def notify_session_starting(event: Session, user: User) -> Email:
     start = _to_human_time(user, event.start)
-    return CircleStartingEmail(
+    return SessionStartingEmail(
         recipient=user.email,
         start=start,
-        event_title=event.circle.title,
+        event_title=event.space.title,
         event_link=_make_email_url(event.get_absolute_url()),
         link=type_url(event.email_join_url(user)),
     )
 
 
-def notify_circle_tomorrow(event: CircleEvent, user: User) -> Email:
+def notify_session_tomorrow(event: Session, user: User) -> Email:
     start = _to_human_time(user, event.start)
-    title = event.title or event.circle.title or event.circle.title
-    return CircleTomorrowReminderEmail(
+    title = event.title or event.space.title or event.space.title
+    return SessionTomorrowReminderEmail(
         title=f"Tomorrow - {title}",
         subject=f"Tomorrow - {title}",
         recipient=user.email,
         start=start,
-        event_title=event.circle.title,
+        event_title=event.space.title,
         link=_make_email_url(event.get_absolute_url()),
     )
 
 
-def notify_circle_advertisement(event: CircleEvent, user: User) -> Email:
+def notify_session_advertisement(event: Session, user: User) -> Email:
     start = _to_human_time(user, event.start)
-    title = event.title or event.circle.subtitle
-    subtitle = event.circle.title
+    title = event.title or event.space.subtitle
+    subtitle = event.space.title
     details = None
     if event.content:
         details = event.content_html
-    elif event.circle.content:
-        details = event.circle.content_html
-    image_url = event.circle.image.url if event.circle.image else None
-    author_image_url = event.circle.author.profile_image.url if event.circle.author.profile_image else None
+    elif event.space.content:
+        details = event.space.content_html
+    image_url = event.space.image.url if event.space.image else None
+    author_image_url = event.space.author.profile_image.url if event.space.author.profile_image else None
     subject = f"✨New: {title}✨"
-    return CircleAdvertisementEmail(
+    return SessionAdvertisementEmail(
         recipient=user.email,
         link=_make_email_url(event.get_absolute_url()),
         subject=subject,
         start=start,
         event_title=event.title,
-        space_title=event.circle.title,
-        space_subtitle=event.circle.subtitle,
+        space_title=event.space.title,
+        space_subtitle=event.space.subtitle,
         event_details=details,
         title=title,
         subtitle=subtitle,
-        author=event.circle.author.name,
+        author=event.space.author.name,
         image_url=image_url,
         author_image_url=author_image_url,
-        unsubscribe_url=type_url(event.circle.subscribe_url(user, subscribe=False)),
+        unsubscribe_url=type_url(event.space.subscribe_url(user, subscribe=False)),
     )
 
 
-def notify_circle_signup(event: CircleEvent, user: User) -> Email:
+def notify_session_signup(event: Session, user: User) -> Email:
     start = _to_human_time(user, event.start)
-    return CircleSignupEmail(
+    return SessionSignupEmail(
         recipient=user.email,
-        link=_make_email_url(reverse("circles:calendar", kwargs={"event_slug": event.slug})),
+        link=_make_email_url(reverse("spaces:calendar", kwargs={"session_slug": event.slug})),
         start=start,
-        event_title=event.circle.title,
+        event_title=event.space.title,
     )
 
 
-def missed_event_email(event: CircleEvent, user: User) -> Email:
+def missed_session_email(event: Session, user: User) -> Email:
     start = _to_human_time(user, event.start)
-    title = event.title or event.circle.title
-    return MissedEventEmail(
+    title = event.title or event.space.title
+    return MissedSessionEmail(
         recipient=user.email,
         start=start,
         event_title=title,
         event_link=_make_email_url(event.get_absolute_url()),
     )
+
+
+notify_circle_starting = notify_session_starting
+notify_circle_tomorrow = notify_session_tomorrow
+notify_circle_advertisement = notify_session_advertisement
+notify_circle_signup = notify_session_signup
+missed_event_email = missed_session_email

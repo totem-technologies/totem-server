@@ -1,7 +1,8 @@
-from factory import Faker, SubFactory, post_generation
-from factory.django import DjangoModelFactory
 from collections.abc import Sequence
 from typing import Any
+
+from factory import Faker, SubFactory, post_generation
+from factory.django import DjangoModelFactory
 
 from totem.onboard.models import OnboardModel
 from totem.users.tests.factories import UserFactory

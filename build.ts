@@ -7,9 +7,9 @@ const isDev = arg === "dev"
 
 async function build() {
   console.log("Building...")
-  const res = await Bun.build({
+  const _res = await Bun.build({
     entrypoints: ["assets/js/app.ts"],
-    minify: true,
+    minify: isDev ? false : true,
     sourcemap: isDev ? "inline" : "none",
     splitting: true,
     outdir: "totem/static/js/bundles",

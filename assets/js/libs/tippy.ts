@@ -44,7 +44,7 @@ export function tippy<T extends Element>(
 
     createComputed(() => {
       instance.setProps({
-        ...(options?.props ?? {}),
+        ...options?.props,
       })
     })
 
@@ -83,7 +83,7 @@ export function tippyHeadless<T extends Element>(
 
     createComputed(() => {
       instance.setProps({
-        ...(options?.props ?? {}),
+        ...options?.props,
       })
     })
 
@@ -127,7 +127,7 @@ export function useTippy<T extends Element>(
 
       createComputed(() => {
         instance.setProps({
-          ...(options?.props ?? {}),
+          ...options?.props,
         })
       })
 
@@ -174,7 +174,7 @@ export function useTippyHeadless<T extends Element>(
 
       createComputed(() => {
         instance.setProps({
-          ...(options?.props ?? {}),
+          ...options?.props,
         })
       })
 

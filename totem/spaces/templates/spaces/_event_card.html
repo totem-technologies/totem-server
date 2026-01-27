@@ -1,0 +1,66 @@
+{% load avatar %}
+<div class="w-full">
+  <div
+    class="relative overflow-clip rounded-3xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-xl">
+    <!-- prettier-ignore-start -->
+      {% if session.space.image %}
+        <style>
+          .space-bg-image-{{ session.slug }} {
+            background-image: linear-gradient(
+                355deg,
+                rgba(1, 1, 1, 0),
+                rgba(0, 0, 0, 0.6)
+              ),
+              url({{ session.space.image.url }});
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+          }
+        </style>
+      {% endif %}
+      <!-- prettier-ignore-end -->
+    <a href="{% url "spaces:session_detail" session_slug=session.slug %}">
+      <div
+        class="{% if session.space.image %}space-bg-image-{{ session.slug }}{% else %}no-image{% endif %} relative flex flex-col rounded-t-3xl p-5">
+        <div class="flex min-h-[100px] justify-between">
+          <div>
+            <h1 class="h3 pb-3 text-white">
+              {{ session.session_title_or_title }}
+            </h1>
+            <div class="text-white">with {{ session.space.author.name }}</div>
+          </div>
+          <div class="min-w-[50px] self-end">
+            {% avatar session.space.author size=100 classes="m-auto" %}
+          </div>
+        </div>
+      </div>
+    </a>
+    <div class="p-5">
+      <div class="flex items-center justify-between gap-2">
+        <p class="font-normal text-gray-700">
+          <t-time time="{{ session.start|date:'c' }}" format="at">
+            {{ session.start|date:"M d, Y gA T" }}</t-time
+          >
+        </p>
+        <a
+          href="{% url "spaces:session_detail" session_slug=session.slug %}"
+          class="btn btn-primary btn-sm inline-flex items-center px-5">
+          Join
+          <svg
+            class="h-3.5 w-3.5"
+            aria-hidden="true"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 14 10">
+            <path
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M1 5h12m0 0L9 1m4 4L9 9" />
+          </svg>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

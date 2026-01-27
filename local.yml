@@ -19,6 +19,7 @@ services:
       - ./.env
     ports:
       - "8000:8000"
+      # - "5678:5678" Debug port
     command: /start
     labels:
       - dev.orbstack.domains=totem.local
