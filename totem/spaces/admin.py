@@ -162,6 +162,13 @@ class SessionAdmin(admin.ModelAdmin):
     readonly_fields = ("date_created", "date_modified")
     actions = [copy_session]
     inlines = [SessionFeedbackInline]
+
+    @override
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "space":
+            kwargs["queryset"] = Space.objects.order_by("title")
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
     fieldsets = (
         (
             None,
