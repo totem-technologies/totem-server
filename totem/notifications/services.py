@@ -104,8 +104,13 @@ def send_notification(tokens: list[str], title: str, body: str, data: dict[str, 
             # Token was registered with a different sender - mark for deactivation
             invalid_tokens.append(token)
             logger.warning("FCM token sender mismatch: %s...", token[:20])
+        except messaging.ThirdPartyAuthError:
+            # APNs or Web Push auth error - token's platform has invalid auth config
+            # These tokens will never work, so deactivate them
+            invalid_tokens.append(token)
+            logger.warning("FCM token has third-party auth error (APNs/Web Push): %s...", token[:20])
         except Exception as e:
-            # Don't deactivate token for server-side errors (auth issues, network, etc.)
+            # Don't deactivate token for server-side errors (network, quota, etc.)
             logger.error("Failed to send FCM notification (%s): %s", type(e).__name__, e)
 
     # Bulk update the device records to avoid individual DB queries
