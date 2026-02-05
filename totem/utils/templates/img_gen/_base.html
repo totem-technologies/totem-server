@@ -2,6 +2,7 @@
 <html>
 <head><style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
         font-family: 'Montserrat', sans-serif;
         color: white;
@@ -9,6 +10,7 @@
         display: flex;
         flex-direction: column;
     }
+
     .bg {
         position: absolute;
         inset: 0;
@@ -16,33 +18,114 @@
         height: 100%;
         object-fit: cover;
     }
-    .gradient {
+
+    .overlay {
         position: absolute;
         inset: 0;
-        background: linear-gradient(to bottom, rgba(0,0,0,0.63), transparent);
+        background: linear-gradient(
+            160deg,
+            rgba(38, 47, 55, 0.94) 0%,
+            rgba(38, 47, 55, 0.88) 40%,
+            rgba(152, 122, 165, 0.50) 78%,
+            rgba(152, 122, 165, 0.25) 100%
+        );
     }
+
     .content {
         position: relative;
         flex: 1;
         display: flex;
-        flex-direction: column;
-        padding: 2vmin;
+        flex-direction: row;
+        padding: 3.5vmin;
         overflow: hidden;
     }
+
+    .accent {
+        width: 0.6vmin;
+        flex-shrink: 0;
+        margin-right: 2.5vmin;
+        border-radius: 1vmin;
+        background: linear-gradient(to bottom, #f4dc92, #987aa5);
+    }
+
+    .text-wrap {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .title {
+        font-size: 9vh;
+        font-weight: 700;
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+        font-size: 4.5vh;
+        font-weight: 500;
+        margin-top: 1.5vh;
+        color: #f3f1e9;
+    }
+
+    .meta {
+        font-size: 4vh;
+        font-weight: 500;
+        margin-top: 0.8vh;
+        color: #f3f1e9;
+    }
+
+    .dim { opacity: 0.6; }
+
+    .schedule {
+        margin-top: auto;
+    }
+
+    .schedule-day {
+        font-size: 5.5vh;
+        font-weight: 600;
+        margin-bottom: 0.3vh;
+    }
+
+    .schedule-time {
+        font-size: 4.5vh;
+        font-weight: 500;
+        color: #f3f1e9;
+        margin-top: 0.4vh;
+    }
+
+    .label {
+        font-size: 3.5vh;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        color: #f4dc92;
+    }
+
+    .blog-title {
+        font-size: 8vh;
+        margin-top: 1.5vh;
+    }
+
     .avatar {
         position: absolute;
-        bottom: 2vmin;
-        right: 2vmin;
+        bottom: 3vmin;
+        right: 3vmin;
         border-radius: 50%;
-        border: 0.5vmin solid white;
+        border: 0.6vmin solid rgba(255, 255, 255, 0.9);
+        box-shadow: 0 0.5vmin 2vmin rgba(0, 0, 0, 0.3);
         object-fit: cover;
     }
 </style></head>
 <body style="width: {{ width }}px; height: {{ height }}px; position: relative;">
     <img class="bg" src="{{ background_src }}" />
-    <div class="gradient"></div>
+    <div class="overlay"></div>
     <div class="content">
-        {% block content %}{% endblock %}
+        <div class="accent"></div>
+        <div class="text-wrap">
+            {% block content %}{% endblock %}
+        </div>
     </div>
     <img class="avatar" src="{{ avatar_src }}" style="width: {{ avatar_size }}; height: {{ avatar_size }};" />
 </body>

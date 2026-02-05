@@ -1,7 +1,7 @@
 {% extends "img_gen/_base.html" %}
 
 {% block content %}
-<div style="font-size: 3.7vh; font-weight: 600;">{{ label }}</div>
-<div style="font-size: 7vh; font-weight: 600; margin-top: 2vh; line-height: 1.1;">{{ title }}</div>
-<div style="font-size: 3.7vh; font-weight: 600; margin-top: 2vh;">by {{ author_name }} @ totem.org</div>
+<div class="label">{{ label }}</div>
+<div class="title blog-title">{{ title }}</div>
+<div class="meta" style="margin-top: auto;"><span class="dim">by</span> {{ author_name }} <span class="dim">@ totem.org</span></div>
 {% endblock %}

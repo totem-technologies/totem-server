@@ -1,10 +1,12 @@
 {% extends "img_gen/_base.html" %}
 
 {% block content %}
-<div style="font-size: 9.5vh; font-weight: 600; line-height: 1.1;">{{ title }}</div>
-<div style="font-size: 3.7vh; font-weight: 600; margin-top: 2vh;">{{ subtitle }}</div>
-<div style="font-size: 3.7vh; font-weight: 600; margin-top: 1vh;">with {{ author_name }} @ totem.org</div>
-<div style="font-size: 5.2vh; font-weight: 600; margin-top: 3vh;">{{ day }}</div>
-<div style="font-size: 5.2vh; font-weight: 600; margin-top: 1.5vh;">{{ time_pst }}</div>
-<div style="font-size: 5.2vh; font-weight: 600; margin-top: 1.5vh;">{{ time_est }}</div>
+<div class="title">{{ title }}</div>
+<div class="subtitle">{{ subtitle }}</div>
+<div class="meta"><span class="dim">with</span> {{ author_name }} <span class="dim">@ totem.org</span></div>
+<div class="schedule">
+    <div class="schedule-day">{{ day }}</div>
+    <div class="schedule-time">{{ time_pst }}</div>
+    <div class="schedule-time">{{ time_est }}</div>
+</div>
 {% endblock %}
