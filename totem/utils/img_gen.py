@@ -1,5 +1,4 @@
 import hashlib
-import html
 import os
 from dataclasses import asdict, dataclass
 from functools import lru_cache
@@ -7,6 +6,7 @@ from typing import Any
 
 import dynimg
 from django.conf import settings
+from django.template.loader import render_to_string
 from typing_extensions import override
 
 
@@ -55,51 +55,11 @@ def _assets_dir() -> str:
 
 
 def _src(path: str) -> str:
-    """Convert a file path or URL to a src suitable for use in HTML."""
+    """Convert a local file path to a path relative to assets_dir.
+    HTTP URLs are returned as-is."""
     if path.startswith("http"):
-        return html.escape(path)
-    abs_path = os.path.realpath(path)
-    return html.escape(os.path.relpath(abs_path, _assets_dir()))
-
-
-_BASE_CSS = """
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-        font-family: 'Montserrat', sans-serif;
-        color: white;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-    }
-    .bg {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-    .gradient {
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(to bottom, rgba(0,0,0,0.63), transparent);
-    }
-    .content {
-        position: relative;
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        padding: 2vmin;
-        overflow: hidden;
-    }
-    .avatar {
-        position: absolute;
-        bottom: 2vmin;
-        right: 2vmin;
-        border-radius: 50%;
-        border: 0.5vmin solid white;
-        object-fit: cover;
-    }
-"""
+        return path
+    return os.path.relpath(os.path.realpath(path), _assets_dir())
 
 
 def _render(html_content: str, width: int, height: int) -> dynimg.Image:
@@ -115,45 +75,39 @@ def _render(html_content: str, width: int, height: int) -> dynimg.Image:
 
 
 def _circle_html(params: CircleImageParams) -> str:
-    return f"""<!DOCTYPE html>
-<html>
-<head><style>
-{_BASE_CSS}
-</style></head>
-<body style="width: {params.width}px; height: {params.height}px; position: relative;">
-    <img class="bg" src="{_src(params.background_path)}" />
-    <div class="gradient"></div>
-    <div class="content">
-        <div style="font-size: 9.5vh; font-weight: 600; line-height: 1.1;">{html.escape(params.title)}</div>
-        <div style="font-size: 3.7vh; font-weight: 600; margin-top: 2vh;">{html.escape(params.subtitle)}</div>
-        <div style="font-size: 3.7vh; font-weight: 600; margin-top: 1vh;">with {html.escape(params.author_name)} @ totem.org</div>
-        <div style="font-size: 5.2vh; font-weight: 600; margin-top: 3vh;">{html.escape(params.day)}</div>
-        <div style="font-size: 5.2vh; font-weight: 600; margin-top: 1.5vh;">{html.escape(params.time_pst)}</div>
-        <div style="font-size: 5.2vh; font-weight: 600; margin-top: 1.5vh;">{html.escape(params.time_est)}</div>
-    </div>
-    <img class="avatar" src="{_src(params.author_img_path)}" style="width: 28vmin; height: 28vmin;" />
-</body>
-</html>"""
+    return render_to_string(
+        "img_gen/circle.html",
+        {
+            "width": params.width,
+            "height": params.height,
+            "background_src": _src(params.background_path),
+            "avatar_src": _src(params.author_img_path),
+            "avatar_size": "28vmin",
+            "title": params.title,
+            "subtitle": params.subtitle,
+            "author_name": params.author_name,
+            "day": params.day,
+            "time_pst": params.time_pst,
+            "time_est": params.time_est,
+        },
+    )
 
 
 def _blog_html(params: BlogImageParams) -> str:
     label = "New on the Totem Blog" if params.show_new else "Totem Blog"
-    return f"""<!DOCTYPE html>
-<html>
-<head><style>
-{_BASE_CSS}
-</style></head>
-<body style="width: {params.width}px; height: {params.height}px; position: relative;">
-    <img class="bg" src="{_src(params.background_path)}" />
-    <div class="gradient"></div>
-    <div class="content">
-        <div style="font-size: 3.7vh; font-weight: 600;">{html.escape(label)}</div>
-        <div style="font-size: 7vh; font-weight: 600; margin-top: 2vh; line-height: 1.1;">{html.escape(params.title)}</div>
-        <div style="font-size: 3.7vh; font-weight: 600; margin-top: 2vh;">by {html.escape(params.author_name)} @ totem.org</div>
-    </div>
-    <img class="avatar" src="{_src(params.author_img_path)}" style="width: 25vmin; height: 25vmin;" />
-</body>
-</html>"""
+    return render_to_string(
+        "img_gen/blog.html",
+        {
+            "width": params.width,
+            "height": params.height,
+            "background_src": _src(params.background_path),
+            "avatar_src": _src(params.author_img_path),
+            "avatar_size": "25vmin",
+            "label": label,
+            "title": params.title,
+            "author_name": params.author_name,
+        },
+    )
 
 
 @lru_cache(maxsize=100)
