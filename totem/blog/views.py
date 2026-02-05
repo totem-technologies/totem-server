@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from io import BytesIO
 
 from django.conf import settings
 from django.http import Http404, HttpRequest, HttpResponse
@@ -103,9 +102,8 @@ def post_social_img(request: HttpRequest, slug: str, image_format: str):
     if not post.publish and not request.user.is_staff:  # pyright: ignore[reportUnknownMemberType, reportAttributeAccessIssue]
         raise Http404("Post not found")
 
-    buffer = BytesIO()
-    _make_social_img_post(post, image_size, show_new).save(buffer, "JPEG", optimize=True)
+    image = _make_social_img_post(post, image_size, show_new)
     response = HttpResponse(content_type="image/jpeg")
     response["Cache-Control"] = "max-age=600"
-    response.write(buffer.getvalue())
+    response.write(image.to_jpeg())
     return response

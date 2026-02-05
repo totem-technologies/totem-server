@@ -12,8 +12,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     build-essential \
     # psycopg2 dependencies
     libpq-dev \
-    # Pillow dependencies for text shaping (ZWJ emoji sequences)
-    libraqm-dev libfribidi-dev libharfbuzz-dev
+    # dynimg dependencies
+    libexpat1-dev
 
 RUN pip install uv
 ENV UV_COMPILE_BYTECODE=1
@@ -58,8 +58,9 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     libpq-dev \
     # Translations dependencies
     gettext \
-    # Pillow text shaping runtime (ZWJ emoji sequences)
-    libraqm0 \
+    # dynimg runtime dependencies
+    libexpat1 \
+    fontconfig \
     # cleaning up unused files
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && rm -rf /var/lib/apt/lists/*
@@ -78,6 +79,9 @@ RUN chmod +x /start
 # copy application code to WORKDIR
 COPY . ${APP_HOME}
 COPY --from=js-build-stage /app/totem/static/js/bundles /app/totem/static/js/bundles
+
+# Register app fonts with fontconfig for dynimg
+RUN ln -s /app/totem/static/fonts /usr/local/share/fonts/totem && fc-cache -f
 
 # Define the default command.
 CMD ["/start"]

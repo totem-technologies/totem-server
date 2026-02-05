@@ -20,7 +20,10 @@
       "Bash(command make test:*)",
       "Bash(command make assets:*)",
       "Bash(npx tsc:*)",
-      "mcp__kagi__kagi_search_fetch"
+      "mcp__kagi__kagi_search_fetch",
+      "mcp__kagi__kagi_summarizer",
+      "WebFetch(domain:github.com)",
+      "Bash(gh api:*)"
     ]
   }
 }

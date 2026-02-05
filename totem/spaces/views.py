@@ -1,6 +1,5 @@
 import datetime
 from dataclasses import dataclass
-from io import BytesIO
 
 import pytz
 from django.conf import settings
@@ -262,13 +261,10 @@ def session_social_img(request: HttpRequest, session_slug: str, image_format: st
     start_time_est: str = est.strftime("%-I:%M %p") + " EST"
     if start_day_pst != start_day_est:
         start_time_est = f"{start_time_est}+1"
-    buffer = BytesIO()
-    _make_social_img(session, start_day_pst, start_time_pst, start_time_est, image_size).save(
-        buffer, "JPEG", optimize=True
-    )
+    image = _make_social_img(session, start_day_pst, start_time_pst, start_time_est, image_size)
     response = HttpResponse(content_type="image/jpeg")
     response["Cache-Control"] = "max-age=600"  # Cache for 10 minutes (600 seconds)
-    response.write(buffer.getvalue())
+    response.write(image.to_jpeg())
     return response
 
 
