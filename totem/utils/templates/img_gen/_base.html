@@ -29,20 +29,7 @@
     }
 
     .header {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        margin-bottom: 2vmin;
-    }
-
-    .header-avatar {
-        width: 4.2vmin;
-        height: 4.2vmin;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 0.25vmin solid #987aa5;
-        margin-right: 1.2vmin;
-        flex-shrink: 0;
+        margin-bottom: 1vmin;
     }
 
     .header-name {
@@ -56,14 +43,33 @@
         opacity: 0.4;
     }
 
+    /* Vertical header shown, horizontal header hidden by default */
+    .header-h { display: none; }
+
+    .image-wrap {
+        position: relative;
+    }
+
     .image {
         max-width: 100%;
+        max-height: {{ max_image_height }}px;
         border-radius: 2vmin;
         box-shadow: 0 0.3vmin 1.5vmin rgba(38, 47, 55, 0.12);
     }
 
+    .avatar-overlay {
+        position: absolute;
+        bottom: 1.5vmin;
+        right: 1.5vmin;
+        width: {{ avatar_size }}px;
+        height: {{ avatar_size }}px;
+        border-radius: 50%;
+        border: 0.4vmin solid white;
+        box-shadow: 0 0.2vmin 0.8vmin rgba(38, 47, 55, 0.2);
+    }
+
     .details {
-        margin-top: 2vmin;
+        margin-top: 1.5vmin;
     }
 
     .category {
@@ -72,7 +78,6 @@
         text-transform: uppercase;
         letter-spacing: 0.15em;
         color: #a09a93;
-        margin-bottom: 0.4vmin;
     }
 
     .title {
@@ -82,20 +87,25 @@
         letter-spacing: -0.02em;
     }
 
+    .author-line {
+        font-size: 2.8vmin;
+        font-weight: 500;
+        margin-top: 0.2vmin;
+    }
+
     .schedule {
-        margin-top: 0.8vmin;
+        margin-top: 1.4vmin;
     }
 
     .schedule-day {
-        font-size: 3.5vmin;
-        font-weight: 600;
+        font-size: 2.4vmin;
+        font-weight: 700;
     }
 
     .schedule-times {
-        font-size: 2.6vmin;
-        font-weight: 500;
-        color: #987aa5;
-        margin-top: 0.15vmin;
+        font-size: 2.4vmin;
+        font-weight: 700;
+        margin-top: 0.1vmin;
     }
 
     .label {
@@ -111,7 +121,7 @@
         margin-top: 0.4vmin;
     }
 
-    /* Horizontal layout overrides */
+    /* Horizontal layout overrides (applied via .h-layout class) */
     .h-layout {
         display: flex;
         flex-direction: row;
@@ -119,9 +129,17 @@
         align-items: center;
     }
 
-    .h-layout .image {
+    .h-layout .header-v { display: none; }
+    .h-layout .header-h { display: block; }
+
+    .h-layout .image-wrap {
         flex-shrink: 0;
-        max-width: none;
+        max-width: 50%;
+    }
+
+    .h-layout .image {
+        max-width: 100%;
+        max-height: none;
     }
 
     .h-layout .text-side {
@@ -140,27 +158,25 @@
 <body style="width: {{ width }}px; height: {{ height }}px;">
     <div class="top-bar"></div>
     <div class="card">
-        <div class="layout {% if horizontal %}h-layout{% endif %}" {% if not horizontal %}style="width: {{ content_width }}px"{% endif %}>
-            {% if not horizontal %}
-            <div class="header">
-                <img class="header-avatar" src="{{ avatar_src }}" />
-                <div>
+        <div class="layout {% if horizontal %}h-layout{% endif %}">
+            {% block header_v %}
+            <div class="header header-v">
+                <span class="header-name">{{ author_name }}</span>
+                <span class="header-org"> @ totem.org</span>
+            </div>
+            {% endblock %}
+            <div class="image-wrap">
+                {% block image_overlay %}{% endblock %}
+                <img class="image" src="{{ background_src }}" />
+                <img class="avatar-overlay" src="{{ avatar_src }}" />
+            </div>
+            <div class="text-side">
+                {% block header_h %}
+                <div class="header header-h">
                     <span class="header-name">{{ author_name }}</span>
                     <span class="header-org"> @ totem.org</span>
                 </div>
-            </div>
-            {% endif %}
-            <img class="image" src="{{ background_src }}" style="{% if horizontal %}width: {{ h_image_width }}px{% else %}max-height: {{ max_image_height }}px{% endif %}" />
-            <div class="text-side">
-                {% if horizontal %}
-                <div class="header">
-                    <img class="header-avatar" src="{{ avatar_src }}" />
-                    <div>
-                        <span class="header-name">{{ author_name }}</span>
-                        <span class="header-org"> @ totem.org</span>
-                    </div>
-                </div>
-                {% endif %}
+                {% endblock %}
                 <div class="details">
                     {% block content %}{% endblock %}
                 </div>

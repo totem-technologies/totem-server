@@ -7,7 +7,6 @@ from typing import Any
 import dynimg
 from django.conf import settings
 from django.template.loader import render_to_string
-from PIL import Image as PILImage
 from typing_extensions import override
 
 
@@ -76,38 +75,10 @@ def _render(html_content: str, width: int, height: int) -> dynimg.Image:
 
 
 def _max_image_height(width: int, height: int) -> int:
-    """Compute max image height in pixels, reserving space for header + details."""
+    """Compute max image height in pixels, reserving space for header + details.
+    Pixel values are used because dynimg treats viewport-unit max-height as
+    layout height even when the image is shorter (causing a gap)."""
     return int(height * 0.65)
-
-
-def _get_image_size(bg_path: str) -> tuple[int, int] | None:
-    """Get source image dimensions using Pillow. Returns (width, height) or None."""
-    if bg_path.startswith("http"):
-        return None
-    try:
-        abs_path = os.path.join(_assets_dir(), bg_path) if not os.path.isabs(bg_path) else bg_path
-        with PILImage.open(abs_path) as img:
-            return img.size
-    except Exception:
-        return None
-
-
-def _content_width(bg_path: str, card_width: int, card_height: int) -> int:
-    """Compute the rendered image width so the content wrapper can match it."""
-    vmin = min(card_width, card_height)
-    available_width = card_width - int(vmin * 0.06)
-    max_h = _max_image_height(card_width, card_height)
-
-    size = _get_image_size(bg_path)
-    if size is None:
-        return available_width
-
-    src_w, src_h = size
-    rendered_h = int(available_width * src_h / src_w)
-    if rendered_h <= max_h:
-        return available_width
-    else:
-        return int(max_h * src_w / src_h)
 
 
 def _is_horizontal(width: int, height: int) -> bool:
@@ -115,72 +86,40 @@ def _is_horizontal(width: int, height: int) -> bool:
     return width / height >= 1.8
 
 
-def _horizontal_image_width(bg_path: str, card_width: int, card_height: int) -> int:
-    """Compute image width for horizontal layout. Image is height-constrained."""
-    vmin = min(card_width, card_height)
-    available_height = card_height - int(vmin * 0.056)  # top-bar + vertical padding
-    max_img_width = int(card_width * 0.5)  # image takes at most 50% of card
-
-    size = _get_image_size(bg_path)
-    if size is None:
-        return max_img_width
-
-    src_w, src_h = size
-    # Image fills available height, compute resulting width
-    rendered_width = int(available_height * src_w / src_h)
-    return min(rendered_width, max_img_width)
+def _base_context(params: CircleImageParams | BlogImageParams) -> dict[str, Any]:
+    """Shared template context for all image types."""
+    max_h = _max_image_height(params.width, params.height)
+    return {
+        "width": params.width,
+        "height": params.height,
+        "horizontal": _is_horizontal(params.width, params.height),
+        "max_image_height": max_h,
+        "avatar_size": max_h // 5,
+        "background_src": _src(params.background_path),
+        "avatar_src": _src(params.author_img_path),
+        "author_name": params.author_name,
+    }
 
 
 def _circle_html(params: CircleImageParams) -> str:
-    bg_src = _src(params.background_path)
-    horizontal = _is_horizontal(params.width, params.height)
-    return render_to_string(
-        "img_gen/circle.html",
-        {
-            "width": params.width,
-            "height": params.height,
-            "horizontal": horizontal,
-            "max_image_height": _max_image_height(params.width, params.height),
-            "content_width": _content_width(params.background_path, params.width, params.height),
-            "h_image_width": _horizontal_image_width(params.background_path, params.width, params.height)
-            if horizontal
-            else 0,
-            "background_src": bg_src,
-            "avatar_src": _src(params.author_img_path),
-            "avatar_size": "28vmin",
-            "title": params.title,
-            "subtitle": params.subtitle,
-            "author_name": params.author_name,
-            "day": params.day,
-            "time_pst": params.time_pst,
-            "time_est": params.time_est,
-        },
+    ctx = _base_context(params)
+    ctx.update(
+        title=params.title,
+        subtitle=params.subtitle,
+        day=params.day,
+        time_pst=params.time_pst,
+        time_est=params.time_est,
     )
+    return render_to_string("img_gen/circle.html", ctx)
 
 
 def _blog_html(params: BlogImageParams) -> str:
-    label = "New on the Totem Blog" if params.show_new else "Totem Blog"
-    bg_src = _src(params.background_path)
-    horizontal = _is_horizontal(params.width, params.height)
-    return render_to_string(
-        "img_gen/blog.html",
-        {
-            "width": params.width,
-            "height": params.height,
-            "horizontal": horizontal,
-            "max_image_height": _max_image_height(params.width, params.height),
-            "content_width": _content_width(params.background_path, params.width, params.height),
-            "h_image_width": _horizontal_image_width(params.background_path, params.width, params.height)
-            if horizontal
-            else 0,
-            "background_src": bg_src,
-            "avatar_src": _src(params.author_img_path),
-            "avatar_size": "25vmin",
-            "label": label,
-            "title": params.title,
-            "author_name": params.author_name,
-        },
+    ctx = _base_context(params)
+    ctx.update(
+        label="New on the Totem Blog" if params.show_new else "Totem Blog",
+        title=params.title,
     )
+    return render_to_string("img_gen/blog.html", ctx)
 
 
 @lru_cache(maxsize=100)
