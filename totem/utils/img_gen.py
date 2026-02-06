@@ -86,6 +86,29 @@ def _is_horizontal(width: int, height: int) -> bool:
     return width / height >= 1.8
 
 
+def _title_font_size(title: str, horizontal: bool) -> float:
+    """Step down title font size so long titles fit in ~3 lines max."""
+    n = len(title)
+    if horizontal:
+        if n > 70:
+            return 6.4
+        if n > 50:
+            return 7.2
+        if n > 35:
+            return 8.0
+        if n > 20:
+            return 9.0
+        return 10.0
+    else:
+        if n > 80:
+            return 3.5
+        if n > 50:
+            return 4.2
+        if n > 30:
+            return 4.5
+        return 5.0
+
+
 def _base_context(params: CircleImageParams | BlogImageParams) -> dict[str, Any]:
     """Shared template context for all image types."""
     max_h = _max_image_height(params.width, params.height)
@@ -103,8 +126,10 @@ def _base_context(params: CircleImageParams | BlogImageParams) -> dict[str, Any]
 
 def _circle_html(params: CircleImageParams) -> str:
     ctx = _base_context(params)
+    horizontal = ctx["horizontal"]
     ctx.update(
         title=params.title,
+        title_font_size=_title_font_size(params.title, horizontal),
         subtitle=params.subtitle,
         day=params.day,
         time_pst=params.time_pst,
@@ -115,9 +140,11 @@ def _circle_html(params: CircleImageParams) -> str:
 
 def _blog_html(params: BlogImageParams) -> str:
     ctx = _base_context(params)
+    horizontal = ctx["horizontal"]
     ctx.update(
         label="New on the Totem Blog" if params.show_new else "Totem Blog",
         title=params.title,
+        title_font_size=_title_font_size(params.title, horizontal),
     )
     return render_to_string("img_gen/blog.html", ctx)
 

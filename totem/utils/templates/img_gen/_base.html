@@ -72,6 +72,10 @@
         margin-top: 1.5vmin;
     }
 
+    .category-wrap {
+        overflow: hidden;
+    }
+
     .category {
         font-size: 2.2vmin;
         font-weight: 600;
@@ -81,9 +85,9 @@
     }
 
     .title {
-        font-size: 5vmin;
+        font-size: {{ title_font_size }}vmin;
         font-weight: 700;
-        line-height: 1.1;
+        line-height: 1.15;
         letter-spacing: -0.02em;
     }
 
@@ -145,6 +149,7 @@
     .h-layout .text-side {
         flex: 1;
         padding-left: 3vmin;
+        overflow: hidden;
     }
 
     .h-layout .header {
@@ -153,6 +158,19 @@
 
     .h-layout .details {
         margin-top: 0;
+    }
+
+    .h-layout .category {
+        font-size: 2.8vmin;
+    }
+
+    .h-layout .author-line {
+        font-size: 3.4vmin;
+    }
+
+    .h-layout .schedule-day,
+    .h-layout .schedule-times {
+        font-size: 3.0vmin;
     }
 </style></head>
 <body style="width: {{ width }}px; height: {{ height }}px;">
