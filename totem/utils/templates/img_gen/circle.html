@@ -1,12 +1,10 @@
 {% extends "img_gen/_base.html" %}
 
 {% block content %}
+<div class="category">{{ subtitle }}</div>
 <div class="title">{{ title }}</div>
-<div class="subtitle">{{ subtitle }}</div>
-<div class="meta"><span class="dim">with</span> {{ author_name }} <span class="dim">@ totem.org</span></div>
 <div class="schedule">
     <div class="schedule-day">{{ day }}</div>
-    <div class="schedule-time">{{ time_pst }}</div>
-    <div class="schedule-time">{{ time_est }}</div>
+    <div class="schedule-times">{{ time_pst }} · {{ time_est }}</div>
 </div>
 {% endblock %}

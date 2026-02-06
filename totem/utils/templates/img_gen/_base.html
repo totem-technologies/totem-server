@@ -5,128 +5,167 @@
 
     body {
         font-family: 'Montserrat', sans-serif;
-        color: white;
+        background: #f3f1e9;
+        color: #262f37;
         overflow: hidden;
         display: flex;
         flex-direction: column;
     }
 
-    .bg {
-        position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
+    .top-bar {
+        height: 0.6vmin;
+        flex-shrink: 0;
+        background: linear-gradient(to right, #f4dc92, #987aa5, #d999aa);
     }
 
-    .overlay {
-        position: absolute;
-        inset: 0;
-        background: linear-gradient(
-            160deg,
-            rgba(38, 47, 55, 0.94) 0%,
-            rgba(38, 47, 55, 0.88) 40%,
-            rgba(152, 122, 165, 0.50) 78%,
-            rgba(152, 122, 165, 0.25) 100%
-        );
-    }
-
-    .content {
-        position: relative;
+    .card {
         flex: 1;
+        padding: 2.5vmin 3vmin 3vmin 3vmin;
+        overflow: hidden;
+    }
+
+    .layout {
+        margin: 0 auto;
+    }
+
+    .header {
         display: flex;
         flex-direction: row;
-        padding: 3.5vmin;
-        overflow: hidden;
+        align-items: center;
+        margin-bottom: 2vmin;
     }
 
-    .accent {
-        width: 0.6vmin;
+    .header-avatar {
+        width: 4.2vmin;
+        height: 4.2vmin;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 0.25vmin solid #987aa5;
+        margin-right: 1.2vmin;
         flex-shrink: 0;
-        margin-right: 2.5vmin;
-        border-radius: 1vmin;
-        background: linear-gradient(to bottom, #f4dc92, #987aa5);
     }
 
-    .text-wrap {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        min-width: 0;
-    }
-
-    .title {
-        font-size: 9vh;
-        font-weight: 700;
-        line-height: 1.05;
-        letter-spacing: -0.02em;
-    }
-
-    .subtitle {
-        font-size: 4.5vh;
-        font-weight: 500;
-        margin-top: 1.5vh;
-        color: #f3f1e9;
-    }
-
-    .meta {
-        font-size: 4vh;
-        font-weight: 500;
-        margin-top: 0.8vh;
-        color: #f3f1e9;
-    }
-
-    .dim { opacity: 0.6; }
-
-    .schedule {
-        margin-top: auto;
-    }
-
-    .schedule-day {
-        font-size: 5.5vh;
+    .header-name {
+        font-size: 2.8vmin;
         font-weight: 600;
-        margin-bottom: 0.3vh;
     }
 
-    .schedule-time {
-        font-size: 4.5vh;
-        font-weight: 500;
-        color: #f3f1e9;
-        margin-top: 0.4vh;
+    .header-org {
+        font-size: 2.8vmin;
+        font-weight: 400;
+        opacity: 0.4;
     }
 
-    .label {
-        font-size: 3.5vh;
+    .image {
+        max-width: 100%;
+        border-radius: 2vmin;
+        box-shadow: 0 0.3vmin 1.5vmin rgba(38, 47, 55, 0.12);
+    }
+
+    .details {
+        margin-top: 2vmin;
+    }
+
+    .category {
+        font-size: 2.2vmin;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.15em;
-        color: #f4dc92;
+        color: #a09a93;
+        margin-bottom: 0.4vmin;
+    }
+
+    .title {
+        font-size: 5vmin;
+        font-weight: 700;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+    }
+
+    .schedule {
+        margin-top: 0.8vmin;
+    }
+
+    .schedule-day {
+        font-size: 3.5vmin;
+        font-weight: 600;
+    }
+
+    .schedule-times {
+        font-size: 2.6vmin;
+        font-weight: 500;
+        color: #987aa5;
+        margin-top: 0.15vmin;
+    }
+
+    .label {
+        font-size: 2.4vmin;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        color: #987aa5;
     }
 
     .blog-title {
-        font-size: 8vh;
-        margin-top: 1.5vh;
+        font-size: 4.5vmin;
+        margin-top: 0.4vmin;
     }
 
-    .avatar {
-        position: absolute;
-        bottom: 3vmin;
-        right: 3vmin;
-        border-radius: 50%;
-        border: 0.6vmin solid rgba(255, 255, 255, 0.9);
-        box-shadow: 0 0.5vmin 2vmin rgba(0, 0, 0, 0.3);
-        object-fit: cover;
+    /* Horizontal layout overrides */
+    .h-layout {
+        display: flex;
+        flex-direction: row;
+        height: 100%;
+        align-items: center;
+    }
+
+    .h-layout .image {
+        flex-shrink: 0;
+        max-width: none;
+    }
+
+    .h-layout .text-side {
+        flex: 1;
+        padding-left: 3vmin;
+    }
+
+    .h-layout .header {
+        margin-bottom: 1.5vmin;
+    }
+
+    .h-layout .details {
+        margin-top: 0;
     }
 </style></head>
-<body style="width: {{ width }}px; height: {{ height }}px; position: relative;">
-    <img class="bg" src="{{ background_src }}" />
-    <div class="overlay"></div>
-    <div class="content">
-        <div class="accent"></div>
-        <div class="text-wrap">
-            {% block content %}{% endblock %}
+<body style="width: {{ width }}px; height: {{ height }}px;">
+    <div class="top-bar"></div>
+    <div class="card">
+        <div class="layout {% if horizontal %}h-layout{% endif %}" {% if not horizontal %}style="width: {{ content_width }}px"{% endif %}>
+            {% if not horizontal %}
+            <div class="header">
+                <img class="header-avatar" src="{{ avatar_src }}" />
+                <div>
+                    <span class="header-name">{{ author_name }}</span>
+                    <span class="header-org"> @ totem.org</span>
+                </div>
+            </div>
+            {% endif %}
+            <img class="image" src="{{ background_src }}" style="{% if horizontal %}width: {{ h_image_width }}px{% else %}max-height: {{ max_image_height }}px{% endif %}" />
+            <div class="text-side">
+                {% if horizontal %}
+                <div class="header">
+                    <img class="header-avatar" src="{{ avatar_src }}" />
+                    <div>
+                        <span class="header-name">{{ author_name }}</span>
+                        <span class="header-org"> @ totem.org</span>
+                    </div>
+                </div>
+                {% endif %}
+                <div class="details">
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
         </div>
     </div>
-    <img class="avatar" src="{{ avatar_src }}" style="width: {{ avatar_size }}; height: {{ avatar_size }};" />
 </body>
 </html>
