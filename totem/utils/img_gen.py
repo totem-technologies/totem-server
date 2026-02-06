@@ -74,13 +74,6 @@ def _render(html_content: str, width: int, height: int) -> dynimg.Image:
     return dynimg.render(html_content, options)
 
 
-def _max_image_height(width: int, height: int) -> int:
-    """Compute max image height in pixels, reserving space for header + details.
-    Pixel values are used because dynimg treats viewport-unit max-height as
-    layout height even when the image is shorter (causing a gap)."""
-    return int(height * 0.65)
-
-
 def _is_horizontal(width: int, height: int) -> bool:
     """Use horizontal layout when the card is significantly wider than tall."""
     return width / height >= 1.8
@@ -115,7 +108,7 @@ def _base_context(params: CircleImageParams | BlogImageParams) -> dict[str, Any]
         "width": params.width,
         "height": params.height,
         "horizontal": _is_horizontal(params.width, params.height),
-        "max_image_height": _max_image_height(params.width, params.height),
+        "max_image_height": int(params.height * 0.65),
         "background_src": _src(params.background_path),
         "avatar_src": _src(params.author_img_path),
         "author_name": params.author_name,
