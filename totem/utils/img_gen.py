@@ -111,13 +111,11 @@ def _title_font_size(title: str, horizontal: bool) -> float:
 
 def _base_context(params: CircleImageParams | BlogImageParams) -> dict[str, Any]:
     """Shared template context for all image types."""
-    max_h = _max_image_height(params.width, params.height)
     return {
         "width": params.width,
         "height": params.height,
         "horizontal": _is_horizontal(params.width, params.height),
-        "max_image_height": max_h,
-        "avatar_size": max_h // 5,
+        "max_image_height": _max_image_height(params.width, params.height),
         "background_src": _src(params.background_path),
         "avatar_src": _src(params.author_img_path),
         "author_name": params.author_name,
