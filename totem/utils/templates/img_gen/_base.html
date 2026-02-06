@@ -22,10 +22,12 @@
         flex: 1;
         padding: 2.5vmin 3vmin 3vmin 3vmin;
         overflow: hidden;
+        text-align: center;
     }
 
     .layout {
-        margin: 0 auto;
+        display: inline-block;
+        text-align: left;
     }
 
     .header {
@@ -48,6 +50,7 @@
 
     .image-wrap {
         position: relative;
+        display: inline-block;
     }
 
     .image {
@@ -131,12 +134,14 @@
         flex-direction: row;
         height: 100%;
         align-items: center;
+        text-align: left;
     }
 
     .h-layout .header-v { display: none; }
     .h-layout .header-h { display: block; }
 
     .h-layout .image-wrap {
+        display: block;
         flex-shrink: 0;
         max-width: 50%;
     }
