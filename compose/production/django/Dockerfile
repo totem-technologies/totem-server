@@ -53,7 +53,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 WORKDIR ${APP_HOME}
 
 RUN addgroup --system django \
-    && adduser --system --create-home --ingroup django django
+    && adduser --system --home /home/django --ingroup django django
 
 # Install required system dependencies
 RUN apt-get update && apt-get install --no-install-recommends -y \
