@@ -64,6 +64,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     # dynimg runtime dependencies
     libexpat1 \
     fontconfig \
+    ca-certificates \
     # cleaning up unused files
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && rm -rf /var/lib/apt/lists/*
