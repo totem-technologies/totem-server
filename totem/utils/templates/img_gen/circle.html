@@ -1,0 +1,22 @@
+{% extends "img_gen/_base.html" %}
+
+{% block header_v %}
+  <div class="header header-v category-wrap">
+    <span class="category">{{ subtitle }}</span>
+  </div>
+{% endblock %}
+
+{% block header_h %}
+  <div class="header header-h category-wrap">
+    <span class="category">{{ subtitle }}</span>
+  </div>
+{% endblock %}
+
+{% block content %}
+  <div class="title">{{ title }}</div>
+  <div class="author-line">with {{ author_name }} @ totem.org</div>
+  <div class="schedule">
+    <div class="schedule-day">{{ day }}</div>
+    <div class="schedule-times">{{ time_pst }} · {{ time_est }}</div>
+  </div>
+{% endblock %}

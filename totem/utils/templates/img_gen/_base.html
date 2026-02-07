@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+        font-family: 'Montserrat', sans-serif;
+        background: #f3f1e9;
+        color: #262f37;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .top-bar {
+        height: 0.8vh;
+        flex-shrink: 0;
+        background: linear-gradient(to right, #f4dc92, #987aa5, #d999aa);
+    }
+
+    .card {
+        flex: 1;
+        padding: 2.5vmin 3vmin 3vmin 3vmin;
+        overflow: hidden;
+        text-align: center;
+    }
+
+    .layout {
+        display: inline-block;
+        text-align: left;
+    }
+
+    .header {
+        margin-bottom: 1.5vmin;
+    }
+
+    .header-name {
+        font-size: 2.8vmin;
+        font-weight: 600;
+    }
+
+    .header-org {
+        font-size: 2.8vmin;
+        font-weight: 400;
+        opacity: 0.4;
+    }
+
+    /* Vertical header shown, horizontal header hidden by default */
+    .header-h { display: none; }
+
+    .image-wrap {
+        position: relative;
+        display: inline-block;
+    }
+
+    .image {
+        max-width: 100%;
+        max-height: 65vh;
+        border-radius: 2vmin;
+        box-shadow: 0 0.3vmin 1.5vmin rgba(38, 47, 55, 0.12);
+    }
+
+    .avatar-overlay {
+        position: absolute;
+        bottom: 1.5vmin;
+        right: 1.5vmin;
+        width: 15vmin;
+        height: 15vmin;
+        border-radius: 50%;
+        border: 0.4vmin solid white;
+        box-shadow: 0 0.2vmin 0.8vmin rgba(38, 47, 55, 0.2);
+    }
+
+    .details {
+        margin-top: 2vmin;
+    }
+
+    .category-wrap {
+        overflow: hidden;
+    }
+
+    .category {
+        font-size: 1.8vmin;
+        font-weight: 600;
+        color: #8a847d;
+    }
+
+    .title {
+        font-size: {{ title_font_size }}vmin;
+        font-weight: 700;
+        line-height: 1.15;
+        letter-spacing: -0.02em;
+    }
+
+    .author-line {
+        font-size: 2.8vmin;
+        font-weight: 500;
+        margin-top: 0.5vmin;
+        font-style: italic;
+    }
+
+    .schedule {
+        margin-top: 2vmin;
+    }
+
+    .schedule-day {
+        font-size: 2.4vmin;
+        font-weight: 700;
+    }
+
+    .schedule-times {
+        font-size: 2.4vmin;
+        font-weight: 700;
+        margin-top: 0.1vmin;
+    }
+
+    .label {
+        font-size: 2.4vmin;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        color: #987aa5;
+    }
+
+    .blog-title {
+        font-size: 4.5vmin;
+        margin-top: 0.4vmin;
+    }
+
+    /* Horizontal layout for wide viewports */
+    @media (min-width: 1200px) {
+        .layout {
+            display: flex;
+            flex-direction: row;
+            height: 100%;
+            align-items: center;
+            text-align: left;
+        }
+
+        .header-v { display: none; }
+        .header-h { display: block; }
+
+        .image-wrap {
+            display: block;
+            flex-shrink: 0;
+            max-width: 50%;
+        }
+
+        .image {
+            max-width: 100%;
+            max-height: none;
+        }
+
+        .text-side {
+            flex: 1;
+            padding-left: 3vmin;
+            overflow: hidden;
+        }
+
+        .header {
+            margin-bottom: 1.5vmin;
+        }
+
+        .details {
+            margin-top: 0;
+        }
+
+        .category {
+            font-size: 2.8vmin;
+        }
+
+        .author-line {
+            font-size: 3.4vmin;
+        }
+
+        .schedule-day,
+        .schedule-times {
+            font-size: 3.0vmin;
+        }
+    }
+
+</style></head>
+<body style="width: {{ width }}px; height: {{ height }}px;">
+    <div class="top-bar"></div>
+    <div class="card">
+        <div class="layout">
+            {% block header_v %}
+            <div class="header header-v">
+                <span class="header-name">{{ author_name }}</span>
+                <span class="header-org"> @ totem.org</span>
+            </div>
+            {% endblock %}
+            <div class="image-wrap">
+                {% block image_overlay %}{% endblock %}
+                <img class="image" src="{{ background_src }}" />
+                <img class="avatar-overlay" src="{{ avatar_src }}" />
+            </div>
+            <div class="text-side">
+                {% block header_h %}
+                <div class="header header-h">
+                    <span class="header-name">{{ author_name }}</span>
+                    <span class="header-org"> @ totem.org</span>
+                </div>
+                {% endblock %}
+                <div class="details">
+                    {% block content %}{% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -3,7 +3,7 @@ import {
   FaSolidChevronRight as ChevronRight,
 } from "solid-icons/fa"
 import { FiClock as Clock } from "solid-icons/fi"
-import { TbArmchair } from "solid-icons/tb"
+import { TbOutlineChairDirector } from "solid-icons/tb"
 import {
   type Accessor,
   createContext,
@@ -252,7 +252,7 @@ function SpacesListInner() {
                                 </div>
                                 {/* Add seats left info with armchair icon */}
                                 <div class="text-muted-foreground flex items-center text-xs">
-                                  <TbArmchair class="mr-1 h-3.5 w-3.5" />
+                                  <TbOutlineChairDirector class="mr-1 h-3.5 w-3.5" />
                                   <Show
                                     when={space.next_event?.seats_left! > 0}
                                     fallback="Full">
