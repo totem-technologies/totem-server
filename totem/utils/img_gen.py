@@ -1,3 +1,13 @@
+# dynimg uses the Blitz renderer (Dioxus) with Stylo CSS engine.
+# CSS quirks:
+#   - object-fit not supported; use max-width/max-height instead
+#   - percentage max-height doesn't resolve in flex containers; use vh or px
+#   - vh/vmin units require <meta name="viewport" ...> in the HTML
+#   - @media (min-width: ...) works; aspect-ratio/height/orientation do not
+#   - blitz-net needs a writable HOME dir or network fetching silently fails
+#
+# Templates live in totem/utils/templates/img_gen/
+
 import hashlib
 import os
 from dataclasses import asdict, dataclass

@@ -14,3 +14,8 @@ Javascript notes:
 The front end code is in the /assets folder. The front end uses a generated OpenAPI schema (from Django Ninja) to render mini apps (via custom elements) on various MPA-style pages.
 
 Use tailwind and SolidJS
+
+
+Brand colors: cream #f3f1e9, slate #262f37, mauve #987aa5, yellow #f4dc92, pink #d999aa
+
+Font: Montserrat
