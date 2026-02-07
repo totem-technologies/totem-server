@@ -30,7 +30,7 @@
         {% include "blog/_author_date.html" %}
       </address>
       <h1
-        class="mb-4 hidden text-3xl leading-tight font-extrabold text-gray-900 lg:mb-6 lg:text-4xl">
+        class="mb-4 text-3xl leading-tight font-extrabold text-gray-900 lg:mb-6 lg:text-4xl">
         {{ post.title }}
       </h1>
       <p>
@@ -40,14 +40,12 @@
         {% endif %}
       </p>
       {% if post.header_image %}
-        <div class="card mt-5 shadow-xl">
-          <figure>
-            <img
-              src="{% absurl 'blog:post_social_img' slug=post.slug image_format="2to1" %}?new=false"
-              alt="{{ post.title }}"
-              class="h-auto w-full rounded-lg"
-              loading="lazy" />
-          </figure>
+        <div class="mt-5">
+          <img
+            src="{{ post.header_image.url }}"
+            alt="{{ post.title }}"
+            class="h-auto w-full rounded-lg shadow-xl"
+            loading="lazy" />
         </div>
       {% endif %}
     </header>
