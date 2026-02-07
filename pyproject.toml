@@ -40,7 +40,7 @@ dependencies = [
     "livekit<2",
     "livekit-api<2",
     "granian<3",
-    "dynimg>=0.1.15",
+    "dynimg<=0.2.0",
 ]
 
 [dependency-groups]

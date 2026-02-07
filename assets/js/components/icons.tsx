@@ -1,7 +1,7 @@
 import { AiOutlineClockCircle, AiOutlineDollarCircle } from "solid-icons/ai"
 import { FaRegularStar } from "solid-icons/fa"
 import { FiRepeat } from "solid-icons/fi"
-import { TbArmchair } from "solid-icons/tb"
+import { TbOutlineChairDirector } from "solid-icons/tb"
 import { createMemo, Match, Switch } from "solid-js"
 
 export type IconName = "star" | "dollar" | "recur" | "clock" | "chair"
@@ -31,7 +31,7 @@ function Icon(props: IconProps) {
         <AiOutlineClockCircle size={size()} />
       </Match>
       <Match when={props.name === "chair"}>
-        <TbArmchair size={size()} />
+        <TbOutlineChairDirector size={size()} />
       </Match>
     </Switch>
   )
