@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
-<head><style>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
@@ -55,7 +57,7 @@
 
     .image {
         max-width: 100%;
-        max-height: {{ max_image_height }}px;
+        max-height: 65vh;
         border-radius: 2vmin;
         box-shadow: 0 0.3vmin 1.5vmin rgba(38, 47, 55, 0.12);
     }
@@ -82,8 +84,6 @@
     .category {
         font-size: 2.2vmin;
         font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.15em;
         color: #8a847d;
     }
 
@@ -129,60 +129,63 @@
         margin-top: 0.4vmin;
     }
 
-    /* Horizontal layout overrides (applied via .h-layout class) */
-    .h-layout {
-        display: flex;
-        flex-direction: row;
-        height: 100%;
-        align-items: center;
-        text-align: left;
+    /* Horizontal layout for wide viewports */
+    @media (min-width: 1200px) {
+        .layout {
+            display: flex;
+            flex-direction: row;
+            height: 100%;
+            align-items: center;
+            text-align: left;
+        }
+
+        .header-v { display: none; }
+        .header-h { display: block; }
+
+        .image-wrap {
+            display: block;
+            flex-shrink: 0;
+            max-width: 50%;
+        }
+
+        .image {
+            max-width: 100%;
+            max-height: none;
+        }
+
+        .text-side {
+            flex: 1;
+            padding-left: 3vmin;
+            overflow: hidden;
+        }
+
+        .header {
+            margin-bottom: 1.5vmin;
+        }
+
+        .details {
+            margin-top: 0;
+        }
+
+        .category {
+            font-size: 2.8vmin;
+        }
+
+        .author-line {
+            font-size: 3.4vmin;
+        }
+
+        .schedule-day,
+        .schedule-times {
+            font-size: 3.0vmin;
+        }
     }
 
-    .h-layout .header-v { display: none; }
-    .h-layout .header-h { display: block; }
-
-    .h-layout .image-wrap {
-        display: block;
-        flex-shrink: 0;
-        max-width: 50%;
-    }
-
-    .h-layout .image {
-        max-width: 100%;
-        max-height: none;
-    }
-
-    .h-layout .text-side {
-        flex: 1;
-        padding-left: 3vmin;
-        overflow: hidden;
-    }
-
-    .h-layout .header {
-        margin-bottom: 1.5vmin;
-    }
-
-    .h-layout .details {
-        margin-top: 0;
-    }
-
-    .h-layout .category {
-        font-size: 2.8vmin;
-    }
-
-    .h-layout .author-line {
-        font-size: 3.4vmin;
-    }
-
-    .h-layout .schedule-day,
-    .h-layout .schedule-times {
-        font-size: 3.0vmin;
-    }
 </style></head>
 <body style="width: {{ width }}px; height: {{ height }}px;">
     <div class="top-bar"></div>
     <div class="card">
-        <div class="layout {% if horizontal %}h-layout{% endif %}">
+        <div class="layout">
             {% block header_v %}
             <div class="header header-v">
                 <span class="header-name">{{ author_name }}</span>

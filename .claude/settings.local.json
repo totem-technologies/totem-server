@@ -23,7 +23,11 @@
       "mcp__kagi__kagi_search_fetch",
       "mcp__kagi__kagi_summarizer",
       "WebFetch(domain:github.com)",
-      "Bash(gh api:*)"
+      "Bash(gh api:*)",
+      "Bash(gh search:*)",
+      "Bash(gh issue list:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh pr list:*)"
     ]
   }
 }

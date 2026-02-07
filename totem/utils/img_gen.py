@@ -74,15 +74,10 @@ def _render(html_content: str, width: int, height: int) -> dynimg.Image:
     return dynimg.render(html_content, options)
 
 
-def _is_horizontal(width: int, height: int) -> bool:
-    """Use horizontal layout when the card is significantly wider than tall."""
-    return width / height >= 1.8
-
-
-def _title_font_size(title: str, horizontal: bool) -> float:
+def _title_font_size(title: str, width: int) -> float:
     """Step down title font size so long titles fit in ~3 lines max."""
     n = len(title)
-    if horizontal:
+    if width >= 1200:
         if n > 70:
             return 6.4
         if n > 50:
@@ -107,8 +102,6 @@ def _base_context(params: CircleImageParams | BlogImageParams) -> dict[str, Any]
     return {
         "width": params.width,
         "height": params.height,
-        "horizontal": _is_horizontal(params.width, params.height),
-        "max_image_height": int(params.height * 0.65),
         "background_src": _src(params.background_path),
         "avatar_src": _src(params.author_img_path),
         "author_name": params.author_name,
@@ -117,11 +110,10 @@ def _base_context(params: CircleImageParams | BlogImageParams) -> dict[str, Any]
 
 def _circle_html(params: CircleImageParams) -> str:
     ctx = _base_context(params)
-    horizontal = ctx["horizontal"]
     ctx.update(
         title=params.title,
-        title_font_size=_title_font_size(params.title, horizontal),
-        subtitle=params.subtitle,
+        title_font_size=_title_font_size(params.title, params.width),
+        subtitle=params.subtitle.upper(),
         day=params.day,
         time_pst=params.time_pst,
         time_est=params.time_est,
@@ -131,11 +123,10 @@ def _circle_html(params: CircleImageParams) -> str:
 
 def _blog_html(params: BlogImageParams) -> str:
     ctx = _base_context(params)
-    horizontal = ctx["horizontal"]
     ctx.update(
         label="New on the Totem Blog" if params.show_new else "Totem Blog",
         title=params.title,
-        title_font_size=_title_font_size(params.title, horizontal),
+        title_font_size=_title_font_size(params.title, params.width),
     )
     return render_to_string("img_gen/blog.html", ctx)
 
