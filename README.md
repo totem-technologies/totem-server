@@ -41,6 +41,16 @@ Steps:
 - Totem used `dokku` for deployment. The `Dockerfile` is used to build the image.
   - Configure `dokku` to use the production Dockerfile: `dokku builder:set totem selected dockerfile` and `dokku builder-dockerfile:set totem dockerfile-path compose/production/django/Dockerfile`.
 
+## Update PostgreSQL config
+
+The production Postgres config is at `compose/production/postgres/postgresql.conf`. To apply changes:
+
+- Find the Dokku config directory: `dokku postgres:info totemdb --config-dir`
+- Copy the config: `scp compose/production/postgres/postgresql.conf <vps>:<config-dir>/postgresql.conf`
+- Restart Postgres: `dokku postgres:restart totemdb`
+
+Note: `shared_buffers` changes require a full restart to take effect.
+
 ## Restore DB from backup
 
 - Download backup locally

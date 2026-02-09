@@ -35,8 +35,10 @@ services:
     volumes:
       - totem_local_postgres_data:/var/lib/postgresql/data
       - totem_local_postgres_data_backups:/backups
+      - ./compose/local/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
     env_file:
       - ./.envs/.local/.postgres
+    command: postgres -c config_file=/etc/postgresql/postgresql.conf
 
   mailpit:
     image: axllent/mailpit
