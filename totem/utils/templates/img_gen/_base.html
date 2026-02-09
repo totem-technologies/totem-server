@@ -24,25 +24,30 @@
         flex: 1;
         padding: 2.5vmin 3vmin 3vmin 3vmin;
         overflow: hidden;
-        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
     }
 
     .layout {
-        display: inline-block;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        width: 100%;
         text-align: left;
     }
 
     .header {
-        margin-bottom: 1.5vmin;
+        margin-bottom: 1.5vh;
     }
 
     .header-name {
-        font-size: 2.8vmin;
+        font-size: 2.8vh;
         font-weight: 600;
     }
 
     .header-org {
-        font-size: 2.8vmin;
+        font-size: 2.8vh;
         font-weight: 400;
         opacity: 0.4;
     }
@@ -52,12 +57,13 @@
 
     .image-wrap {
         position: relative;
-        display: inline-block;
+        align-self: center;
+        flex-shrink: 0;
     }
 
     .image {
         max-width: 100%;
-        max-height: 65vh;
+        max-height: 60vw;
         border-radius: 2vmin;
         box-shadow: 0 0.3vmin 1.5vmin rgba(38, 47, 55, 0.12);
     }
@@ -73,8 +79,15 @@
         box-shadow: 0 0.2vmin 0.8vmin rgba(38, 47, 55, 0.2);
     }
 
+    .text-side {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
     .details {
-        margin-top: 2vmin;
+        margin-top: 2vh;
     }
 
     .category-wrap {
@@ -82,42 +95,42 @@
     }
 
     .category {
-        font-size: 1.8vmin;
+        font-size: 1.8vh;
         font-weight: 600;
         color: #8a847d;
     }
 
     .title {
-        font-size: {{ title_font_size }}vmin;
+        font-size: {{ title_font_size }}vh;
         font-weight: 700;
         line-height: 1.15;
         letter-spacing: -0.02em;
     }
 
     .author-line {
-        font-size: 2.8vmin;
+        font-size: 2.8vh;
         font-weight: 500;
-        margin-top: 0.5vmin;
+        margin-top: 0.5vh;
         font-style: italic;
     }
 
     .schedule {
-        margin-top: 2vmin;
+        margin-top: 2vh;
     }
 
     .schedule-day {
-        font-size: 2.4vmin;
+        font-size: 2.4vh;
         font-weight: 700;
     }
 
     .schedule-times {
-        font-size: 2.4vmin;
+        font-size: 2.4vh;
         font-weight: 700;
-        margin-top: 0.1vmin;
+        margin-top: 0.1vh;
     }
 
     .label {
-        font-size: 2.4vmin;
+        font-size: 2.4vh;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.18em;
@@ -125,27 +138,24 @@
     }
 
     .blog-title {
-        font-size: 4.5vmin;
-        margin-top: 0.4vmin;
+        font-size: 4.5vh;
+        margin-top: 0.4vh;
     }
 
     /* Horizontal layout for wide viewports */
     @media (min-width: 1200px) {
         .layout {
-            display: flex;
             flex-direction: row;
-            height: 100%;
             align-items: center;
-            text-align: left;
         }
 
         .header-v { display: none; }
         .header-h { display: block; }
 
         .image-wrap {
-            display: block;
             flex-shrink: 0;
             max-width: 50%;
+            align-self: auto;
         }
 
         .image {
@@ -154,7 +164,6 @@
         }
 
         .text-side {
-            flex: 1;
             padding-left: 3vmin;
             overflow: hidden;
         }

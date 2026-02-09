@@ -13,7 +13,7 @@
         download="{{ session.slug }}-square.jpg"
         href="{% url 'spaces:session_social_img' session_slug=session.slug image_format="square" %}">
         <img
-          class="border-gray-800"
+          class="border"
           src="{% url 'spaces:session_social_img' session_slug=session.slug image_format="square" %}"
           alt="" />
       </a>
@@ -24,7 +24,7 @@
         download="{{ session.slug }}-wide.jpg"
         href="{% url 'spaces:session_social_img' session_slug=session.slug image_format="2to1" %}">
         <img
-          class="border-gray-800"
+          class="border"
           src="{% url 'spaces:session_social_img' session_slug=session.slug image_format="2to1" %}"
           alt="" />
       </a>
@@ -35,7 +35,7 @@
         download="{{ session.slug }}-tall.jpg"
         href="{% url 'spaces:session_social_img' session_slug=session.slug image_format="4to5" %}">
         <img
-          class="border-gray-800"
+          class="border"
           src="{% url 'spaces:session_social_img' session_slug=session.slug image_format="4to5" %}"
           alt="" />
       </a>
