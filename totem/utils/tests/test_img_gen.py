@@ -2,7 +2,7 @@ from totem.utils import img_gen
 
 
 def test_cache_key():
-    params = img_gen.CircleImageParams(
+    params = img_gen.SpaceImageParams(
         background_path="tests/img_gen/background.jpg",
         author_img_path="tests/img_gen/me.jpg",
         author_name="Bo",
@@ -27,7 +27,7 @@ def test_gen():
     import os
 
     folder_path = os.path.dirname(os.path.realpath(__file__))
-    params = img_gen.CircleImageParams(
+    params = img_gen.SpaceImageParams(
         background_path=f"{folder_path}/img_gen/background.jpg",
         author_img_path=f"{folder_path}/img_gen/me.jpg",
         author_name="Bo",
@@ -41,5 +41,5 @@ def test_gen():
         # width=1024,
         # height=512,
     )
-    image = img_gen.generate_circle_image(params)
+    image = img_gen.generate_space_image(params)
     assert image

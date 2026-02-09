@@ -11,7 +11,6 @@
 import hashlib
 import os
 from dataclasses import asdict, dataclass
-from functools import lru_cache
 from typing import Any
 
 import dynimg
@@ -28,7 +27,7 @@ def _generate_hash(data: dict[str, Any], version: int = 1) -> int:  # pyright: i
 
 
 @dataclass
-class CircleImageParams:
+class SpaceImageParams:
     background_path: str
     author_img_path: str
     author_name: str
@@ -107,7 +106,7 @@ def _title_font_size(title: str, width: int) -> float:
         return 5.0
 
 
-def _base_context(params: CircleImageParams | BlogImageParams) -> dict[str, Any]:
+def _base_context(params: SpaceImageParams | BlogImageParams) -> dict[str, Any]:
     """Shared template context for all image types."""
     return {
         "width": params.width,
@@ -118,7 +117,7 @@ def _base_context(params: CircleImageParams | BlogImageParams) -> dict[str, Any]
     }
 
 
-def _circle_html(params: CircleImageParams) -> str:
+def _space_html(params: SpaceImageParams) -> str:
     ctx = _base_context(params)
     ctx.update(
         title=params.title,
@@ -128,7 +127,7 @@ def _circle_html(params: CircleImageParams) -> str:
         time_pst=params.time_pst,
         time_est=params.time_est,
     )
-    return render_to_string("img_gen/circle.html", ctx)
+    return render_to_string("img_gen/session.html", ctx)
 
 
 def _blog_html(params: BlogImageParams) -> str:
@@ -141,27 +140,18 @@ def _blog_html(params: BlogImageParams) -> str:
     return render_to_string("img_gen/blog.html", ctx)
 
 
-@lru_cache(maxsize=100)
-def _render_cached(html_hash: int, width: int, height: int, html_content: str) -> dynimg.Image:
-    return _render(html_content, width, height)
-
-
-def generate_circle_image(params: CircleImageParams) -> dynimg.Image:
-    html = _circle_html(params)
-    return _render_cached(hash(html), params.width, params.height, html)
-
-
-SpaceImageParams = CircleImageParams
-generate_space_image = generate_circle_image
+def generate_space_image(params: SpaceImageParams) -> dynimg.Image:
+    html = _space_html(params)
+    return _render(html, params.width, params.height)
 
 
 def generate_blog_image(params: BlogImageParams) -> dynimg.Image:
     html = _blog_html(params)
-    return _render_cached(hash(html), params.width, params.height, html)
+    return _render(html, params.width, params.height)
 
 
 def _test():
-    params = CircleImageParams(
+    params = SpaceImageParams(
         background_path="tests/img_gen/background.jpg",
         author_img_path="tests/img_gen/me.jpg",
         author_name="Bo",
@@ -173,7 +163,7 @@ def _test():
         width=1080,
         height=1080,
     )
-    image = generate_circle_image(params)
+    image = generate_space_image(params)
     image.save_jpeg("tests/img_gen/output.jpg")
 
 
