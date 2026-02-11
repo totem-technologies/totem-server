@@ -443,6 +443,38 @@ async def accept_totem(room_name: str, keeper_slug: str, user_identity: str) -> 
 
 
 @async_to_sync
+async def force_pass(room_name: str, keeper_slug: str) -> None:
+    """
+    Forcefully passes the totem to the next participant, bypassing normal acceptance.
+
+    Allows the keeper to immediately transfer the speaker role to the next person in
+    the speaking order without waiting for acceptance. This can be used in cases
+    where the current speaker is unresponsive or has left. Updates room metadata accordingly.
+
+    Args:
+        room_name: The unique identifier/name of the room.
+        keeper_slug: The unique identifier of the keeper/session facilitator.
+        user_identity: The unique identifier of the user attempting to force pass.
+
+    Returns:
+        None
+
+    Raises:
+        RoomNotFoundError: If the room does not exist.
+        KeeperNotInRoomError: If the keeper is not currently in the room.
+        UnauthorizedError: If the user is not the keeper.
+        api.TwirpError: If the API call fails.
+    """
+    async with _get_lk_api_client() as lkapi:
+        room = await _get_room_or_raise(room_name, lkapi)
+
+        state = await _parse_validate_room_state(room, lkapi, validate=True, keeper_slug=keeper_slug)
+
+        state.force_pass()
+        await _update_room_metadata(room_name, state, lkapi)
+
+
+@async_to_sync
 async def start_room(room_name: str, keeper_slug: str) -> None:
     """
     Starts the session in the room by updating its status to 'started'.

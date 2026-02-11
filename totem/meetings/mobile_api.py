@@ -155,6 +155,44 @@ def accept_totem_endpoint(request: HttpRequest, event_slug: str):
 
 
 @meetings_router.post(
+    "/event/{event_slug}/force-pass",
+    response={
+        200: None,
+        400: ErrorResponseSchema,
+        403: ErrorResponseSchema,
+        404: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+    },
+    url_name="force_pass",
+)
+def force_pass_endpoint(request: HttpRequest, event_slug: str):
+    user: User = request.user  # type: ignore
+    event: Session = get_object_or_404(Session, slug=event_slug)
+
+    if event.ended():
+        return 400, ErrorResponseSchema(error="Session has already ended.")
+
+    if event.space.author.slug != user.slug:
+        return 403, ErrorResponseSchema(error="Only the Keeper can force pass the totem.")
+
+    try:
+        livekit.force_pass(room_name=event_slug, keeper_slug=event.space.author.slug)
+        return HttpResponse(status=200)
+    except RoomNotFoundError as e:
+        return 404, ErrorResponseSchema(error=str(e))
+    except KeeperNotInRoomError as e:
+        return 404, ErrorResponseSchema(error=str(e))
+    except UnauthorizedError as e:
+        return 403, ErrorResponseSchema(error=str(e))
+    except api.TwirpError as e:
+        logging.error("LiveKit API error in force_pass: %s", e)
+        return 500, ErrorResponseSchema(error=f"Failed to force pass: {str(e)}")
+    except Exception as e:
+        logging.error("Unexpected error in force_pass: %s", e, exc_info=True)
+        return 500, ErrorResponseSchema(error="An unexpected error occurred while force passing the totem.")
+
+
+@meetings_router.post(
     "/event/{event_slug}/start",
     response={
         200: None,
