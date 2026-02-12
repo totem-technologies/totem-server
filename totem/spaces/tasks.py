@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+from django.db.models import DateTimeField, ExpressionWrapper, F
 from django.utils import timezone
 
 from .models import Session
@@ -39,9 +40,16 @@ def advertise_session():
 
 
 def notify_missed_session():
-    recently_ended_sessions = Session.objects.filter(
-        start__gte=timezone.now() - timedelta(hours=2),
-        start__lte=timezone.now() - timedelta(hours=1),
+    now = timezone.now()
+    recently_ended_sessions = Session.objects.alias(
+        end_time=ExpressionWrapper(
+            F("start") + F("duration_minutes") * timedelta(minutes=1),
+            output_field=DateTimeField(),
+        ),
+    ).filter(
+        start__gte=now - timedelta(hours=2),
+        start__lte=now - timedelta(hours=1),
+        end_time__lt=now,
         cancelled=False,
         notified_missed=False,
     )

@@ -67,6 +67,38 @@ class TestMissedSessionTask:
         assert event.notified_missed is True
         assert user not in space.subscribed.all()
 
+    def test_notify_missed_session_long_duration_not_ended(self, db):
+        """A session that started 1.5h ago but has a 2h duration should NOT
+        trigger notify_missed, because it hasn't actually ended yet."""
+        event = SessionFactory(
+            start=timezone.now() - timedelta(hours=1, minutes=30),
+            duration_minutes=120,
+        )
+        user = UserFactory()
+        event.attendees.add(user)
+        event.save()
+        assert event.ended() is False
+        notify_missed_session()
+        event.refresh_from_db()
+        assert event.notified_missed is False
+        assert mail.outbox == []
+
+    def test_notify_missed_session_long_duration_ended(self, db):
+        """A session that started 1.5h ago with a short duration SHOULD
+        trigger notify_missed, because it has ended."""
+        event = SessionFactory(
+            start=timezone.now() - timedelta(hours=1, minutes=30),
+            duration_minutes=30,
+        )
+        user = UserFactory()
+        event.attendees.add(user)
+        event.save()
+        assert event.ended() is True
+        notify_missed_session()
+        event.refresh_from_db()
+        assert event.notified_missed is True
+        assert len(mail.outbox) == 1
+
 
 class TestNotifyBounceHandling:
     @patch("totem.spaces.models.notify_session_starting")
