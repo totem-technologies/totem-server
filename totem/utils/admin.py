@@ -1,5 +1,6 @@
 import csv
 import logging
+from typing import TYPE_CHECKING, Any
 
 from django.contrib import admin
 from django.contrib.admin.models import DELETION, LogEntry
@@ -86,6 +87,9 @@ def _make_stale_check_form(check_field: str):
 
         def clean(self):
             cleaned = super().clean()
+            if not cleaned:
+                return cleaned
+
             if not self.instance or not self.instance.pk:
                 return cleaned
 
@@ -109,7 +113,13 @@ def _make_stale_check_form(check_field: str):
     return StaleCheckForm
 
 
-class StaleDataCheckAdminMixin:
+if TYPE_CHECKING:
+    from django.contrib.admin.options import BaseModelAdmin as _StaleCheckBase
+else:
+    _StaleCheckBase = object
+
+
+class StaleDataCheckAdminMixin(_StaleCheckBase):
     """Admin mixin that prevents saving over data modified since the form was loaded.
 
     Uses the model's date_modified timestamp for optimistic locking. If the record
@@ -132,23 +142,23 @@ class StaleDataCheckAdminMixin:
 
     stale_check_field: str = "date_modified"
 
-    def get_fieldsets(self, request, obj=None):
-        fieldsets = super().get_fieldsets(request, obj)  # type: ignore
+    def get_fieldsets(self, request: HttpRequest, obj: Any = None):
+        fieldsets = list(super().get_fieldsets(request, obj))
         if fieldsets:
             first_name, first_options = fieldsets[0]
             fields = list(first_options.get("fields", []))
             if STALE_DATA_HIDDEN_FIELD not in fields:
                 fields.append(STALE_DATA_HIDDEN_FIELD)
-                fieldsets = [(first_name, {**first_options, "fields": fields})] + list(fieldsets[1:])
+                fieldsets[0] = (first_name, {**first_options, "fields": fields})
         return fieldsets
 
-    def get_form(self, request, obj=None, **kwargs):
+    def get_form(self, request: HttpRequest, obj: Any = None, change=False, **kwargs) -> Any:
         kwargs.setdefault("form", _make_stale_check_form(self.stale_check_field))
-        return super().get_form(request, obj, **kwargs)  # type: ignore
+        return super().get_form(request, obj, **kwargs)  # pyright: ignore[reportAttributeAccessIssue]
 
-    def get_formset(self, request, obj=None, **kwargs):
+    def get_formset(self, request: HttpRequest, obj: Any = None, **kwargs) -> Any:
         kwargs.setdefault("form", _make_stale_check_form(self.stale_check_field))
-        return super().get_formset(request, obj, **kwargs)  # type: ignore
+        return super().get_formset(request, obj, **kwargs)  # pyright: ignore[reportAttributeAccessIssue]
 
 
 class ExportCsvMixin:
