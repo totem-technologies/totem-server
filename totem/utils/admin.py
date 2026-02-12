@@ -1,12 +1,16 @@
 import csv
+import logging
 
 from django.contrib import admin
 from django.contrib.admin.models import DELETION, LogEntry
 from django.db.models.query import QuerySet
+from django.forms import CharField, HiddenInput
 from django.http import HttpRequest, HttpResponse
 from django.urls import reverse
 from django.utils.html import escape
 from django.utils.safestring import mark_safe
+
+logger = logging.getLogger(__name__)
 
 admin.site.site_header = "✨ Totem Admin ✨"
 
@@ -52,6 +56,99 @@ class LogEntryAdmin(admin.ModelAdmin):
 
     object_link.admin_order_field = "object_repr"  # type: ignore
     object_link.short_description = "object"  # type: ignore
+
+
+STALE_DATA_HIDDEN_FIELD = "_loaded_at"
+STALE_DATA_ERROR = (
+    "This record was modified while you were editing it. "
+    "Your changes have NOT been saved. Please copy any changes you made, "
+    "refresh the page, and try again."
+)
+
+
+def _make_stale_check_form(check_field: str):
+    """Create a ModelForm subclass with a hidden timestamp field for stale data detection.
+
+    Declaring the field on the class (rather than adding it in __init__) ensures
+    modelform_factory recognizes it, so it works in fieldsets without custom templates.
+    """
+    from django.core.exceptions import ValidationError
+    from django.forms import ModelForm
+
+    class StaleCheckForm(ModelForm):
+        _loaded_at = CharField(widget=HiddenInput, required=False)
+
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            if self.instance and self.instance.pk:
+                ts = getattr(self.instance, check_field, None)
+                self.fields[STALE_DATA_HIDDEN_FIELD].initial = str(ts.timestamp()) if ts else ""
+
+        def clean(self):
+            cleaned = super().clean()
+            if not self.instance or not self.instance.pk:
+                return cleaned
+
+            loaded_at_str = cleaned.get(STALE_DATA_HIDDEN_FIELD, "")
+            if not loaded_at_str:
+                return cleaned
+
+            current_ts = type(self.instance).objects.values_list(check_field, flat=True).get(pk=self.instance.pk)
+            if current_ts and str(current_ts.timestamp()) != loaded_at_str:
+                logger.warning(
+                    "Stale data rejected for %s pk=%s (loaded: %s, current: %s)",
+                    type(self.instance).__name__,
+                    self.instance.pk,
+                    loaded_at_str,
+                    current_ts.timestamp(),
+                )
+                raise ValidationError(STALE_DATA_ERROR)
+
+            return cleaned
+
+    return StaleCheckForm
+
+
+class StaleDataCheckAdminMixin:
+    """Admin mixin that prevents saving over data modified since the form was loaded.
+
+    Uses the model's date_modified timestamp for optimistic locking. If the record
+    was changed between page load and save, the save is rejected with an error message.
+
+    Works for both ModelAdmin and InlineModelAdmin. The model must have a
+    date_modified field (e.g. via BaseModel).
+
+    The hidden timestamp field is declared on the form class so modelform_factory
+    recognizes it, and injected into the first fieldset so Django renders it
+    automatically as a hidden row — no custom templates needed.
+
+    Usage:
+        class MyAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
+            ...
+
+        class MyInline(StaleDataCheckAdminMixin, admin.StackedInline):
+            ...
+    """
+
+    stale_check_field: str = "date_modified"
+
+    def get_fieldsets(self, request, obj=None):
+        fieldsets = super().get_fieldsets(request, obj)  # type: ignore
+        if fieldsets:
+            first_name, first_options = fieldsets[0]
+            fields = list(first_options.get("fields", []))
+            if STALE_DATA_HIDDEN_FIELD not in fields:
+                fields.append(STALE_DATA_HIDDEN_FIELD)
+                fieldsets = [(first_name, {**first_options, "fields": fields})] + list(fieldsets[1:])
+        return fieldsets
+
+    def get_form(self, request, obj=None, **kwargs):
+        kwargs.setdefault("form", _make_stale_check_form(self.stale_check_field))
+        return super().get_form(request, obj, **kwargs)  # type: ignore
+
+    def get_formset(self, request, obj=None, **kwargs):
+        kwargs.setdefault("form", _make_stale_check_form(self.stale_check_field))
+        return super().get_formset(request, obj, **kwargs)  # type: ignore
 
 
 class ExportCsvMixin:

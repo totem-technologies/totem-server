@@ -10,6 +10,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from totem.users.models import User
+from totem.utils.admin import StaleDataCheckAdminMixin
 
 from .models import Session, SessionFeedback, Space, SpaceCategory
 
@@ -56,7 +57,7 @@ class SpaceCategoryAdmin(admin.ModelAdmin):
 
 
 @final
-class SessionInline(admin.StackedInline):
+class SessionInline(StaleDataCheckAdminMixin, admin.StackedInline):
     model = Session
     extra = 0
     autocomplete_fields = ["attendees", "joined"]
@@ -155,7 +156,7 @@ class SessionFeedbackInline(admin.TabularInline):
 
 @final
 @admin.register(Session)
-class SessionAdmin(admin.ModelAdmin):
+class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
     list_display = ("start", "title", "space", "slug")
     list_filter = [AuthorDropdownFilter, SpaceDropdownFilter, "start", "listed", "open", "cancelled"]
     autocomplete_fields = ["attendees", "joined"]
