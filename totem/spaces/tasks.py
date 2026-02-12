@@ -47,8 +47,7 @@ def notify_missed_session():
             output_field=DateTimeField(),
         ),
     ).filter(
-        start__gte=now - timedelta(hours=2),
-        start__lte=now - timedelta(hours=1),
+        end_time__gte=now - timedelta(hours=1),
         end_time__lt=now,
         cancelled=False,
         notified_missed=False,

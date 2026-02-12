@@ -84,11 +84,10 @@ class TestMissedSessionTask:
         assert mail.outbox == []
 
     def test_notify_missed_session_long_duration_ended(self, db):
-        """A session that started 1.5h ago with a short duration SHOULD
-        trigger notify_missed, because it has ended."""
+        """A long-duration session that has ended should trigger notify_missed."""
         event = SessionFactory(
             start=timezone.now() - timedelta(hours=1, minutes=30),
-            duration_minutes=30,
+            duration_minutes=60,
         )
         user = UserFactory()
         event.attendees.add(user)
