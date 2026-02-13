@@ -1,10 +1,6 @@
-import datetime
-
 from django.db import transaction
-from django.db.models import Count, DateTimeField, ExpressionWrapper, F
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from ninja import Router
 from ninja.errors import AuthorizationError
 from ninja.pagination import paginate
@@ -12,6 +8,7 @@ from ninja.pagination import paginate
 from totem.onboard.models import OnboardModel
 from totem.spaces.mobile_api.mobile_filters import (
     get_upcoming_spaces_list,
+    get_user_upcoming_sessions,
     session_detail_schema,
     space_detail_schema,
     upcoming_recommended_sessions,
@@ -104,23 +101,7 @@ def post_session_feedback(request: HttpRequest, event_slug: str, payload: Sessio
 def get_sessions_upcoming(request: HttpRequest):
     """Get the user's upcoming sessions they are attending."""
     user: User = request.user  # type: ignore
-
-    end_time_expression = ExpressionWrapper(
-        F("start") + F("duration_minutes") * datetime.timedelta(minutes=1),
-        output_field=DateTimeField(),
-    )
-    upcoming_sessions = (
-        Session.objects.annotate(end_time=end_time_expression)
-        .filter(attendees=user, cancelled=False, end_time__gt=timezone.now(), space__published=True)
-        .select_related("space")
-        .prefetch_related("space__author", "space__categories", "attendees", "space__subscribed")
-        .annotate(
-            attendee_count=Count("attendees", distinct=True),
-            subscriber_count=Count("space__subscribed", distinct=True),
-        )
-        .order_by("start")
-    )
-
+    upcoming_sessions = get_user_upcoming_sessions(user)
     return [session_detail_schema(session, user) for session in upcoming_sessions]
 
 
@@ -157,22 +138,7 @@ def get_spaces_summary(request: HttpRequest):
 
     spaces_qs = get_upcoming_spaces_list()
 
-    # The upcoming events that the user is subscribed to
-    end_time_expression = ExpressionWrapper(
-        F("start") + F("duration_minutes") * datetime.timedelta(minutes=1),
-        output_field=DateTimeField(),
-    )
-    upcoming_sessions = (
-        Session.objects.annotate(end_time=end_time_expression)
-        .filter(attendees=user, cancelled=False, end_time__gt=timezone.now())
-        .select_related("space")
-        .prefetch_related("space__author", "space__categories", "attendees", "space__subscribed")
-        .annotate(
-            attendee_count=Count("attendees", distinct=True),
-            subscriber_count=Count("space__subscribed", distinct=True),
-        )
-        .order_by("start")
-    )
+    upcoming_sessions = get_user_upcoming_sessions(user, require_published=False)
     upcoming = [session_detail_schema(event, user) for event in upcoming_sessions]
     upcoming_space_slugs = {event.space.slug for event in upcoming_sessions}
 
@@ -188,7 +154,6 @@ def get_spaces_summary(request: HttpRequest):
     except OnboardModel.DoesNotExist:
         # If no onboard model, just use empty categories set
         pass
-    # Add categories from user's previously joined spaces (single query)
     previous_category_names = spaces_qs.filter(subscribed=user).values_list("categories__name", flat=True).distinct()
     categories_set.update(name for name in previous_category_names if name)
     recommended_spaces = upcoming_recommended_spaces(user, categories=list(categories_set))

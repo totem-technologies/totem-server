@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta
 
 from django.utils import timezone
@@ -33,7 +34,7 @@ def end_sessions_without_keeper():
         session.ended_at = timezone.now()
         session.save()
         ended_count += 1
-        print(f"Ended session {session.slug} - keeper {keeper.email} did not join")
+        logging.warning(f"Ended session {session.slug} - keeper {keeper.email} did not join")
 
         try:
             end_room(session.slug)

@@ -515,7 +515,7 @@ async def force_pass(room_name: str, keeper_slug: str, slug_to_name: dict[str, s
     Args:
         room_name: The unique identifier/name of the room.
         keeper_slug: The unique identifier of the keeper/session facilitator.
-        user_identity: The unique identifier of the user attempting to force pass.
+        slug_to_name: Optional mapping of participant slugs to display names for name syncing.
 
     Returns:
         None

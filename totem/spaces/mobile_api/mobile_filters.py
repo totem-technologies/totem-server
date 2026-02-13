@@ -1,4 +1,6 @@
-from django.db.models import Count, F, Prefetch, Q, QuerySet
+import datetime
+
+from django.db.models import Count, DateTimeField, ExpressionWrapper, F, Prefetch, Q, QuerySet
 from django.urls import reverse
 from django.utils import timezone
 
@@ -11,8 +13,38 @@ from totem.spaces.models import Session, Space
 from totem.users.models import User
 
 
+def get_user_upcoming_sessions(user: User, require_published: bool = True) -> QuerySet[Session]:
+    now = timezone.now()
+
+    end_time_expression = ExpressionWrapper(
+        F("start") + F("duration_minutes") * datetime.timedelta(minutes=1),
+        output_field=DateTimeField(),
+    )
+
+    sessions = (
+        Session.objects.filter(
+            attendees=user,
+            cancelled=False,
+            start__gt=now - datetime.timedelta(hours=1),
+        )
+        .annotate(end_time=end_time_expression)
+        .filter(end_time__gt=now)
+        .select_related("space", "space__author")
+        .prefetch_related("space__categories", "space__subscribed", "attendees")
+        .annotate(
+            attendee_count=Count("attendees", distinct=True),
+            subscriber_count=Count("space__subscribed", distinct=True),
+        )
+        .order_by("start")
+    )
+
+    if require_published:
+        sessions = sessions.filter(space__published=True)
+
+    return sessions
+
+
 def get_upcoming_spaces_list() -> QuerySet[Space]:
-    """Get all published spaces with upcoming events."""
     return (
         Space.objects.filter(published=True, sessions__start__gte=timezone.now())
         .distinct()

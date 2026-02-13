@@ -53,7 +53,6 @@ class TestEndSessionsWithoutKeeper:
         assert end_sessions_without_keeper() == 0
         session.refresh_from_db()
         assert session.ended_at is None
-        # Should not even check LiveKit since keeper is in DB
         mock_livekit.assert_not_called()
         mock_end_room.assert_not_called()
 
@@ -66,7 +65,6 @@ class TestEndSessionsWithoutKeeper:
             space=space,
             start=timezone.now() - timedelta(minutes=10),
         )
-        # Keeper NOT in DB joined list, but IS in LiveKit
         assert end_sessions_without_keeper() == 0
         session.refresh_from_db()
         assert session.ended_at is None
@@ -118,13 +116,11 @@ class TestEndSessionsWithoutKeeper:
         space1 = SpaceFactory(author=author1)
         space2 = SpaceFactory(author=author2)
 
-        # Session 1: keeper not joined, should be ended
         session1 = SessionFactory(
             space=space1,
             start=timezone.now() - timedelta(minutes=10),
         )
 
-        # Session 2: keeper joined, should not be ended
         session2 = SessionFactory(
             space=space2,
             start=timezone.now() - timedelta(minutes=10),
@@ -149,7 +145,6 @@ class TestEndSessionsWithoutKeeper:
             space=space,
             start=timezone.now() - timedelta(minutes=10),
         )
-        # Should not raise, just handle gracefully
         assert end_sessions_without_keeper() == 1
         session.refresh_from_db()
         assert session.ended_at is not None
