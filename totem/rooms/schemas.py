@@ -1,0 +1,187 @@
+"""
+Shared types for the rooms app.
+
+This module is the leaf of the dependency graph — it imports nothing
+from the rest of the app. Everything else imports from here.
+"""
+
+from __future__ import annotations
+
+from enum import Enum
+from typing import Annotated, Literal, Optional, Union
+
+from ninja import Field, Schema
+
+# ---------------------------------------------------------------------------
+# Enums
+# ---------------------------------------------------------------------------
+
+
+class RoomStatus(str, Enum):
+    LOBBY = "lobby"
+    ACTIVE = "active"
+    ENDED = "ended"
+
+
+class TurnState(str, Enum):
+    IDLE = "idle"  # lobby or ended, no active turn
+    SPEAKING = "speaking"
+    PASSING = "passing"  # waiting for next person to accept
+
+
+class ErrorCode(str, Enum):
+    """
+    Machine-readable error codes. Clients switch on these, not on messages.
+    Add new codes here as needed — the OpenAPI spec will update automatically.
+    """
+
+    # Auth / permission
+    NOT_IN_ROOM = "not_in_room"
+    NOT_KEEPER = "not_keeper"
+    NOT_CURRENT_SPEAKER = "not_current_speaker"
+    NOT_NEXT_SPEAKER = "not_next_speaker"
+
+    # Invalid state transitions
+    INVALID_TRANSITION = "invalid_transition"
+    ROOM_NOT_ACTIVE = "room_not_active"
+    ROOM_NOT_LOBBY = "room_not_lobby"
+    ROOM_ALREADY_ENDED = "room_already_ended"
+
+    # Data validation
+    INVALID_PARTICIPANT_ORDER = "invalid_participant_order"
+
+    # Concurrency
+    STALE_VERSION = "stale_version"
+
+    # Generic
+    NOT_FOUND = "not_found"
+
+
+class EndReason(str, Enum):
+    KEEPER_ENDED = "keeper_ended"
+    KEEPER_ABSENT = "keeper_absent"
+    ROOM_EMPTY = "room_empty"
+
+
+# ---------------------------------------------------------------------------
+# State snapshot
+# ---------------------------------------------------------------------------
+
+
+class RoomState(Schema):
+    """
+    The canonical state snapshot. This is what gets:
+    - returned from both endpoints
+    - published to LiveKit room metadata
+    - built from the Room model
+
+    Clients should treat this as the single type they deserialize everywhere.
+    User references are slugs (short unique public IDs), not internal IDs.
+    """
+
+    room_id: int
+    version: int
+    status: RoomStatus
+    turn_state: TurnState
+    current_speaker: Optional[str] = None  # user slug
+    next_speaker: Optional[str] = None  # user slug
+    talking_order: list[str]  # user slugs
+    keeper: str  # user slug
+
+
+# ---------------------------------------------------------------------------
+# Event schemas (discriminated union on `type`)
+# ---------------------------------------------------------------------------
+
+
+class StartRoomEvent(Schema):
+    type: Literal["start_room"] = "start_room"
+
+
+class PassStickEvent(Schema):
+    type: Literal["pass_stick"] = "pass_stick"
+
+
+class AcceptStickEvent(Schema):
+    type: Literal["accept_stick"] = "accept_stick"
+
+
+class SkipParticipantEvent(Schema):
+    """Keeper force-skips the next speaker."""
+
+    type: Literal["skip_participant"] = "skip_participant"
+
+
+class ReorderEvent(Schema):
+    """Keeper reorders the talking order."""
+
+    type: Literal["reorder"] = "reorder"
+    talking_order: list[str]  # user slugs
+
+
+class EndRoomEvent(Schema):
+    type: Literal["end_room"] = "end_room"
+    reason: EndReason
+
+
+RoomEvent = Annotated[
+    Union[
+        StartRoomEvent,
+        PassStickEvent,
+        AcceptStickEvent,
+        SkipParticipantEvent,
+        ReorderEvent,
+        EndRoomEvent,
+    ],
+    Field(discriminator="type"),
+]
+
+
+# ---------------------------------------------------------------------------
+# Request / Response wrappers
+# ---------------------------------------------------------------------------
+
+
+class EventRequest(Schema):
+    """
+    POST body. Includes the event and the client's last-seen version
+    for optimistic concurrency control.
+    """
+
+    event: RoomEvent
+    last_seen_version: int
+
+
+class ErrorResponse(Schema):
+    """
+    Structured error. Clients switch on `code`, display `message`.
+    `detail` is optional extra context for debugging.
+    """
+
+    code: ErrorCode
+    message: str
+    detail: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# Exception
+# ---------------------------------------------------------------------------
+
+
+class TransitionError(Exception):
+    """
+    Raised by the state machine when a transition is invalid.
+    Carries a typed error code so the endpoint can map it to a response
+    without parsing strings or checking subclasses.
+    """
+
+    def __init__(
+        self,
+        code: ErrorCode,
+        message: str,
+        detail: Optional[str] = None,
+    ):
+        self.code = code
+        self.message = message
+        self.detail = detail
+        super().__init__(message)
