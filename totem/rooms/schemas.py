@@ -79,7 +79,7 @@ class RoomState(Schema):
     User references are slugs (short unique public IDs), not internal IDs.
     """
 
-    room_id: int
+    room_id: str  # session slug
     version: int
     status: RoomStatus
     turn_state: TurnState

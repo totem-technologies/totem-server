@@ -45,7 +45,7 @@ class Room(models.Model):
 
     def to_state(self) -> RoomState:
         return RoomState(
-            room_id=self.session_id,
+            room_id=self.session.slug,
             version=self.state_version,
             status=RoomStatus(self.status),
             turn_state=TurnState(self.turn_state),

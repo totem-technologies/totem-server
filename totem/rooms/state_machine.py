@@ -28,7 +28,7 @@ from .schemas import (
 
 
 def apply_event(
-    room_id: int,
+    room_id: str,  # session slug
     actor: str,  # user slug
     event: RoomEvent,
     last_seen_version: int,
@@ -42,7 +42,7 @@ def apply_event(
     Raises TransitionError on any invalid transition.
     """
     with transaction.atomic():
-        room = Room.objects.select_for_update().filter(session_id=room_id).first()
+        room = Room.objects.select_for_update().filter(session__slug=room_id).first()
 
         if not room:
             raise TransitionError(
