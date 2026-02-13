@@ -20,7 +20,7 @@ class Room(models.Model):
     """
 
     session = models.OneToOneField(
-        "sessions.Session",
+        "spaces.Session",
         on_delete=models.CASCADE,
         related_name="room",
     )

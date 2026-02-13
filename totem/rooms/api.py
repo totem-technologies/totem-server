@@ -10,6 +10,8 @@ from __future__ import annotations
 from django.http import HttpRequest
 from ninja import Router
 
+from totem.users.models import User
+
 from .livekit import get_connected_participants, publish_state
 from .models import Room
 from .schemas import (
@@ -69,8 +71,18 @@ def post_event(
     room_id: int,
     body: EventRequest,
 ):
-    actor = request.auth.slug  # however you resolve the caller's slug
-    connected = get_connected_participants(room_id)
+    user: User = request.user  # type: ignore
+    actor = user.slug
+
+    room = Room.objects.select_related("session").filter(session_id=room_id).first()
+    if not room:
+        return 404, ErrorResponse(
+            code=ErrorCode.NOT_FOUND,
+            message="Room not found",
+        )
+
+    room_name = room.session.slug
+    connected = get_connected_participants(room_name)
 
     try:
         state = apply_event(
@@ -89,7 +101,7 @@ def post_event(
 
     # Broadcast is best-effort and outside the DB transaction.
     # If this fails, clients will catch up via polling.
-    publish_state(room_id, state)
+    publish_state(room_name, state)
 
     return 200, state
 
