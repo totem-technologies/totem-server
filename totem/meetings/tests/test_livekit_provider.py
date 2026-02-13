@@ -464,6 +464,138 @@ class TestReorder:
         assert "user1" in new_order
         assert "user2" in new_order
 
+    def test_reorder_saves_metadata_correctly(self):
+        """Test that reorder saves the new order to room metadata.
+
+        This test verifies the fix for the bug where reorder changes were discarded
+        by re-parsing metadata before saving.
+        """
+        mock_room = Mock()
+        mock_room.metadata = _make_room_metadata(speaking_order=["keeper", "user1", "user2"])
+        mock_room.name = "test-room"
+
+        mock_lkapi = AsyncMock()
+        mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
+        mock_lkapi.room.list_participants.return_value = Mock(
+            participants=[
+                _make_participant("keeper", "keeper"),
+                _make_participant("user1", "user1"),
+                _make_participant("user2", "user2"),
+            ]
+        )
+
+        with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
+            mock_get_client.return_value.__aenter__.return_value = mock_lkapi
+
+            reorder("test-room", ["keeper", "user2", "user1"])
+
+        mock_lkapi.room.update_room_metadata.assert_called_once()
+        call_args = mock_lkapi.room.update_room_metadata.call_args[1]["update"]
+        metadata = json.loads(call_args.metadata)
+
+        assert metadata["speaking_order"] == ["keeper", "user2", "user1"]
+
+    def test_reorder_while_totem_is_passing(self):
+        """Test reordering while a totem handoff is in progress.
+
+        Bug report: Reordering mid-pass broke functionality for rest of session.
+        """
+        mock_room = Mock()
+        mock_room.metadata = _make_room_metadata(
+            speaking_order=["keeper", "user1", "user2"],
+            speaking_now="keeper",
+            next_speaker="user1",
+            totem_status="passing",
+        )
+        mock_room.name = "test-room"
+
+        mock_lkapi = AsyncMock()
+        mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
+        mock_lkapi.room.list_participants.return_value = Mock(
+            participants=[
+                _make_participant("keeper", "keeper"),
+                _make_participant("user1", "user1"),
+                _make_participant("user2", "user2"),
+            ]
+        )
+
+        with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
+            mock_get_client.return_value.__aenter__.return_value = mock_lkapi
+
+            reorder("test-room", ["keeper", "user2", "user1"])
+
+        mock_lkapi.room.update_room_metadata.assert_called_once()
+        call_args = mock_lkapi.room.update_room_metadata.call_args[1]["update"]
+        metadata = json.loads(call_args.metadata)
+
+        assert metadata["speaking_order"] == ["keeper", "user2", "user1"]
+        assert metadata["totem_status"] == "passing"
+        assert metadata["speaking_now"] == "keeper"
+        assert metadata["next_speaker"] == "user2"
+
+    def test_reorder_updates_next_speaker(self):
+        """Test that reorder correctly updates next_speaker based on new order."""
+        mock_room = Mock()
+        mock_room.metadata = _make_room_metadata(
+            speaking_order=["keeper", "user1", "user2"],
+            speaking_now="keeper",
+            next_speaker="user1",
+            totem_status="accepted",
+        )
+        mock_room.name = "test-room"
+
+        mock_lkapi = AsyncMock()
+        mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
+        mock_lkapi.room.list_participants.return_value = Mock(
+            participants=[
+                _make_participant("keeper", "keeper"),
+                _make_participant("user1", "user1"),
+                _make_participant("user2", "user2"),
+            ]
+        )
+
+        with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
+            mock_get_client.return_value.__aenter__.return_value = mock_lkapi
+
+            reorder("test-room", ["keeper", "user2", "user1"])
+
+        call_args = mock_lkapi.room.update_room_metadata.call_args[1]["update"]
+        metadata = json.loads(call_args.metadata)
+
+        assert metadata["next_speaker"] == "user2"
+
+    def test_reorder_removes_current_speaker_resets_to_first(self):
+        """Test that removing the current speaker during reorder resets to first in order."""
+        mock_room = Mock()
+        mock_room.metadata = _make_room_metadata(
+            speaking_order=["keeper", "user1", "user2"],
+            speaking_now="user1",
+            next_speaker="user2",
+            totem_status="accepted",
+        )
+        mock_room.name = "test-room"
+
+        mock_lkapi = AsyncMock()
+        mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
+
+        mock_lkapi.room.list_participants.return_value = Mock(
+            participants=[
+                _make_participant("keeper", "keeper"),
+                _make_participant("user2", "user2"),
+            ]
+        )
+
+        with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
+            mock_get_client.return_value.__aenter__.return_value = mock_lkapi
+
+            reorder("test-room", ["keeper", "user2"])
+
+        call_args = mock_lkapi.room.update_room_metadata.call_args[1]["update"]
+        metadata = json.loads(call_args.metadata)
+
+        assert metadata["speaking_now"] == "keeper"
+        assert metadata["next_speaker"] == "user2"
+
     def test_filters_disconnected_participants(self):
         """Test that reorder filters out participants not connected to the room."""
         mock_room = Mock()

@@ -672,9 +672,7 @@ async def reorder(room_name: str, new_order: list[str], slug_to_name: dict[str, 
         filtered_order = [identity for identity in new_order if identity in participant_identities]
 
         state.reorder(filtered_order)
-        state = await _parse_validate_room_state(
-            room, lkapi, validate=True, participants=participant_list, slug_to_name=slug_to_name
-        )
+        state.validate_order(participant_identities)
         await _update_room_metadata(room_name, state, lkapi)
 
         return state.speaking_order
