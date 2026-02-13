@@ -35,7 +35,7 @@ def _get_participant_names(event: Session) -> dict[str, str]:
 
 
 @meetings_router.get(
-    "/event/{event_slug}/token",
+    "/session/{event_slug}/token",
     response={
         200: LivekitTokenResponseSchema,
         403: ErrorResponseSchema,
@@ -86,7 +86,7 @@ def get_livekit_token(request: HttpRequest, event_slug: str):
 
 
 @meetings_router.post(
-    "/event/{event_slug}/pass-totem",
+    "/session/{event_slug}/pass-totem",
     response={
         200: None,
         400: ErrorResponseSchema,
@@ -121,7 +121,7 @@ def pass_totem_endpoint(request: HttpRequest, event_slug: str):
 
 
 @meetings_router.post(
-    "/event/{event_slug}/accept-totem",
+    "/session/{event_slug}/accept-totem",
     response={
         200: None,
         400: ErrorResponseSchema,
@@ -161,7 +161,7 @@ def accept_totem_endpoint(request: HttpRequest, event_slug: str):
 
 
 @meetings_router.post(
-    "/event/{event_slug}/force-pass",
+    "/session/{event_slug}/force-pass",
     response={
         200: None,
         400: ErrorResponseSchema,
@@ -201,7 +201,7 @@ def force_pass_endpoint(request: HttpRequest, event_slug: str):
 
 
 @meetings_router.post(
-    "/event/{event_slug}/start",
+    "/session/{event_slug}/start",
     response={
         200: None,
         400: ErrorResponseSchema,
@@ -243,7 +243,7 @@ def start_room_endpoint(request: HttpRequest, event_slug: str):
 
 
 @meetings_router.post(
-    "/event/{event_slug}/end",
+    "/session/{event_slug}/end",
     response={
         200: None,
         400: ErrorResponseSchema,
@@ -280,7 +280,7 @@ def end_room_endpoint(request: HttpRequest, event_slug: str):
 
 
 @meetings_router.post(
-    "/event/{event_slug}/mute/{participant_identity}",
+    "/session/{event_slug}/mute/{participant_identity}",
     response={
         200: None,
         400: ErrorResponseSchema,
@@ -318,7 +318,7 @@ def mute_participant_endpoint(request: HttpRequest, event_slug: str, participant
 
 
 @meetings_router.post(
-    "/event/{event_slug}/mute-all",
+    "/session/{event_slug}/mute-all",
     response={
         200: None,
         400: ErrorResponseSchema,
@@ -352,7 +352,7 @@ def mute_all_participants_endpoint(request: HttpRequest, event_slug: str):
 
 
 @meetings_router.post(
-    "/event/{event_slug}/remove/{participant_identity}",
+    "/session/{event_slug}/remove/{participant_identity}",
     response={
         200: None,
         400: ErrorResponseSchema,
@@ -391,7 +391,7 @@ def remove_participant_endpoint(request: HttpRequest, event_slug: str, participa
 
 
 @meetings_router.post(
-    "/event/{event_slug}/reorder",
+    "/session/{event_slug}/reorder",
     response={
         200: LivekitOrderSchema,
         400: ErrorResponseSchema,
@@ -429,7 +429,7 @@ def reorder_participants_endpoint(request: HttpRequest, event_slug: str, order: 
 
 
 @meetings_router.get(
-    "/event/{event_slug}/room-state",
+    "/session/{event_slug}/room-state",
     response={200: SessionState, 403: ErrorResponseSchema, 404: ErrorResponseSchema, 500: ErrorResponseSchema},
     url_name="get_room_state",
 )
