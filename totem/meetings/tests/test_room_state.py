@@ -325,3 +325,290 @@ class TestSessionState:
         state = SessionState(speaking_order=["user1", "user2", "user3"], keeper_slug="user1")
         state.reorder(["user2", "user1", "user3"])
         assert state.speaking_order == ["user1", "user2", "user3"]
+
+    def test_reorder_while_totem_is_passing(self):
+        """Test reordering while a totem handoff is in progress."""
+        state = SessionState(speaking_order=["keeper", "user1", "user2", "user3"], keeper_slug="keeper")
+        state.start()
+        assert state.speaking_now == "keeper"
+        assert state.next_speaker == "user1"
+        assert state.totem_status == TotemStatus.ACCEPTED
+
+        state.pass_totem()
+        assert state.totem_status == TotemStatus.PASSING
+        assert state.speaking_now == "keeper"
+        assert state.next_speaker == "user1"
+
+        state.reorder(["keeper", "user3", "user1", "user2"])
+        assert state.speaking_order == ["keeper", "user3", "user1", "user2"]
+        assert state.totem_status == TotemStatus.PASSING
+        assert state.speaking_now == "keeper"
+        assert state.next_speaker == "user3"
+
+    def test_reorder_while_passing_then_accept(self):
+        """Test that accept_totem works correctly after reordering mid-pass."""
+        state = SessionState(speaking_order=["keeper", "user1", "user2"], keeper_slug="keeper")
+        state.start()
+        state.pass_totem()
+
+        state.reorder(["keeper", "user2", "user1"])
+        assert state.next_speaker == "user2"
+
+        state.accept_totem()
+        assert state.speaking_now == "user2"
+        assert state.next_speaker == "user1"
+        assert state.totem_status == TotemStatus.ACCEPTED
+
+    def test_reorder_removes_next_speaker_mid_pass(self):
+        """Test reordering that removes the next_speaker while totem is passing."""
+        state = SessionState(speaking_order=["keeper", "user1", "user2", "user3"], keeper_slug="keeper")
+        state.start()
+        state.pass_totem()
+        assert state.next_speaker == "user1"
+
+        state.reorder(["keeper", "user2", "user3"])
+        assert state.speaking_order == ["keeper", "user2", "user3"]
+        assert state.next_speaker == "user2"  # Should update to next in new order
+        assert state.totem_status == TotemStatus.PASSING
+
+    def test_reorder_removes_current_speaker_mid_pass(self):
+        """Test reordering that removes the current speaker while totem is passing."""
+        state = SessionState(speaking_order=["keeper", "user1", "user2", "user3"], keeper_slug="keeper")
+        state.start()
+        state.pass_totem()
+        state.accept_totem()  # user1 now speaking
+        state.pass_totem()  # user1 passes to user2
+
+        assert state.speaking_now == "user1"
+        assert state.next_speaker == "user2"
+        assert state.totem_status == TotemStatus.PASSING
+
+        # Reorder removes user1 (current speaker)
+        state.reorder(["keeper", "user2", "user3"])
+        assert state.speaking_order == ["keeper", "user2", "user3"]
+        assert state.speaking_now == "keeper"  # Falls back to first in order
+        assert state.totem_status == TotemStatus.ACCEPTED  # Should reset to ACCEPTED
+        assert state.next_speaker == "user2"
+
+    def test_multiple_sequential_reorders(self):
+        """Test multiple reorders in sequence."""
+        state = SessionState(speaking_order=["keeper", "user1", "user2", "user3"], keeper_slug="keeper")
+        state.start()
+
+        # First reorder
+        state.reorder(["keeper", "user3", "user2", "user1"])
+        assert state.speaking_order == ["keeper", "user3", "user2", "user1"]
+        assert state.next_speaker == "user3"
+
+        # Second reorder
+        state.reorder(["keeper", "user1", "user3", "user2"])
+        assert state.speaking_order == ["keeper", "user1", "user3", "user2"]
+        assert state.next_speaker == "user1"
+
+        # Third reorder
+        state.reorder(["keeper", "user2", "user1", "user3"])
+        assert state.speaking_order == ["keeper", "user2", "user1", "user3"]
+        assert state.next_speaker == "user2"
+
+    def test_multiple_reorders_during_pass_cycle(self):
+        """Test multiple reorders during an active totem passing cycle."""
+        state = SessionState(speaking_order=["keeper", "user1", "user2", "user3"], keeper_slug="keeper")
+        state.start()
+        state.pass_totem()
+
+        # Reorder 1 during pass
+        state.reorder(["keeper", "user3", "user2", "user1"])
+        assert state.next_speaker == "user3"
+        assert state.totem_status == TotemStatus.PASSING
+
+        # Reorder 2 during same pass
+        state.reorder(["keeper", "user1", "user2", "user3"])
+        assert state.next_speaker == "user1"
+        assert state.totem_status == TotemStatus.PASSING
+
+        # Accept should work with latest next_speaker
+        state.accept_totem()
+        assert state.speaking_now == "user1"
+        assert state.totem_status == TotemStatus.ACCEPTED
+
+    def test_reorder_after_completed_pass_cycle(self):
+        """Test reordering after a complete totem pass cycle."""
+        state = SessionState(speaking_order=["keeper", "user1", "user2"], keeper_slug="keeper")
+        state.start()
+
+        state.pass_totem()
+        state.accept_totem()  # user1 speaking
+        state.pass_totem()
+        state.accept_totem()  # user2 speaking
+        state.pass_totem()
+        state.accept_totem()  # keeper speaking again (wrapped)
+
+        assert state.speaking_now == "keeper"
+        assert state.next_speaker == "user1"
+
+        state.reorder(["keeper", "user2", "user1"])
+        assert state.speaking_order == ["keeper", "user2", "user1"]
+        assert state.speaking_now == "keeper"
+        assert state.next_speaker == "user2"
+
+    def test_reorder_preserves_totem_status_none(self):
+        """Test that reorder preserves NONE totem status before session fully starts."""
+        state = SessionState(speaking_order=["keeper", "user1", "user2"], keeper_slug="keeper")
+        assert state.totem_status == TotemStatus.NONE
+
+        state.reorder(["keeper", "user2", "user1"])
+        assert state.totem_status == TotemStatus.NONE
+        assert state.speaking_order == ["keeper", "user2", "user1"]
+
+    def test_reorder_preserves_totem_status_accepted(self):
+        """Test that reorder preserves ACCEPTED totem status."""
+        state = SessionState(speaking_order=["keeper", "user1", "user2"], keeper_slug="keeper")
+        state.start()
+        assert state.totem_status == TotemStatus.ACCEPTED
+
+        state.reorder(["keeper", "user2", "user1"])
+        assert state.totem_status == TotemStatus.ACCEPTED
+        assert state.speaking_now == "keeper"
+        assert state.next_speaker == "user2"
+
+    def test_initial_order_keeper_first(self):
+        """Test that keeper is always first in initial order."""
+        state = SessionState(speaking_order=["user1", "user2", "keeper"], keeper_slug="keeper")
+        state.start()
+        assert state.speaking_order == ["keeper", "user1", "user2"]
+        assert state.speaking_now == "keeper"
+
+    def test_initial_order_with_validate(self):
+        """Test validate_order puts keeper first when starting session."""
+        state = SessionState(speaking_order=[], keeper_slug="keeper")
+        state.validate_order(["user1", "user2", "keeper"])
+        assert state.speaking_order == ["keeper", "user1", "user2"]
+
+    def test_start_validates_order_correctly(self):
+        """Test that start() properly validates the speaking order."""
+        state = SessionState(speaking_order=["user3", "user1", "keeper", "user2"], keeper_slug="keeper")
+        state.start()
+        assert state.speaking_order[0] == "keeper"
+        assert state.speaking_now == "keeper"
+
+    def test_initial_order_after_participants_join(self):
+        """Test order when participants join one by one."""
+        state = SessionState(speaking_order=[], keeper_slug="keeper")
+
+        state.validate_order(["user1"])
+        assert state.speaking_order == ["user1"]
+
+        state.validate_order(["user1", "keeper"])
+        assert state.speaking_order == ["keeper", "user1"]
+
+        state.validate_order(["user1", "keeper", "user2"])
+        assert state.speaking_order == ["keeper", "user1", "user2"]
+
+        state.start()
+        assert state.speaking_order == ["keeper", "user1", "user2"]
+        assert state.speaking_now == "keeper"
+
+    def test_reorder_single_participant(self):
+        """Test reordering with only one participant."""
+        state = SessionState(speaking_order=["keeper"], keeper_slug="keeper")
+        state.start()
+        assert state.speaking_now == "keeper"
+        assert state.next_speaker == "keeper"
+
+        state.reorder(["keeper"])
+        assert state.speaking_order == ["keeper"]
+        assert state.speaking_now == "keeper"
+        assert state.next_speaker == "keeper"
+
+    def test_reorder_two_participants(self):
+        """Test reordering with two participants."""
+        state = SessionState(speaking_order=["keeper", "user1"], keeper_slug="keeper")
+        state.start()
+        assert state.next_speaker == "user1"
+
+        state.reorder(["user1", "keeper"])
+        assert state.speaking_order == ["keeper", "user1"]
+
+    def test_reorder_with_duplicate_entries(self):
+        """Test that reorder handles duplicate entries gracefully."""
+        state = SessionState(speaking_order=["keeper", "user1", "user2"], keeper_slug="keeper")
+        state.start()
+
+        state.reorder(["keeper", "user1", "user1", "user2"])
+        assert "keeper" in state.speaking_order
+        assert state.speaking_now == "keeper"
+
+    def test_reorder_restores_correct_next_speaker_after_passing_cycle(self):
+        """Test that next_speaker is correctly set after reorder during complex pass cycle."""
+        state = SessionState(speaking_order=["keeper", "A", "B", "C", "D"], keeper_slug="keeper")
+        state.start()
+
+        state.pass_totem()
+        state.accept_totem()  # A speaking
+        state.pass_totem()
+        state.accept_totem()  # B speaking
+
+        assert state.speaking_now == "B"
+        assert state.next_speaker == "C"
+
+        state.reorder(["keeper", "D", "A", "C", "B"])
+        assert state.speaking_order == ["keeper", "D", "A", "C", "B"]
+        assert state.speaking_now == "B"  # Still in order
+        assert state.next_speaker == "keeper"
+
+    def test_force_pass_after_reorder(self):
+        """Test that force_pass works correctly after reorder."""
+        state = SessionState(speaking_order=["keeper", "user1", "user2"], keeper_slug="keeper")
+        state.start()
+        state.pass_totem()
+
+        state.reorder(["keeper", "user2", "user1"])
+        assert state.next_speaker == "user2"
+
+        state.force_pass()
+        assert state.speaking_now == "user2"
+        assert state.totem_status == TotemStatus.ACCEPTED
+        assert state.next_speaker == "user1"
+
+    def test_validate_order_during_totem_pass(self):
+        """Test validate_order (participant join/leave) during totem pass."""
+        state = SessionState(speaking_order=["keeper", "user1", "user2"], keeper_slug="keeper")
+        state.start()
+        state.pass_totem()
+
+        state.validate_order(["keeper", "user2"])
+        assert state.speaking_order == ["keeper", "user2"]
+        assert state.next_speaker == "user2"
+        assert state.totem_status == TotemStatus.PASSING
+
+        state.accept_totem()
+        assert state.speaking_now == "user2"
+
+    def test_validate_order_removes_next_speaker_during_pass(self):
+        """Test validate_order when the next_speaker leaves during totem pass."""
+        state = SessionState(speaking_order=["keeper", "user1", "user2", "user3"], keeper_slug="keeper")
+        state.start()
+        state.pass_totem()
+        assert state.next_speaker == "user1"
+
+        state.validate_order(["keeper", "user2", "user3"])
+        assert state.speaking_order == ["keeper", "user2", "user3"]
+        assert state.next_speaker == "user2"
+        assert state.totem_status == TotemStatus.PASSING
+
+    def test_validate_order_removes_current_speaker_during_pass(self):
+        """Test validate_order when the current speaker leaves during totem pass."""
+        state = SessionState(speaking_order=["keeper", "user1", "user2"], keeper_slug="keeper")
+        state.start()
+        state.pass_totem()
+        state.accept_totem()  # user1 speaking
+        state.pass_totem()  # user1 passing to user2
+
+        assert state.speaking_now == "user1"
+        assert state.totem_status == TotemStatus.PASSING
+
+        # user1 (current speaker) leaves
+        state.validate_order(["keeper", "user2"])
+        assert state.speaking_order == ["keeper", "user2"]
+        assert state.speaking_now == "keeper"  # Falls back to first
+        assert state.totem_status == TotemStatus.ACCEPTED  # Should reset

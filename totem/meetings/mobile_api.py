@@ -29,8 +29,13 @@ meetings_router = Router(
 )
 
 
+def _get_participant_names(event: Session) -> dict[str, str]:
+    """Get a mapping of user slug -> display name for all event attendees."""
+    return dict(event.attendees.values_list("slug", "name"))
+
+
 @meetings_router.get(
-    "/event/{event_slug}/token",
+    "/session/{event_slug}/token",
     response={
         200: LivekitTokenResponseSchema,
         403: ErrorResponseSchema,
@@ -81,7 +86,7 @@ def get_livekit_token(request: HttpRequest, event_slug: str):
 
 
 @meetings_router.post(
-    "/event/{event_slug}/pass-totem",
+    "/session/{event_slug}/pass-totem",
     response={
         200: None,
         400: ErrorResponseSchema,
@@ -99,7 +104,7 @@ def pass_totem_endpoint(request: HttpRequest, event_slug: str):
         return 400, ErrorResponseSchema(error="Session has already ended.")
 
     try:
-        livekit.pass_totem(event_slug, event.space.author.slug, user.slug)
+        livekit.pass_totem(event_slug, event.space.author.slug, user.slug, slug_to_name=_get_participant_names(event))
         return HttpResponse(status=200)
     except RoomNotFoundError as e:
         return 404, ErrorResponseSchema(error=str(e))
@@ -116,7 +121,7 @@ def pass_totem_endpoint(request: HttpRequest, event_slug: str):
 
 
 @meetings_router.post(
-    "/event/{event_slug}/accept-totem",
+    "/session/{event_slug}/accept-totem",
     response={
         200: None,
         400: ErrorResponseSchema,
@@ -138,6 +143,7 @@ def accept_totem_endpoint(request: HttpRequest, event_slug: str):
             room_name=event_slug,
             user_identity=user.slug,
             keeper_slug=event.space.author.slug,
+            slug_to_name=_get_participant_names(event),
         )
         return HttpResponse(status=200)
     except RoomNotFoundError as e:
@@ -155,7 +161,47 @@ def accept_totem_endpoint(request: HttpRequest, event_slug: str):
 
 
 @meetings_router.post(
-    "/event/{event_slug}/start",
+    "/session/{event_slug}/force-pass",
+    response={
+        200: None,
+        400: ErrorResponseSchema,
+        403: ErrorResponseSchema,
+        404: ErrorResponseSchema,
+        500: ErrorResponseSchema,
+    },
+    url_name="force_pass",
+)
+def force_pass_endpoint(request: HttpRequest, event_slug: str):
+    user: User = request.user  # type: ignore
+    event: Session = get_object_or_404(Session, slug=event_slug)
+
+    if event.ended():
+        return 400, ErrorResponseSchema(error="Session has already ended.")
+
+    if event.space.author.slug != user.slug:
+        return 403, ErrorResponseSchema(error="Only the Keeper can force pass the totem.")
+
+    try:
+        livekit.force_pass(
+            room_name=event_slug, keeper_slug=event.space.author.slug, slug_to_name=_get_participant_names(event)
+        )
+        return HttpResponse(status=200)
+    except RoomNotFoundError as e:
+        return 404, ErrorResponseSchema(error=str(e))
+    except KeeperNotInRoomError as e:
+        return 404, ErrorResponseSchema(error=str(e))
+    except UnauthorizedError as e:
+        return 403, ErrorResponseSchema(error=str(e))
+    except api.TwirpError as e:
+        logging.error("LiveKit API error in force_pass: %s", e)
+        return 500, ErrorResponseSchema(error=f"Failed to force pass: {str(e)}")
+    except Exception as e:
+        logging.error("Unexpected error in force_pass: %s", e, exc_info=True)
+        return 500, ErrorResponseSchema(error="An unexpected error occurred while force passing the totem.")
+
+
+@meetings_router.post(
+    "/session/{event_slug}/start",
     response={
         200: None,
         400: ErrorResponseSchema,
@@ -178,7 +224,9 @@ def start_room_endpoint(request: HttpRequest, event_slug: str):
         return 400, ErrorResponseSchema(error="Session has already ended.")
 
     try:
-        livekit.start_room(room_name=event.slug, keeper_slug=event.space.author.slug)
+        livekit.start_room(
+            room_name=event.slug, keeper_slug=event.space.author.slug, slug_to_name=_get_participant_names(event)
+        )
         return HttpResponse(status=200)
     except RoomNotFoundError as e:
         return 404, ErrorResponseSchema(error=str(e))
@@ -195,7 +243,7 @@ def start_room_endpoint(request: HttpRequest, event_slug: str):
 
 
 @meetings_router.post(
-    "/event/{event_slug}/end",
+    "/session/{event_slug}/end",
     response={
         200: None,
         400: ErrorResponseSchema,
@@ -232,7 +280,7 @@ def end_room_endpoint(request: HttpRequest, event_slug: str):
 
 
 @meetings_router.post(
-    "/event/{event_slug}/mute/{participant_identity}",
+    "/session/{event_slug}/mute/{participant_identity}",
     response={
         200: None,
         400: ErrorResponseSchema,
@@ -270,7 +318,7 @@ def mute_participant_endpoint(request: HttpRequest, event_slug: str, participant
 
 
 @meetings_router.post(
-    "/event/{event_slug}/mute-all",
+    "/session/{event_slug}/mute-all",
     response={
         200: None,
         400: ErrorResponseSchema,
@@ -304,7 +352,7 @@ def mute_all_participants_endpoint(request: HttpRequest, event_slug: str):
 
 
 @meetings_router.post(
-    "/event/{event_slug}/remove/{participant_identity}",
+    "/session/{event_slug}/remove/{participant_identity}",
     response={
         200: None,
         400: ErrorResponseSchema,
@@ -343,7 +391,7 @@ def remove_participant_endpoint(request: HttpRequest, event_slug: str, participa
 
 
 @meetings_router.post(
-    "/event/{event_slug}/reorder",
+    "/session/{event_slug}/reorder",
     response={
         200: LivekitOrderSchema,
         400: ErrorResponseSchema,
@@ -366,7 +414,7 @@ def reorder_participants_endpoint(request: HttpRequest, event_slug: str, order: 
         return 400, ErrorResponseSchema(error="Session has already ended.")
 
     try:
-        new_order = livekit.reorder(event.slug, order.order)
+        new_order = livekit.reorder(event.slug, order.order, slug_to_name=_get_participant_names(event))
         return LivekitOrderSchema(order=new_order)
     except RoomNotFoundError as e:
         return 404, ErrorResponseSchema(error=str(e))
@@ -381,7 +429,7 @@ def reorder_participants_endpoint(request: HttpRequest, event_slug: str, order: 
 
 
 @meetings_router.get(
-    "/event/{event_slug}/room-state",
+    "/session/{event_slug}/room-state",
     response={200: SessionState, 403: ErrorResponseSchema, 404: ErrorResponseSchema, 500: ErrorResponseSchema},
     url_name="get_room_state",
 )
@@ -401,7 +449,7 @@ def get_room_state_endpoint(request: HttpRequest, event_slug: str):
         return 403, ErrorResponseSchema(error="Session is not joinable at this time.")
 
     try:
-        state = livekit.get_room_state(event.slug)
+        state = livekit.get_room_state(event.slug, slug_to_name=_get_participant_names(event))
         return state
     except RoomNotFoundError as e:
         return 404, ErrorResponseSchema(error=str(e))

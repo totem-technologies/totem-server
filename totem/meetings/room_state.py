@@ -70,6 +70,18 @@ class SessionState(Schema):
         self.totem_status = TotemStatus.ACCEPTED
         self._update_next_speaker()
 
+    def force_pass(self):
+        """
+        Forcefully passes the totem to the next person in the speaking order.
+        It sets the current speaker to the next speaker and totem_status to ACCEPTED.
+        """
+        if self.next_speaker is None:
+            raise ValueError("Cannot force pass when there is no next speaker.")
+
+        self.speaking_now = self.next_speaker
+        self.totem_status = TotemStatus.ACCEPTED
+        self._update_next_speaker()
+
     def reorder(self, new_order: list[str]):
         """
         Reorders the speaking order.
