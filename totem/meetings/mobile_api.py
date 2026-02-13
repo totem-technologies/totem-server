@@ -29,6 +29,11 @@ meetings_router = Router(
 )
 
 
+def _get_participant_names(event: Session) -> dict[str, str]:
+    """Get a mapping of user slug -> display name for all event attendees."""
+    return dict(event.attendees.values_list("slug", "name"))
+
+
 @meetings_router.get(
     "/event/{event_slug}/token",
     response={
@@ -99,7 +104,7 @@ def pass_totem_endpoint(request: HttpRequest, event_slug: str):
         return 400, ErrorResponseSchema(error="Session has already ended.")
 
     try:
-        livekit.pass_totem(event_slug, event.space.author.slug, user.slug)
+        livekit.pass_totem(event_slug, event.space.author.slug, user.slug, slug_to_name=_get_participant_names(event))
         return HttpResponse(status=200)
     except RoomNotFoundError as e:
         return 404, ErrorResponseSchema(error=str(e))
@@ -138,6 +143,7 @@ def accept_totem_endpoint(request: HttpRequest, event_slug: str):
             room_name=event_slug,
             user_identity=user.slug,
             keeper_slug=event.space.author.slug,
+            slug_to_name=_get_participant_names(event),
         )
         return HttpResponse(status=200)
     except RoomNotFoundError as e:
@@ -176,7 +182,9 @@ def force_pass_endpoint(request: HttpRequest, event_slug: str):
         return 403, ErrorResponseSchema(error="Only the Keeper can force pass the totem.")
 
     try:
-        livekit.force_pass(room_name=event_slug, keeper_slug=event.space.author.slug)
+        livekit.force_pass(
+            room_name=event_slug, keeper_slug=event.space.author.slug, slug_to_name=_get_participant_names(event)
+        )
         return HttpResponse(status=200)
     except RoomNotFoundError as e:
         return 404, ErrorResponseSchema(error=str(e))
@@ -216,7 +224,9 @@ def start_room_endpoint(request: HttpRequest, event_slug: str):
         return 400, ErrorResponseSchema(error="Session has already ended.")
 
     try:
-        livekit.start_room(room_name=event.slug, keeper_slug=event.space.author.slug)
+        livekit.start_room(
+            room_name=event.slug, keeper_slug=event.space.author.slug, slug_to_name=_get_participant_names(event)
+        )
         return HttpResponse(status=200)
     except RoomNotFoundError as e:
         return 404, ErrorResponseSchema(error=str(e))
@@ -404,7 +414,7 @@ def reorder_participants_endpoint(request: HttpRequest, event_slug: str, order: 
         return 400, ErrorResponseSchema(error="Session has already ended.")
 
     try:
-        new_order = livekit.reorder(event.slug, order.order)
+        new_order = livekit.reorder(event.slug, order.order, slug_to_name=_get_participant_names(event))
         return LivekitOrderSchema(order=new_order)
     except RoomNotFoundError as e:
         return 404, ErrorResponseSchema(error=str(e))
@@ -439,7 +449,7 @@ def get_room_state_endpoint(request: HttpRequest, event_slug: str):
         return 403, ErrorResponseSchema(error="Session is not joinable at this time.")
 
     try:
-        state = livekit.get_room_state(event.slug)
+        state = livekit.get_room_state(event.slug, slug_to_name=_get_participant_names(event))
         return state
     except RoomNotFoundError as e:
         return 404, ErrorResponseSchema(error=str(e))

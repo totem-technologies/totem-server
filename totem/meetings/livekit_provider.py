@@ -77,6 +77,48 @@ class NoAudioTrackError(LiveKitException):
     pass
 
 
+async def _sync_participant_names(
+    room_name: str,
+    lkapi: api.LiveKitAPI,
+    participants: list[api.ParticipantInfo],
+    slug_to_name: dict[str, str],
+) -> None:
+    """Syncs participant display names in LiveKit with the provided name mapping.
+
+    Compares each participant's LiveKit display name against the provided mapping
+    and updates any that are out of sync.
+
+    Args:
+        room_name: The room containing the participants.
+        lkapi: An authenticated LiveKit API client instance.
+        participants: The list of participants to sync.
+        slug_to_name: Mapping of user slug to display name from the database.
+    """
+    if not participants:
+        return
+
+    for participant in participants:
+        db_name = slug_to_name.get(participant.identity)
+        if db_name is not None:
+            expected_name = db_name or "Anonymous"
+            if participant.name != expected_name:
+                try:
+                    await lkapi.room.update_participant(
+                        api.UpdateParticipantRequest(
+                            room=room_name,
+                            identity=participant.identity,
+                            name=expected_name,
+                        )
+                    )
+                except api.TwirpError as e:
+                    logging.error(
+                        "Failed to sync name for participant %s in room %s: %s",
+                        participant.identity,
+                        room_name,
+                        e,
+                    )
+
+
 @asynccontextmanager
 async def _get_lk_api_client():
     """Provides an initialized and automatically closed LiveKitAPI client.
@@ -208,6 +250,7 @@ async def _parse_validate_room_state(
     validate: bool = True,
     keeper_slug: str | None = None,
     participants: list[api.ParticipantInfo] | None = None,
+    slug_to_name: dict[str, str] | None = None,
 ) -> SessionState:
     """
     Parses the session state from room metadata and optionally validates it.
@@ -254,6 +297,9 @@ async def _parse_validate_room_state(
 
         state = SessionState(**metadata_dict)
 
+        if participant_list is not None and slug_to_name is not None:
+            await _sync_participant_names(room.name, lkapi, list(participant_list), slug_to_name)
+
         if validate and participant_list is not None:
             participant_identities = [p.identity for p in participant_list]
             state.validate_order(participant_identities)
@@ -289,7 +335,7 @@ async def _update_room_metadata(room_name: str, state: SessionState, lkapi: api.
 
 
 @async_to_sync
-async def get_room_state(room_name: str) -> SessionState:
+async def get_room_state(room_name: str, slug_to_name: dict[str, str] | None = None) -> SessionState:
     """
     Retrieves the current session state for a room.
 
@@ -297,7 +343,7 @@ async def get_room_state(room_name: str) -> SessionState:
     This provides clients with the current room status, speaking order, and totem state.
 
     Args:
-        room_name: The unique identifier/name of the room.
+        room_name: The unique identifier/name of the room .
 
     Returns:
         SessionState: The current session state for the room.
@@ -311,7 +357,11 @@ async def get_room_state(room_name: str) -> SessionState:
     """
     async with _get_lk_api_client() as lkapi:
         room = await _get_room_or_raise(room_name, lkapi)
-        return await _parse_validate_room_state(room, lkapi, validate=False)
+        participants_response = await lkapi.room.list_participants(api.ListParticipantsRequest(room=room_name))
+        participant_list = list(participants_response.participants)
+        return await _parse_validate_room_state(
+            room, lkapi, validate=False, participants=participant_list, slug_to_name=slug_to_name
+        )
 
 
 @async_to_sync
@@ -349,7 +399,9 @@ async def initialize_room(room_name: str, speaking_order: list[str], keeper_slug
 
 
 @async_to_sync
-async def pass_totem(room_name: str, keeper_slug: str, user_identity: str) -> None:
+async def pass_totem(
+    room_name: str, keeper_slug: str, user_identity: str, slug_to_name: dict[str, str] | None = None
+) -> None:
     """
     Passes the totem to the next participant in the speaking order.
 
@@ -378,7 +430,9 @@ async def pass_totem(room_name: str, keeper_slug: str, user_identity: str) -> No
     async with _get_lk_api_client() as lkapi:
         room = await _get_room_or_raise(room_name, lkapi)
 
-        state = await _parse_validate_room_state(room, lkapi, validate=True, keeper_slug=keeper_slug)
+        state = await _parse_validate_room_state(
+            room, lkapi, validate=True, keeper_slug=keeper_slug, slug_to_name=slug_to_name
+        )
 
         is_speaking_now = state.speaking_now == user_identity
         is_keeper = user_identity == keeper_slug
@@ -392,7 +446,9 @@ async def pass_totem(room_name: str, keeper_slug: str, user_identity: str) -> No
 
 
 @async_to_sync
-async def accept_totem(room_name: str, keeper_slug: str, user_identity: str) -> None:
+async def accept_totem(
+    room_name: str, keeper_slug: str, user_identity: str, slug_to_name: dict[str, str] | None = None
+) -> None:
     """
     Accepts the totem from the current speaker in the room.
 
@@ -426,7 +482,12 @@ async def accept_totem(room_name: str, keeper_slug: str, user_identity: str) -> 
         participant_list = list(participants_response.participants)
 
         state = await _parse_validate_room_state(
-            room, lkapi, validate=True, keeper_slug=keeper_slug, participants=participant_list
+            room,
+            lkapi,
+            validate=True,
+            keeper_slug=keeper_slug,
+            participants=participant_list,
+            slug_to_name=slug_to_name,
         )
 
         is_next_speaker = state.next_speaker == user_identity
@@ -443,7 +504,7 @@ async def accept_totem(room_name: str, keeper_slug: str, user_identity: str) -> 
 
 
 @async_to_sync
-async def force_pass(room_name: str, keeper_slug: str) -> None:
+async def force_pass(room_name: str, keeper_slug: str, slug_to_name: dict[str, str] | None = None) -> None:
     """
     Forcefully passes the totem to the next participant, bypassing normal acceptance.
 
@@ -468,14 +529,16 @@ async def force_pass(room_name: str, keeper_slug: str) -> None:
     async with _get_lk_api_client() as lkapi:
         room = await _get_room_or_raise(room_name, lkapi)
 
-        state = await _parse_validate_room_state(room, lkapi, validate=True, keeper_slug=keeper_slug)
+        state = await _parse_validate_room_state(
+            room, lkapi, validate=True, keeper_slug=keeper_slug, slug_to_name=slug_to_name
+        )
 
         state.force_pass()
         await _update_room_metadata(room_name, state, lkapi)
 
 
 @async_to_sync
-async def start_room(room_name: str, keeper_slug: str) -> None:
+async def start_room(room_name: str, keeper_slug: str, slug_to_name: dict[str, str] | None = None) -> None:
     """
     Starts the session in the room by updating its status to 'started'.
 
@@ -507,7 +570,12 @@ async def start_room(room_name: str, keeper_slug: str) -> None:
         participant_list = list(participants_response.participants)
 
         state = await _parse_validate_room_state(
-            room, lkapi, validate=True, keeper_slug=keeper_slug, participants=participant_list
+            room,
+            lkapi,
+            validate=True,
+            keeper_slug=keeper_slug,
+            participants=participant_list,
+            slug_to_name=slug_to_name,
         )
 
         if state.status == SessionStatus.STARTED:
@@ -562,7 +630,7 @@ async def end_room(room_name: str) -> None:
 
 
 @async_to_sync
-async def reorder(room_name: str, new_order: list[str]) -> list[str]:
+async def reorder(room_name: str, new_order: list[str], slug_to_name: dict[str, str] | None = None) -> list[str]:
     """
     Reorders the participants in the room's speaking order.
 
@@ -596,7 +664,7 @@ async def reorder(room_name: str, new_order: list[str]) -> list[str]:
         participant_list = list(participants_response.participants)
         participant_identities = [p.identity for p in participant_list]
 
-        state = await _parse_validate_room_state(room, lkapi, participants=participant_list)
+        state = await _parse_validate_room_state(room, lkapi, participants=participant_list, slug_to_name=slug_to_name)
 
         if state.status == SessionStatus.ENDED:
             raise RoomAlreadyEndedError(f"Room {room_name} has already ended.")
@@ -604,7 +672,9 @@ async def reorder(room_name: str, new_order: list[str]) -> list[str]:
         filtered_order = [identity for identity in new_order if identity in participant_identities]
 
         state.reorder(filtered_order)
-        state = await _parse_validate_room_state(room, lkapi, validate=True, participants=participant_list)
+        state = await _parse_validate_room_state(
+            room, lkapi, validate=True, participants=participant_list, slug_to_name=slug_to_name
+        )
         await _update_room_metadata(room_name, state, lkapi)
 
         return state.speaking_order
