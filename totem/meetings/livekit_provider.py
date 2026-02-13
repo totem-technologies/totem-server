@@ -852,3 +852,32 @@ async def remove_participant(room_name: str, user_identity: str) -> None:
 
         if not participant:
             raise ParticipantNotFoundError(f"Participant {user_identity} not found in room {room_name}.")
+
+
+@async_to_sync
+async def is_user_in_room(room_name: str, user_identity: str) -> bool:
+    """
+    Check if a user is currently in a LiveKit room.
+
+    Args:
+        room_name: The unique identifier/name of the room (typically session slug).
+        user_identity: The unique identifier of the user (typically user slug).
+
+    Returns:
+        bool: True if the user is in the room, False otherwise.
+
+    Note:
+        Returns False if the room doesn't exist or LiveKit is not configured.
+        This is a synchronous wrapper around async code using @async_to_sync.
+    """
+    try:
+        async with _get_lk_api_client() as lkapi:
+            room = await _get_room(room_name, lkapi)
+            if room is None:
+                return False
+            participants_response = await lkapi.room.list_participants(api.ListParticipantsRequest(room=room_name))
+            return any(p.identity == user_identity for p in participants_response.participants)
+    except LiveKitConfigurationError:
+        return False
+    except api.TwirpError:
+        return False

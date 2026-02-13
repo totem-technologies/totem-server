@@ -17,6 +17,7 @@ from totem.meetings.livekit_provider import (
     end_room,
     get_room_state,
     initialize_room,
+    is_user_in_room,
     mute_all_participants,
     mute_participant,
     pass_totem,
@@ -772,3 +773,107 @@ class TestSyncParticipantNames:
             start_room("test-room", "keeper", slug_to_name={"keeper": "New Keeper", "user1": "New User"})
 
         assert mock_lkapi.room.update_participant.call_count == 2
+
+
+@pytest.mark.django_db
+@pytest.mark.enable_socket
+class TestIsUserInRoom:
+    """Tests for the is_user_in_room function."""
+
+    def test_returns_true_when_user_in_room(self):
+        """Test that is_user_in_room returns True when user is in the room."""
+        mock_room = Mock()
+        mock_room.name = "test-room"
+
+        mock_lkapi = AsyncMock()
+        mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
+        mock_lkapi.room.list_participants.return_value = Mock(
+            participants=[
+                _make_participant("user1", "User 1"),
+                _make_participant("user2", "User 2"),
+            ]
+        )
+
+        with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
+            mock_get_client.return_value.__aenter__.return_value = mock_lkapi
+
+            result = is_user_in_room("test-room", "user1")
+
+        assert result is True
+
+    def test_returns_false_when_user_not_in_room(self):
+        """Test that is_user_in_room returns False when user is not in the room."""
+        mock_room = Mock()
+        mock_room.name = "test-room"
+
+        mock_lkapi = AsyncMock()
+        mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
+        mock_lkapi.room.list_participants.return_value = Mock(
+            participants=[
+                _make_participant("user1", "User 1"),
+            ]
+        )
+
+        with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
+            mock_get_client.return_value.__aenter__.return_value = mock_lkapi
+
+            result = is_user_in_room("test-room", "user2")
+
+        assert result is False
+
+    def test_returns_false_when_room_not_found(self):
+        """Test that is_user_in_room returns False when room doesn't exist."""
+        mock_lkapi = AsyncMock()
+        mock_lkapi.room.list_rooms.return_value = Mock(rooms=[])
+
+        with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
+            mock_get_client.return_value.__aenter__.return_value = mock_lkapi
+
+            result = is_user_in_room("non-existent-room", "user1")
+
+        assert result is False
+
+    def test_returns_false_on_livekit_config_error(self):
+        """Test that is_user_in_room returns False when LiveKit is not configured."""
+        with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
+            from totem.meetings.livekit_provider import LiveKitConfigurationError
+
+            mock_get_client.return_value.__aenter__.side_effect = LiveKitConfigurationError("Not configured")
+
+            result = is_user_in_room("test-room", "user1")
+
+        assert result is False
+
+    def test_returns_false_on_twirp_error(self):
+        """Test that is_user_in_room returns False on API errors."""
+        mock_room = Mock()
+        mock_room.name = "test-room"
+
+        mock_lkapi = AsyncMock()
+        mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
+        mock_lkapi.room.list_participants.side_effect = api.TwirpError(
+            code="internal", status=500, msg="Internal error"
+        )
+
+        with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
+            mock_get_client.return_value.__aenter__.return_value = mock_lkapi
+
+            result = is_user_in_room("test-room", "user1")
+
+        assert result is False
+
+    def test_returns_false_when_room_empty(self):
+        """Test that is_user_in_room returns False when room has no participants."""
+        mock_room = Mock()
+        mock_room.name = "test-room"
+
+        mock_lkapi = AsyncMock()
+        mock_lkapi.room.list_rooms.return_value = Mock(rooms=[mock_room])
+        mock_lkapi.room.list_participants.return_value = Mock(participants=[])
+
+        with patch("totem.meetings.livekit_provider._get_lk_api_client") as mock_get_client:
+            mock_get_client.return_value.__aenter__.return_value = mock_lkapi
+
+            result = is_user_in_room("test-room", "user1")
+
+        assert result is False
