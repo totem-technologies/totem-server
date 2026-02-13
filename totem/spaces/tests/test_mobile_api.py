@@ -226,6 +226,104 @@ class TestMobileApiSpaces:
         assert response.status_code == 200
         assert len(response.json()) == 10
 
+    def test_sessions_upcoming(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        now = timezone.now()
+
+        upcoming_event = SessionFactory(space__published=True, cancelled=False, start=now + timedelta(days=1))
+        upcoming_event.attendees.add(user)
+
+        SessionFactory(space__published=True, cancelled=False, start=now + timedelta(days=2))
+
+        url = reverse("mobile-api:sessions_upcoming")
+        response = client.get(url)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["slug"] == upcoming_event.slug
+
+    def test_sessions_upcoming_empty(self, client_with_user: tuple[Client, User]):
+        client, _ = client_with_user
+
+        url = reverse("mobile-api:sessions_upcoming")
+        response = client.get(url)
+
+        assert response.status_code == 200
+        assert response.json() == []
+
+    def test_sessions_upcoming_filters_cancelled_and_unpublished(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        now = timezone.now()
+
+        # Valid upcoming session
+        valid_event = SessionFactory(space__published=True, cancelled=False, start=now + timedelta(days=1))
+        valid_event.attendees.add(user)
+
+        # Cancelled session (should NOT appear)
+        cancelled_event = SessionFactory(space__published=True, cancelled=True, start=now + timedelta(days=2))
+        cancelled_event.attendees.add(user)
+
+        # Unpublished space (should NOT appear)
+        unpublished_event = SessionFactory(space__published=False, cancelled=False, start=now + timedelta(days=3))
+        unpublished_event.attendees.add(user)
+
+        url = reverse("mobile-api:sessions_upcoming")
+        response = client.get(url)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["slug"] == valid_event.slug
+
+    def test_sessions_upcoming_includes_in_progress(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        now = timezone.now()
+
+        # Session that started 30 minutes ago and lasts 60 minutes (still in progress)
+        in_progress_event = SessionFactory(
+            space__published=True, cancelled=False, start=now - timedelta(minutes=30), duration_minutes=60
+        )
+        in_progress_event.attendees.add(user)
+
+        # Session that ended 30 minutes ago (should NOT appear)
+        past_event = SessionFactory(
+            space__published=True, cancelled=False, start=now - timedelta(minutes=90), duration_minutes=60
+        )
+        past_event.attendees.add(user)
+
+        url = reverse("mobile-api:sessions_upcoming")
+        response = client.get(url)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["slug"] == in_progress_event.slug
+
+    def test_sessions_upcoming_ordered_by_start(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        now = timezone.now()
+
+        # Create sessions in reverse order
+        event3 = SessionFactory(space__published=True, cancelled=False, start=now + timedelta(days=3))
+        event3.attendees.add(user)
+
+        event1 = SessionFactory(space__published=True, cancelled=False, start=now + timedelta(days=1))
+        event1.attendees.add(user)
+
+        event2 = SessionFactory(space__published=True, cancelled=False, start=now + timedelta(days=2))
+        event2.attendees.add(user)
+
+        url = reverse("mobile-api:sessions_upcoming")
+        response = client.get(url)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 3
+        assert data[0]["slug"] == event1.slug
+        assert data[1]["slug"] == event2.slug
+        assert data[2]["slug"] == event3.slug
+
     def test_recommended_spaces(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         url = reverse("mobile-api:recommended_spaces")

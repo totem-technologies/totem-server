@@ -100,6 +100,30 @@ def post_session_feedback(request: HttpRequest, event_slug: str, payload: Sessio
     return 204, None
 
 
+@spaces_router.get("/sessions/upcoming", response={200: list[SessionDetailSchema]}, url_name="sessions_upcoming")
+def get_sessions_upcoming(request: HttpRequest):
+    """Get the user's upcoming sessions they are attending."""
+    user: User = request.user  # type: ignore
+
+    end_time_expression = ExpressionWrapper(
+        F("start") + F("duration_minutes") * datetime.timedelta(minutes=1),
+        output_field=DateTimeField(),
+    )
+    upcoming_sessions = (
+        Session.objects.annotate(end_time=end_time_expression)
+        .filter(attendees=user, cancelled=False, end_time__gt=timezone.now(), space__published=True)
+        .select_related("space")
+        .prefetch_related("space__author", "space__categories", "attendees", "space__subscribed")
+        .annotate(
+            attendee_count=Count("attendees", distinct=True),
+            subscriber_count=Count("space__subscribed", distinct=True),
+        )
+        .order_by("start")
+    )
+
+    return [session_detail_schema(session, user) for session in upcoming_sessions]
+
+
 @spaces_router.get("/sessions/history", response={200: list[SessionDetailSchema]}, url_name="sessions_history")
 def get_sessions_history(request: HttpRequest):
     user: User = request.user  # type: ignore
