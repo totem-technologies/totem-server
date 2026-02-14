@@ -42,7 +42,7 @@ def apply_event(
     Raises TransitionError on any invalid transition.
     """
     with transaction.atomic():
-        room = Room.objects.for_session(session_slug).select_for_update().first()
+        room = Room.objects.for_session(session_slug).select_for_update().first()  # type: ignore
 
         if not room:
             raise TransitionError(

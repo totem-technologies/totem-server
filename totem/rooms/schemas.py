@@ -53,6 +53,12 @@ class ErrorCode(str, Enum):
     # Concurrency
     STALE_VERSION = "stale_version"
 
+    # Join
+    NOT_JOINABLE = "not_joinable"
+
+    # LiveKit
+    LIVEKIT_ERROR = "livekit_error"
+
     # Generic
     NOT_FOUND = "not_found"
 
@@ -150,6 +156,12 @@ class EventRequest(Schema):
 
     event: RoomEvent
     last_seen_version: int
+
+
+class JoinResponse(Schema):
+    """Token for connecting to a LiveKit room."""
+
+    token: str
 
 
 class ErrorResponse(Schema):
