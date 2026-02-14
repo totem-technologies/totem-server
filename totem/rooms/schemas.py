@@ -18,7 +18,7 @@ from ninja import Field, Schema
 
 
 class RoomStatus(str, Enum):
-    LOBBY = "lobby"
+    WAITING_ROOM = "waiting_room"
     ACTIVE = "active"
     ENDED = "ended"
 
@@ -44,7 +44,7 @@ class ErrorCode(str, Enum):
     # Invalid state transitions
     INVALID_TRANSITION = "invalid_transition"
     ROOM_NOT_ACTIVE = "room_not_active"
-    ROOM_NOT_LOBBY = "room_not_lobby"
+    ROOM_NOT_WAITING = "room_not_waiting"
     ROOM_ALREADY_ENDED = "room_already_ended"
 
     # Data validation
@@ -79,7 +79,7 @@ class RoomState(Schema):
     User references are slugs (short unique public IDs), not internal IDs.
     """
 
-    room_id: str  # session slug
+    session_slug: str
     version: int
     status: RoomStatus
     turn_state: TurnState

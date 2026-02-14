@@ -57,7 +57,7 @@ ERROR_RESPONSES = {
 
 
 @router.post(
-    "/{room_id}/event",
+    "/{session_slug}/event",
     response={200: RoomState, **ERROR_RESPONSES},
     summary="Submit a state transition event",
     description=(
@@ -68,16 +68,16 @@ ERROR_RESPONSES = {
 )
 def post_event(
     request: HttpRequest,
-    room_id: str,
+    session_slug: str,
     body: EventRequest,
 ):
     user: User = request.user  # type: ignore
     actor = user.slug
-    connected = get_connected_participants(room_id)
+    connected = get_connected_participants(session_slug)
 
     try:
         state = apply_event(
-            room_id=room_id,
+            session_slug=session_slug,
             actor=actor,
             event=body.event,
             last_seen_version=body.last_seen_version,
@@ -92,13 +92,13 @@ def post_event(
 
     # Broadcast is best-effort and outside the DB transaction.
     # If this fails, clients will catch up via polling.
-    publish_state(room_id, state)
+    publish_state(session_slug, state)
 
     return 200, state
 
 
 @router.get(
-    "/{room_id}/state",
+    "/{session_slug}/state",
     response={200: RoomState, 404: ErrorResponse},
     summary="Get current room state",
     description=(
@@ -109,9 +109,9 @@ def post_event(
 )
 def get_state(
     request: HttpRequest,
-    room_id: str,
+    session_slug: str,
 ):
-    room = Room.objects.select_related("session").filter(session__slug=room_id).first()
+    room = Room.objects.for_session(session_slug).first()
 
     if not room:
         return 404, ErrorResponse(

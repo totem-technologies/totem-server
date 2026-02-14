@@ -28,7 +28,7 @@ from .schemas import (
 
 
 def apply_event(
-    room_id: str,  # session slug
+    session_slug: str,
     actor: str,  # user slug
     event: RoomEvent,
     last_seen_version: int,
@@ -42,7 +42,7 @@ def apply_event(
     Raises TransitionError on any invalid transition.
     """
     with transaction.atomic():
-        room = Room.objects.select_for_update().filter(session__slug=room_id).first()
+        room = Room.objects.for_session(session_slug).select_for_update().first()
 
         if not room:
             raise TransitionError(
@@ -151,9 +151,9 @@ def _next_in_order(
 def _handle_start(room: Room, actor: str, connected: set[str]) -> None:
     _require_keeper(room, actor)
 
-    if room.status != RoomStatus.LOBBY:
+    if room.status != RoomStatus.WAITING_ROOM:
         raise TransitionError(
-            code=ErrorCode.ROOM_NOT_LOBBY,
+            code=ErrorCode.ROOM_NOT_WAITING,
             message="Room can only be started from the lobby",
         )
 

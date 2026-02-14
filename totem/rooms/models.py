@@ -3,10 +3,20 @@ from __future__ import annotations
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
+from totem.utils.models import BaseModel
+
 from .schemas import RoomState, RoomStatus, TurnState
 
 
-class Room(models.Model):
+class RoomQuerySet(models.QuerySet["Room"]):
+    def for_session(self, session_slug: str) -> RoomQuerySet:
+        return self.select_related("session").filter(session__slug=session_slug)
+
+
+RoomManager = models.Manager.from_queryset(RoomQuerySet)
+
+
+class Room(BaseModel):
     """
     Real-time room state. This is the ephemeral state machine row,
     not the Session model that tracks signups, title, etc.
@@ -19,6 +29,8 @@ class Room(models.Model):
     participant, they can be the same person.
     """
 
+    objects = RoomManager()
+
     session = models.OneToOneField(
         "spaces.Session",
         on_delete=models.CASCADE,
@@ -27,7 +39,7 @@ class Room(models.Model):
     status = models.CharField(
         max_length=20,
         choices=[(s.value, s.value) for s in RoomStatus],
-        default=RoomStatus.LOBBY,
+        default=RoomStatus.WAITING_ROOM,
     )
     turn_state = models.CharField(
         max_length=20,
@@ -40,12 +52,9 @@ class Room(models.Model):
     talking_order = ArrayField(models.CharField(max_length=50), default=list)  # user slugs
     state_version = models.PositiveIntegerField(default=0)
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
     def to_state(self) -> RoomState:
         return RoomState(
-            room_id=self.session.slug,
+            session_slug=self.session.slug,
             version=self.state_version,
             status=RoomStatus(self.status),
             turn_state=TurnState(self.turn_state),
@@ -55,11 +64,8 @@ class Room(models.Model):
             keeper=self.keeper,
         )
 
-    class Meta:
-        app_label = "rooms"
 
-
-class RoomEventLog(models.Model):
+class RoomEventLog(BaseModel):
     """Append-only log of every state transition."""
 
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name="events")
@@ -67,8 +73,6 @@ class RoomEventLog(models.Model):
     event_type = models.CharField(max_length=50)
     actor = models.CharField(max_length=50)  # user slug
     snapshot = models.JSONField()
-    created_at = models.DateTimeField(auto_now_add=True)
 
-    class Meta:
-        app_label = "rooms"
+    class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]
         ordering = ["version"]
