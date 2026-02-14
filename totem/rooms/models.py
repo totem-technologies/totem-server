@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
@@ -7,10 +9,24 @@ from totem.utils.models import BaseModel
 
 from .schemas import RoomState, RoomStatus, TurnState
 
+if TYPE_CHECKING:
+    from totem.spaces.models import Session
+
 
 class RoomQuerySet(models.QuerySet["Room"]):
     def for_session(self, session_slug: str) -> RoomQuerySet:
         return self.select_related("session").filter(session__slug=session_slug)
+
+    def get_or_create_for_session(self, session: Session) -> Room:
+        """Get or create a Room for a Session, initializing from Session data."""
+        room, created = self.get_or_create(
+            session=session,
+            defaults={
+                "keeper": session.space.author.slug,
+                "talking_order": [a.slug for a in session.attendees.all()],
+            },
+        )
+        return room
 
 
 RoomManager = models.Manager.from_queryset(RoomQuerySet)

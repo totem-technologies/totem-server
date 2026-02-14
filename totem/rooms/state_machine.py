@@ -50,12 +50,17 @@ def apply_event(
                 message="Room not found",
             )
 
+        _require_attendee(room, actor)
+
         if room.state_version != last_seen_version:
             raise TransitionError(
                 code=ErrorCode.STALE_VERSION,
                 message="State has changed since your last read",
                 detail=f"expected {last_seen_version}, current {room.state_version}",
             )
+
+        # Reconcile talking order with who's actually connected
+        _reconcile_talking_order(room, connected)
 
         match event:
             case StartRoomEvent():
@@ -110,6 +115,14 @@ def _require_active(room: Room) -> None:
         )
 
 
+def _require_attendee(room: Room, actor: str) -> None:
+    if not room.session.attendees.filter(slug=actor).exists():
+        raise TransitionError(
+            code=ErrorCode.NOT_IN_ROOM,
+            message="You are not an attendee of this session",
+        )
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -143,6 +156,50 @@ def _next_in_order(
     return None
 
 
+def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
+    """
+    Sync talking_order with connected participants.
+    - Removes disconnected participants
+    - Appends newly connected participants
+    - Keeps the keeper first
+    - Fixes current_speaker/next_speaker if they disconnected
+    """
+    seen: set[str] = set()
+    reconciled: list[str] = []
+
+    # Keeper first if connected
+    if room.keeper in connected:
+        reconciled.append(room.keeper)
+        seen.add(room.keeper)
+
+    # Preserve existing order for members still connected
+    for slug in room.talking_order:
+        if slug in connected and slug not in seen:
+            reconciled.append(slug)
+            seen.add(slug)
+
+    # Append any newly connected members
+    for slug in connected:
+        if slug not in seen:
+            reconciled.append(slug)
+            seen.add(slug)
+
+    room.talking_order = reconciled
+
+    # Fix current_speaker if they disconnected
+    if room.current_speaker and room.current_speaker not in connected:
+        room.current_speaker = reconciled[0] if reconciled else None
+        if room.turn_state == TurnState.PASSING:
+            room.turn_state = TurnState.SPEAKING
+
+    # Fix next_speaker if they disconnected
+    if room.next_speaker and room.next_speaker not in connected:
+        if room.current_speaker:
+            room.next_speaker = _next_in_order(reconciled, room.current_speaker, connected)
+        else:
+            room.next_speaker = reconciled[0] if reconciled else None
+
+
 # ---------------------------------------------------------------------------
 # Event handlers
 # ---------------------------------------------------------------------------
@@ -154,7 +211,7 @@ def _handle_start(room: Room, actor: str, connected: set[str]) -> None:
     if room.status != RoomStatus.WAITING_ROOM:
         raise TransitionError(
             code=ErrorCode.ROOM_NOT_WAITING,
-            message="Room can only be started from the lobby",
+            message="Room can only be started from the waiting room",
         )
 
     next_slug = _next_in_order(room.talking_order, room.keeper, connected)
@@ -168,14 +225,12 @@ def _handle_start(room: Room, actor: str, connected: set[str]) -> None:
 def _handle_pass(room: Room, actor: str) -> None:
     _require_active(room)
 
-    if actor != room.current_speaker:
+    if actor != room.current_speaker and actor != room.keeper:
         raise TransitionError(
             code=ErrorCode.NOT_CURRENT_SPEAKER,
-            message="Only the current speaker can pass the stick",
+            message="Only the current speaker or keeper can pass the stick",
         )
 
-    # next_speaker is already set — transition to passing.
-    # current_speaker stays (stick is "in transit" from them).
     room.turn_state = TurnState.PASSING
 
 

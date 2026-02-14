@@ -99,7 +99,7 @@ def post_event(
 
 @router.get(
     "/{session_slug}/state",
-    response={200: RoomState, 404: ErrorResponse},
+    response={200: RoomState, **ERROR_RESPONSES},
     summary="Get current room state",
     description=(
         "Returns the current state snapshot. Used by clients on reconnect "
@@ -111,12 +111,19 @@ def get_state(
     request: HttpRequest,
     session_slug: str,
 ):
+    user: User = request.user  # type: ignore
     room = Room.objects.for_session(session_slug).first()
 
     if not room:
         return 404, ErrorResponse(
             code=ErrorCode.NOT_FOUND,
             message="Room not found",
+        )
+
+    if not room.session.attendees.filter(slug=user.slug).exists():
+        return 403, ErrorResponse(
+            code=ErrorCode.NOT_IN_ROOM,
+            message="You are not an attendee of this session",
         )
 
     return 200, room.to_state()
