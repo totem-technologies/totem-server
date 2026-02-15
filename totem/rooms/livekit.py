@@ -20,43 +20,29 @@ from .schemas import RoomState
 logger = logging.getLogger(__name__)
 
 
-async def _get_connected_participants(room_name: str) -> set[str]:
+def _get_api():
     if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
-        return set()
-
-    lkapi = api.LiveKitAPI(
+        raise LiveKitConfigurationError("LiveKit API key or secret not configured")
+    return api.LiveKitAPI(
         api_key=settings.LIVEKIT_API_KEY,
         api_secret=settings.LIVEKIT_API_SECRET,
     )
-    try:
+
+
+async def _get_connected_participants(room_name: str) -> set[str]:
+    async with _get_api() as lkapi:
         resp = await lkapi.room.list_participants(api.ListParticipantsRequest(room=room_name))
         return {p.identity for p in resp.participants}
-    except Exception:
-        logger.exception("Failed to list participants for room %s", room_name)
-        return set()
-    finally:
-        await lkapi.aclose()
 
 
 async def _publish_state(room_name: str, state: RoomState) -> None:
-    if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
-        return
-
-    lkapi = api.LiveKitAPI(
-        api_key=settings.LIVEKIT_API_KEY,
-        api_secret=settings.LIVEKIT_API_SECRET,
-    )
-    try:
+    async with _get_api() as lkapi:
         await lkapi.room.update_room_metadata(
             update=api.UpdateRoomMetadataRequest(
                 room=room_name,
                 metadata=json.dumps(state.dict()),
             )
         )
-    except Exception:
-        logger.exception("Failed to publish state for room %s", room_name)
-    finally:
-        await lkapi.aclose()
 
 
 @async_to_sync
@@ -144,17 +130,10 @@ def create_access_token(user: User, room_name: str) -> str:
 
 
 async def _mute_participant(room_name: str, identity: str) -> None:
-    if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
-        raise LiveKitConfigurationError("LiveKit API key and secret are not configured.")
-
-    lkapi = api.LiveKitAPI(
-        api_key=settings.LIVEKIT_API_KEY,
-        api_secret=settings.LIVEKIT_API_SECRET,
-    )
-    try:
+    async with _get_api() as lkapi:
         participant = await lkapi.room.get_participant(api.RoomParticipantIdentity(room=room_name, identity=identity))
         if not participant:
-            raise ParticipantNotFoundError(f"Participant {identity} not found in room {room_name}.")
+            return
 
         track_sid = None
         for track in participant.tracks:
@@ -163,7 +142,7 @@ async def _mute_participant(room_name: str, identity: str) -> None:
                 break
 
         if track_sid is None:
-            raise NoAudioTrackError(f"Participant {identity} has no audio track in room {room_name}.")
+            return
 
         await lkapi.room.mute_published_track(
             api.MuteRoomTrackRequest(
@@ -173,19 +152,10 @@ async def _mute_participant(room_name: str, identity: str) -> None:
                 muted=True,
             )
         )
-    finally:
-        await lkapi.aclose()
 
 
 async def _mute_all_participants(room_name: str, except_identity: str | None = None) -> None:
-    if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
-        raise LiveKitConfigurationError("LiveKit API key and secret are not configured.")
-
-    lkapi = api.LiveKitAPI(
-        api_key=settings.LIVEKIT_API_KEY,
-        api_secret=settings.LIVEKIT_API_SECRET,
-    )
-    try:
+    async with _get_api() as lkapi:
         resp = await lkapi.room.list_participants(api.ListParticipantsRequest(room=room_name))
         for participant in resp.participants:
             if except_identity and participant.identity == except_identity:
@@ -207,25 +177,11 @@ async def _mute_all_participants(room_name: str, except_identity: str | None = N
                             participant.identity,
                             room_name,
                         )
-    finally:
-        await lkapi.aclose()
 
 
 async def _remove_participant(room_name: str, identity: str) -> None:
-    if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
-        raise LiveKitConfigurationError("LiveKit API key and secret are not configured.")
-
-    lkapi = api.LiveKitAPI(
-        api_key=settings.LIVEKIT_API_KEY,
-        api_secret=settings.LIVEKIT_API_SECRET,
-    )
-    try:
-        try:
-            await lkapi.room.remove_participant(api.RoomParticipantIdentity(room=room_name, identity=identity))
-        except Exception as e:
-            raise ParticipantNotFoundError(f"Failed to remove participant {identity} from room {room_name}: {e}") from e
-    finally:
-        await lkapi.aclose()
+    async with _get_api() as lkapi:
+        await lkapi.room.remove_participant(api.RoomParticipantIdentity(room=room_name, identity=identity))
 
 
 @async_to_sync

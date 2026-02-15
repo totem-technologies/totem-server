@@ -6,7 +6,6 @@ from livekit import api
 
 from totem.rooms.livekit import (
     LiveKitConfigurationError,
-    NoAudioTrackError,
     ParticipantNotFoundError,
     create_access_token,
     mute_all_participants,
@@ -108,8 +107,7 @@ class TestMuteParticipant:
         mock_lkapi.room.get_participant.return_value = participant
 
         with patch("totem.rooms.livekit.api.LiveKitAPI", return_value=mock_lkapi):
-            with pytest.raises(NoAudioTrackError):
-                mute_participant("room-1", "user-1")
+            mute_participant("room-1", "user-1")
 
     @override_settings(**LK_SETTINGS)
     def test_raises_on_participant_not_found(self):
