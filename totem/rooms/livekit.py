@@ -107,16 +107,13 @@ class NoAudioTrackError(Exception):
 # ---------------------------------------------------------------------------
 
 
-def create_access_token(user: User, session) -> str:
+def create_access_token(user: User, room_name: str) -> str:
     """
     Create a LiveKit access token for a user to join a session room.
     Raises LiveKitConfigurationError if LiveKit is not configured.
     """
     if not settings.LIVEKIT_API_KEY or not settings.LIVEKIT_API_SECRET:
         raise LiveKitConfigurationError("LiveKit API key and secret are not configured.")
-
-    attendees_count = session.attendees.count()
-    room_name = session.slug
 
     token = (
         api.AccessToken(settings.LIVEKIT_API_KEY, settings.LIVEKIT_API_SECRET)
@@ -133,7 +130,7 @@ def create_access_token(user: User, session) -> str:
             config=api.RoomConfiguration(
                 name=room_name,
                 empty_timeout=ROOM_EMPTY_TIMEOUT_SECONDS,
-                max_participants=attendees_count + EXTRA_PARTICIPANT_BUFFER,
+                max_participants=10,
             )
         )
     )

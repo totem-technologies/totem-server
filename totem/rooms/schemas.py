@@ -174,6 +174,26 @@ class ErrorResponse(Schema):
     message: str
     detail: Optional[str] = None
 
+    def as_http_response(self) -> tuple[int, ErrorResponse]:
+        """Map error codes to HTTP statuses. Defaults to 400."""
+        match self.code:
+            case (
+                ErrorCode.NOT_IN_ROOM
+                | ErrorCode.NOT_KEEPER
+                | ErrorCode.NOT_CURRENT_SPEAKER
+                | ErrorCode.NOT_NEXT_SPEAKER
+                | ErrorCode.NOT_JOINABLE
+            ):
+                return 403, self
+            case ErrorCode.NOT_FOUND:
+                return 404, self
+            case ErrorCode.STALE_VERSION:
+                return 409, self
+            case ErrorCode.LIVEKIT_ERROR:
+                return 500, self
+            case _:
+                return 400, self
+
 
 # ---------------------------------------------------------------------------
 # Exception

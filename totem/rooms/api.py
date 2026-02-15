@@ -39,33 +39,6 @@ from .state_machine import apply_event
 
 router = Router(tags=["rooms"])
 
-
-# ---------------------------------------------------------------------------
-# HTTP mapping (only HTTP-aware code in the app)
-# ---------------------------------------------------------------------------
-
-
-def http_status_for(code: ErrorCode) -> int:
-    """Map error codes to HTTP statuses. Defaults to 400."""
-    match code:
-        case (
-            ErrorCode.NOT_IN_ROOM
-            | ErrorCode.NOT_KEEPER
-            | ErrorCode.NOT_CURRENT_SPEAKER
-            | ErrorCode.NOT_NEXT_SPEAKER
-            | ErrorCode.NOT_JOINABLE
-        ):
-            return 403
-        case ErrorCode.NOT_FOUND:
-            return 404
-        case ErrorCode.STALE_VERSION:
-            return 409
-        case ErrorCode.LIVEKIT_ERROR:
-            return 500
-        case _:
-            return 400
-
-
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -109,11 +82,11 @@ def post_event(
             connected=connected,
         )
     except TransitionError as e:
-        return http_status_for(e.code), ErrorResponse(
+        return ErrorResponse(
             code=e.code,
             message=e.message,
             detail=e.detail,
-        )
+        ).as_http_response()
 
     # Broadcast is best-effort and outside the DB transaction.
     # If this fails, clients will catch up via polling.
@@ -178,21 +151,21 @@ def join_room(
         )
 
     if not session.can_join(user):
-        return http_status_for(ErrorCode.NOT_JOINABLE), ErrorResponse(
+        return ErrorResponse(
             code=ErrorCode.NOT_JOINABLE,
             message="Session is not joinable at this time",
-        )
+        ).as_http_response()
 
-    Room.objects.get_or_create_for_session(session)
+    Room.objects.get_or_create_for_session(session)  # pyright: ignore[reportAttributeAccessIssue]
 
     try:
-        token = create_access_token(user, session)
+        token = create_access_token(user, session.slug)
     except LiveKitConfigurationError:
         logger.exception("LiveKit not configured")
-        return 500, ErrorResponse(
+        return ErrorResponse(
             code=ErrorCode.LIVEKIT_ERROR,
             message="LiveKit service is not properly configured",
-        )
+        ).as_http_response()
 
     session.joined.add(user)
 
@@ -203,10 +176,10 @@ def _get_room_and_require_keeper(user: User, session_slug: str) -> Room | ErrorR
     """Helper: load the Room and verify the user is the keeper. Returns Room or ErrorResponse tuple."""
     room = Room.objects.for_session(session_slug).first()  # type: ignore
     if not room:
-        return 404, ErrorResponse(code=ErrorCode.NOT_FOUND, message="Room not found")  # type: ignore[return-value]
+        return ErrorResponse(code=ErrorCode.NOT_FOUND, message="Room not found")
 
     if room.keeper != user.slug:
-        return 403, ErrorResponse(code=ErrorCode.NOT_KEEPER, message="Only the keeper can perform this action")  # type: ignore[return-value]
+        return ErrorResponse(code=ErrorCode.NOT_KEEPER, message="Only the keeper can perform this action")
 
     return room
 
@@ -224,17 +197,19 @@ def mute(
 ):
     user: User = request.user  # type: ignore
     result = _get_room_and_require_keeper(user, session_slug)
-    if not isinstance(result, Room):
-        return result
+    if isinstance(result, ErrorResponse):
+        return result.as_http_response()
 
     try:
         mute_participant(session_slug, participant_identity)
     except ParticipantNotFoundError:
-        return 404, ErrorResponse(code=ErrorCode.NOT_FOUND, message="Participant not found")
+        return ErrorResponse(code=ErrorCode.NOT_FOUND, message="Participant not found").as_http_response()
     except NoAudioTrackError:
-        return 400, ErrorResponse(code=ErrorCode.LIVEKIT_ERROR, message="Participant has no audio track")
+        return ErrorResponse(code=ErrorCode.LIVEKIT_ERROR, message="Participant has no audio track").as_http_response()
     except LiveKitConfigurationError:
-        return 500, ErrorResponse(code=ErrorCode.LIVEKIT_ERROR, message="LiveKit service is not properly configured")
+        return ErrorResponse(
+            code=ErrorCode.LIVEKIT_ERROR, message="LiveKit service is not properly configured"
+        ).as_http_response()
 
     return 200, None
 
@@ -251,13 +226,15 @@ def mute_all(
 ):
     user: User = request.user  # type: ignore
     result = _get_room_and_require_keeper(user, session_slug)
-    if not isinstance(result, Room):
-        return result
+    if isinstance(result, ErrorResponse):
+        return result.as_http_response()
 
     try:
         mute_all_participants(session_slug, except_identity=user.slug)
     except LiveKitConfigurationError:
-        return 500, ErrorResponse(code=ErrorCode.LIVEKIT_ERROR, message="LiveKit service is not properly configured")
+        return ErrorResponse(
+            code=ErrorCode.LIVEKIT_ERROR, message="LiveKit service is not properly configured"
+        ).as_http_response()
 
     return 200, None
 
@@ -275,20 +252,22 @@ def remove(
 ):
     user: User = request.user  # type: ignore
     result = _get_room_and_require_keeper(user, session_slug)
-    if not isinstance(result, Room):
-        return result
+    if isinstance(result, ErrorResponse):
+        return result.as_http_response()
 
     if participant_identity == user.slug:
-        return 400, ErrorResponse(
+        return ErrorResponse(
             code=ErrorCode.INVALID_TRANSITION,
             message="Cannot remove yourself from the room",
-        )
+        ).as_http_response()
 
     try:
         remove_participant(session_slug, participant_identity)
     except ParticipantNotFoundError:
-        return 404, ErrorResponse(code=ErrorCode.NOT_FOUND, message="Participant not found")
+        return ErrorResponse(code=ErrorCode.NOT_FOUND, message="Participant not found").as_http_response()
     except LiveKitConfigurationError:
-        return 500, ErrorResponse(code=ErrorCode.LIVEKIT_ERROR, message="LiveKit service is not properly configured")
+        return ErrorResponse(
+            code=ErrorCode.LIVEKIT_ERROR, message="LiveKit service is not properly configured"
+        ).as_http_response()
 
     return 200, None

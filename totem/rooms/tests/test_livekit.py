@@ -63,7 +63,7 @@ class TestCreateAccessToken:
         session.slug = "test-session"
         session.attendees.count.return_value = 5
 
-        token = create_access_token(user, session)
+        token = create_access_token(user, session.slug)
 
         assert isinstance(token, str)
         assert len(token) > 0
@@ -76,7 +76,7 @@ class TestCreateAccessToken:
         session.attendees.count.return_value = 5
 
         with pytest.raises(LiveKitConfigurationError):
-            create_access_token(user, session)
+            create_access_token(user, session.slug)
 
 
 # ---------------------------------------------------------------------------
