@@ -68,7 +68,7 @@ async def publish_state(room_name: str, state: RoomState) -> None:
 # ---------------------------------------------------------------------------
 
 ROOM_EMPTY_TIMEOUT_SECONDS = 60 * 60  # 1 hour
-EXTRA_PARTICIPANT_BUFFER = 5
+MAX_PARTICIPANTS = 10
 
 
 # ---------------------------------------------------------------------------
@@ -116,7 +116,7 @@ def create_access_token(user: User, room_name: str) -> str:
             config=api.RoomConfiguration(
                 name=room_name,
                 empty_timeout=ROOM_EMPTY_TIMEOUT_SECONDS,
-                max_participants=10,
+                max_participants=MAX_PARTICIPANTS,
             )
         )
     )
