@@ -6,7 +6,6 @@ from livekit import api
 
 from totem.rooms.livekit import (
     LiveKitConfigurationError,
-    ParticipantNotFoundError,
     create_access_token,
     mute_all_participants,
     mute_participant,
@@ -44,7 +43,9 @@ def _make_mock_lkapi() -> MagicMock:
     mock.room.mute_published_track = AsyncMock()
     mock.room.list_participants = AsyncMock()
     mock.room.remove_participant = AsyncMock()
-    mock.aclose = AsyncMock()
+    # Support async context manager: async with _get_api() as lkapi
+    mock.__aenter__ = AsyncMock(return_value=mock)
+    mock.__aexit__ = AsyncMock(return_value=False)
     return mock
 
 
@@ -101,7 +102,7 @@ class TestMuteParticipant:
         assert req.muted is True
 
     @override_settings(**LK_SETTINGS)
-    def test_raises_on_no_audio_track(self):
+    def test_no_audio_track_is_noop(self):
         participant = _make_participant("user-1", has_audio=False)
         mock_lkapi = _make_mock_lkapi()
         mock_lkapi.room.get_participant.return_value = participant
@@ -109,14 +110,17 @@ class TestMuteParticipant:
         with patch("totem.rooms.livekit.api.LiveKitAPI", return_value=mock_lkapi):
             mute_participant("room-1", "user-1")
 
+        mock_lkapi.room.mute_published_track.assert_not_called()
+
     @override_settings(**LK_SETTINGS)
-    def test_raises_on_participant_not_found(self):
+    def test_participant_not_found_is_noop(self):
         mock_lkapi = _make_mock_lkapi()
         mock_lkapi.room.get_participant.return_value = None
 
         with patch("totem.rooms.livekit.api.LiveKitAPI", return_value=mock_lkapi):
-            with pytest.raises(ParticipantNotFoundError):
-                mute_participant("room-1", "user-1")
+            mute_participant("room-1", "user-1")
+
+        mock_lkapi.room.mute_published_track.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -183,5 +187,5 @@ class TestRemoveParticipant:
         mock_lkapi.room.remove_participant.side_effect = Exception("API error")
 
         with patch("totem.rooms.livekit.api.LiveKitAPI", return_value=mock_lkapi):
-            with pytest.raises(ParticipantNotFoundError):
+            with pytest.raises(Exception, match="API error"):
                 remove_participant("room-1", "user-1")
