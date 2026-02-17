@@ -4,7 +4,7 @@ import pytest
 from django.test import Client
 from django.utils import timezone
 
-from totem.rooms.livekit import LiveKitConfigurationError, ParticipantNotFoundError
+from totem.rooms.livekit import LiveKitConfigurationError
 from totem.rooms.models import Room
 from totem.spaces.tests.factories import SessionFactory
 from totem.users.models import User
@@ -387,21 +387,6 @@ class TestMuteParticipant:
         assert resp.status_code == 403
         assert resp.json()["code"] == "not_keeper"
 
-    def test_mute_participant_not_found(self, client_with_user: tuple[Client, User]):
-        client, keeper = client_with_user
-        session = SessionFactory(space__author=keeper)
-        session.attendees.add(keeper)
-        Room.objects.get_or_create_for_session(session)
-
-        with patch(
-            "totem.rooms.api.mute_participant",
-            side_effect=ParticipantNotFoundError("not found"),
-        ):
-            resp = client.post(f"{BASE}/{session.slug}/mute/missing-user")
-
-        assert resp.status_code == 404
-        assert resp.json()["code"] == "not_found"
-
     def test_mute_room_not_found(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
 
@@ -482,18 +467,3 @@ class TestRemoveParticipant:
         resp = client.post(f"{BASE}/{session.slug}/remove/{keeper.slug}")
 
         assert resp.status_code == 400
-
-    def test_remove_participant_not_found(self, client_with_user: tuple[Client, User]):
-        client, keeper = client_with_user
-        session = SessionFactory(space__author=keeper)
-        session.attendees.add(keeper)
-        Room.objects.get_or_create_for_session(session)
-
-        with patch(
-            "totem.rooms.api.remove_participant",
-            side_effect=ParticipantNotFoundError("not found"),
-        ):
-            resp = client.post(f"{BASE}/{session.slug}/remove/missing-user")
-
-        assert resp.status_code == 404
-        assert resp.json()["code"] == "not_found"

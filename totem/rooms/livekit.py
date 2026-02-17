@@ -81,14 +81,6 @@ class LiveKitConfigurationError(Exception):
     """Raised when LiveKit API key/secret are not configured."""
 
 
-class ParticipantNotFoundError(Exception):
-    """Raised when a participant is not found in a room."""
-
-
-class NoAudioTrackError(Exception):
-    """Raised when a participant has no audio track to mute."""
-
-
 # ---------------------------------------------------------------------------
 # Token generation
 # ---------------------------------------------------------------------------

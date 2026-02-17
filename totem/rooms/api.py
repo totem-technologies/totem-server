@@ -18,8 +18,6 @@ from totem.users.models import User
 
 from .livekit import (
     LiveKitConfigurationError,
-    NoAudioTrackError,
-    ParticipantNotFoundError,
     create_access_token,
     get_connected_participants,
     mute_all_participants,
@@ -215,10 +213,6 @@ def mute(
 
     try:
         mute_participant(session_slug, participant_identity)
-    except ParticipantNotFoundError:
-        return ErrorResponse(code=ErrorCode.NOT_FOUND, message="Participant not found").as_http_response()
-    except NoAudioTrackError:
-        return ErrorResponse(code=ErrorCode.LIVEKIT_ERROR, message="Participant has no audio track").as_http_response()
     except LiveKitConfigurationError:
         return ErrorResponse(
             code=ErrorCode.LIVEKIT_ERROR, message="LiveKit service is not properly configured"
@@ -276,8 +270,6 @@ def remove(
 
     try:
         remove_participant(session_slug, participant_identity)
-    except ParticipantNotFoundError:
-        return ErrorResponse(code=ErrorCode.NOT_FOUND, message="Participant not found").as_http_response()
     except LiveKitConfigurationError:
         return ErrorResponse(
             code=ErrorCode.LIVEKIT_ERROR, message="LiveKit service is not properly configured"
