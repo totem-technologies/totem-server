@@ -16,12 +16,12 @@ from .schemas import (
     EndReason,
     EndRoomEvent,
     ErrorCode,
+    ForcePassEvent,
     PassStickEvent,
     ReorderEvent,
     RoomEvent,
     RoomState,
     RoomStatus,
-    SkipParticipantEvent,
     StartRoomEvent,
     TransitionError,
     TurnState,
@@ -70,8 +70,8 @@ def apply_event(
                 _handle_pass(room, actor)
             case AcceptStickEvent():
                 _handle_accept(room, actor, connected)
-            case SkipParticipantEvent():
-                _handle_skip(room, actor, connected)
+            case ForcePassEvent():
+                _handle_force_pass(room, actor, connected)
             case ReorderEvent(talking_order=new_order):
                 _handle_reorder(room, actor, new_order)
             case EndRoomEvent(reason=reason):
@@ -259,29 +259,34 @@ def _handle_accept(room: Room, actor: str, connected: set[str]) -> None:
     room.turn_state = TurnState.SPEAKING
 
 
-def _handle_skip(room: Room, actor: str, connected: set[str]) -> None:
+def _handle_force_pass(room: Room, actor: str, connected: set[str]) -> None:
+    """Keeper forces the stick to the next connected speaker. Always ends in PASSING."""
     _require_active(room)
     _require_keeper(room, actor)
 
-    if room.turn_state != TurnState.PASSING:
+    if room.turn_state == TurnState.SPEAKING:
+        # Force a pass from the current speaker
+        room.turn_state = TurnState.PASSING
+
+    elif room.turn_state == TurnState.PASSING:
+        # Skip current next_speaker, find the person after them
+        skipped = room.next_speaker
+        candidates = connected - {skipped}
+        next_slug = _next_in_order(room.talking_order, skipped, candidates)
+
+        if next_slug is None:
+            raise TransitionError(
+                code=ErrorCode.INVALID_TRANSITION,
+                message="No connected participants to pass the stick to",
+            )
+
+        room.next_speaker = next_slug
+
+    else:
         raise TransitionError(
             code=ErrorCode.INVALID_TRANSITION,
-            message="No one to skip right now",
+            message="Cannot force pass right now",
         )
-
-    skipped = room.next_speaker
-
-    # Find next person after the skipped one, excluding them.
-    candidates = connected - {skipped}
-    next_slug = _next_in_order(room.talking_order, skipped, candidates)
-
-    if next_slug is None:
-        raise TransitionError(
-            code=ErrorCode.INVALID_TRANSITION,
-            message="No connected participants to pass the stick to",
-        )
-
-    room.next_speaker = next_slug
 
 
 def _handle_reorder(room: Room, actor: str, new_order: list[str]) -> None:
