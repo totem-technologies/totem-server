@@ -6,7 +6,6 @@ from totem.rooms.schemas import (
     EndReason,
     EndRoomEvent,
     ErrorCode,
-    ForcePassEvent,
     PassStickEvent,
     ReorderEvent,
     RoomStatus,
@@ -298,24 +297,8 @@ class TestAcceptStick:
 
 
 @pytest.mark.django_db
-class TestForcePass:
-    def test_force_pass_from_speaking(self):
-        keeper = UserFactory()
-        user1 = UserFactory()
-        _, slug = _setup_room(keeper, [keeper, user1])
-        connected = {keeper.slug, user1.slug}
-
-        # Start — keeper is speaking
-        state = apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
-        assert state.current_speaker == keeper.slug
-        assert state.turn_state == TurnState.SPEAKING
-
-        # Force pass moves to PASSING, current_speaker unchanged
-        state = apply_event(slug, keeper.slug, ForcePassEvent(), 1, connected)
-        assert state.current_speaker == keeper.slug
-        assert state.turn_state == TurnState.PASSING
-
-    def test_force_pass_skips_next_speaker_while_passing(self):
+class TestKeeperPassWhilePassing:
+    def test_keeper_pass_skips_next_speaker(self):
         keeper = UserFactory()
         user1 = UserFactory()
         user2 = UserFactory()
@@ -325,12 +308,12 @@ class TestForcePass:
         apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
         apply_event(slug, keeper.slug, PassStickEvent(), 1, connected)
 
-        # Already PASSING — force pass skips next_speaker
-        state = apply_event(slug, keeper.slug, ForcePassEvent(), 2, connected)
+        # Keeper passes again while PASSING — skips next_speaker
+        state = apply_event(slug, keeper.slug, PassStickEvent(), 2, connected)
         assert state.next_speaker == user2.slug
         assert state.turn_state == TurnState.PASSING
 
-    def test_non_keeper_cannot_force_pass(self):
+    def test_non_keeper_cannot_pass_while_passing(self):
         keeper = UserFactory()
         user1 = UserFactory()
         _, slug = _setup_room(keeper, [keeper, user1])
@@ -340,18 +323,8 @@ class TestForcePass:
         apply_event(slug, keeper.slug, PassStickEvent(), 1, connected)
 
         with pytest.raises(TransitionError) as exc_info:
-            apply_event(slug, user1.slug, ForcePassEvent(), 2, connected)
-        assert exc_info.value.code == ErrorCode.NOT_KEEPER
-
-    def test_cannot_force_pass_when_idle(self):
-        keeper = UserFactory()
-        user1 = UserFactory()
-        _, slug = _setup_room(keeper, [keeper, user1])
-        connected = {keeper.slug, user1.slug}
-
-        with pytest.raises(TransitionError) as exc_info:
-            apply_event(slug, keeper.slug, ForcePassEvent(), 0, connected)
-        assert exc_info.value.code == ErrorCode.ROOM_NOT_ACTIVE
+            apply_event(slug, user1.slug, PassStickEvent(), 2, connected)
+        assert exc_info.value.code == ErrorCode.NOT_CURRENT_SPEAKER
 
 
 @pytest.mark.django_db

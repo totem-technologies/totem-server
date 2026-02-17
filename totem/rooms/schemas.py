@@ -137,12 +137,6 @@ class AcceptStickEvent(Schema):
     type: Literal["accept_stick"] = "accept_stick"
 
 
-class ForcePassEvent(Schema):
-    """Keeper forces the stick to the next connected speaker."""
-
-    type: Literal["force_pass"] = "force_pass"
-
-
 class ReorderEvent(Schema):
     """Keeper reorders the talking order."""
 
@@ -160,7 +154,6 @@ RoomEvent = Annotated[
         StartRoomEvent,
         PassStickEvent,
         AcceptStickEvent,
-        ForcePassEvent,
         ReorderEvent,
         EndRoomEvent,
     ],
