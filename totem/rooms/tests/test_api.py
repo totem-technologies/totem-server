@@ -29,7 +29,7 @@ class TestPostEvent:
         client, user = client_with_user
         session = SessionFactory(space__author=user)
         session.attendees.add(user)
-        Room.objects.get_or_create_for_session(session)  # pyright: ignore[reportAttributeAccessIssue]
+        Room.objects.get_or_create_for_session(session)
 
         with (
             patch(
@@ -52,7 +52,7 @@ class TestPostEvent:
         user1 = UserFactory()
         session = SessionFactory(space__author=keeper)
         session.attendees.add(keeper, user1)
-        Room.objects.get_or_create_for_session(session)  # pyright: ignore[reportAttributeAccessIssue]
+        Room.objects.get_or_create_for_session(session)
 
         connected = {keeper.slug, user1.slug}
 
@@ -77,7 +77,7 @@ class TestPostEvent:
         client, user = client_with_user
         session = SessionFactory(space__author=user)
         session.attendees.add(user)
-        Room.objects.get_or_create_for_session(session)  # pyright: ignore[reportAttributeAccessIssue]
+        Room.objects.get_or_create_for_session(session)
 
         with (
             patch(
@@ -98,7 +98,7 @@ class TestPostEvent:
         keeper = UserFactory()
         session = SessionFactory(space__author=keeper)
         session.attendees.add(keeper)
-        Room.objects.get_or_create_for_session(session)  # pyright: ignore[reportAttributeAccessIssue]
+        Room.objects.get_or_create_for_session(session)
 
         with (
             patch(
@@ -132,7 +132,7 @@ class TestPostEvent:
         keeper = UserFactory()
         session = SessionFactory(space__author=keeper)
         session.attendees.add(keeper, user)
-        Room.objects.get_or_create_for_session(session)  # pyright: ignore[reportAttributeAccessIssue]
+        Room.objects.get_or_create_for_session(session)
 
         with (
             patch(
@@ -150,7 +150,7 @@ class TestPostEvent:
         client, user = client_with_user
         session = SessionFactory(space__author=user)
         session.attendees.add(user)
-        Room.objects.get_or_create_for_session(session)  # pyright: ignore[reportAttributeAccessIssue]
+        Room.objects.get_or_create_for_session(session)
 
         with (
             patch(
@@ -175,7 +175,7 @@ class TestPostEvent:
         client, user = client_with_user
         session = SessionFactory(space__author=user)
         session.attendees.add(user)
-        Room.objects.get_or_create_for_session(session)  # pyright: ignore[reportAttributeAccessIssue]
+        Room.objects.get_or_create_for_session(session)
 
         assert session.ended_at is None
 
@@ -202,7 +202,7 @@ class TestPostEvent:
         client, user = client_with_user
         session = SessionFactory(space__author=user)
         session.attendees.add(user)
-        Room.objects.get_or_create_for_session(session)  # pyright: ignore[reportAttributeAccessIssue]
+        Room.objects.get_or_create_for_session(session)
 
         with (
             patch(
@@ -224,7 +224,7 @@ class TestGetState:
         client, user = client_with_user
         session = SessionFactory(space__author=user)
         session.attendees.add(user)
-        Room.objects.get_or_create_for_session(session)  # pyright: ignore[reportAttributeAccessIssue]
+        Room.objects.get_or_create_for_session(session)
 
         resp = _get_state(client, session.slug)
 
@@ -239,7 +239,7 @@ class TestGetState:
         keeper = UserFactory()
         session = SessionFactory(space__author=keeper)
         session.attendees.add(keeper)
-        Room.objects.get_or_create_for_session(session)  # pyright: ignore[reportAttributeAccessIssue]
+        Room.objects.get_or_create_for_session(session)
 
         resp = _get_state(client, session.slug)
 
@@ -258,7 +258,7 @@ class TestGetState:
         client, user = client_with_user
         session = SessionFactory(space__author=user)
         session.attendees.add(user)
-        Room.objects.get_or_create_for_session(session)  # pyright: ignore[reportAttributeAccessIssue]
+        Room.objects.get_or_create_for_session(session)
 
         with (
             patch(
@@ -367,7 +367,7 @@ class TestMuteParticipant:
         client, keeper = client_with_user
         session = SessionFactory(space__author=keeper)
         session.attendees.add(keeper)
-        Room.objects.get_or_create_for_session(session)  # pyright: ignore[reportAttributeAccessIssue]
+        Room.objects.get_or_create_for_session(session)
 
         with patch("totem.rooms.api.mute_participant") as mock_mute:
             resp = client.post(f"{BASE}/{session.slug}/mute/some-participant")
@@ -380,7 +380,7 @@ class TestMuteParticipant:
         keeper = UserFactory()
         session = SessionFactory(space__author=keeper)
         session.attendees.add(keeper, user)
-        Room.objects.get_or_create_for_session(session)  # pyright: ignore[reportAttributeAccessIssue]
+        Room.objects.get_or_create_for_session(session)
 
         resp = client.post(f"{BASE}/{session.slug}/mute/some-participant")
 
@@ -391,7 +391,7 @@ class TestMuteParticipant:
         client, keeper = client_with_user
         session = SessionFactory(space__author=keeper)
         session.attendees.add(keeper)
-        Room.objects.get_or_create_for_session(session)  # pyright: ignore[reportAttributeAccessIssue]
+        Room.objects.get_or_create_for_session(session)
 
         with patch(
             "totem.rooms.api.mute_participant",
@@ -421,7 +421,7 @@ class TestMuteAll:
         client, keeper = client_with_user
         session = SessionFactory(space__author=keeper)
         session.attendees.add(keeper)
-        Room.objects.get_or_create_for_session(session)  # pyright: ignore[reportAttributeAccessIssue]
+        Room.objects.get_or_create_for_session(session)
 
         with patch("totem.rooms.api.mute_all_participants") as mock_mute_all:
             resp = client.post(f"{BASE}/{session.slug}/mute-all")
@@ -434,7 +434,7 @@ class TestMuteAll:
         keeper = UserFactory()
         session = SessionFactory(space__author=keeper)
         session.attendees.add(keeper, user)
-        Room.objects.get_or_create_for_session(session)  # pyright: ignore[reportAttributeAccessIssue]
+        Room.objects.get_or_create_for_session(session)
 
         resp = client.post(f"{BASE}/{session.slug}/mute-all")
 
@@ -453,7 +453,7 @@ class TestRemoveParticipant:
         client, keeper = client_with_user
         session = SessionFactory(space__author=keeper)
         session.attendees.add(keeper)
-        Room.objects.get_or_create_for_session(session)  # pyright: ignore[reportAttributeAccessIssue]
+        Room.objects.get_or_create_for_session(session)
 
         with patch("totem.rooms.api.remove_participant") as mock_remove:
             resp = client.post(f"{BASE}/{session.slug}/remove/some-participant")
@@ -466,7 +466,7 @@ class TestRemoveParticipant:
         keeper = UserFactory()
         session = SessionFactory(space__author=keeper)
         session.attendees.add(keeper, user)
-        Room.objects.get_or_create_for_session(session)  # pyright: ignore[reportAttributeAccessIssue]
+        Room.objects.get_or_create_for_session(session)
 
         resp = client.post(f"{BASE}/{session.slug}/remove/some-participant")
 
@@ -477,7 +477,7 @@ class TestRemoveParticipant:
         client, keeper = client_with_user
         session = SessionFactory(space__author=keeper)
         session.attendees.add(keeper)
-        Room.objects.get_or_create_for_session(session)  # pyright: ignore[reportAttributeAccessIssue]
+        Room.objects.get_or_create_for_session(session)
 
         resp = client.post(f"{BASE}/{session.slug}/remove/{keeper.slug}")
 
@@ -487,7 +487,7 @@ class TestRemoveParticipant:
         client, keeper = client_with_user
         session = SessionFactory(space__author=keeper)
         session.attendees.add(keeper)
-        Room.objects.get_or_create_for_session(session)  # pyright: ignore[reportAttributeAccessIssue]
+        Room.objects.get_or_create_for_session(session)
 
         with patch(
             "totem.rooms.api.remove_participant",

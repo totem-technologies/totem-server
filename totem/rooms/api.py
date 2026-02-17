@@ -168,7 +168,7 @@ def join_room(
             message="Session is not joinable at this time",
         ).as_http_response()
 
-    Room.objects.get_or_create_for_session(session)  # pyright: ignore[reportAttributeAccessIssue]
+    Room.objects.get_or_create_for_session(session)
 
     try:
         token = create_access_token(user, session.slug)

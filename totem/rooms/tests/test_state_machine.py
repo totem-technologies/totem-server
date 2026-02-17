@@ -354,6 +354,7 @@ class TestReorder:
         apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
 
         room = Room.objects.for_session(slug).first()
+        assert room
         current_order = list(room.talking_order)
 
         # Reverse the order
@@ -371,6 +372,7 @@ class TestReorder:
         apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
 
         room = Room.objects.for_session(slug).first()
+        assert room
         with pytest.raises(TransitionError) as exc_info:
             apply_event(slug, user1.slug, ReorderEvent(talking_order=list(room.talking_order)), 1, connected)
         assert exc_info.value.code == ErrorCode.NOT_KEEPER

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
@@ -22,13 +22,13 @@ if TYPE_CHECKING:
     from totem.spaces.models import Session
 
 
-class RoomQuerySet(models.QuerySet["Room"]):
-    def for_session(self, session_slug: str) -> RoomQuerySet:
+class RoomManager(models.Manager["Room"]):
+    def for_session(self, session_slug: str) -> models.QuerySet[Room]:
         return self.select_related("session").filter(session__slug=session_slug)
 
     def get_or_create_for_session(self, session: Session) -> Room:
         """Get or create a Room for a Session, initializing from Session data."""
-        room, created = self.get_or_create(
+        room, _created = self.get_or_create(
             session=session,
             defaults={
                 "keeper": session.space.author.slug,
@@ -36,9 +36,6 @@ class RoomQuerySet(models.QuerySet["Room"]):
             },
         )
         return room
-
-
-RoomManager = models.Manager.from_queryset(RoomQuerySet)
 
 
 class Room(BaseModel):
@@ -54,7 +51,7 @@ class Room(BaseModel):
     participant, they can be the same person.
     """
 
-    objects = RoomManager()
+    objects: ClassVar[RoomManager] = RoomManager()  # type: ignore[assignment]
 
     session = models.OneToOneField(
         "spaces.Session",
