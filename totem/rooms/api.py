@@ -13,6 +13,7 @@ from django.http import HttpRequest
 from ninja import Router
 
 from totem.spaces.models import Session
+from totem.users import analytics
 from totem.users.models import User
 
 from .livekit import (
@@ -28,11 +29,14 @@ from .livekit import (
 )
 from .models import Room
 from .schemas import (
+    AcceptStickEvent,
+    EndRoomEvent,
     ErrorCode,
     ErrorResponse,
     EventRequest,
     JoinResponse,
     RoomState,
+    StartRoomEvent,
     TransitionError,
 )
 from .state_machine import apply_event
@@ -88,9 +92,17 @@ def post_event(
             detail=e.detail,
         ).as_http_response()
 
-    # Broadcast is best-effort and outside the DB transaction.
-    # If this fails, clients will catch up via polling.
+    # Side effects outside the DB transaction — best-effort.
+    # If these fail, clients will catch up via polling.
     publish_state(session_slug, state)
+
+    match body.event:
+        case StartRoomEvent():
+            mute_all_participants(session_slug, except_identity=state.current_speaker)
+        case AcceptStickEvent():
+            mute_all_participants(session_slug, except_identity=actor)
+        case EndRoomEvent():
+            mute_all_participants(session_slug)
 
     return 200, state
 
@@ -168,6 +180,7 @@ def join_room(
         ).as_http_response()
 
     session.joined.add(user)
+    analytics.event_joined(user, session)
 
     return 200, JoinResponse(token=token)
 

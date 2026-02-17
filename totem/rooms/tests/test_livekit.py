@@ -14,8 +14,8 @@ from totem.rooms.livekit import (
 from totem.users.tests.factories import UserFactory
 
 LK_SETTINGS = {
-    "LIVEKIT_API_KEY": "test-key",
-    "LIVEKIT_API_SECRET": "test-secret",
+    "LIVEKIT_API_KEY": "test-key-test-key-test-key-test-key-test-key",
+    "LIVEKIT_API_SECRET": "test-secret-test-secret-test-secret-test-secret-test-secret",
 }
 
 

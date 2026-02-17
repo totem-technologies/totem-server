@@ -8,6 +8,7 @@ No LiveKit calls, no HTTP concerns. Side effects are limited to the database.
 from __future__ import annotations
 
 from django.db import transaction
+from django.utils import timezone
 
 from .models import Room, RoomEventLog
 from .schemas import (
@@ -55,7 +56,7 @@ def apply_event(
         if room.state_version != last_seen_version:
             raise TransitionError(
                 code=ErrorCode.STALE_VERSION,
-                message="State has changed since your last read",
+                message="State has changed since your last read. Re-fetch state and try again.",
                 detail=f"expected {last_seen_version}, current {room.state_version}",
             )
 
@@ -158,23 +159,23 @@ def _next_in_order(
 
 def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
     """
-    Sync talking_order with connected participants.
-    - Removes disconnected participants
+    Reconcile talking_order with connected participants.
+    - Keeps disconnected participants in the order (they may reconnect)
     - Appends newly connected participants
     - Keeps the keeper first
-    - Fixes current_speaker/next_speaker if they disconnected
+    - Fixes current_speaker/next_speaker to connected participants only
     """
     seen: set[str] = set()
     reconciled: list[str] = []
 
-    # Keeper first if connected
-    if room.keeper in connected:
+    # Keeper first
+    if room.keeper in set(room.talking_order) | connected:
         reconciled.append(room.keeper)
         seen.add(room.keeper)
 
-    # Preserve existing order for members still connected
+    # Preserve full existing order (connected and disconnected)
     for slug in room.talking_order:
-        if slug in connected and slug not in seen:
+        if slug not in seen:
             reconciled.append(slug)
             seen.add(slug)
 
@@ -186,9 +187,11 @@ def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
 
     room.talking_order = reconciled
 
+    connected_order = [s for s in reconciled if s in connected]
+
     # Fix current_speaker if they disconnected
     if room.current_speaker and room.current_speaker not in connected:
-        room.current_speaker = reconciled[0] if reconciled else None
+        room.current_speaker = connected_order[0] if connected_order else None
         if room.turn_state == TurnState.PASSING:
             room.turn_state = TurnState.SPEAKING
 
@@ -197,7 +200,7 @@ def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
         if room.current_speaker:
             room.next_speaker = _next_in_order(reconciled, room.current_speaker, connected)
         else:
-            room.next_speaker = reconciled[0] if reconciled else None
+            room.next_speaker = connected_order[0] if connected_order else None
 
 
 # ---------------------------------------------------------------------------
@@ -301,3 +304,7 @@ def _handle_end(room: Room, actor: str, reason: EndReason) -> None:
     room.turn_state = TurnState.IDLE
     room.current_speaker = None
     room.next_speaker = None
+    room.end_reason = reason
+
+    room.session.ended_at = timezone.now()
+    room.session.save(update_fields=["ended_at"])

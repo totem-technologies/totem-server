@@ -37,6 +37,7 @@ class TestPostEvent:
                 return_value={user.slug},
             ),
             patch("totem.rooms.api.publish_state"),
+            patch("totem.rooms.api.mute_all_participants"),
         ):
             resp = _post_event(client, session.slug, {"type": "start_room"}, 0)
 
@@ -61,6 +62,7 @@ class TestPostEvent:
                 return_value=connected,
             ),
             patch("totem.rooms.api.publish_state"),
+            patch("totem.rooms.api.mute_all_participants"),
         ):
             # Start
             resp = _post_event(client, session.slug, {"type": "start_room"}, 0)
@@ -83,6 +85,7 @@ class TestPostEvent:
                 return_value={user.slug},
             ),
             patch("totem.rooms.api.publish_state"),
+            patch("totem.rooms.api.mute_all_participants"),
         ):
             _post_event(client, session.slug, {"type": "start_room"}, 0)
             resp = _post_event(client, session.slug, {"type": "pass_stick"}, 0)  # stale
@@ -155,6 +158,7 @@ class TestPostEvent:
                 return_value={user.slug},
             ),
             patch("totem.rooms.api.publish_state"),
+            patch("totem.rooms.api.mute_all_participants"),
         ):
             _post_event(client, session.slug, {"type": "start_room"}, 0)
             resp = _post_event(
@@ -166,6 +170,52 @@ class TestPostEvent:
 
         assert resp.status_code == 200
         assert resp.json()["status"] == "ended"
+
+    def test_end_room_sets_ended_at(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        session = SessionFactory(space__author=user)
+        session.attendees.add(user)
+        Room.objects.get_or_create_for_session(session)  # pyright: ignore[reportAttributeAccessIssue]
+
+        assert session.ended_at is None
+
+        with (
+            patch(
+                "totem.rooms.api.get_connected_participants",
+                return_value={user.slug},
+            ),
+            patch("totem.rooms.api.publish_state"),
+            patch("totem.rooms.api.mute_all_participants"),
+        ):
+            _post_event(client, session.slug, {"type": "start_room"}, 0)
+            _post_event(
+                client,
+                session.slug,
+                {"type": "end_room", "reason": "keeper_ended"},
+                1,
+            )
+
+        session.refresh_from_db()
+        assert session.ended_at is not None
+
+    def test_start_room_mutes_all_except_speaker(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        session = SessionFactory(space__author=user)
+        session.attendees.add(user)
+        Room.objects.get_or_create_for_session(session)  # pyright: ignore[reportAttributeAccessIssue]
+
+        with (
+            patch(
+                "totem.rooms.api.get_connected_participants",
+                return_value={user.slug},
+            ),
+            patch("totem.rooms.api.publish_state"),
+            patch("totem.rooms.api.mute_all_participants") as mock_mute_all,
+        ):
+            resp = _post_event(client, session.slug, {"type": "start_room"}, 0)
+
+        assert resp.status_code == 200
+        mock_mute_all.assert_called_once_with(session.slug, except_identity=user.slug)
 
 
 @pytest.mark.django_db
@@ -216,6 +266,7 @@ class TestGetState:
                 return_value={user.slug},
             ),
             patch("totem.rooms.api.publish_state"),
+            patch("totem.rooms.api.mute_all_participants"),
         ):
             _post_event(client, session.slug, {"type": "start_room"}, 0)
 
@@ -277,6 +328,19 @@ class TestJoinRoom:
 
         assert resp.status_code == 404
         assert resp.json()["code"] == "not_found"
+
+    def test_join_tracks_analytics(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        session = _make_joinable_session(user)
+
+        with (
+            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.api.analytics") as mock_analytics,
+        ):
+            resp = client.post(f"{BASE}/{session.slug}/join")
+
+        assert resp.status_code == 200
+        mock_analytics.event_joined.assert_called_once_with(user, session)
 
     def test_join_livekit_not_configured(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user

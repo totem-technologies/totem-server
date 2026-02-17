@@ -81,10 +81,10 @@ class TestReconcileTalkingOrder:
         _reconcile_talking_order(room, {"a", "b", "c"})
         assert room.talking_order == ["a", "b", "c"]
 
-    def test_removes_disconnected(self):
+    def test_keeps_disconnected_in_order(self):
         room = self._make_room("a", ["a", "b", "c"])
         _reconcile_talking_order(room, {"a", "c"})
-        assert room.talking_order == ["a", "c"]
+        assert room.talking_order == ["a", "b", "c"]
 
     def test_adds_new_at_end(self):
         room = self._make_room("a", ["a", "b"])
@@ -97,10 +97,10 @@ class TestReconcileTalkingOrder:
         _reconcile_talking_order(room, {"a", "b", "c"})
         assert room.talking_order[0] == "b"
 
-    def test_empty_connected_clears_order(self):
+    def test_empty_connected_preserves_order(self):
         room = self._make_room("a", ["a", "b", "c"])
         _reconcile_talking_order(room, set())
-        assert room.talking_order == []
+        assert room.talking_order == ["a", "b", "c"]
 
     def test_fixes_current_speaker_on_disconnect(self):
         room = self._make_room(
@@ -508,6 +508,7 @@ class TestFullTurnCycle:
 
         # Next speaker accepts
         next_slug = s.next_speaker
+        assert next_slug
         s = apply_event(slug, next_slug, AcceptStickEvent(), v, connected)
         assert s.current_speaker == next_slug
         assert s.turn_state == TurnState.SPEAKING
@@ -519,6 +520,7 @@ class TestFullTurnCycle:
 
         # Next accepts
         next_slug2 = s.next_speaker
+        assert next_slug2
         s = apply_event(slug, next_slug2, AcceptStickEvent(), v, connected)
         assert s.current_speaker == next_slug2
         v = s.version
@@ -547,6 +549,8 @@ class TestEventLog:
         room = Room.objects.for_session(slug).first()
         logs = RoomEventLog.objects.filter(room=room)
         assert logs.count() == 1
-        assert logs.first().event_type == "start_room"
-        assert logs.first().actor == keeper.slug
-        assert logs.first().version == 1
+        log = logs.first()
+        assert log
+        assert log.event_type == "start_room"
+        assert log.actor == keeper.slug
+        assert log.version == 1

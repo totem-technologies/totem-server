@@ -7,7 +7,16 @@ from django.db import models
 
 from totem.utils.models import BaseModel
 
-from .schemas import RoomState, RoomStatus, TurnState
+from .schemas import (
+    ActiveDetail,
+    EndedDetail,
+    EndReason,
+    RoomState,
+    RoomStatus,
+    StatusDetail,
+    TurnState,
+    WaitingRoomDetail,
+)
 
 if TYPE_CHECKING:
     from totem.spaces.models import Session
@@ -67,6 +76,21 @@ class Room(BaseModel):
     next_speaker = models.CharField(max_length=50, null=True)  # user slug
     talking_order = ArrayField(models.CharField(max_length=50), default=list)  # user slugs
     state_version = models.PositiveIntegerField(default=0)
+    end_reason = models.CharField(
+        max_length=20,
+        choices=[(r.value, r.value) for r in EndReason],
+        null=True,
+        default=None,
+    )
+
+    def _build_status_detail(self) -> StatusDetail:
+        match self.status:
+            case RoomStatus.ENDED:
+                return EndedDetail(reason=EndReason(self.end_reason))
+            case RoomStatus.ACTIVE:
+                return ActiveDetail()
+            case _:
+                return WaitingRoomDetail()
 
     def to_state(self) -> RoomState:
         return RoomState(
@@ -74,6 +98,7 @@ class Room(BaseModel):
             version=self.state_version,
             status=RoomStatus(self.status),
             turn_state=TurnState(self.turn_state),
+            status_detail=self._build_status_detail(),
             current_speaker=self.current_speaker,
             next_speaker=self.next_speaker,
             talking_order=self.talking_order,

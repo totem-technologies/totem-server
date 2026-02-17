@@ -70,6 +70,30 @@ class EndReason(str, Enum):
 
 
 # ---------------------------------------------------------------------------
+# Status detail (discriminated union)
+# ---------------------------------------------------------------------------
+
+
+class WaitingRoomDetail(Schema):
+    type: Literal["waiting_room"] = "waiting_room"
+
+
+class ActiveDetail(Schema):
+    type: Literal["active"] = "active"
+
+
+class EndedDetail(Schema):
+    type: Literal["ended"] = "ended"
+    reason: EndReason
+
+
+StatusDetail = Annotated[
+    Union[WaitingRoomDetail, ActiveDetail, EndedDetail],
+    Field(discriminator="type"),
+]
+
+
+# ---------------------------------------------------------------------------
 # State snapshot
 # ---------------------------------------------------------------------------
 
@@ -89,6 +113,7 @@ class RoomState(Schema):
     version: int
     status: RoomStatus
     turn_state: TurnState
+    status_detail: StatusDetail
     current_speaker: Optional[str] = None  # user slug
     next_speaker: Optional[str] = None  # user slug
     talking_order: list[str]  # user slugs

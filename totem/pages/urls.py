@@ -7,7 +7,7 @@ from . import views
 webflow_pages = [
     "about",
     "crisis-resources",
-    "docs/crisis-resources",
+    "docs/crisis-resources",  # to remove after astro deploy
     "docs/keeper-trainer-curriculum",
     "friends-of-totem",
     "guidelines",
@@ -16,7 +16,7 @@ webflow_pages = [
     "staying-grounded",
     # "topics/creatives",
     "topics/lgbtq",
-    "topics/lgbtqia-topic-details",
+    "topics/lgbtqia-topic-details",  # to remove after astro deploy
     "topics/love-and-other-emotions",
     "topics/mothers",
     "topics/self-improvement",

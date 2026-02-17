@@ -6,6 +6,7 @@ All LiveKit API calls live here — nowhere else in the app talks to LiveKit.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 
@@ -155,15 +156,20 @@ async def _mute_participant(room_name: str, identity: str) -> None:
 
 
 async def _mute_all_participants(room_name: str, except_identity: str | None = None) -> None:
+    """
+    Mute all participants in a room except for the specified identity. Optimization: Use asyncio.gather to make
+    all the api calls concurrently.
+    """
     async with _get_api() as lkapi:
         resp = await lkapi.room.list_participants(api.ListParticipantsRequest(room=room_name))
+        tasks = []
         for participant in resp.participants:
             if except_identity and participant.identity == except_identity:
                 continue
             for track in participant.tracks:
                 if track.type == api.TrackType.AUDIO:
-                    try:
-                        await lkapi.room.mute_published_track(
+                    tasks.append(
+                        lkapi.room.mute_published_track(
                             api.MuteRoomTrackRequest(
                                 room=room_name,
                                 identity=participant.identity,
@@ -171,12 +177,11 @@ async def _mute_all_participants(room_name: str, except_identity: str | None = N
                                 muted=True,
                             )
                         )
-                    except Exception:
-                        logger.exception(
-                            "Failed to mute participant %s in room %s",
-                            participant.identity,
-                            room_name,
-                        )
+                    )
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for result in results:
+            if isinstance(result, Exception):
+                logger.exception("Failed to mute participant in room %s", room_name, exc_info=result)
 
 
 async def _remove_participant(room_name: str, identity: str) -> None:
