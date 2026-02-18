@@ -123,7 +123,8 @@ def validate_pin(request, data: ValidatePinSchema):
     """
     # Find user by email
     try:
-        user = User.objects.get(email=data.email.lower())
+        normalized_email = User.objects.normalize_email(data.email)
+        user = User.objects.get(email=normalized_email)
     except User.DoesNotExist:
         raise AuthenticationError(message=AuthErrors.INCORRECT_PIN.value)
 
