@@ -70,7 +70,7 @@ def apply_event(
             case AcceptStickEvent():
                 _handle_accept(room, actor, connected)
             case ReorderEvent(talking_order=new_order):
-                _handle_reorder(room, actor, new_order)
+                _handle_reorder(room, actor, new_order, connected)
             case EndRoomEvent(reason=reason):
                 _handle_end(room, actor, reason)
             case _:
@@ -162,25 +162,21 @@ def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
     - Keeps the keeper first
     - Fixes current_speaker/next_speaker to connected participants only
     """
-    seen: set[str] = set()
     reconciled: list[str] = []
 
     # Keeper first
     if room.keeper in set(room.talking_order) | connected:
         reconciled.append(room.keeper)
-        seen.add(room.keeper)
 
     # Preserve full existing order (connected and disconnected)
     for slug in room.talking_order:
-        if slug not in seen:
+        if slug not in reconciled:
             reconciled.append(slug)
-            seen.add(slug)
 
     # Append any newly connected members
     for slug in connected:
-        if slug not in seen:
+        if slug not in reconciled:
             reconciled.append(slug)
-            seen.add(slug)
 
     room.talking_order = reconciled
 
@@ -270,7 +266,7 @@ def _handle_accept(room: Room, actor: str, connected: set[str]) -> None:
     room.turn_state = TurnState.SPEAKING
 
 
-def _handle_reorder(room: Room, actor: str, new_order: list[str]) -> None:
+def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set[str]) -> None:
     _require_keeper(room, actor)
 
     if set(new_order) != set(room.talking_order):
@@ -280,6 +276,8 @@ def _handle_reorder(room: Room, actor: str, new_order: list[str]) -> None:
         )
 
     room.talking_order = new_order
+    if room.current_speaker:
+        room.next_speaker = _next_in_order(room.talking_order, room.current_speaker, connected)
 
 
 def _handle_end(room: Room, actor: str, reason: EndReason) -> None:

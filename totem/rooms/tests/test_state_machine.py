@@ -363,6 +363,43 @@ class TestReorder:
             apply_event(slug, user1.slug, ReorderEvent(talking_order=list(room.talking_order)), 1, connected)
         assert exc_info.value.code == ErrorCode.NOT_KEEPER
 
+    def test_reorder_updates_next_speaker(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        user2 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1, user2])
+        connected = {keeper.slug, user1.slug, user2.slug}
+
+        # Start — keeper speaking, next is user1
+        state = apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        assert state.current_speaker == keeper.slug
+        assert state.next_speaker == user1.slug
+
+        # Reorder so user2 comes right after keeper
+        new_order = [keeper.slug, user2.slug, user1.slug]
+        state = apply_event(slug, keeper.slug, ReorderEvent(talking_order=new_order), 1, connected)
+
+        assert state.talking_order == new_order
+        assert state.next_speaker == user2.slug
+
+    def test_reorder_next_speaker_skips_disconnected(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        user2 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1, user2])
+        connected_all = {keeper.slug, user1.slug, user2.slug}
+
+        # Start with all connected
+        state = apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected_all)
+
+        # user1 disconnects, reorder puts user1 right after keeper
+        connected = {keeper.slug, user2.slug}
+        new_order = [keeper.slug, user1.slug, user2.slug]
+        state = apply_event(slug, keeper.slug, ReorderEvent(talking_order=new_order), 1, connected)
+
+        # next_speaker should skip disconnected user1 and land on user2
+        assert state.next_speaker == user2.slug
+
     def test_reorder_must_have_same_participants(self):
         keeper = UserFactory()
         user1 = UserFactory()
