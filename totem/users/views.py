@@ -110,7 +110,7 @@ def verify_pin_view(request: HttpRequest):
     if request.method == "POST":
         form = PinVerifyForm(request.POST)
         if form.is_valid():
-            email = form.cleaned_data["email"]
+            email = User.objects.normalize_email(form.cleaned_data["email"])
             pin = form.cleaned_data["pin"]
             try:
                 user = User.objects.get(email=email)
@@ -198,7 +198,7 @@ def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name
                 fake_email = email or "bot@example.com"
                 return redirect(f"{reverse('users:verify-pin')}?email={quote(fake_email)}")
 
-            email: str = data["email"].lower()
+            email: str = data["email"]
             logger.info(
                 "User login attempt",
                 extra={

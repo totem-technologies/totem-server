@@ -22,7 +22,8 @@ class TestPinRequestEndpoint:
 
     def test_request_pin_new_user(self, client: Client, db):
         """Test requesting a PIN for a new user."""
-        email = "newuser+1234@example.com"
+        email = "neWuser+1234@example.COM"
+        normalized_email = User.objects.normalize_email(email)
         response = client.post(
             reverse("mobile-api:auth_request_pin"),
             data={"email": email, "newsletter_consent": True},
@@ -34,7 +35,7 @@ class TestPinRequestEndpoint:
         assert response.json() == {"message": "PIN sent to your email"}
 
         # Check user was created
-        user = User.objects.get(email=email)
+        user = User.objects.get(email=normalized_email)
         assert user.newsletter_consent is True
         assert not user.has_usable_password()
 
@@ -42,12 +43,14 @@ class TestPinRequestEndpoint:
         pin = LoginPin.objects.get(user=user)
         assert pin.is_valid()
         assert len(mail.outbox) == 1  # PIN email
-        assert mail.outbox[0].to == [email]
+        assert mail.outbox[0].to == [normalized_email]
         assert pin.pin in mail.outbox[0].body
 
     def test_request_pin_existing_user_preserves_password(self, client: Client, db):
-        """Existing user requesting a PIN should keep their password (web sessions intact)."""
-        user = User.objects.create_user(email="existing@example.com", password="initial-pass")
+        """Existing user requesting a PIN should not change their password."""
+        email = "eXisting@example.COM"
+        normalized_email = User.objects.normalize_email(email)
+        user = User.objects.create_user(email=email)
         original_password_hash = user.password
 
         response = client.post(
@@ -55,13 +58,13 @@ class TestPinRequestEndpoint:
             data={"email": user.email},
             content_type="application/json",
         )
-
         assert response.status_code == 200
         assert response.json() == {"message": "PIN sent to your email"}
 
         user.refresh_from_db()
+        assert user.email == normalized_email
+        assert user.password
         assert user.password == original_password_hash
-        assert user.check_password("initial-pass")
 
     def test_request_pin_existing_user(self, client: Client, db, setup_user):
         """Test requesting PIN for existing user."""

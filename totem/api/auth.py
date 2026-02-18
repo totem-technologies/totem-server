@@ -87,11 +87,8 @@ def request_pin(request, data: PinRequestSchema):
     """
     # Get or create user
     user, created = User.objects.get_or_create(
-        email=data.email.lower(), defaults={"newsletter_consent": data.newsletter_consent}
+        email=data.email, defaults={"newsletter_consent": data.newsletter_consent}
     )
-
-    if created:
-        user.set_unusable_password()
 
     # If existing user, update newsletter preference if provided
     if not created and data.newsletter_consent:

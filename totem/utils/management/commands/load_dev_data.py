@@ -27,7 +27,7 @@ def load_fixtures_impl():
 
     # Create superuser if it doesn't exist
     if not User.objects.filter(email="admin@admin.com").exists():
-        User.objects.create_superuser(name="admin", email="admin@admin.com", password=fake.password())
+        User.objects.create_superuser(name="admin", email="admin@admin.com")
 
     # Create staff
     staff = []
@@ -35,7 +35,6 @@ def load_fixtures_impl():
         u = User.objects.create_user(
             name=fake.name(),
             email=fake.email(),
-            password=fake.password(),
             is_staff=True,
         )
         KeeperProfile.objects.create(user=u, bio=fake.paragraph(nb_sentences=20))
@@ -48,7 +47,6 @@ def load_fixtures_impl():
             User.objects.create_user(
                 name=fake.name(),
                 email=fake.email(),
-                password=fake.password(),
             )
         )
 

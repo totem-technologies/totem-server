@@ -60,6 +60,15 @@ FROM pg_database WHERE datallowconn \gexec
 EOF
 ```
 
+For the local dev database:
+
+```bash
+docker exec -i totem_local_postgres psql -U debug -d totem <<'EOF'
+SELECT format('ALTER DATABASE %I REFRESH COLLATION VERSION', datname)
+FROM pg_database WHERE datallowconn \gexec
+EOF
+```
+
 ## Restore DB from backup
 
 - Download backup locally
