@@ -9,9 +9,12 @@ from totem.users.tests.factories import UserFactory
 @pytest.mark.django_db
 class TestLogInView:
     def test_login_new_user(self, client):
-        email = "testuser@totem.org"
+        email = "testuseR@totem.ORG"
+        normalized_email = User.objects.normalize_email(email)
         with pytest.raises(User.DoesNotExist):
             User.objects.get(email=email)
+        with pytest.raises(User.DoesNotExist):
+            User.objects.get(email=normalized_email)
 
         # Submit login request
         response = client.post(reverse("users:login"), {"email": email})
@@ -22,16 +25,18 @@ class TestLogInView:
         assert len(mail.outbox) == 1  # Just PIN email in test mode
         assert "PIN" in mail.outbox[0].body
         # Get the PIN from the most recent LoginPin object
-        pin = LoginPin.objects.get(user__email=email).pin
+        pin = LoginPin.objects.get(user__email=normalized_email).pin
         assert pin in mail.outbox[0].body
 
         # Check that a new user was created
         count = User.objects.count()
         assert count == 1
-        user = User.objects.get(email=email)
-        assert user.email == email
+        user: User = User.objects.get(email=normalized_email)
+        assert user.email == normalized_email
+        assert user.email != email
         assert user.newsletter_consent is False
         assert not user.verified  # User should not be verified until PIN verification
+        assert not user.has_usable_password()
 
     def test_signup_new_with_consent(self, client):
         assert len(mail.outbox) == 0
@@ -115,7 +120,7 @@ class TestLogInView:
         user = UserFactory()
         count = User.objects.count()
 
-        # Try to redirect to unallowed host (e.g., attacker)
+        # Try to redirect to not allowed host (e.g., attacker)
         response = client.post(
             reverse("users:login") + "?next=https://attacker.com",
             {
@@ -164,7 +169,7 @@ class TestLogInView:
         assert response.url == reverse("users:redirect")
 
     def test_deactivated_account(self, client):
-        user = User.objects.create_user(email="test@example.com", password="password")
+        user = User.objects.create_user(email="test@example.com")
         user.is_active = False
         user.save()
 

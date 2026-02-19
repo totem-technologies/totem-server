@@ -87,11 +87,8 @@ def request_pin(request, data: PinRequestSchema):
     """
     # Get or create user
     user, created = User.objects.get_or_create(
-        email=data.email.lower(), defaults={"newsletter_consent": data.newsletter_consent}
+        email=data.email, defaults={"newsletter_consent": data.newsletter_consent}
     )
-
-    if created:
-        user.set_unusable_password()
 
     # If existing user, update newsletter preference if provided
     if not created and data.newsletter_consent:
@@ -126,7 +123,8 @@ def validate_pin(request, data: ValidatePinSchema):
     """
     # Find user by email
     try:
-        user = User.objects.get(email=data.email.lower())
+        normalized_email = User.objects.normalize_email(data.email)
+        user = User.objects.get(email=normalized_email)
     except User.DoesNotExist:
         raise AuthenticationError(message=AuthErrors.INCORRECT_PIN.value)
 

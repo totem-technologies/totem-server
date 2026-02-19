@@ -86,7 +86,7 @@ def update_current_user_image(
     if user.profile_avatar_type == User.ProfileChoices.TIEDYE:
         user.profile_avatar_type = User.ProfileChoices.IMAGE
     user.full_clean()
-    user.save(update_fields=["profile_image", "profile_avatar_type"])  # Ensure this is saved if changed
+    user.save(update_fields=["profile_image", "profile_avatar_type"])
 
     return True
 

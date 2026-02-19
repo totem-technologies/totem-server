@@ -10,31 +10,43 @@ from totem.users.models import User
 class TestUserManager:
     def test_create_user(self):
         user = User.objects.create_user(
-            email="john@totem.org",
-            password="something-r@nd0m!",
+            email="JOHN@totem.ORG",
         )
         assert user.email == "john@totem.org"
         assert not user.is_staff
         assert not user.is_superuser
-        assert user.check_password("something-r@nd0m!")
+        assert not user.has_usable_password()
         assert user.username is None
 
     def test_create_superuser(self):
         user = User.objects.create_superuser(
             email="admin@totem.org",
-            password="something-r@nd0m!",
         )
         assert user.email == "admin@totem.org"
         assert user.is_staff
         assert user.is_superuser
+        assert not user.has_usable_password()
         assert user.username is None
 
     def test_create_superuser_username_ignored(self):
         user = User.objects.create_superuser(
             email="test@totem.org",
-            password="something-r@nd0m!",
         )
         assert user.username is None
+
+    def test_get_or_create_sets_unusable_password(self):
+        user: User
+        user, created = User.objects.get_or_create(email="new@TOTEM.org")
+        assert user.email == "new@totem.org"
+        assert created
+        assert not user.has_usable_password()
+
+    def test_get_or_create_existing_user(self):
+        User.objects.create_user(email="existing@totem.org")
+        user: User
+        user, created = User.objects.get_or_create(email="existing@totem.ORG")
+        assert not created
+        assert not user.has_usable_password()
 
 
 @pytest.mark.django_db
