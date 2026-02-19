@@ -83,5 +83,3 @@ To do a full wipe and restore:
 - `createdb -U postgres -T template0 totemdb`
 - `pg_restore -U postgres -d totemdb < /tmp/export`
 - Then redeploy or `dokku ps:start totem`
-
-did we cache?
