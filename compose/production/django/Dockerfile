@@ -10,8 +10,6 @@ ARG BUILD_ENVIRONMENT=production
 RUN apt-get update && apt-get install --no-install-recommends -y \
     # dependencies for building Python packages
     build-essential \
-    # psycopg2 dependencies
-    libpq-dev \
     # dynimg dependencies
     libexpat1-dev
 
@@ -57,8 +55,6 @@ RUN addgroup --system django \
 
 # Install required system dependencies
 RUN apt-get update && apt-get install --no-install-recommends -y \
-    # psycopg2 dependencies
-    libpq-dev \
     # Translations dependencies
     gettext \
     # dynimg runtime dependencies

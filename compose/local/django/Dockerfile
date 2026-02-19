@@ -10,8 +10,6 @@ ARG BUILD_ENVIRONMENT=local
 RUN apt-get update && apt-get install --no-install-recommends -y \
     # dependencies for building Python packages
     build-essential \
-    # psycopg2 dependencies
-    libpq-dev \
     # dynimg dependencies
     libexpat1-dev
 
@@ -54,13 +52,12 @@ WORKDIR ${APP_HOME}
 
 # Install required system dependencies
 RUN apt-get update && apt-get install --no-install-recommends -y \
-    # psycopg2 dependencies
-    libpq-dev \
     # Translations dependencies
     gettext \
     # dynimg runtime dependencies
     libexpat1 \
     fontconfig \
+    ca-certificates \
     # cleaning up unused files
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
     && rm -rf /var/lib/apt/lists/*
