@@ -1,0 +1,13 @@
+services:
+  django:
+    build:
+      cache_from:
+        - type=gha,scope=django
+      cache_to:
+        - type=gha,scope=django,mode=max
+  postgres:
+    build:
+      cache_from:
+        - type=gha,scope=postgres
+      cache_to:
+        - type=gha,scope=postgres,mode=max
