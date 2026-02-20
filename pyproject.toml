@@ -33,6 +33,7 @@ dependencies = [
     "django-storages[s3]<2",
     "django-taggit<7",
     "django-timezone-field<8",
+    "tzdata",
     "django<5.3",
     "pyjwt>=2.10.1",
     "firebase-admin>=6.8.0",

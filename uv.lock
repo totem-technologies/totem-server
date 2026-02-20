@@ -2177,6 +2177,7 @@ dependencies = [
     { name = "requests" },
     { name = "sentry-sdk", extra = ["django"] },
     { name = "tenacity" },
+    { name = "tzdata" },
     { name = "whitenoise" },
 ]
 
@@ -2238,6 +2239,7 @@ requires-dist = [
     { name = "requests", specifier = "<3" },
     { name = "sentry-sdk", extras = ["django"], specifier = "<3" },
     { name = "tenacity", specifier = ">=9.1.2" },
+    { name = "tzdata" },
     { name = "whitenoise", specifier = "<7" },
 ]
 

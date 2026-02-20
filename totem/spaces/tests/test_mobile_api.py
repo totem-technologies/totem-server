@@ -77,6 +77,20 @@ class TestMobileApiSpaces:
         assert len(response.json()["items"]) == 1
         assert response.json()["items"][0]["slug"] == event.space.slug
 
+    def test_list_spaces_author_with_legacy_timezone(self, client_with_user: tuple[Client, User]):
+        """Ensure spaces serialize correctly when the author has a legacy timezone like America/Buenos_Aires."""
+        client, _ = client_with_user
+        author = UserFactory()
+        User.objects.filter(pk=author.pk).update(timezone="America/Buenos_Aires")
+        event = SessionFactory(space__author=author)
+        event.save()
+
+        url = reverse("mobile-api:mobile_spaces_list")
+        response = client.get(url)
+
+        assert response.status_code == 200
+        assert len(response.json()["items"]) == 1
+
     def test_list_spaces_no_events(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
         response = client.get(reverse("mobile-api:mobile_spaces_list"))
