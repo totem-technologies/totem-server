@@ -6,6 +6,7 @@ from totem.rooms.schemas import (
     EndReason,
     EndRoomEvent,
     ErrorCode,
+    ForcePassStickEvent,
     PassStickEvent,
     ReorderEvent,
     RoomStatus,
@@ -15,6 +16,7 @@ from totem.rooms.schemas import (
 )
 from totem.rooms.state_machine import _next_in_order, _reconcile_talking_order, apply_event
 from totem.spaces.tests.factories import SessionFactory
+from totem.users.models import User
 from totem.users.tests.factories import UserFactory
 
 # ---------------------------------------------------------------------------
@@ -143,7 +145,7 @@ class TestReconcileTalkingOrder:
 # ---------------------------------------------------------------------------
 
 
-def _setup_room(keeper, attendees):
+def _setup_room(keeper: User, attendees: list[User]):
     """
     Create a Session + Room with the given keeper and attendees.
     Returns (room, session_slug).
@@ -452,6 +454,70 @@ class TestEndRoom:
         with pytest.raises(TransitionError) as exc_info:
             apply_event(slug, keeper.slug, EndRoomEvent(reason=EndReason.KEEPER_ENDED), 2, connected)
         assert exc_info.value.code == ErrorCode.ROOM_ALREADY_ENDED
+
+
+@pytest.mark.django_db
+class TestForcePassStick:
+    def test_keeper_force_passes_from_speaking(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        state = apply_event(slug, keeper.slug, ForcePassStickEvent(), 1, connected)
+
+        assert state.current_speaker == user1.slug
+        assert state.turn_state == TurnState.SPEAKING
+
+    def test_keeper_force_passes_from_passing(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        apply_event(slug, keeper.slug, PassStickEvent(), 1, connected)
+        state = apply_event(slug, keeper.slug, ForcePassStickEvent(), 2, connected)
+
+        assert state.current_speaker == user1.slug
+        assert state.turn_state == TurnState.SPEAKING
+
+    def test_force_pass_updates_next_speaker(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        user2 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1, user2])
+        connected = {keeper.slug, user1.slug, user2.slug}
+
+        state = apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        # keeper is current, user1 is next
+        assert state.current_speaker == keeper.slug
+
+        state = apply_event(slug, keeper.slug, ForcePassStickEvent(), 1, connected)
+        # user1 becomes current, user2 becomes next
+        assert state.current_speaker == user1.slug
+        assert state.next_speaker == user2.slug
+
+    def test_non_keeper_cannot_force_pass(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(slug, user1.slug, ForcePassStickEvent(), 1, connected)
+        assert exc_info.value.code == ErrorCode.NOT_KEEPER
+
+    def test_cannot_force_pass_in_inactive_room(self):
+        keeper = UserFactory()
+        _, slug = _setup_room(keeper, [keeper])
+
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(slug, keeper.slug, ForcePassStickEvent(), 0, {keeper.slug})
+        assert exc_info.value.code == ErrorCode.ROOM_NOT_ACTIVE
 
 
 # ---------------------------------------------------------------------------

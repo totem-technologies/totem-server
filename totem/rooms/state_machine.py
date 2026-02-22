@@ -16,6 +16,7 @@ from .schemas import (
     EndReason,
     EndRoomEvent,
     ErrorCode,
+    ForcePassStickEvent,
     PassStickEvent,
     ReorderEvent,
     RoomEvent,
@@ -69,6 +70,8 @@ def apply_event(
                 _handle_pass(room, actor, connected)
             case AcceptStickEvent():
                 _handle_accept(room, actor, connected)
+            case ForcePassStickEvent():
+                _handle_force_pass(room, actor, connected)
             case ReorderEvent(talking_order=new_order):
                 _handle_reorder(room, actor, new_order, connected)
             case EndRoomEvent(reason=reason):
@@ -276,6 +279,24 @@ def _handle_accept(room: Room, actor: str, connected: set[str]) -> None:
 
     room.current_speaker = actor
     room.next_speaker = next_slug or actor
+    room.turn_state = TurnState.SPEAKING
+
+
+def _handle_force_pass(room: Room, actor: str, connected: set[str]) -> None:
+    _require_active(room)
+    _require_keeper(room, actor)
+
+    if room.next_speaker is None:
+        raise TransitionError(
+            code=ErrorCode.INVALID_TRANSITION,
+            message="No next speaker to force-pass to",
+        )
+
+    new_speaker = room.next_speaker
+    next_slug = _next_in_order(room.talking_order, new_speaker, connected)
+
+    room.current_speaker = new_speaker
+    room.next_speaker = next_slug or new_speaker
     room.turn_state = TurnState.SPEAKING
 
 

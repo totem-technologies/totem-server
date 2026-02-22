@@ -32,6 +32,7 @@ from .schemas import (
     ErrorCode,
     ErrorResponse,
     EventRequest,
+    ForcePassStickEvent,
     JoinResponse,
     RoomState,
     StartRoomEvent,
@@ -95,7 +96,7 @@ def post_event(
     publish_state(session_slug, state)
 
     match body.event:
-        case StartRoomEvent():
+        case StartRoomEvent() | ForcePassStickEvent():
             mute_all_participants(session_slug, except_identity=state.current_speaker)
         case AcceptStickEvent():
             mute_all_participants(session_slug, except_identity=actor)
