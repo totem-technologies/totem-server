@@ -52,7 +52,9 @@ class TestEndSessionsWithoutKeeper:
         ):
             end_sessions_without_keeper()
 
-        mock_publish.assert_called_once_with(session.slug, room_state := mock_publish.call_args[0][1])
+        mock_publish.assert_called_once()
+        session_slug_arg, room_state = mock_publish.call_args[0]
+        assert session_slug_arg == session.slug
         assert room_state.status == RoomStatus.ENDED
 
     def test_no_room_exists_does_not_crash(self):

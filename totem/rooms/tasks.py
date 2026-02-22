@@ -31,7 +31,7 @@ def end_sessions_without_keeper():
         if keeper_in_joined:
             continue
 
-        keeper_in_livekit = get_connected_participants(session.slug).intersection({keeper.slug})
+        keeper_in_livekit = keeper.slug in get_connected_participants(session.slug)
         if keeper_in_livekit:
             continue
 
