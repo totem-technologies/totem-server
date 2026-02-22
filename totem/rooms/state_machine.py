@@ -16,6 +16,7 @@ from .schemas import (
     EndReason,
     EndRoomEvent,
     ErrorCode,
+    ForcePassStickEvent,
     PassStickEvent,
     ReorderEvent,
     RoomEvent,
@@ -69,6 +70,8 @@ def apply_event(
                 _handle_pass(room, actor, connected)
             case AcceptStickEvent():
                 _handle_accept(room, actor, connected)
+            case ForcePassStickEvent():
+                _handle_force_pass(room, actor, connected)
             case ReorderEvent(talking_order=new_order):
                 _handle_reorder(room, actor, new_order, connected)
             case EndRoomEvent(reason=reason):
@@ -113,7 +116,20 @@ def _require_active(room: Room) -> None:
         )
 
 
+def _require_not_ended(room: Room) -> None:
+    if room.status == RoomStatus.ENDED:
+        raise TransitionError(
+            code=ErrorCode.ROOM_ALREADY_ENDED,
+            message="Room has already ended",
+        )
+
+
 def _require_attendee(room: Room, actor: str) -> None:
+    if actor == room.keeper:
+        # keeper is always authorized in their own room
+        # This check is required because background tasks acting on behalf
+        # of the keeper may not be in the attendees list
+        return
     if not room.session.attendees.filter(slug=actor).exists():
         raise TransitionError(
             code=ErrorCode.NOT_IN_ROOM,
@@ -266,6 +282,24 @@ def _handle_accept(room: Room, actor: str, connected: set[str]) -> None:
     room.turn_state = TurnState.SPEAKING
 
 
+def _handle_force_pass(room: Room, actor: str, connected: set[str]) -> None:
+    _require_active(room)
+    _require_keeper(room, actor)
+
+    if room.next_speaker is None:
+        raise TransitionError(
+            code=ErrorCode.INVALID_TRANSITION,
+            message="No next speaker to force-pass to",
+        )
+
+    new_speaker = room.next_speaker
+    next_slug = _next_in_order(room.talking_order, new_speaker, connected)
+
+    room.current_speaker = new_speaker
+    room.next_speaker = next_slug or new_speaker
+    room.turn_state = TurnState.SPEAKING
+
+
 def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set[str]) -> None:
     _require_keeper(room, actor)
 
@@ -282,7 +316,7 @@ def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set
 
 def _handle_end(room: Room, actor: str, reason: EndReason) -> None:
     _require_keeper(room, actor)
-    _require_active(room)
+    _require_not_ended(room)
 
     room.status = RoomStatus.ENDED
     room.turn_state = TurnState.IDLE
