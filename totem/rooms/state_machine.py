@@ -113,7 +113,20 @@ def _require_active(room: Room) -> None:
         )
 
 
+def _require_not_ended(room: Room) -> None:
+    if room.status == RoomStatus.ENDED:
+        raise TransitionError(
+            code=ErrorCode.ROOM_ALREADY_ENDED,
+            message="Room has already ended",
+        )
+
+
 def _require_attendee(room: Room, actor: str) -> None:
+    if actor == room.keeper:
+        # keeper is always authorized in their own room
+        # This check is required because background tasks acting on behalf
+        # of the keeper may not be in the attendees list
+        return
     if not room.session.attendees.filter(slug=actor).exists():
         raise TransitionError(
             code=ErrorCode.NOT_IN_ROOM,
@@ -282,7 +295,7 @@ def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set
 
 def _handle_end(room: Room, actor: str, reason: EndReason) -> None:
     _require_keeper(room, actor)
-    _require_active(room)
+    _require_not_ended(room)
 
     room.status = RoomStatus.ENDED
     room.turn_state = TurnState.IDLE

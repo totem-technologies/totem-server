@@ -441,13 +441,17 @@ class TestEndRoom:
             apply_event(slug, user1.slug, EndRoomEvent(reason=EndReason.KEEPER_ENDED), 1, connected)
         assert exc_info.value.code == ErrorCode.NOT_KEEPER
 
-    def test_cannot_end_inactive_room(self):
+    def test_cannot_end_already_ended_room(self):
         keeper = UserFactory()
         _, slug = _setup_room(keeper, [keeper])
+        connected = {keeper.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        apply_event(slug, keeper.slug, EndRoomEvent(reason=EndReason.KEEPER_ENDED), 1, connected)
 
         with pytest.raises(TransitionError) as exc_info:
-            apply_event(slug, keeper.slug, EndRoomEvent(reason=EndReason.KEEPER_ENDED), 0, {keeper.slug})
-        assert exc_info.value.code == ErrorCode.ROOM_NOT_ACTIVE
+            apply_event(slug, keeper.slug, EndRoomEvent(reason=EndReason.KEEPER_ENDED), 2, connected)
+        assert exc_info.value.code == ErrorCode.ROOM_ALREADY_ENDED
 
 
 # ---------------------------------------------------------------------------
