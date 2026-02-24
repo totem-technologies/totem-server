@@ -76,6 +76,17 @@ class RemoveReason(str, Enum):
 
 
 # ---------------------------------------------------------------------------
+# LiveKit data message payloads
+# ---------------------------------------------------------------------------
+
+
+class RemoveParticipantPayload(Schema):
+    action: Literal["remove_participant"] = "remove_participant"
+    identity: str
+    reason: RemoveReason
+
+
+# ---------------------------------------------------------------------------
 # Status detail (discriminated union)
 # ---------------------------------------------------------------------------
 

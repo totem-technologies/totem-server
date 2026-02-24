@@ -105,6 +105,7 @@ def post_event(
         case EndRoomEvent():
             mute_all_participants(session_slug)
         case BanParticipantEvent(participant_slug=slug):
+            analytics.user_banned_from_room(user, session_slug)
             remove_participant(session_slug, slug, reason=RemoveReason.BAN)
 
     return 200, state

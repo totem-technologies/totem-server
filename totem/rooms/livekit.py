@@ -7,7 +7,6 @@ All LiveKit API calls live here — nowhere else in the app talks to LiveKit.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 
 from asgiref.sync import async_to_sync
@@ -16,7 +15,7 @@ from livekit import api
 
 from totem.users.models import User
 
-from .schemas import RemoveReason, RoomState
+from .schemas import RemoveParticipantPayload, RemoveReason, RoomState
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +40,7 @@ async def _publish_state(room_name: str, state: RoomState) -> None:
         await lkapi.room.update_room_metadata(
             update=api.UpdateRoomMetadataRequest(
                 room=room_name,
-                metadata=json.dumps(state.dict()),
+                metadata=state.model_dump_json(),
             )
         )
 
@@ -183,7 +182,7 @@ async def _remove_participant(room_name: str, identity: str, reason: RemoveReaso
                 api.SendDataRequest(
                     room=room_name,
                     topic="lk-participant-removed-topic",
-                    data=json.dumps({"action": "remove_participant", "identity": identity, "reason": reason}).encode(),
+                    data=RemoveParticipantPayload(identity=identity, reason=reason).model_dump_json().encode(),
                     destination_identities=[identity],
                     kind=api.DataPacket.Kind.RELIABLE,
                 )

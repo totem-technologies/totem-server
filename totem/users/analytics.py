@@ -50,10 +50,17 @@ def user_removed_from_room(user: "User", session: "Session"):
         "user_removed_from_room",
         distinct_id=user.analytics_id(),
         properties={
-            "event_id": session.slug,
-            "session_id": session.slug,
-            "circle_id": session.space.slug,
+            "session_slug": session.slug,
             "space_id": session.space.slug,
-            "keeper_id": session.space.author.analytics_id(),
+        },
+    )
+
+
+def user_banned_from_room(user: "User", session_slug: str):
+    _posthog.capture(
+        "user_banned_from_room",
+        distinct_id=user.analytics_id(),
+        properties={
+            "session_slug": session_slug,
         },
     )
