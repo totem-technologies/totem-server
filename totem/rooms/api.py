@@ -257,7 +257,7 @@ def mute_all(
     "/{session_slug}/remove/{participant_identity}",
     response={200: None, **ERROR_RESPONSES},
     summary="Remove a participant",
-    description="Keeper removes a participant from the room.",
+    description="Emits a remove event to a specific participant",
 )
 def remove(
     request: HttpRequest,
@@ -281,5 +281,8 @@ def remove(
         return ErrorResponse(
             code=ErrorCode.LIVEKIT_ERROR, message="LiveKit service is not properly configured"
         ).as_http_response()
+
+    room: Room = result
+    analytics.user_removed_from_room(user, room.session)
 
     return 200, None
