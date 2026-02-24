@@ -40,6 +40,7 @@ class ErrorCode(str, Enum):
     NOT_KEEPER = "not_keeper"
     NOT_CURRENT_SPEAKER = "not_current_speaker"
     NOT_NEXT_SPEAKER = "not_next_speaker"
+    BANNED = "banned"
 
     # Invalid state transitions
     INVALID_TRANSITION = "invalid_transition"
@@ -118,6 +119,7 @@ class RoomState(Schema):
     next_speaker: Optional[str] = None  # user slug
     talking_order: list[str]  # user slugs
     keeper: str  # user slug
+    banned_participants: list[str] = []  # user slugs
 
 
 # ---------------------------------------------------------------------------
@@ -212,6 +214,7 @@ class ErrorResponse(Schema):
                 | ErrorCode.NOT_CURRENT_SPEAKER
                 | ErrorCode.NOT_NEXT_SPEAKER
                 | ErrorCode.NOT_JOINABLE
+                | ErrorCode.BANNED
             ):
                 return 403, self
             case ErrorCode.NOT_FOUND:
