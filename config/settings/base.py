@@ -451,7 +451,7 @@ AUDITLOG_EXCLUDE_TRACKING_MODELS = ["totem.email.models.EmailLog"]
 
 # Webflow
 # ------------------------------------------------------------------------------
-WEBFLOW_BASE_URL = env("WEBFLOW_BASE_URL", default="https://wf.totem.org/")
+WEBFLOW_BASE_URL = env("WEBFLOW_BASE_URL", default="https://cf.totem.org/")
 
 
 # Social
