@@ -160,6 +160,20 @@ class EndRoomEvent(Schema):
     reason: EndReason
 
 
+class BanParticipantEvent(Schema):
+    """Keeper permanently bans a participant, removing them from the talking order."""
+
+    type: Literal["ban_participant"] = "ban_participant"
+    participant_slug: str
+
+
+class UnbanParticipantEvent(Schema):
+    """Keeper lifts a ban, allowing the participant to rejoin."""
+
+    type: Literal["unban_participant"] = "unban_participant"
+    participant_slug: str
+
+
 RoomEvent = Annotated[
     Union[
         StartRoomEvent,
@@ -168,6 +182,8 @@ RoomEvent = Annotated[
         ForcePassStickEvent,
         ReorderEvent,
         EndRoomEvent,
+        BanParticipantEvent,
+        UnbanParticipantEvent,
     ],
     Field(discriminator="type"),
 ]

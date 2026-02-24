@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import logging
 
-from django.db import transaction
 from django.http import HttpRequest
 from ninja import Router
 
@@ -29,6 +28,7 @@ from .livekit import (
 from .models import Room
 from .schemas import (
     AcceptStickEvent,
+    BanParticipantEvent,
     EndRoomEvent,
     ErrorCode,
     ErrorResponse,
@@ -103,6 +103,8 @@ def post_event(
             mute_all_participants(session_slug, except_identity=actor)
         case EndRoomEvent():
             mute_all_participants(session_slug)
+        case BanParticipantEvent(participant_slug=slug):
+            remove_participant(session_slug, slug)
 
     return 200, state
 
@@ -162,20 +164,18 @@ def join_room(
             message="Session not found",
         )
 
-    room = Room.objects.for_session(session_slug).first()  # type: ignore
-    if room and user.slug in room.banned_participants:
-        return ErrorResponse(
-            code=ErrorCode.BANNED,
-            message="You have been banned from this session",
-        ).as_http_response()
-
     if not session.can_join(user):
         return ErrorResponse(
             code=ErrorCode.NOT_JOINABLE,
             message="Session is not joinable at this time",
         ).as_http_response()
 
-    Room.objects.get_or_create_for_session(session)
+    room = Room.objects.get_or_create_for_session(session)
+    if user.slug in room.banned_participants:
+        return ErrorResponse(
+            code=ErrorCode.BANNED,
+            message="You have been banned from this session",
+        ).as_http_response()
 
     try:
         token = create_access_token(user, session.slug)
@@ -294,96 +294,3 @@ def remove(
     analytics.user_removed_from_room(user, room.session)
 
     return 200, None
-
-
-@router.post(
-    "/{session_slug}/ban/{participant_slug}",
-    response={200: RoomState, **ERROR_RESPONSES},
-    summary="Ban a participant",
-    description="Keeper permanently bans a participant. They are removed from the talking order and blocked from rejoining.",
-)
-def ban(
-    request: HttpRequest,
-    session_slug: str,
-    participant_slug: str,
-):
-    user: User = request.user  # type: ignore
-
-    if participant_slug == user.slug:
-        return ErrorResponse(
-            code=ErrorCode.INVALID_TRANSITION,
-            message="Cannot ban yourself",
-        ).as_http_response()
-
-    with transaction.atomic():
-        room = Room.objects.for_session(session_slug).select_for_update().first()  # type: ignore
-        if not room:
-            return 404, ErrorResponse(code=ErrorCode.NOT_FOUND, message="Room not found")
-
-        if room.keeper != user.slug:
-            return ErrorResponse(code=ErrorCode.NOT_KEEPER, message="Only the keeper can perform this action").as_http_response()
-
-        if participant_slug in room.banned_participants:
-            return 200, room.to_state()
-
-        room.banned_participants = [*room.banned_participants, participant_slug]
-        room.talking_order = [s for s in room.talking_order if s != participant_slug]
-
-        if room.current_speaker == participant_slug:
-            remaining = room.talking_order
-            room.current_speaker = remaining[0] if remaining else None
-            room.next_speaker = remaining[1] if len(remaining) > 1 else (remaining[0] if remaining else None)
-        elif room.next_speaker == participant_slug:
-            remaining = room.talking_order
-            if room.current_speaker and room.current_speaker in remaining:
-                idx = remaining.index(room.current_speaker)
-                room.next_speaker = remaining[(idx + 1) % len(remaining)]
-            else:
-                room.next_speaker = remaining[0] if remaining else None
-
-        room.state_version += 1
-        room.save()
-        state = room.to_state()
-
-    publish_state(session_slug, state)
-
-    try:
-        remove_participant(session_slug, participant_slug)
-    except LiveKitConfigurationError:
-        pass  # best-effort
-
-    return 200, state
-
-
-@router.post(
-    "/{session_slug}/unban/{participant_slug}",
-    response={200: RoomState, **ERROR_RESPONSES},
-    summary="Unban a participant",
-    description="Keeper removes a ban, allowing the participant to rejoin.",
-)
-def unban(
-    request: HttpRequest,
-    session_slug: str,
-    participant_slug: str,
-):
-    user: User = request.user  # type: ignore
-
-    with transaction.atomic():
-        room = Room.objects.for_session(session_slug).select_for_update().first()  # type: ignore
-        if not room:
-            return 404, ErrorResponse(code=ErrorCode.NOT_FOUND, message="Room not found")
-
-        if room.keeper != user.slug:
-            return ErrorResponse(code=ErrorCode.NOT_KEEPER, message="Only the keeper can perform this action").as_http_response()
-
-        if participant_slug not in room.banned_participants:
-            return 200, room.to_state()
-
-        room.banned_participants = [s for s in room.banned_participants if s != participant_slug]
-        room.state_version += 1
-        room.save()
-        state = room.to_state()
-
-    publish_state(session_slug, state)
-
-    return 200, state

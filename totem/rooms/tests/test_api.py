@@ -497,14 +497,14 @@ class TestBanParticipant:
         Room.objects.get_or_create_for_session(session)
 
         with (
+            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug, participant.slug}),
             patch("totem.rooms.api.publish_state"),
             patch("totem.rooms.api.remove_participant"),
         ):
-            resp = client.post(f"{BASE}/{session.slug}/ban/{participant.slug}")
+            resp = _post_event(client, session.slug, {"type": "ban_participant", "participant_slug": participant.slug}, 0)
 
         assert resp.status_code == 200
-        data = resp.json()
-        assert participant.slug in data["banned_participants"]
+        assert participant.slug in resp.json()["banned_participants"]
 
     def test_ban_removes_from_talking_order(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
@@ -514,10 +514,11 @@ class TestBanParticipant:
         Room.objects.get_or_create_for_session(session)
 
         with (
+            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug, participant.slug}),
             patch("totem.rooms.api.publish_state"),
             patch("totem.rooms.api.remove_participant"),
         ):
-            resp = client.post(f"{BASE}/{session.slug}/ban/{participant.slug}")
+            resp = _post_event(client, session.slug, {"type": "ban_participant", "participant_slug": participant.slug}, 0)
 
         assert resp.status_code == 200
         assert participant.slug not in resp.json()["talking_order"]
@@ -529,7 +530,11 @@ class TestBanParticipant:
         session.attendees.add(keeper, user)
         Room.objects.get_or_create_for_session(session)
 
-        resp = client.post(f"{BASE}/{session.slug}/ban/{keeper.slug}")
+        with (
+            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug, user.slug}),
+            patch("totem.rooms.api.publish_state"),
+        ):
+            resp = _post_event(client, session.slug, {"type": "ban_participant", "participant_slug": keeper.slug}, 0)
 
         assert resp.status_code == 403
         assert resp.json()["code"] == "not_keeper"
@@ -540,18 +545,34 @@ class TestBanParticipant:
         session.attendees.add(keeper)
         Room.objects.get_or_create_for_session(session)
 
-        resp = client.post(f"{BASE}/{session.slug}/ban/{keeper.slug}")
+        with (
+            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug}),
+            patch("totem.rooms.api.publish_state"),
+        ):
+            resp = _post_event(client, session.slug, {"type": "ban_participant", "participant_slug": keeper.slug}, 0)
 
         assert resp.status_code == 400
+        assert resp.json()["code"] == "invalid_transition"
 
-    def test_ban_room_not_found_returns_404(self, client_with_user: tuple[Client, User]):
-        client, _ = client_with_user
+    def test_ban_already_banned_returns_400(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        participant = UserFactory()
+        session = SessionFactory(space__author=keeper)
+        session.attendees.add(keeper, participant)
+        room = Room.objects.get_or_create_for_session(session)
+        room.banned_participants = [participant.slug]
+        room.save()
 
-        resp = client.post(f"{BASE}/nonexistent/ban/some-participant")
+        with (
+            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug}),
+            patch("totem.rooms.api.publish_state"),
+        ):
+            resp = _post_event(client, session.slug, {"type": "ban_participant", "participant_slug": participant.slug}, 0)
 
-        assert resp.status_code == 404
+        assert resp.status_code == 400
+        assert resp.json()["code"] == "invalid_transition"
 
-    def test_ban_already_banned_is_idempotent(self, client_with_user: tuple[Client, User]):
+    def test_ban_calls_remove_participant(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         participant = UserFactory()
         session = SessionFactory(space__author=keeper)
@@ -559,16 +580,13 @@ class TestBanParticipant:
         Room.objects.get_or_create_for_session(session)
 
         with (
+            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug, participant.slug}),
             patch("totem.rooms.api.publish_state"),
-            patch("totem.rooms.api.remove_participant"),
+            patch("totem.rooms.api.remove_participant") as mock_remove,
         ):
-            resp1 = client.post(f"{BASE}/{session.slug}/ban/{participant.slug}")
-            resp2 = client.post(f"{BASE}/{session.slug}/ban/{participant.slug}")
+            _post_event(client, session.slug, {"type": "ban_participant", "participant_slug": participant.slug}, 0)
 
-        assert resp1.status_code == 200
-        assert resp2.status_code == 200
-        room = Room.objects.get(session=session)
-        assert room.banned_participants.count(participant.slug) == 1
+        mock_remove.assert_called_once_with(session.slug, participant.slug)
 
 
 @pytest.mark.django_db
@@ -582,8 +600,11 @@ class TestUnbanParticipant:
         room.banned_participants = [participant.slug]
         room.save()
 
-        with patch("totem.rooms.api.publish_state"):
-            resp = client.post(f"{BASE}/{session.slug}/unban/{participant.slug}")
+        with (
+            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug}),
+            patch("totem.rooms.api.publish_state"),
+        ):
+            resp = _post_event(client, session.slug, {"type": "unban_participant", "participant_slug": participant.slug}, 0)
 
         assert resp.status_code == 200
         assert participant.slug not in resp.json()["banned_participants"]
@@ -598,26 +619,27 @@ class TestUnbanParticipant:
         room.banned_participants = [participant.slug]
         room.save()
 
-        resp = client.post(f"{BASE}/{session.slug}/unban/{participant.slug}")
+        with (
+            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug, user.slug}),
+            patch("totem.rooms.api.publish_state"),
+        ):
+            resp = _post_event(client, session.slug, {"type": "unban_participant", "participant_slug": participant.slug}, 0)
 
         assert resp.status_code == 403
         assert resp.json()["code"] == "not_keeper"
 
-    def test_unban_room_not_found_returns_404(self, client_with_user: tuple[Client, User]):
-        client, _ = client_with_user
-
-        resp = client.post(f"{BASE}/nonexistent/unban/some-participant")
-
-        assert resp.status_code == 404
-
-    def test_unban_not_banned_is_idempotent(self, client_with_user: tuple[Client, User]):
+    def test_unban_not_banned_returns_400(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         participant = UserFactory()
         session = SessionFactory(space__author=keeper)
         session.attendees.add(keeper, participant)
         Room.objects.get_or_create_for_session(session)
 
-        with patch("totem.rooms.api.publish_state"):
-            resp = client.post(f"{BASE}/{session.slug}/unban/{participant.slug}")
+        with (
+            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug, participant.slug}),
+            patch("totem.rooms.api.publish_state"),
+        ):
+            resp = _post_event(client, session.slug, {"type": "unban_participant", "participant_slug": participant.slug}, 0)
 
-        assert resp.status_code == 200
+        assert resp.status_code == 400
+        assert resp.json()["code"] == "invalid_transition"
