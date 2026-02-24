@@ -181,7 +181,13 @@ def join_room(
     session.joined.add(user)
     analytics.event_joined(user, session)
 
-    return 200, JoinResponse(token=token)
+    try:
+        is_connected = user.slug in get_connected_participants(session_slug)
+    except LiveKitConfigurationError:
+        logger.exception("LiveKit not configured")
+        is_connected = False
+
+    return 200, JoinResponse(token=token, is_already_present=is_connected)
 
 
 def _get_room_and_require_keeper(user: User, session_slug: str) -> Room | ErrorResponse:

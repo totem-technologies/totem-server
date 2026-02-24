@@ -190,6 +190,7 @@ class JoinResponse(Schema):
     """Token for connecting to a LiveKit room."""
 
     token: str
+    is_already_present: bool
 
 
 class ErrorResponse(Schema):
