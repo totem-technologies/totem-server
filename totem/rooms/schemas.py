@@ -70,6 +70,11 @@ class EndReason(str, Enum):
     ROOM_EMPTY = "room_empty"
 
 
+class RemoveReason(str, Enum):
+    REMOVE = "remove"
+    BAN = "ban"
+
+
 # ---------------------------------------------------------------------------
 # Status detail (discriminated union)
 # ---------------------------------------------------------------------------

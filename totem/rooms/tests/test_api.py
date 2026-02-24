@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from totem.rooms.livekit import LiveKitConfigurationError
 from totem.rooms.models import Room
+from totem.rooms.schemas import RemoveReason
 from totem.spaces.tests.factories import SessionFactory
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
@@ -610,7 +611,7 @@ class TestBanParticipant:
         ):
             _post_event(client, session.slug, {"type": "ban_participant", "participant_slug": participant.slug}, 0)
 
-        mock_remove.assert_called_once_with(session.slug, participant.slug)
+        mock_remove.assert_called_once_with(session.slug, participant.slug, reason=RemoveReason.BAN)
 
 
 @pytest.mark.django_db

@@ -18,6 +18,7 @@ from totem.users.models import User
 
 from .livekit import (
     LiveKitConfigurationError,
+    RemoveReason,
     create_access_token,
     get_connected_participants,
     mute_all_participants,
@@ -104,7 +105,7 @@ def post_event(
         case EndRoomEvent():
             mute_all_participants(session_slug)
         case BanParticipantEvent(participant_slug=slug):
-            remove_participant(session_slug, slug)
+            remove_participant(session_slug, slug, reason=RemoveReason.BAN)
 
     return 200, state
 

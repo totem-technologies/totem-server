@@ -16,7 +16,7 @@ from livekit import api
 
 from totem.users.models import User
 
-from .schemas import RoomState
+from .schemas import RemoveReason, RoomState
 
 logger = logging.getLogger(__name__)
 
@@ -176,14 +176,14 @@ async def _mute_all_participants(room_name: str, except_identity: str | None = N
                 logger.exception("Failed to mute participant in room %s", room_name, exc_info=result)
 
 
-async def _remove_participant(room_name: str, identity: str) -> None:
+async def _remove_participant(room_name: str, identity: str, reason: RemoveReason = RemoveReason.REMOVE) -> None:
     async with _get_api() as lkapi:
         try:
             await lkapi.room.send_data(
                 api.SendDataRequest(
                     room=room_name,
                     topic="lk-participant-removed-topic",
-                    data=json.dumps({"action": "remove_participant", "identity": identity}).encode(),
+                    data=json.dumps({"action": "remove_participant", "identity": identity, "reason": reason}).encode(),
                     destination_identities=[identity],
                     kind=api.DataPacket.Kind.RELIABLE,
                 )
@@ -205,6 +205,6 @@ async def mute_all_participants(room_name: str, except_identity: str | None = No
 
 
 @async_to_sync
-async def remove_participant(room_name: str, identity: str) -> None:
+async def remove_participant(room_name: str, identity: str, reason: RemoveReason = RemoveReason.REMOVE) -> None:
     """Remove a participant from the room."""
-    await _remove_participant(room_name, identity)
+    await _remove_participant(room_name, identity, reason)
