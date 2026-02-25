@@ -25,13 +25,8 @@
     "tpink",
     "truncatewords",
     "waitlist",
-    "webflow"
+    "proxiedsite"
   ],
   "typescript.tsdk": "node_modules/typescript/lib",
-  "tailwindCSS.classAttributes": [
-    "class",
-    "className",
-    "ngClass",
-    ".*Classes"
-  ]
+  "tailwindCSS.classAttributes": ["class", "className", "ngClass", ".*Classes"]
 }

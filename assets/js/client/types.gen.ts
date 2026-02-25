@@ -412,52 +412,6 @@ export type EventCalendarSchema = {
 };
 
 /**
- * WebflowEventsFilterSchema
- */
-export type WebflowEventsFilterSchema = {
-    /**
-     * Keeper Username
-     *
-     * Filter by Keeper's username
-     */
-    keeper_username?: string | null;
-};
-
-/**
- * WebflowEventSchema
- */
-export type WebflowEventSchema = {
-    /**
-     * Start
-     */
-    start: string;
-    /**
-     * Name
-     */
-    name: string;
-    /**
-     * Keeper Name
-     */
-    keeper_name: string;
-    /**
-     * Keeper Username
-     */
-    keeper_username: string;
-    /**
-     * Join Link
-     */
-    join_link: string;
-    /**
-     * Image Link
-     */
-    image_link: string | null;
-    /**
-     * Keeper Image Link
-     */
-    keeper_image_link: string | null;
-};
-
-/**
  * NextSessionSchema
  */
 export type NextSessionSchema = {
@@ -755,31 +709,6 @@ export type TotemSpacesApiUpcomingEventsResponses = {
 };
 
 export type TotemSpacesApiUpcomingEventsResponse = TotemSpacesApiUpcomingEventsResponses[keyof TotemSpacesApiUpcomingEventsResponses];
-
-export type TotemSpacesApiWebflowEventsListData = {
-    body?: never;
-    path?: never;
-    query?: {
-        /**
-         * Keeper Username
-         *
-         * Filter by Keeper's username
-         */
-        keeper_username?: string | null;
-    };
-    url: '/api/v1/spaces/webflow/list_events';
-};
-
-export type TotemSpacesApiWebflowEventsListResponses = {
-    /**
-     * Response
-     *
-     * OK
-     */
-    200: Array<WebflowEventSchema>;
-};
-
-export type TotemSpacesApiWebflowEventsListResponse = TotemSpacesApiWebflowEventsListResponses[keyof TotemSpacesApiWebflowEventsListResponses];
 
 export type TotemSpacesApiListSpacesData = {
     body?: never;

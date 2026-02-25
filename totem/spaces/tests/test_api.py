@@ -5,7 +5,7 @@ from django.utils import timezone
 
 from totem.spaces.api import EventCalendarFilterSchema, SessionsFilterSchema
 from totem.spaces.tests.factories import SessionFactory, SpaceCategoryFactory, SpaceFactory
-from totem.users.tests.factories import KeeperProfileFactory, UserFactory
+from totem.users.tests.factories import UserFactory
 
 
 class TestSessionListAPI:
@@ -175,58 +175,6 @@ class TestSessionCalendar:
         assert response.status_code == 200
         assert response.json()[0]["title"] == session.title
         assert len(response.json()) == 1
-
-
-class TestWebflowSessionsAPI:
-    def test_webflow_no_sessions(self, client, db):
-        response = client.get(reverse("api-1:webflow_events_list"))
-        assert response.status_code == 200
-        assert response.json() == []
-
-    def test_webflow_sessions_ordered(self, client, db):
-        now = timezone.now()
-        keeper1 = UserFactory()
-        KeeperProfileFactory(user=keeper1, username="keeper1")
-        space1 = SpaceFactory(author=keeper1)
-        session1 = SessionFactory(space=space1, start=now + timedelta(days=2))
-
-        keeper2 = UserFactory()
-        KeeperProfileFactory(user=keeper2, username="keeper2")
-        space2 = SpaceFactory(author=keeper2)
-        session2 = SessionFactory(space=space2, start=now + timedelta(days=1))
-
-        response = client.get(reverse("api-1:webflow_events_list"))
-
-        assert response.status_code == 200
-        data = response.json()
-        assert len(data) == 2
-        assert data[0]["start"] == session2.start.isoformat()
-        assert data[1]["start"] == session1.start.isoformat()
-
-    def test_webflow_filter_keeper(self, client, db):
-        # Create keepers with profiles
-        keeper1 = UserFactory()
-        KeeperProfileFactory(user=keeper1, username="keeper1")
-        space1 = SpaceFactory(author=keeper1)
-        SessionFactory(space=space1)
-
-        keeper2 = UserFactory()
-        KeeperProfileFactory(user=keeper2, username="keeper2")
-        space2 = SpaceFactory(author=keeper2)
-        SessionFactory(space=space2)
-
-        # Test filter
-        response = client.get(reverse("api-1:webflow_events_list"), {"keeper_username": "keeper1"})
-
-        assert response.status_code == 200
-        data = response.json()
-        assert len(data) == 1
-        assert data[0]["keeper_username"] == "keeper1"
-
-    def test_webflow_past_sessions_excluded(self, client, db):
-        SessionFactory(start=timezone.now() - timedelta(days=1))
-        response = client.get(reverse("api-1:webflow_events_list"))
-        assert len(response.json()) == 0
 
 
 class TestListSpaces:

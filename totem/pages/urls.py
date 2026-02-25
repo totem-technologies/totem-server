@@ -4,19 +4,16 @@ from django.views.generic import TemplateView
 
 from . import views
 
-webflow_pages = [
+proxied_site_pages = [
     "about",
     "crisis-resources",
-    "docs/crisis-resources",  # to remove after astro deploy
     "docs/keeper-trainer-curriculum",
     "friends-of-totem",
     "guidelines",
     "how-it-works",
     "privacy-notice",
     "staying-grounded",
-    # "topics/creatives",
     "topics/lgbtq",
-    "topics/lgbtqia-topic-details",  # to remove after astro deploy
     "topics/love-and-other-emotions",
     "topics/mothers",
     "topics/self-improvement",
@@ -25,7 +22,7 @@ webflow_pages = [
     "why-totem",
 ]
 
-webflow_patterns = [re_path(rf"^{page}/$", views.webflow_proxy, name=page) for page in webflow_pages]
+proxied_site_patterns = [re_path(rf"^{page}/$", views.proxied_site_proxy, name=page) for page in proxied_site_pages]
 
 
 class PagesSitemap(Sitemap):
@@ -40,7 +37,7 @@ class PagesSitemap(Sitemap):
             "team",
             "team-pam",
         ]
-        return [f"pages:{page}" for page in static_pages + webflow_pages]
+        return [f"pages:{page}" for page in static_pages + proxied_site_pages]
 
     def location(self, item):
         return reverse(item)
@@ -48,7 +45,7 @@ class PagesSitemap(Sitemap):
 
 app_name = "pages"
 urlpatterns = [
-    path("", views.webflow_page, name="home"),
+    path("", views.proxied_site_page, name="home"),
     path("team/", views.team_view, name="team"),
     # path("about/", TemplateView.as_view(template_name="pages/about.html"), name="about"),
     # path("how-it-works/", views.HowItWorksView.as_view(), name="how-it-works"),
@@ -65,9 +62,14 @@ urlpatterns = [
     ),
     path("r/<slug:slug>/qr/", views.redirect_qr, name="redirect_qr"),
     path("r/<slug:slug>/", views.redirect, name="redirect"),
-    path("webflow/", views.dev_webflow_page, name="webflow"),
-    path("webflow/_test", views.webflow_page, name="webflow-test", kwargs={"page": "how-totem-works"}),
-    path("webflow/<path:page>/", views.dev_webflow_page, name="webflow-path"),
+    path("proxied-site/", views.dev_proxied_site_page, name="proxied-site"),
+    path(
+        "proxied-site/_test",
+        views.proxied_site_page,
+        name="proxied-site-test",
+        kwargs={"page": "how-totem-works"},
+    ),
+    path("proxied-site/<path:page>/", views.dev_proxied_site_page, name="proxied-site-path"),
 ]
 
-urlpatterns += webflow_patterns
+urlpatterns += proxied_site_patterns

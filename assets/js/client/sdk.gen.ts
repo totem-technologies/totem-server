@@ -2,7 +2,7 @@
 
 import { type Client, formDataBodySerializer, type Options as Options2, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { TotemApiApiCurrentUserData, TotemApiApiCurrentUserErrors, TotemApiApiCurrentUserResponses, TotemApiApiDevVersionData, TotemApiApiDevVersionResponses, TotemApiApiUserAvatarUpdateData, TotemApiApiUserAvatarUpdateErrors, TotemApiApiUserAvatarUpdateResponses, TotemApiApiUserUploadProfileImageData, TotemApiApiUserUploadProfileImageErrors, TotemApiApiUserUploadProfileImageResponses, TotemSpacesApiEventDetailData, TotemSpacesApiEventDetailResponses, TotemSpacesApiFilterOptionsData, TotemSpacesApiFilterOptionsResponses, TotemSpacesApiListEventsData, TotemSpacesApiListEventsResponses, TotemSpacesApiListSpacesData, TotemSpacesApiListSpacesResponses, TotemSpacesApiUpcomingEventsData, TotemSpacesApiUpcomingEventsResponses, TotemSpacesApiWebflowEventsListData, TotemSpacesApiWebflowEventsListResponses } from './types.gen';
+import type { TotemApiApiCurrentUserData, TotemApiApiCurrentUserErrors, TotemApiApiCurrentUserResponses, TotemApiApiDevVersionData, TotemApiApiDevVersionResponses, TotemApiApiUserAvatarUpdateData, TotemApiApiUserAvatarUpdateErrors, TotemApiApiUserAvatarUpdateResponses, TotemApiApiUserUploadProfileImageData, TotemApiApiUserUploadProfileImageErrors, TotemApiApiUserUploadProfileImageResponses, TotemSpacesApiEventDetailData, TotemSpacesApiEventDetailResponses, TotemSpacesApiFilterOptionsData, TotemSpacesApiFilterOptionsResponses, TotemSpacesApiListEventsData, TotemSpacesApiListEventsResponses, TotemSpacesApiListSpacesData, TotemSpacesApiListSpacesResponses, TotemSpacesApiUpcomingEventsData, TotemSpacesApiUpcomingEventsResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -72,11 +72,6 @@ export const totemSpacesApiEventDetail = <ThrowOnError extends boolean = false>(
  * Upcoming Events
  */
 export const totemSpacesApiUpcomingEvents = <ThrowOnError extends boolean = false>(options?: Options<TotemSpacesApiUpcomingEventsData, ThrowOnError>) => (options?.client ?? client).get<TotemSpacesApiUpcomingEventsResponses, unknown, ThrowOnError>({ url: '/api/v1/spaces/calendar', ...options });
-
-/**
- * Webflow Events List
- */
-export const totemSpacesApiWebflowEventsList = <ThrowOnError extends boolean = false>(options?: Options<TotemSpacesApiWebflowEventsListData, ThrowOnError>) => (options?.client ?? client).get<TotemSpacesApiWebflowEventsListResponses, unknown, ThrowOnError>({ url: '/api/v1/spaces/webflow/list_events', ...options });
 
 /**
  * List Spaces

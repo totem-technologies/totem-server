@@ -17,12 +17,12 @@ class TestPages:
         response = client.get(url)
         assert response.status_code == 200
 
-    def test_about(self, client, webflow_mock):
+    def test_about(self, client, proxied_site_mock):
         url = reverse("pages:about")
         response = client.get(url)
         assert response.status_code == 200
 
-    def test_view_how_it_works(self, client, webflow_mock):
+    def test_view_how_it_works(self, client, proxied_site_mock):
         url = reverse("pages:how-it-works")
         response = client.get(url)
         assert response.status_code == 200
@@ -34,7 +34,7 @@ class TestPages:
 
 
 class HomeViewTest:
-    def test_home(self, client, webflow_mock):
+    def test_home(self, client, proxied_site_mock):
         response = client.get(reverse("pages:home"))
         assert response.status_code == 200
 
@@ -54,7 +54,8 @@ class RedirectViewTest(TestCase):
         self.assertEqual(redirect.count, 0)
         response = self.client.get(reverse("pages:redirect", kwargs={"slug": redirect.slug}))
         self.assertEqual(response.status_code, 301)
-        self.assertEqual(response.url, redirect.url)
+        resp_url = getattr(response, "url")
+        self.assertEqual(resp_url, redirect.url)
         redirect.refresh_from_db()
         self.assertEqual(redirect.count, 1)
 

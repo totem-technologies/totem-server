@@ -449,9 +449,12 @@ AUDITLOG_DISABLE_ON_RAW_SAVE = True
 AUDITLOG_EXCLUDE_TRACKING_MODELS = ["totem.email.models.EmailLog"]
 
 
-# Webflow
+# Proxied site
 # ------------------------------------------------------------------------------
-WEBFLOW_BASE_URL = env("WEBFLOW_BASE_URL", default="https://cf.totem.org/")
+PROXIED_SITE_BASE_URL = env(
+    "PROXIED_SITE_BASE_URL",
+    default="https://cf.totem.org/",
+)
 
 
 # Social

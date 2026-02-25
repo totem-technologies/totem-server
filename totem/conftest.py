@@ -20,14 +20,14 @@ def user(db) -> User:
 
 
 @pytest.fixture
-def webflow_mock(request):
-    mock_content = "<h1>Webflow Page</h1>"
-    patched = patch("totem.pages.webflow.get", return_value=mock_content)
+def proxied_site_mock(request):
+    mock_content = "<h1>Proxied Site Page</h1>"
+    patched = patch("totem.pages.views.get_proxied_site_page", return_value=mock_content)
     mock = patched.__enter__()
 
     def unpatch():
         # Make sure the mock was actually called
-        assert mock.called, "The webflow mock was not called"
+        assert mock.called, "The proxied site mock was not called"
         patched.__exit__(None, None, None)
 
     request.addfinalizer(unpatch)

@@ -15,8 +15,8 @@ from django.views.generic import TemplateView
 
 from ..users.models import User
 from .models import Redirect
+from .proxied_site import ProxiedSiteUnavailable, get_proxied_site_page
 from .qrmaker import make_qr
-from .webflow import get_webflow_page
 
 
 @dataclass
@@ -166,12 +166,10 @@ def redirect_qr(request, slug):
     return render(request, "pages/qr.html", {"img": img_str.decode("utf-8"), "obj": redirect})
 
 
-def webflow_page(request, page: str | None = None):
-    from totem.pages.webflow import WebflowUnavailable
-
+def proxied_site_page(request, page: str | None = None):
     one_hour = 60 * 60
     one_week = 60 * 60 * 24 * 7
-    key = f"webflow:{page or 'home'}"
+    key = f"proxied_site:{page or 'home'}"
     fresh_key = f"{key}:fresh"
     should_refresh = request.GET.get("refresh", False)
     if should_refresh:
@@ -184,11 +182,11 @@ def webflow_page(request, page: str | None = None):
 
     # Stale or missing - try to fetch new content
     try:
-        content = get_webflow_page(page)
+        content = get_proxied_site_page(page)
         cache.set(key, content, one_week)  # Content stored for 1 week
         cache.set(fresh_key, True, one_hour)  # Fresh marker for 1 hour
         return HttpResponse(content, content_type="text/html")
-    except WebflowUnavailable:
+    except ProxiedSiteUnavailable:
         # Fetch failed - serve stale content if available
         if content is not None:
             return HttpResponse(content, content_type="text/html")
@@ -201,11 +199,11 @@ def webflow_page(request, page: str | None = None):
 
 
 @login_required
-def dev_webflow_page(request, page=None):
+def dev_proxied_site_page(request, page=None):
     if not request.user.is_staff:
         raise PermissionDenied
-    return webflow_page(request, page)
+    return proxied_site_page(request, page)
 
 
-def webflow_proxy(request):
-    return webflow_page(request, page=request.path_info[1:])
+def proxied_site_proxy(request):
+    return proxied_site_page(request, page=request.path_info[1:])

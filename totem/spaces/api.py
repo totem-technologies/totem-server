@@ -87,62 +87,6 @@ def upcoming_events(request, filters: EventCalendarFilterSchema = Query()):
     ]
 
 
-class WebflowEventsFilterSchema(FilterSchema):
-    keeper_username: str | None = Field(
-        default=None,
-        description="Filter by Keeper's username",
-    )
-
-
-class WebflowEventSchema(Schema):
-    start: str
-    name: str
-    keeper_name: str
-    keeper_username: str
-    join_link: str
-    image_link: str | None
-    keeper_image_link: str | None
-
-
-@router.get(
-    "/webflow/list_events",
-    response={200: list[WebflowEventSchema]},
-    tags=["events"],
-    url_name="webflow_events_list",
-    auth=None,
-)
-def webflow_events_list(request, filters: WebflowEventsFilterSchema = Query()):
-    events = all_upcoming_recommended_sessions(None)
-    if filters.keeper_username:
-        events = events.filter(space__author__keeper_profile__username=filters.keeper_username)
-
-    results: list[WebflowEventSchema] = []
-    for event in events:
-        space = event.space
-
-        keeper_profile = getattr(space.author, "keeper_profile", None)
-        if not keeper_profile:
-            continue
-
-        image_url = space.image.url if space.image else None
-        keeper_image_link = space.author.profile_image.url if space.author.profile_image else None
-        join_link = request.build_absolute_uri(event.get_absolute_url())
-
-        results.append(
-            WebflowEventSchema(
-                start=event.start.isoformat(),
-                name=event.title or space.title,
-                keeper_name=space.author.name,
-                keeper_username=keeper_profile.username,
-                join_link=join_link,
-                image_link=image_url,
-                keeper_image_link=keeper_image_link,
-            )
-        )
-
-    return results
-
-
 @router.get("/list", response={200: list[SpaceDetailSchema]}, tags=["spaces"], url_name="spaces_list")
 def list_spaces(request):
     # Get events with availability information
