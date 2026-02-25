@@ -105,7 +105,9 @@ def post_event(
         case EndRoomEvent():
             mute_all_participants(session_slug)
         case BanParticipantEvent(participant_slug=slug):
-            analytics.user_banned_from_room(user, session_slug)
+            banned_user = User.objects.filter(slug=slug).first()
+            if banned_user is not None:
+                analytics.user_banned_from_room(banned_user, session_slug)
             remove_participant(session_slug, slug, reason=RemoveReason.BAN)
 
     return 200, state
@@ -193,8 +195,8 @@ def join_room(
 
     try:
         is_connected = user.slug in get_connected_participants(session_slug)
-    except LiveKitConfigurationError:
-        logger.exception("LiveKit not configured")
+    except Exception:
+        logger.exception("Failed to determine if user is already connected to LiveKit")
         is_connected = False
 
     return 200, JoinResponse(token=token, is_already_present=is_connected)
