@@ -13,6 +13,7 @@ from django.utils import timezone
 from .models import Room, RoomEventLog
 from .schemas import (
     AcceptStickEvent,
+    BanParticipantEvent,
     EndReason,
     EndRoomEvent,
     ErrorCode,
@@ -25,6 +26,7 @@ from .schemas import (
     StartRoomEvent,
     TransitionError,
     TurnState,
+    UnbanParticipantEvent,
 )
 
 
@@ -76,6 +78,10 @@ def apply_event(
                 _handle_reorder(room, actor, new_order, connected)
             case EndRoomEvent(reason=reason):
                 _handle_end(room, actor, reason)
+            case BanParticipantEvent(participant_slug=slug):
+                _handle_ban(room, actor, slug, connected)
+            case UnbanParticipantEvent(participant_slug=slug):
+                _handle_unban(room, actor, slug)
             case _:
                 raise AssertionError(f"Unhandled event type: {type(event).__name__}")
 
@@ -198,13 +204,13 @@ def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
 
     connected_order = [s for s in reconciled if s in connected]
 
-    # Fix current_speaker if they disconnected
+    # Fix current_speaker if absent from connected (disconnected or banned)
     if room.current_speaker and room.current_speaker not in connected:
         room.current_speaker = connected_order[0] if connected_order else None
         if room.turn_state == TurnState.PASSING:
             room.turn_state = TurnState.SPEAKING
 
-    # Fix next_speaker if they disconnected
+    # Fix next_speaker if absent from connected (disconnected or banned)
     if room.next_speaker and room.next_speaker not in connected:
         if room.current_speaker:
             room.next_speaker = _next_in_order(reconciled, room.current_speaker, connected)
@@ -326,3 +332,37 @@ def _handle_end(room: Room, actor: str, reason: EndReason) -> None:
 
     room.session.ended_at = timezone.now()
     room.session.save(update_fields=["ended_at"])
+
+
+def _handle_ban(room: Room, actor: str, participant_slug: str, connected: set[str]) -> None:
+    _require_keeper(room, actor)
+    _require_not_ended(room)
+
+    if participant_slug == actor:
+        raise TransitionError(
+            code=ErrorCode.INVALID_TRANSITION,
+            message="Cannot ban yourself",
+        )
+
+    if participant_slug in room.banned_participants:
+        raise TransitionError(
+            code=ErrorCode.INVALID_TRANSITION,
+            message="Participant is already banned",
+        )
+
+    room.banned_participants = [*room.banned_participants, participant_slug]
+    room.talking_order = [s for s in room.talking_order if s != participant_slug]
+    _reconcile_talking_order(room, connected - {participant_slug})
+
+
+def _handle_unban(room: Room, actor: str, participant_slug: str) -> None:
+    _require_keeper(room, actor)
+    _require_not_ended(room)
+
+    if participant_slug not in room.banned_participants:
+        raise TransitionError(
+            code=ErrorCode.INVALID_TRANSITION,
+            message="Participant is not banned",
+        )
+
+    room.banned_participants = [s for s in room.banned_participants if s != participant_slug]

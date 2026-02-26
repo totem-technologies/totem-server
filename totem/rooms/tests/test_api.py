@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from totem.rooms.livekit import LiveKitConfigurationError
 from totem.rooms.models import Room
+from totem.rooms.schemas import RemoveReason
 from totem.spaces.tests.factories import SessionFactory
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
@@ -302,7 +303,10 @@ class TestJoinRoom:
         client, user = client_with_user
         session = _make_joinable_session(user)
 
-        with patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"):
+        with (
+            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.api.get_connected_participants", return_value={}),
+        ):
             resp = client.post(f"{BASE}/{session.slug}/join")
 
         assert resp.status_code == 200
@@ -336,6 +340,7 @@ class TestJoinRoom:
         with (
             patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),
             patch("totem.rooms.api.analytics") as mock_analytics,
+            patch("totem.rooms.api.get_connected_participants", return_value={}),
         ):
             resp = client.post(f"{BASE}/{session.slug}/join")
 
@@ -354,6 +359,34 @@ class TestJoinRoom:
 
         assert resp.status_code == 500
         assert resp.json()["code"] == "livekit_error"
+
+    def test_join_banned_returns_403(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        keeper = UserFactory()
+        session = _make_joinable_session(keeper, attendees=[user])
+        room = Room.objects.get_or_create_for_session(session)
+        room.banned_participants = [user.slug]
+        room.save()
+
+        resp = client.post(f"{BASE}/{session.slug}/join")
+
+        assert resp.status_code == 403
+        assert resp.json()["code"] == "banned"
+
+    def test_join_already_connected(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        session = _make_joinable_session(user)
+        session.joined.add(user)
+
+        with (
+            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.api.get_connected_participants", return_value={user.slug}),
+        ):
+            resp = client.post(f"{BASE}/{session.slug}/join")
+
+        assert resp.status_code == 200
+        assert resp.json()["token"] == "fake-jwt-token"
+        assert resp.json()["is_already_present"] is True
 
 
 # ---------------------------------------------------------------------------
@@ -444,7 +477,7 @@ class TestRemoveParticipant:
             resp = client.post(f"{BASE}/{session.slug}/remove/some-participant")
 
         assert resp.status_code == 200
-        mock_remove.assert_called_once_with(session.slug, "some-participant")
+        mock_remove.assert_called_once_with(session.slug, "some-participant", reason=RemoveReason.REMOVE)
 
     def test_remove_not_keeper(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -467,3 +500,69 @@ class TestRemoveParticipant:
         resp = client.post(f"{BASE}/{session.slug}/remove/{keeper.slug}")
 
         assert resp.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# Ban / Unban
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestBanParticipant:
+    def test_ban_success(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        participant = UserFactory()
+        session = SessionFactory(space__author=keeper)
+        session.attendees.add(keeper, participant)
+        Room.objects.get_or_create_for_session(session)
+
+        with (
+            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug, participant.slug}),
+            patch("totem.rooms.api.publish_state"),
+            patch("totem.rooms.api.remove_participant"),
+        ):
+            resp = _post_event(
+                client, session.slug, {"type": "ban_participant", "participant_slug": participant.slug}, 0
+            )
+
+        assert resp.status_code == 200
+        assert participant.slug in resp.json()["banned_participants"]
+
+    def test_ban_calls_remove_participant(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        participant = UserFactory()
+        session = SessionFactory(space__author=keeper)
+        session.attendees.add(keeper, participant)
+        Room.objects.get_or_create_for_session(session)
+
+        with (
+            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug, participant.slug}),
+            patch("totem.rooms.api.publish_state"),
+            patch("totem.rooms.api.remove_participant") as mock_remove,
+        ):
+            _post_event(client, session.slug, {"type": "ban_participant", "participant_slug": participant.slug}, 0)
+
+        mock_remove.assert_called_once_with(session.slug, participant.slug, reason=RemoveReason.BAN)
+
+
+@pytest.mark.django_db
+class TestUnbanParticipant:
+    def test_unban_success(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        participant = UserFactory()
+        session = SessionFactory(space__author=keeper)
+        session.attendees.add(keeper, participant)
+        room = Room.objects.get_or_create_for_session(session)
+        room.banned_participants = [participant.slug]
+        room.save()
+
+        with (
+            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug}),
+            patch("totem.rooms.api.publish_state"),
+        ):
+            resp = _post_event(
+                client, session.slug, {"type": "unban_participant", "participant_slug": participant.slug}, 0
+            )
+
+        assert resp.status_code == 200
+        assert participant.slug not in resp.json()["banned_participants"]

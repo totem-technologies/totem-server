@@ -7,7 +7,6 @@ All LiveKit API calls live here — nowhere else in the app talks to LiveKit.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 
 from asgiref.sync import async_to_sync
@@ -16,7 +15,7 @@ from livekit import api
 
 from totem.users.models import User
 
-from .schemas import RoomState
+from .schemas import RemoveParticipantPayload, RemoveReason, RoomState
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +40,7 @@ async def _publish_state(room_name: str, state: RoomState) -> None:
         await lkapi.room.update_room_metadata(
             update=api.UpdateRoomMetadataRequest(
                 room=room_name,
-                metadata=json.dumps(state.dict()),
+                metadata=state.model_dump_json(),
             )
         )
 
@@ -176,9 +175,23 @@ async def _mute_all_participants(room_name: str, except_identity: str | None = N
                 logger.exception("Failed to mute participant in room %s", room_name, exc_info=result)
 
 
-async def _remove_participant(room_name: str, identity: str) -> None:
+async def _remove_participant(room_name: str, identity: str, reason: RemoveReason = RemoveReason.REMOVE) -> None:
     async with _get_api() as lkapi:
-        await lkapi.room.remove_participant(api.RoomParticipantIdentity(room=room_name, identity=identity))
+        try:
+            await lkapi.room.send_data(
+                api.SendDataRequest(
+                    room=room_name,
+                    topic="lk-participant-removed-topic",
+                    data=RemoveParticipantPayload(identity=identity, reason=reason).model_dump_json().encode(),
+                    destination_identities=[identity],
+                    kind=api.DataPacket.Kind.RELIABLE,
+                )
+            )
+        except Exception:
+            logger.exception(
+                "Failed to send remove data message to %s in room %s, falling back to hard remove", identity, room_name
+            )
+            await lkapi.room.remove_participant(api.RoomParticipantIdentity(room=room_name, identity=identity))
 
 
 @async_to_sync
@@ -194,6 +207,6 @@ async def mute_all_participants(room_name: str, except_identity: str | None = No
 
 
 @async_to_sync
-async def remove_participant(room_name: str, identity: str) -> None:
+async def remove_participant(room_name: str, identity: str, reason: RemoveReason = RemoveReason.REMOVE) -> None:
     """Remove a participant from the room."""
-    await _remove_participant(room_name, identity)
+    await _remove_participant(room_name, identity, reason)

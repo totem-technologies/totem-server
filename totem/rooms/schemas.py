@@ -11,6 +11,7 @@ from enum import Enum
 from typing import Annotated, Literal, Optional, Union
 
 from ninja import Field, Schema
+from pydantic import ConfigDict
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -40,6 +41,7 @@ class ErrorCode(str, Enum):
     NOT_KEEPER = "not_keeper"
     NOT_CURRENT_SPEAKER = "not_current_speaker"
     NOT_NEXT_SPEAKER = "not_next_speaker"
+    BANNED = "banned"
 
     # Invalid state transitions
     INVALID_TRANSITION = "invalid_transition"
@@ -67,6 +69,22 @@ class EndReason(str, Enum):
     KEEPER_ENDED = "keeper_ended"
     KEEPER_ABSENT = "keeper_absent"
     ROOM_EMPTY = "room_empty"
+
+
+class RemoveReason(str, Enum):
+    REMOVE = "remove"
+    BAN = "ban"
+
+
+# ---------------------------------------------------------------------------
+# LiveKit data message payloads
+# ---------------------------------------------------------------------------
+
+
+class RemoveParticipantPayload(Schema):
+    action: Literal["remove_participant"] = "remove_participant"
+    identity: str
+    reason: RemoveReason
 
 
 # ---------------------------------------------------------------------------
@@ -118,6 +136,7 @@ class RoomState(Schema):
     next_speaker: Optional[str] = None  # user slug
     talking_order: list[str]  # user slugs
     keeper: str  # user slug
+    banned_participants: list[str] = []  # user slugs
 
 
 # ---------------------------------------------------------------------------
@@ -158,6 +177,24 @@ class EndRoomEvent(Schema):
     reason: EndReason
 
 
+class BanParticipantEvent(Schema):
+    """Keeper permanently bans a participant, removing them from the talking order."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    type: Literal["ban_participant"] = "ban_participant"
+    participant_slug: str = Field(alias="participantSlug")
+
+
+class UnbanParticipantEvent(Schema):
+    """Keeper lifts a ban, allowing the participant to rejoin."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    type: Literal["unban_participant"] = "unban_participant"
+    participant_slug: str = Field(alias="participantSlug")
+
+
 RoomEvent = Annotated[
     Union[
         StartRoomEvent,
@@ -166,6 +203,8 @@ RoomEvent = Annotated[
         ForcePassStickEvent,
         ReorderEvent,
         EndRoomEvent,
+        BanParticipantEvent,
+        UnbanParticipantEvent,
     ],
     Field(discriminator="type"),
 ]
@@ -190,9 +229,10 @@ class JoinResponse(Schema):
     """Token for connecting to a LiveKit room."""
 
     token: str
+    is_already_present: bool
 
 
-class ErrorResponse(Schema):
+class RoomErrorResponse(Schema):
     """
     Structured error. Clients switch on `code`, display `message`.
     `detail` is optional extra context for debugging.
@@ -202,7 +242,7 @@ class ErrorResponse(Schema):
     message: str
     detail: Optional[str] = None
 
-    def as_http_response(self) -> tuple[int, ErrorResponse]:
+    def as_http_response(self) -> tuple[int, RoomErrorResponse]:
         """Map error codes to HTTP statuses. Defaults to 400."""
         match self.code:
             case (
@@ -211,6 +251,7 @@ class ErrorResponse(Schema):
                 | ErrorCode.NOT_CURRENT_SPEAKER
                 | ErrorCode.NOT_NEXT_SPEAKER
                 | ErrorCode.NOT_JOINABLE
+                | ErrorCode.BANNED
             ):
                 return 403, self
             case ErrorCode.NOT_FOUND:

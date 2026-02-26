@@ -43,3 +43,23 @@ def event_joined(user: "User", event: "Session"):
             "keeper_id": event.space.author.analytics_id(),
         },
     )
+
+
+def user_removed_from_room(user: "User", session_slug: str):
+    _posthog.capture(
+        "user_removed_from_room",
+        distinct_id=user.analytics_id(),
+        properties={
+            "session_slug": session_slug,
+        },
+    )
+
+
+def user_banned_from_room(user: "User", session_slug: str):
+    _posthog.capture(
+        "user_banned_from_room",
+        distinct_id=user.analytics_id(),
+        properties={
+            "session_slug": session_slug,
+        },
+    )
