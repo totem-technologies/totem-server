@@ -298,6 +298,8 @@ def remove(
         ).as_http_response()
 
     room: Room = result
-    analytics.user_removed_from_room(user, room.session)
+    removed_user = User.objects.filter(slug=participant_identity).first()
+    if removed_user:
+        analytics.user_removed_from_room(removed_user, room.session)
 
     return 200, RemoveParticipantPayload(identity=participant_identity, reason=reason)
