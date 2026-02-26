@@ -18,7 +18,6 @@ from totem.users.models import User
 
 from .livekit import (
     LiveKitConfigurationError,
-    RemoveReason,
     create_access_token,
     get_connected_participants,
     mute_all_participants,
@@ -36,6 +35,7 @@ from .schemas import (
     EventRequest,
     ForcePassStickEvent,
     JoinResponse,
+    RemoveReason,
     RoomState,
     StartRoomEvent,
     TransitionError,

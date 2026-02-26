@@ -204,13 +204,13 @@ def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
 
     connected_order = [s for s in reconciled if s in connected]
 
-    # Fix current_speaker if they disconnected
+    # Fix current_speaker if absent from connected (disconnected or banned)
     if room.current_speaker and room.current_speaker not in connected:
         room.current_speaker = connected_order[0] if connected_order else None
         if room.turn_state == TurnState.PASSING:
             room.turn_state = TurnState.SPEAKING
 
-    # Fix next_speaker if they disconnected
+    # Fix next_speaker if absent from connected (disconnected or banned)
     if room.next_speaker and room.next_speaker not in connected:
         if room.current_speaker:
             room.next_speaker = _next_in_order(reconciled, room.current_speaker, connected)
@@ -351,25 +351,7 @@ def _handle_ban(room: Room, actor: str, participant_slug: str, connected: set[st
 
     room.banned_participants = [*room.banned_participants, participant_slug]
     room.talking_order = [s for s in room.talking_order if s != participant_slug]
-
-    remaining_connected = connected - {participant_slug}
-
-    if room.current_speaker == participant_slug:
-        connected_order = [s for s in room.talking_order if s in remaining_connected]
-        room.current_speaker = connected_order[0] if connected_order else None
-        if room.current_speaker:
-            room.next_speaker = (
-                _next_in_order(room.talking_order, room.current_speaker, remaining_connected) or room.current_speaker
-            )
-        else:
-            room.next_speaker = None
-    elif room.next_speaker == participant_slug:
-        if room.current_speaker:
-            room.next_speaker = (
-                _next_in_order(room.talking_order, room.current_speaker, remaining_connected) or room.current_speaker
-            )
-        else:
-            room.next_speaker = None
+    _reconcile_talking_order(room, connected - {participant_slug})
 
 
 def _handle_unban(room: Room, actor: str, participant_slug: str) -> None:
@@ -382,5 +364,3 @@ def _handle_unban(room: Room, actor: str, participant_slug: str) -> None:
         )
 
     room.banned_participants = [s for s in room.banned_participants if s != participant_slug]
-
-    room.talking_order.append(participant_slug)

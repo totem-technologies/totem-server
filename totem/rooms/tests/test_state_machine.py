@@ -3,6 +3,7 @@ import pytest
 from totem.rooms.models import Room
 from totem.rooms.schemas import (
     AcceptStickEvent,
+    BanParticipantEvent,
     EndReason,
     EndRoomEvent,
     ErrorCode,
@@ -13,6 +14,7 @@ from totem.rooms.schemas import (
     StartRoomEvent,
     TransitionError,
     TurnState,
+    UnbanParticipantEvent,
 )
 from totem.rooms.state_machine import _next_in_order, _reconcile_talking_order, apply_event
 from totem.spaces.tests.factories import SessionFactory
@@ -518,6 +520,169 @@ class TestForcePassStick:
         with pytest.raises(TransitionError) as exc_info:
             apply_event(slug, keeper.slug, ForcePassStickEvent(), 0, {keeper.slug})
         assert exc_info.value.code == ErrorCode.ROOM_NOT_ACTIVE
+
+
+# ---------------------------------------------------------------------------
+# Ban / Unban
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestBanParticipant:
+    def test_ban_adds_to_banned_list(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        state = apply_event(slug, keeper.slug, BanParticipantEvent(participantSlug=user1.slug), 1, connected)
+
+        assert user1.slug in state.banned_participants
+
+    def test_ban_removes_from_talking_order(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        state = apply_event(slug, keeper.slug, BanParticipantEvent(participantSlug=user1.slug), 1, connected)
+
+        assert user1.slug not in state.talking_order
+
+    def test_ban_current_speaker_transfers_stick(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        user2 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1, user2])
+        connected = {keeper.slug, user1.slug, user2.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        apply_event(slug, keeper.slug, PassStickEvent(), 1, connected)
+        apply_event(slug, user1.slug, AcceptStickEvent(), 2, connected)
+
+        state = apply_event(slug, keeper.slug, BanParticipantEvent(participantSlug=user1.slug), 3, connected)
+
+        assert state.current_speaker == keeper.slug
+
+    def test_ban_current_speaker_while_passing_resets_turn_state(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        user2 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1, user2])
+        connected = {keeper.slug, user1.slug, user2.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        apply_event(slug, keeper.slug, PassStickEvent(), 1, connected)
+        apply_event(slug, user1.slug, AcceptStickEvent(), 2, connected)
+        apply_event(slug, user1.slug, PassStickEvent(), 3, connected)
+
+        state = apply_event(slug, keeper.slug, BanParticipantEvent(participantSlug=user1.slug), 4, connected)
+
+        assert state.current_speaker != user1.slug
+        assert state.turn_state == TurnState.SPEAKING
+
+    def test_ban_next_speaker_reassigns(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        user2 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1, user2])
+        connected = {keeper.slug, user1.slug, user2.slug}
+
+        state = apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        assert state.next_speaker == user1.slug
+
+        state = apply_event(slug, keeper.slug, BanParticipantEvent(participantSlug=user1.slug), 1, connected)
+
+        assert state.next_speaker == user2.slug
+
+    def test_ban_self_raises_error(self):
+        keeper = UserFactory()
+        _, slug = _setup_room(keeper, [keeper])
+
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(slug, keeper.slug, BanParticipantEvent(participantSlug=keeper.slug), 0, {keeper.slug})
+        assert exc_info.value.code == ErrorCode.INVALID_TRANSITION
+
+    def test_cannot_ban_keeper(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(slug, keeper.slug, BanParticipantEvent(participantSlug=keeper.slug), 1, connected)
+        assert exc_info.value.code == ErrorCode.INVALID_TRANSITION
+
+    def test_ban_already_banned_raises_error(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        apply_event(slug, keeper.slug, BanParticipantEvent(participantSlug=user1.slug), 1, connected)
+
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(slug, keeper.slug, BanParticipantEvent(participantSlug=user1.slug), 2, {keeper.slug})
+        assert exc_info.value.code == ErrorCode.INVALID_TRANSITION
+
+    def test_non_keeper_cannot_ban(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        user2 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1, user2])
+        connected = {keeper.slug, user1.slug, user2.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(slug, user1.slug, BanParticipantEvent(participantSlug=user2.slug), 1, connected)
+        assert exc_info.value.code == ErrorCode.NOT_KEEPER
+
+
+@pytest.mark.django_db
+class TestUnbanParticipant:
+    def test_unban_removes_from_banned_list(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        apply_event(slug, keeper.slug, BanParticipantEvent(participantSlug=user1.slug), 1, connected)
+
+        state = apply_event(slug, keeper.slug, UnbanParticipantEvent(participantSlug=user1.slug), 2, {keeper.slug})
+
+        assert user1.slug not in state.banned_participants
+
+    def test_unban_not_banned_raises_error(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(
+                slug, keeper.slug, UnbanParticipantEvent(participantSlug=user1.slug), 0, {keeper.slug, user1.slug}
+            )
+        assert exc_info.value.code == ErrorCode.INVALID_TRANSITION
+
+    def test_non_keeper_cannot_unban(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        user2 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1, user2])
+        connected = {keeper.slug, user1.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        apply_event(slug, keeper.slug, BanParticipantEvent(participantSlug=user2.slug), 1, connected)
+
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(slug, user1.slug, UnbanParticipantEvent(participantSlug=user2.slug), 2, connected)
+        assert exc_info.value.code == ErrorCode.NOT_KEEPER
 
 
 # ---------------------------------------------------------------------------
