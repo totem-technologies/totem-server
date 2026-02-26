@@ -376,6 +376,7 @@ class TestJoinRoom:
     def test_join_already_connected(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         session = _make_joinable_session(user)
+        session.joined.add(user)
 
         with (
             patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),

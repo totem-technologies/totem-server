@@ -190,17 +190,17 @@ def join_room(
             message="LiveKit service is not properly configured",
         ).as_http_response()
 
-    session.joined.add(user)
-    analytics.event_joined(user, session)
-
-    is_connected = False
-    if session.joined.count() > 1:
+    is_already_connected = False
+    if session.joined.count() > 0:
         try:
-            is_connected = user.slug in get_connected_participants(session_slug)
+            is_already_connected = user.slug in get_connected_participants(session_slug)
         except Exception:
             logger.exception("Failed to determine if user is already connected to LiveKit")
 
-    return 200, JoinResponse(token=token, is_already_present=is_connected)
+    session.joined.add(user)
+    analytics.event_joined(user, session)
+
+    return 200, JoinResponse(token=token, is_already_present=is_already_connected)
 
 
 def _get_room_and_require_keeper(user: User, session_slug: str) -> Room | ErrorResponse:

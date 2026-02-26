@@ -11,6 +11,7 @@ from enum import Enum
 from typing import Annotated, Literal, Optional, Union
 
 from ninja import Field, Schema
+from pydantic import ConfigDict
 
 # ---------------------------------------------------------------------------
 # Enums
@@ -179,15 +180,19 @@ class EndRoomEvent(Schema):
 class BanParticipantEvent(Schema):
     """Keeper permanently bans a participant, removing them from the talking order."""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     type: Literal["ban_participant"] = "ban_participant"
-    participant_slug: str
+    participant_slug: str = Field(alias="participantSlug")
 
 
 class UnbanParticipantEvent(Schema):
     """Keeper lifts a ban, allowing the participant to rejoin."""
 
+    model_config = ConfigDict(populate_by_name=True)
+
     type: Literal["unban_participant"] = "unban_participant"
-    participant_slug: str
+    participant_slug: str = Field(alias="participantSlug")
 
 
 RoomEvent = Annotated[
