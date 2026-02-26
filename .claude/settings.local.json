@@ -29,7 +29,9 @@
       "Bash(gh issue view:*)",
       "Bash(gh pr list:*)",
       "Bash(gh pr view:*)",
-      "Bash(make test-python:*)"
+      "Bash(make test-python:*)",
+      "WebFetch(domain:django-ninja.dev)",
+      "WebFetch(domain:docs.pydantic.dev)"
     ]
   }
 }

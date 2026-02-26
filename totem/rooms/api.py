@@ -297,9 +297,8 @@ def remove(
             code=ErrorCode.LIVEKIT_ERROR, message="LiveKit service is not properly configured"
         ).as_http_response()
 
-    room: Room = result
     removed_user = User.objects.filter(slug=participant_identity).first()
     if removed_user:
-        analytics.user_removed_from_room(removed_user, room.session)
+        analytics.user_removed_from_room(removed_user, session_slug)
 
     return 200, RemoveParticipantPayload(identity=participant_identity, reason=reason)

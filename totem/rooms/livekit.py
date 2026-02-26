@@ -188,6 +188,9 @@ async def _remove_participant(room_name: str, identity: str, reason: RemoveReaso
                 )
             )
         except Exception:
+            logger.exception(
+                "Failed to send remove data message to %s in room %s, falling back to hard remove", identity, room_name
+            )
             await lkapi.room.remove_participant(api.RoomParticipantIdentity(room=room_name, identity=identity))
 
 

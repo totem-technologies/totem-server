@@ -45,13 +45,12 @@ def event_joined(user: "User", event: "Session"):
     )
 
 
-def user_removed_from_room(user: "User", session: "Session"):
+def user_removed_from_room(user: "User", session_slug: str):
     _posthog.capture(
         "user_removed_from_room",
         distinct_id=user.analytics_id(),
         properties={
-            "session_slug": session.slug,
-            "space_id": session.space.slug,
+            "session_slug": session_slug,
         },
     )
 

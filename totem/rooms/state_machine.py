@@ -336,6 +336,7 @@ def _handle_end(room: Room, actor: str, reason: EndReason) -> None:
 
 def _handle_ban(room: Room, actor: str, participant_slug: str, connected: set[str]) -> None:
     _require_keeper(room, actor)
+    _require_not_ended(room)
 
     if participant_slug == actor:
         raise TransitionError(
@@ -356,6 +357,7 @@ def _handle_ban(room: Room, actor: str, participant_slug: str, connected: set[st
 
 def _handle_unban(room: Room, actor: str, participant_slug: str) -> None:
     _require_keeper(room, actor)
+    _require_not_ended(room)
 
     if participant_slug not in room.banned_participants:
         raise TransitionError(
