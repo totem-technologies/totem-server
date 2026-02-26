@@ -31,11 +31,12 @@ from .schemas import (
     BanParticipantEvent,
     EndRoomEvent,
     ErrorCode,
-    ErrorResponse,
     EventRequest,
     ForcePassStickEvent,
     JoinResponse,
+    RemoveParticipantPayload,
     RemoveReason,
+    RoomErrorResponse,
     RoomState,
     StartRoomEvent,
     TransitionError,
@@ -49,11 +50,11 @@ router = Router(tags=["rooms"])
 # ---------------------------------------------------------------------------
 
 ERROR_RESPONSES = {
-    400: ErrorResponse,
-    403: ErrorResponse,
-    404: ErrorResponse,
-    409: ErrorResponse,
-    500: ErrorResponse,
+    400: RoomErrorResponse,
+    403: RoomErrorResponse,
+    404: RoomErrorResponse,
+    409: RoomErrorResponse,
+    500: RoomErrorResponse,
 }
 
 logger = logging.getLogger(__name__)
@@ -87,7 +88,7 @@ def post_event(
             connected=connected,
         )
     except TransitionError as e:
-        return ErrorResponse(
+        return RoomErrorResponse(
             code=e.code,
             message=e.message,
             detail=e.detail,
@@ -130,13 +131,13 @@ def get_state(
     room = Room.objects.for_session(session_slug).first()  # type: ignore
 
     if not room:
-        return 404, ErrorResponse(
+        return 404, RoomErrorResponse(
             code=ErrorCode.NOT_FOUND,
             message="Room not found",
         )
 
     if not room.session.attendees.filter(slug=user.slug).exists():
-        return 403, ErrorResponse(
+        return 403, RoomErrorResponse(
             code=ErrorCode.NOT_IN_ROOM,
             message="You are not an attendee of this session",
         )
@@ -163,20 +164,20 @@ def join_room(
 
     session = Session.objects.filter(slug=session_slug).first()
     if not session:
-        return 404, ErrorResponse(
+        return 404, RoomErrorResponse(
             code=ErrorCode.NOT_FOUND,
             message="Session not found",
         )
 
     if not session.can_join(user):
-        return ErrorResponse(
+        return RoomErrorResponse(
             code=ErrorCode.NOT_JOINABLE,
             message="Session is not joinable at this time",
         ).as_http_response()
 
     room = Room.objects.get_or_create_for_session(session)
     if user.slug in room.banned_participants:
-        return ErrorResponse(
+        return RoomErrorResponse(
             code=ErrorCode.BANNED,
             message="You have been banned from this session",
         ).as_http_response()
@@ -185,7 +186,7 @@ def join_room(
         token = create_access_token(user, session.slug)
     except LiveKitConfigurationError:
         logger.exception("LiveKit not configured")
-        return ErrorResponse(
+        return RoomErrorResponse(
             code=ErrorCode.LIVEKIT_ERROR,
             message="LiveKit service is not properly configured",
         ).as_http_response()
@@ -203,14 +204,14 @@ def join_room(
     return 200, JoinResponse(token=token, is_already_present=is_already_connected)
 
 
-def _get_room_and_require_keeper(user: User, session_slug: str) -> Room | ErrorResponse:
+def _get_room_and_require_keeper(user: User, session_slug: str) -> Room | RoomErrorResponse:
     """Helper: load the Room and verify the user is the keeper. Returns Room or ErrorResponse tuple."""
     room = Room.objects.for_session(session_slug).first()  # type: ignore
     if not room:
-        return ErrorResponse(code=ErrorCode.NOT_FOUND, message="Room not found")
+        return RoomErrorResponse(code=ErrorCode.NOT_FOUND, message="Room not found")
 
     if room.keeper != user.slug:
-        return ErrorResponse(code=ErrorCode.NOT_KEEPER, message="Only the keeper can perform this action")
+        return RoomErrorResponse(code=ErrorCode.NOT_KEEPER, message="Only the keeper can perform this action")
 
     return room
 
@@ -228,13 +229,13 @@ def mute(
 ):
     user: User = request.user  # type: ignore
     result = _get_room_and_require_keeper(user, session_slug)
-    if isinstance(result, ErrorResponse):
+    if isinstance(result, RoomErrorResponse):
         return result.as_http_response()
 
     try:
         mute_participant(session_slug, participant_identity)
     except LiveKitConfigurationError:
-        return ErrorResponse(
+        return RoomErrorResponse(
             code=ErrorCode.LIVEKIT_ERROR, message="LiveKit service is not properly configured"
         ).as_http_response()
 
@@ -253,13 +254,13 @@ def mute_all(
 ):
     user: User = request.user  # type: ignore
     result = _get_room_and_require_keeper(user, session_slug)
-    if isinstance(result, ErrorResponse):
+    if isinstance(result, RoomErrorResponse):
         return result.as_http_response()
 
     try:
         mute_all_participants(session_slug, except_identity=user.slug)
     except LiveKitConfigurationError:
-        return ErrorResponse(
+        return RoomErrorResponse(
             code=ErrorCode.LIVEKIT_ERROR, message="LiveKit service is not properly configured"
         ).as_http_response()
 
@@ -268,7 +269,7 @@ def mute_all(
 
 @router.post(
     "/{session_slug}/remove/{participant_identity}",
-    response={200: None, **ERROR_RESPONSES},
+    response={200: RemoveParticipantPayload, **ERROR_RESPONSES},
     summary="Remove a participant",
     description="Emits a remove event to a specific participant",
 )
@@ -276,26 +277,27 @@ def remove(
     request: HttpRequest,
     session_slug: str,
     participant_identity: str,
+    reason: RemoveReason = RemoveReason.REMOVE,
 ):
     user: User = request.user  # type: ignore
     result = _get_room_and_require_keeper(user, session_slug)
-    if isinstance(result, ErrorResponse):
+    if isinstance(result, RoomErrorResponse):
         return result.as_http_response()
 
     if participant_identity == user.slug:
-        return ErrorResponse(
+        return RoomErrorResponse(
             code=ErrorCode.INVALID_TRANSITION,
             message="Cannot remove yourself from the room",
         ).as_http_response()
 
     try:
-        remove_participant(session_slug, participant_identity)
+        remove_participant(session_slug, participant_identity, reason=reason)
     except LiveKitConfigurationError:
-        return ErrorResponse(
+        return RoomErrorResponse(
             code=ErrorCode.LIVEKIT_ERROR, message="LiveKit service is not properly configured"
         ).as_http_response()
 
     room: Room = result
     analytics.user_removed_from_room(user, room.session)
 
-    return 200, None
+    return 200, RemoveParticipantPayload(identity=participant_identity, reason=reason)

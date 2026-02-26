@@ -477,7 +477,7 @@ class TestRemoveParticipant:
             resp = client.post(f"{BASE}/{session.slug}/remove/some-participant")
 
         assert resp.status_code == 200
-        mock_remove.assert_called_once_with(session.slug, "some-participant")
+        mock_remove.assert_called_once_with(session.slug, "some-participant", reason=RemoveReason.REMOVE)
 
     def test_remove_not_keeper(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -566,4 +566,3 @@ class TestUnbanParticipant:
 
         assert resp.status_code == 200
         assert participant.slug not in resp.json()["banned_participants"]
-

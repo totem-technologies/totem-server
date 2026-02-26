@@ -232,7 +232,7 @@ class JoinResponse(Schema):
     is_already_present: bool
 
 
-class ErrorResponse(Schema):
+class RoomErrorResponse(Schema):
     """
     Structured error. Clients switch on `code`, display `message`.
     `detail` is optional extra context for debugging.
@@ -242,7 +242,7 @@ class ErrorResponse(Schema):
     message: str
     detail: Optional[str] = None
 
-    def as_http_response(self) -> tuple[int, ErrorResponse]:
+    def as_http_response(self) -> tuple[int, RoomErrorResponse]:
         """Map error codes to HTTP statuses. Defaults to 400."""
         match self.code:
             case (
