@@ -193,11 +193,12 @@ def join_room(
     session.joined.add(user)
     analytics.event_joined(user, session)
 
-    try:
-        is_connected = user.slug in get_connected_participants(session_slug)
-    except Exception:
-        logger.exception("Failed to determine if user is already connected to LiveKit")
-        is_connected = False
+    is_connected = False
+    if session.joined.count() > 1:
+        try:
+            is_connected = user.slug in get_connected_participants(session_slug)
+        except Exception:
+            logger.exception("Failed to determine if user is already connected to LiveKit")
 
     return 200, JoinResponse(token=token, is_already_present=is_connected)
 
