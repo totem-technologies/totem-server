@@ -23,7 +23,12 @@ def send_mail(
     subject = subject.replace("\n", " ")
     try:
         return django_send_mail(
-            subject, text_message, from_email, recipient_list, fail_silently=fail_silently, html_message=html_message
+            subject=subject,
+            message=text_message,
+            from_email=from_email,
+            recipient_list=recipient_list,
+            fail_silently=fail_silently,
+            html_message=html_message,
         )
     except AnymailRecipientsRefused:
         raise EmailBounced(f"Email to {recipient_list} with subject {subject} was blocked.")

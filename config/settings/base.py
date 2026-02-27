@@ -71,6 +71,7 @@ DJANGO_APPS = [
     "django.contrib.sessions",
     "django.contrib.sitemaps",
     "django.contrib.staticfiles",
+    "django.contrib.postgres",
     "django.forms",
 ]
 THIRD_PARTY_APPS = [
@@ -148,6 +149,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/dev/ref/settings/#middleware
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "django.middleware.csp.ContentSecurityPolicyMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -245,6 +247,7 @@ TEMPLATES = [
                 "django.template.context_processors.static",
                 "django.template.context_processors.tz",
                 "django.contrib.messages.context_processors.messages",
+                "django.template.context_processors.csp",
                 "totem.users.context_processors.allauth_settings",
             ],
             "loaders": default_loaders if DEBUG else cached_loaders,
@@ -306,7 +309,7 @@ SEND_BREVO_EMAILS = env.bool("SEND_BREVO_EMAILS", default=False)
 # Django Admin URL.
 ADMIN_URL = "admin/"
 # https://docs.djangoproject.com/en/dev/ref/settings/#admins
-ADMINS = [("""Bo""", "bo@totem.org")]
+ADMINS = ["bo@totem.org"]
 # https://docs.djangoproject.com/en/dev/ref/settings/#managers
 MANAGERS = ADMINS
 
