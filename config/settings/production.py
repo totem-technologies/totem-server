@@ -115,6 +115,7 @@ SECURE_CSP_REPORT_ONLY = {
     "font-src": [CSP.SELF] + ([f"https://{STATIC_HOST}"] if STATIC_HOST else []),
     "connect-src": _CSP_CONNECT_SRC,
     "frame-src": ["https://e.totem.org", "https://www.googletagmanager.com"],
+    "worker-src": [CSP.SELF, "blob:"],  # blob: needed for GTM web workers
     "object-src": [CSP.NONE],
     "base-uri": [CSP.SELF],
     "form-action": [CSP.SELF],
