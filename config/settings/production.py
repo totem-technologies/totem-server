@@ -1,5 +1,7 @@
 import socket
 
+from django.utils.csp import CSP
+
 from .base import *  # noqa
 from .base import MAILERSEND_API_TOKEN, env
 
@@ -61,6 +63,60 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool("DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS
 SECURE_HSTS_PRELOAD = env.bool("DJANGO_SECURE_HSTS_PRELOAD", default=True)
 # https://docs.djangoproject.com/en/dev/ref/middleware/#x-content-type-options-nosniff
 SECURE_CONTENT_TYPE_NOSNIFF = env.bool("DJANGO_SECURE_CONTENT_TYPE_NOSNIFF", default=True)
+
+# CSP (Content Security Policy)
+# ------------------------------------------------------------------------------
+# https://docs.djangoproject.com/en/6.0/ref/csp/
+# Starting in report-only mode to collect violations without breaking the site.
+# Once reports are clean, move this to SECURE_CSP to enforce.
+_DO_CDN = f"*.{env('DO_STORAGE_BUCKET_REGION', default='nyc3')}.cdn.digitaloceanspaces.com"
+_CSP_SCRIPT_SRC = [
+    CSP.SELF,
+    CSP.UNSAFE_INLINE,
+    "https://js.sentry-cdn.com",
+    "https://www.googletagmanager.com",
+    "https://e.totem.org",
+]
+_CSP_STYLE_SRC = [
+    CSP.SELF,
+    CSP.UNSAFE_INLINE,
+]
+_CSP_IMG_SRC = [
+    CSP.SELF,
+    _DO_CDN,
+    "data:",
+]
+_CSP_CONNECT_SRC = [
+    CSP.SELF,
+    "https://o1324443.ingest.sentry.io",
+    "https://e.totem.org",
+    "https://www.google-analytics.com",
+    "https://www.googletagmanager.com",
+    "https://analytics.google.com",
+    _DO_CDN,
+]
+if STATIC_HOST:
+    _CSP_SCRIPT_SRC.append(f"https://{STATIC_HOST}")
+    _CSP_STYLE_SRC.append(f"https://{STATIC_HOST}")
+    _CSP_IMG_SRC.append(f"https://{STATIC_HOST}")
+    _CSP_CONNECT_SRC.append(f"https://{STATIC_HOST}")
+
+SECURE_CSP_REPORT_ONLY = {
+    "default-src": [CSP.SELF],
+    "script-src": _CSP_SCRIPT_SRC,
+    "style-src": _CSP_STYLE_SRC,
+    "img-src": _CSP_IMG_SRC,
+    "font-src": [CSP.SELF] + ([f"https://{STATIC_HOST}"] if STATIC_HOST else []),
+    "connect-src": _CSP_CONNECT_SRC,
+    "frame-src": ["https://e.totem.org"],
+    "object-src": [CSP.NONE],
+    "base-uri": [CSP.SELF],
+    "form-action": [CSP.SELF],
+    "frame-ancestors": [CSP.NONE],
+    "report-uri": [
+        "https://o1324443.ingest.sentry.io/api/4505270983065600/security/?sentry_key=fc28dfc40b014a8fa120aa1d9c279112"
+    ],
+}
 
 # MEDIA
 # ------------------------------------------------------------------------------
