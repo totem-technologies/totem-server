@@ -75,6 +75,8 @@ _CSP_SCRIPT_SRC = [
     CSP.UNSAFE_INLINE,
     "https://js.sentry-cdn.com",
     "https://www.googletagmanager.com",
+    "https://googleads.g.doubleclick.net",
+    "https://static.cloudflareinsights.com",
     "https://e.totem.org",
 ]
 _CSP_STYLE_SRC = [
@@ -85,6 +87,9 @@ _CSP_IMG_SRC = [
     CSP.SELF,
     _DO_CDN,
     "data:",
+    "https://googleads.g.doubleclick.net",
+    "https://www.googleadservices.com",
+    "https://www.google.com",
 ]
 _CSP_CONNECT_SRC = [
     CSP.SELF,
@@ -93,6 +98,7 @@ _CSP_CONNECT_SRC = [
     "https://www.google-analytics.com",
     "https://www.googletagmanager.com",
     "https://analytics.google.com",
+    "https://static.cloudflareinsights.com",
     _DO_CDN,
 ]
 if STATIC_HOST:
@@ -108,7 +114,7 @@ SECURE_CSP_REPORT_ONLY = {
     "img-src": _CSP_IMG_SRC,
     "font-src": [CSP.SELF] + ([f"https://{STATIC_HOST}"] if STATIC_HOST else []),
     "connect-src": _CSP_CONNECT_SRC,
-    "frame-src": ["https://e.totem.org"],
+    "frame-src": ["https://e.totem.org", "https://www.googletagmanager.com"],
     "object-src": [CSP.NONE],
     "base-uri": [CSP.SELF],
     "form-action": [CSP.SELF],
