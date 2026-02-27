@@ -306,7 +306,7 @@ SEND_BREVO_EMAILS = env.bool("SEND_BREVO_EMAILS", default=False)
 # Django Admin URL.
 ADMIN_URL = "admin/"
 # https://docs.djangoproject.com/en/dev/ref/settings/#admins
-ADMINS = [("""Bo""", "bo@totem.org")]
+ADMINS = ["bo@totem.org"]
 # https://docs.djangoproject.com/en/dev/ref/settings/#managers
 MANAGERS = ADMINS
 

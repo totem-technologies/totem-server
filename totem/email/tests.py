@@ -10,6 +10,18 @@ from totem.users.tests.factories import UserFactory
 from .views import get_templates
 
 
+def _get_email_content(email) -> str:
+    """Get decoded content from all parts of an email message."""
+    msg = email.message()
+    parts = []
+    for part in msg.walk():
+        if part.get_content_type() in ("text/plain", "text/html"):
+            payload = part.get_payload(decode=True)
+            if payload:
+                parts.append(payload.decode(part.get_content_charset() or "utf-8"))
+    return "\n".join(parts)
+
+
 class TestTemplateDevEmail:
     def test_template_view_public(self, client: Client, db):
         self._test_templates(client, status_code=404)
@@ -59,7 +71,7 @@ class TestAdvertEmail:
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
-        message = str(email.message())
+        message = _get_email_content(email)
         assert "http://testserver/spaces/session" in message
         assert event.space.title in message
         assert "http://testserver/spaces/subscribe" in message
@@ -74,7 +86,7 @@ class TestAdvertEmail:
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
-        message = str(email.message())
+        message = _get_email_content(email)
         assert "This is a test" in message
 
     def test_advert_email_with_space_content(self, client, db):
@@ -88,7 +100,7 @@ class TestAdvertEmail:
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
-        message = str(email.message())
+        message = _get_email_content(email)
         assert "This is a space" in message
 
 
@@ -100,7 +112,7 @@ class TestAuthEmails:
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
-        message = str(email.message())
+        message = _get_email_content(email)
         assert pin.pin in message
         assert "PIN" in message
 
@@ -117,7 +129,7 @@ class TestMissedSessionEmail:
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
-        message = str(email.message())
+        message = _get_email_content(email)
         assert "http://testserver/spaces/session" in message
         assert event.title in message
         assert "missed you" in message
