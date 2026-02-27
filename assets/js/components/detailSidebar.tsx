@@ -94,7 +94,9 @@ function createCalendarButton(eventStore: SessionDetailSchema) {
   )
 }
 
-function AttendingPopup(props: { eventStore: SessionDetailSchema | undefined }) {
+function AttendingPopup(props: {
+  eventStore: SessionDetailSchema | undefined
+}) {
   let modalRef: HTMLDialogElement | undefined // eslint-disable-line no-unassigned-vars
   createEffect(() => {
     if (showAttendingPopup()) {
@@ -207,7 +209,6 @@ function EventInfo(props: {
       setError("")
     }
     if (response.status >= 400) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       setError((await response.json()).error)
     }
   }
@@ -267,7 +268,7 @@ function EventInfo(props: {
             </div>
           </Match>
           <Match when={props.eventStore.joinable}>
-            <p class="pb-4">The session is starting now!</p>
+            <p class="pb-4">The session is starting soon.</p>
             <a
               class="btn btn-primary w-full"
               target="_blank"
