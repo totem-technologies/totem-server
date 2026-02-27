@@ -31,7 +31,8 @@
       "Bash(gh pr view:*)",
       "Bash(make test-python:*)",
       "WebFetch(domain:django-ninja.dev)",
-      "WebFetch(domain:docs.pydantic.dev)"
+      "WebFetch(domain:docs.pydantic.dev)",
+      "WebFetch(domain:docs.rs)"
     ]
   }
 }

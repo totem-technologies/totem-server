@@ -60,7 +60,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
     ca-certificates \
     # cleaning up unused files
     && apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -f /usr/share/fontconfig/conf.avail/05-reset-dirs-sample.conf
 
 # All absolute dir copies ignore workdir instruction.
 COPY --from=python-build-stage /opt/venv /opt/venv
@@ -77,7 +78,7 @@ RUN chmod +x /start
 COPY . ${APP_HOME}
 COPY --from=js-build-stage /app/totem/static/js/bundles /app/totem/static/js/bundles
 
-# Register app fonts with fontconfig for dynimg
+# Register app fonts for dynimg
 RUN ln -s /app/totem/static/fonts /usr/local/share/fonts/totem && fc-cache -f
 
 # Define the default command.
