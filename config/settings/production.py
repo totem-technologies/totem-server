@@ -16,7 +16,7 @@ ALLOWED_HOSTS: list[str] = env.list("DJANGO_ALLOWED_HOSTS", default=["totem.org"
 ALLOWED_HOSTS.append(str(socket.getaddrinfo(socket.gethostname(), "http")[0][4][0]))
 if STATIC_HOST:
     ALLOWED_HOSTS.append(STATIC_HOST)
-ALLOWED_HOSTS += SITE_HOST  # noqa: F405
+ALLOWED_HOSTS.append(SITE_HOST)  # noqa: F405
 
 # DATABASES
 # ------------------------------------------------------------------------------

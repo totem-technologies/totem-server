@@ -90,6 +90,20 @@ class TestPinRequestEndpoint:
         assert mail.outbox[0].to == [user.email]
         assert pin.pin in mail.outbox[0].body
 
+    def test_request_pin_invalid_email(self, client: Client, db):
+        """Test requesting a PIN with an invalid email address."""
+        response = client.post(
+            reverse("mobile-api:auth_request_pin"),
+            data={"email": "隐藏邮件地址support@smartdeal.my", "newsletter_consent": False},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 401
+        assert response.json() == {"detail": "INVALID_EMAIL"}
+
+        # Ensure no user was created
+        assert User.objects.count() == 0
+
     def test_request_pin_case_insensitive(self, client: Client, db, setup_user):
         """Test email case insensitivity."""
         user = setup_user

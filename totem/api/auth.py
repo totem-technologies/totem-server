@@ -3,6 +3,7 @@ from enum import Enum
 
 import jwt
 from django.conf import settings
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 from ninja import Router, Schema
 from ninja.errors import AuthenticationError
@@ -85,6 +86,12 @@ def request_pin(request, data: PinRequestSchema):
     Request a PIN code to be sent via email.
     This endpoint handles both new and existing users.
     """
+    # Validate email using model validators (includes blocked email check)
+    try:
+        User(email=data.email).full_clean(exclude=["password"], validate_unique=False)
+    except DjangoValidationError:
+        raise AuthenticationError(message=AuthErrors.INVALID_EMAIL.value)
+
     # Get or create user
     user, created = User.objects.get_or_create(
         email=data.email, defaults={"newsletter_consent": data.newsletter_consent}

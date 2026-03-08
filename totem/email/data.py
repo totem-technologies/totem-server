@@ -1,1 +1,1 @@
-EMAIL_BLOCKLIST = ["@data-backup-store.com"]
+EMAIL_BLOCKLIST = ["@data-backup-store.com", "@smartdeal.my"]
