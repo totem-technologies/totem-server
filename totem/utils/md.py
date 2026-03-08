@@ -33,7 +33,7 @@ class _MarkdownWidget(widgets.Textarea):
 
     def _media(self):
         js = ("js/markdown.min.js", "js/markdown.init.js")
-        css = {"all": ("css/markdown.min.css",)}
+        css = {"all": ("css/font-awesome.min.css", "css/markdown.min.css")}
         return forms.Media(css=css, js=js)  # type: ignore
 
     media = property(_media)
