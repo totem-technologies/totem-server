@@ -34,7 +34,11 @@
       "WebFetch(domain:docs.pydantic.dev)",
       "WebFetch(domain:docs.rs)",
       "Bash(command make:*)",
-      "WebFetch(domain:forum.djangoproject.com)"
+      "WebFetch(domain:forum.djangoproject.com)",
+      "WebFetch(domain:developers.google.com)",
+      "WebFetch(domain:stackoverflow.com)",
+      "WebFetch(domain:www.reddit.com)",
+      "WebFetch(domain:gist.github.com)"
     ]
   }
 }

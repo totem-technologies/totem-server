@@ -96,6 +96,10 @@ _CSP_IMG_SRC = [
     "https://googleads.g.doubleclick.net",
     "https://www.googleadservices.com",
     "https://www.google.com",
+    "https://www.google.ca",
+    "https://www.google.co.uk",
+    "https://www.google.com.au",
+    "https://www.google.com.do",
     _PROXIED_SITE,
 ]
 _CSP_CONNECT_SRC = [
@@ -109,6 +113,8 @@ _CSP_CONNECT_SRC = [
     "https://www.google.com",
     "https://static.cloudflareinsights.com",
     "https://us.i.posthog.com",
+    "https://us-assets.i.posthog.com",
+    "https://*.google-analytics.com",
     _DO_CDN,
 ]
 if STATIC_HOST:
