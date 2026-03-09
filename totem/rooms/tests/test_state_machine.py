@@ -480,7 +480,7 @@ class TestForcePassStick:
         # Keeper force passes -> skips Keeper (A), goes to user1 (C)
         state = apply_event(slug, keeper.slug, ForcePassStickEvent(), 1, connected)
 
-        assert state.current_speaker is None
+        assert state.current_speaker == keeper.slug
         assert state.next_speaker == user1.slug
         assert state.turn_state == TurnState.PASSING
 
@@ -490,33 +490,34 @@ class TestForcePassStick:
         A is pending. Keeper force passes.
         A is cleared, C receives the stick (TurnState.PASSING).
         """
-        keeper = UserFactory()
+        user0 = UserFactory()
         user1 = UserFactory()
         user2 = UserFactory()
-        _, slug = _setup_room(keeper, [keeper, user1, user2])
-        connected = {keeper.slug, user1.slug, user2.slug}
+        _, slug = _setup_room(keeper=user0, attendees=[user0, user1, user2])
+        connected = {user0.slug, user1.slug, user2.slug}
 
         # Start and Pass -> Keeper passed, user1 is now pending (next_speaker)
-        state = apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
-        state = apply_event(slug, keeper.slug, PassStickEvent(), 1, connected)
+        state = apply_event(slug, user0.slug, StartRoomEvent(), 0, connected)
+        state = apply_event(slug, user0.slug, PassStickEvent(), 1, connected)
 
         assert state.turn_state == TurnState.PASSING
         assert state.next_speaker == user1.slug
+        assert state.current_speaker == user0.slug
 
         # Keeper force passes -> skips user1 (A), prompt goes to user2 (C)
-        state = apply_event(slug, keeper.slug, ForcePassStickEvent(), 2, connected)
+        state = apply_event(slug, user0.slug, ForcePassStickEvent(), 2, connected)
 
-        assert state.current_speaker is None
+        assert state.current_speaker == user0.slug
         assert state.next_speaker == user2.slug
         assert state.turn_state == TurnState.PASSING
 
     def test_non_keeper_cannot_force_pass(self):
-        keeper = UserFactory()
+        user0 = UserFactory()
         user1 = UserFactory()
-        _, slug = _setup_room(keeper, [keeper, user1])
-        connected = {keeper.slug, user1.slug}
+        _, slug = _setup_room(keeper=user0, attendees=[user0, user1])
+        connected = {user0.slug, user1.slug}
 
-        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        apply_event(slug, user0.slug, StartRoomEvent(), 0, connected)
 
         with pytest.raises(TransitionError) as exc_info:
             apply_event(slug, user1.slug, ForcePassStickEvent(), 1, connected)
