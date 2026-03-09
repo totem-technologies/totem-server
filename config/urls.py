@@ -63,6 +63,7 @@ admin_urls = (
     admin.site.name,
 )
 
+
 def apple_app_site_association(request):
     data = {
         "applinks": {
