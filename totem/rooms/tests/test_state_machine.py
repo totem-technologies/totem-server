@@ -460,46 +460,55 @@ class TestEndRoom:
 
 @pytest.mark.django_db
 class TestForcePassStick:
-    def test_keeper_force_passes_from_speaking(self):
-        keeper = UserFactory()
-        user1 = UserFactory()
-        _, slug = _setup_room(keeper, [keeper, user1])
-        connected = {keeper.slug, user1.slug}
-
-        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
-        state = apply_event(slug, keeper.slug, ForcePassStickEvent(), 1, connected)
-
-        assert state.current_speaker == user1.slug
-        assert state.turn_state == TurnState.SPEAKING
-
-    def test_keeper_force_passes_from_passing(self):
-        keeper = UserFactory()
-        user1 = UserFactory()
-        _, slug = _setup_room(keeper, [keeper, user1])
-        connected = {keeper.slug, user1.slug}
-
-        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
-        apply_event(slug, keeper.slug, PassStickEvent(), 1, connected)
-        state = apply_event(slug, keeper.slug, ForcePassStickEvent(), 2, connected)
-
-        assert state.current_speaker == user1.slug
-        assert state.turn_state == TurnState.SPEAKING
-
-    def test_force_pass_updates_next_speaker(self):
+    def test_keeper_force_passes_from_speaking_skips_current(self):
+        """
+        SCENARIO: Participant accepted but must be skipped.
+        A is speaking. Keeper force passes.
+        A is cleared, C receives the stick (TurnState.PASSING).
+        """
         keeper = UserFactory()
         user1 = UserFactory()
         user2 = UserFactory()
         _, slug = _setup_room(keeper, [keeper, user1, user2])
         connected = {keeper.slug, user1.slug, user2.slug}
 
+        # Start -> Keeper is current_speaker (A), user1 is next
         state = apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
-        # keeper is current, user1 is next
         assert state.current_speaker == keeper.slug
+        assert state.turn_state == TurnState.SPEAKING
 
+        # Keeper force passes -> skips Keeper (A), goes to user1 (C)
         state = apply_event(slug, keeper.slug, ForcePassStickEvent(), 1, connected)
-        # user1 becomes current, user2 becomes next
-        assert state.current_speaker == user1.slug
+
+        assert state.current_speaker is None
+        assert state.next_speaker == user1.slug
+        assert state.turn_state == TurnState.PASSING
+
+    def test_keeper_force_passes_from_passing_skips_pending(self):
+        """
+        SCENARIO: Participant never accepts the totem.
+        A is pending. Keeper force passes.
+        A is cleared, C receives the stick (TurnState.PASSING).
+        """
+        keeper = UserFactory()
+        user1 = UserFactory()
+        user2 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1, user2])
+        connected = {keeper.slug, user1.slug, user2.slug}
+
+        # Start and Pass -> Keeper passed, user1 is now pending (next_speaker)
+        state = apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        state = apply_event(slug, keeper.slug, PassStickEvent(), 1, connected)
+
+        assert state.turn_state == TurnState.PASSING
+        assert state.next_speaker == user1.slug
+
+        # Keeper force passes -> skips user1 (A), prompt goes to user2 (C)
+        state = apply_event(slug, keeper.slug, ForcePassStickEvent(), 2, connected)
+
+        assert state.current_speaker is None
         assert state.next_speaker == user2.slug
+        assert state.turn_state == TurnState.PASSING
 
     def test_non_keeper_cannot_force_pass(self):
         keeper = UserFactory()
