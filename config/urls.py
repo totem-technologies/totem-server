@@ -3,6 +3,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.sitemaps import views as sitemaps_views
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.urls import include, path
 from django.views import defaults as default_views
@@ -62,7 +63,38 @@ admin_urls = (
     admin.site.name,
 )
 
+def apple_app_site_association(request):
+    data = {
+        "applinks": {
+            "apps": [],
+            "details": [
+                {
+                    "appID": f"{settings.IOS_TEAM_ID}.{settings.IOS_BUNDLE_ID}",
+                    "paths": ["/spaces/*", "/blog/*", "/keeper/*"],
+                }
+            ],
+        }
+    }
+    return JsonResponse(data, content_type="application/json")
+
+
+def asset_links(request):
+    data = [
+        {
+            "relation": ["delegate_permission/common.handle_all_urls"],
+            "target": {
+                "namespace": "android_app",
+                "package_name": settings.ANDROID_PACKAGE_NAME,
+                "sha256_cert_fingerprints": [settings.ANDROID_CERT_FINGERPRINT],
+            },
+        }
+    ]
+    return JsonResponse(data, safe=False, content_type="application/json")
+
+
 urlpatterns = [
+    path(".well-known/apple-app-site-association", apple_app_site_association),
+    path(".well-known/assetlinks.json", asset_links),
     path("", include("totem.pages.urls", namespace="pages")),
     path("plans/", include("totem.plans.urls", namespace="plans")),
     path("course/", include("totem.course.urls", namespace="course")),
