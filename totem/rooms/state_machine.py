@@ -241,6 +241,7 @@ def _handle_start(room: Room, actor: str, connected: set[str]) -> None:
 
 
 def _handle_pass(room: Room, actor: str, connected: set[str]) -> None:
+    _require_keeper(room, actor)
     _require_active(room)
 
     if actor != room.current_speaker and actor != room.keeper:
@@ -268,6 +269,7 @@ def _handle_pass(room: Room, actor: str, connected: set[str]) -> None:
 
 def _handle_accept(room: Room, actor: str, connected: set[str]) -> None:
     _require_active(room)
+    _require_keeper(room, actor)
 
     if room.turn_state != TurnState.PASSING:
         raise TransitionError(
@@ -289,8 +291,8 @@ def _handle_accept(room: Room, actor: str, connected: set[str]) -> None:
 
 
 def _handle_force_pass(room: Room, actor: str, connected: set[str]) -> None:
-    _require_active(room)
     _require_keeper(room, actor)
+    _require_active(room)
 
     if room.next_speaker is None:
         raise TransitionError(
