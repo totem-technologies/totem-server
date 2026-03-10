@@ -114,6 +114,16 @@ def _require_keeper(room: Room, actor: str) -> None:
         )
 
 
+def _require_keeper_in_room(room: Room, actor: str) -> None:
+    """Requires the keeper to be in the room to perform an action"""
+
+    if room.keeper not in room.talking_order:
+        raise TransitionError(
+            code=ErrorCode.KEEPER_NOT_IN_ROOM,
+            message="Keeper must be in the room to perform this action",
+        )
+
+
 def _require_active(room: Room) -> None:
     if room.status != RoomStatus.ACTIVE:
         raise TransitionError(
@@ -241,8 +251,8 @@ def _handle_start(room: Room, actor: str, connected: set[str]) -> None:
 
 
 def _handle_pass(room: Room, actor: str, connected: set[str]) -> None:
-    _require_keeper(room, actor)
     _require_active(room)
+    _require_keeper_in_room(room, actor)
 
     if actor != room.current_speaker and actor != room.keeper:
         raise TransitionError(
@@ -269,7 +279,7 @@ def _handle_pass(room: Room, actor: str, connected: set[str]) -> None:
 
 def _handle_accept(room: Room, actor: str, connected: set[str]) -> None:
     _require_active(room)
-    _require_keeper(room, actor)
+    _require_keeper_in_room(room, actor)
 
     if room.turn_state != TurnState.PASSING:
         raise TransitionError(

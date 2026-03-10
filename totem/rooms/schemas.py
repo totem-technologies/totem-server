@@ -51,6 +51,7 @@ class ErrorCode(str, Enum):
 
     # Data validation
     INVALID_PARTICIPANT_ORDER = "invalid_participant_order"
+    KEEPER_NOT_IN_ROOM = "keeper_not_in_room"
 
     # Concurrency
     STALE_VERSION = "stale_version"
