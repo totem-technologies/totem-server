@@ -292,18 +292,17 @@ def _handle_force_pass(room: Room, actor: str, connected: set[str]) -> None:
     _require_active(room)
     _require_keeper(room, actor)
 
-    if room.next_speaker is None:
+    reference_speaker = room.current_speaker if room.turn_state == TurnState.SPEAKING else room.next_speaker
+    pass_to = _next_in_order(talking_order=room.talking_order, after=reference_speaker, connected=connected)
+
+    if not pass_to:
         raise TransitionError(
             code=ErrorCode.INVALID_TRANSITION,
             message="No next speaker to force-pass to",
         )
 
-    new_speaker = room.next_speaker
-    next_slug = _next_in_order(room.talking_order, new_speaker, connected)
-
-    room.current_speaker = new_speaker
-    room.next_speaker = next_slug or new_speaker
-    room.turn_state = TurnState.SPEAKING
+    room.next_speaker = pass_to
+    room.turn_state = TurnState.PASSING
 
 
 def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set[str]) -> None:
