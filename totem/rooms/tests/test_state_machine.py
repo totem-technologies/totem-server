@@ -16,7 +16,7 @@ from totem.rooms.schemas import (
     TurnState,
     UnbanParticipantEvent,
 )
-from totem.rooms.state_machine import _next_in_order, _reconcile_talking_order, apply_event
+from totem.rooms.state_machine import _next_in_order, _reconcile_talking_order, _require_keeper_in_room, apply_event
 from totem.spaces.tests.factories import SessionFactory
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
@@ -143,6 +143,38 @@ class TestReconcileTalkingOrder:
 
 
 # ---------------------------------------------------------------------------
+# Preconditions: _require_keeper_in_room
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestRequireKeeperInRoom:
+    def _make_room(self, keeper_slug: str, talking_order: list[str], **kwargs) -> Room:
+        session = SessionFactory()
+        room = Room(
+            session=session,
+            keeper=keeper_slug,
+            talking_order=talking_order,
+            **kwargs,
+        )
+        room.save()
+        return room
+
+    def test_raises_when_keeper_missing_from_talking_order(self):
+        room = self._make_room("keeper", ["user-1", "user-2"])
+
+        with pytest.raises(TransitionError) as exc_info:
+            _require_keeper_in_room(room, actor="user-1")
+
+        assert exc_info.value.code == ErrorCode.KEEPER_NOT_IN_ROOM
+
+    def test_allows_when_keeper_present_in_talking_order(self):
+        room = self._make_room("keeper", ["keeper", "user-1"])
+
+        _require_keeper_in_room(room, actor="user-1")
+
+
+# ---------------------------------------------------------------------------
 # Full apply_event integration tests
 # ---------------------------------------------------------------------------
 
@@ -256,6 +288,23 @@ class TestPassStick:
             apply_event(slug, keeper.slug, PassStickEvent(), 0, {keeper.slug})
         assert exc_info.value.code == ErrorCode.ROOM_NOT_ACTIVE
 
+    def test_pass_rejected_when_keeper_not_in_room(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {user1.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, {keeper.slug, user1.slug})
+
+        room = Room.objects.for_session(slug).first()
+        assert room
+        room.talking_order = [s for s in room.talking_order if s != keeper.slug]
+        room.save(update_fields=["talking_order"])
+
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(slug, user1.slug, PassStickEvent(), 1, connected)
+        assert exc_info.value.code == ErrorCode.KEEPER_NOT_IN_ROOM
+
 
 @pytest.mark.django_db
 class TestAcceptStick:
@@ -298,6 +347,23 @@ class TestAcceptStick:
         with pytest.raises(TransitionError) as exc_info:
             apply_event(slug, user1.slug, AcceptStickEvent(), 1, connected)
         assert exc_info.value.code == ErrorCode.INVALID_TRANSITION
+
+    def test_accept_rejected_when_keeper_not_in_room(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, {keeper.slug, user1.slug})
+        apply_event(slug, keeper.slug, PassStickEvent(), 1, {keeper.slug, user1.slug})
+
+        room = Room.objects.for_session(slug).first()
+        assert room
+        room.talking_order = [s for s in room.talking_order if s != keeper.slug]
+        room.save(update_fields=["talking_order"])
+
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(slug, user1.slug, AcceptStickEvent(), 2, {user1.slug})
+        assert exc_info.value.code == ErrorCode.KEEPER_NOT_IN_ROOM
 
 
 @pytest.mark.django_db
