@@ -164,14 +164,14 @@ class TestRequireKeeperInRoom:
         room = self._make_room("keeper", ["user-1", "user-2"])
 
         with pytest.raises(TransitionError) as exc_info:
-            _require_keeper_in_room(room, actor="user-1")
+            _require_keeper_in_room(room)
 
         assert exc_info.value.code == ErrorCode.KEEPER_NOT_IN_ROOM
 
     def test_allows_when_keeper_present_in_talking_order(self):
         room = self._make_room("keeper", ["keeper", "user-1"])
 
-        _require_keeper_in_room(room, actor="user-1")
+        _require_keeper_in_room(room)
 
 
 # ---------------------------------------------------------------------------
