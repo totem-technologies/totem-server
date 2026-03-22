@@ -269,9 +269,7 @@ def _handle_pass(room: Room, actor: str, connected: set[str], prompt: str | None
         )
 
     keeper_starts_round = (
-        actor == room.keeper
-        and room.current_speaker == room.keeper
-        and room.turn_state == TurnState.SPEAKING
+        actor == room.keeper and room.current_speaker == room.keeper and room.turn_state == TurnState.SPEAKING
     )
 
     if prompt is not None and not keeper_starts_round:
