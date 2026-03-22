@@ -138,6 +138,8 @@ class RoomState(Schema):
     talking_order: list[str]  # user slugs
     keeper: str  # user slug
     banned_participants: list[str] = []  # user slugs
+    round_number: int
+    round_message: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -151,6 +153,7 @@ class StartRoomEvent(Schema):
 
 class PassStickEvent(Schema):
     type: Literal["pass_stick"] = "pass_stick"
+    prompt: Optional[str] = None
 
 
 class AcceptStickEvent(Schema):

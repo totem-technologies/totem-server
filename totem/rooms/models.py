@@ -73,6 +73,8 @@ class Room(BaseModel):
     next_speaker = models.CharField(max_length=50, null=True)  # user slug
     talking_order = ArrayField(models.CharField(max_length=50), default=list)  # user slugs
     banned_participants = ArrayField(models.CharField(max_length=50), default=list)  # user slugs
+    round_number = models.PositiveIntegerField(default=0)
+    round_message = models.TextField(null=True, blank=True, default=None)
     state_version = models.PositiveIntegerField(default=0)
     end_reason = models.CharField(
         max_length=20,
@@ -102,6 +104,8 @@ class Room(BaseModel):
             talking_order=self.talking_order,
             keeper=self.keeper,
             banned_participants=self.banned_participants,
+            round_number=self.round_number,
+            round_message=self.round_message,
         )
 
 

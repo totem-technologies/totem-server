@@ -305,6 +305,68 @@ class TestPassStick:
             apply_event(slug, user1.slug, PassStickEvent(), 1, connected)
         assert exc_info.value.code == ErrorCode.KEEPER_NOT_IN_ROOM
 
+    def test_keeper_pass_with_prompt_updates_round_and_message(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        started = apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        assert started.round_number == 1
+        assert started.round_message is None
+
+        state = apply_event(slug, keeper.slug, PassStickEvent(prompt="What did you learn this week?"), 1, connected)
+
+        assert state.turn_state == TurnState.PASSING
+        assert state.round_number == 2
+        assert state.round_message == "What did you learn this week?"
+
+    def test_non_keeper_pass_does_not_increment_round(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        apply_event(slug, keeper.slug, PassStickEvent(prompt="Round 2 prompt"), 1, connected)
+        apply_event(slug, user1.slug, AcceptStickEvent(), 2, connected)
+
+        state = apply_event(slug, user1.slug, PassStickEvent(), 3, connected)
+
+        assert state.round_number == 2
+        assert state.round_message == "Round 2 prompt"
+
+    def test_non_keeper_cannot_set_prompt_when_passing(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        apply_event(slug, keeper.slug, PassStickEvent(), 1, connected)
+        apply_event(slug, user1.slug, AcceptStickEvent(), 2, connected)
+
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(slug, user1.slug, PassStickEvent(prompt="Prompt from participant"), 3, connected)
+        assert exc_info.value.code == ErrorCode.NOT_KEEPER
+
+    def test_keeper_can_skip_prompt_and_clear_round_message(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        apply_event(slug, keeper.slug, PassStickEvent(prompt="Prompt for round 2"), 1, connected)
+        apply_event(slug, user1.slug, AcceptStickEvent(), 2, connected)
+        apply_event(slug, user1.slug, PassStickEvent(), 3, connected)
+        apply_event(slug, keeper.slug, AcceptStickEvent(), 4, connected)
+
+        state = apply_event(slug, keeper.slug, PassStickEvent(), 5, connected)
+
+        assert state.round_number == 3
+        assert state.round_message is None
+
 
 @pytest.mark.django_db
 class TestAcceptStick:
