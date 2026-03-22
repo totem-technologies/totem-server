@@ -308,8 +308,9 @@ class TestPassStick:
     def test_keeper_pass_with_prompt_updates_round_and_message(self):
         keeper = UserFactory()
         user1 = UserFactory()
-        _, slug = _setup_room(keeper, [keeper, user1])
-        connected = {keeper.slug, user1.slug}
+        user2 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1, user2])
+        connected = {keeper.slug, user1.slug, user2.slug}
 
         started = apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
         assert started.round_number == 1
@@ -324,8 +325,9 @@ class TestPassStick:
     def test_non_keeper_pass_does_not_increment_round(self):
         keeper = UserFactory()
         user1 = UserFactory()
-        _, slug = _setup_room(keeper, [keeper, user1])
-        connected = {keeper.slug, user1.slug}
+        user2 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1, user2])
+        connected = {keeper.slug, user1.slug, user2.slug}
 
         apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
         apply_event(slug, keeper.slug, PassStickEvent(prompt="Round 2 prompt"), 1, connected)
@@ -339,8 +341,9 @@ class TestPassStick:
     def test_non_keeper_cannot_set_prompt_when_passing(self):
         keeper = UserFactory()
         user1 = UserFactory()
-        _, slug = _setup_room(keeper, [keeper, user1])
-        connected = {keeper.slug, user1.slug}
+        user2 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1, user2])
+        connected = {keeper.slug, user1.slug, user2.slug}
 
         apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
         apply_event(slug, keeper.slug, PassStickEvent(), 1, connected)
@@ -353,16 +356,19 @@ class TestPassStick:
     def test_keeper_can_skip_prompt_and_clear_round_message(self):
         keeper = UserFactory()
         user1 = UserFactory()
-        _, slug = _setup_room(keeper, [keeper, user1])
-        connected = {keeper.slug, user1.slug}
+        user2 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1, user2])
+        connected = {keeper.slug, user1.slug, user2.slug}
 
         apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
         apply_event(slug, keeper.slug, PassStickEvent(prompt="Prompt for round 2"), 1, connected)
         apply_event(slug, user1.slug, AcceptStickEvent(), 2, connected)
         apply_event(slug, user1.slug, PassStickEvent(), 3, connected)
-        apply_event(slug, keeper.slug, AcceptStickEvent(), 4, connected)
+        apply_event(slug, user2.slug, AcceptStickEvent(), 4, connected)
+        apply_event(slug, user2.slug, PassStickEvent(), 5, connected)
+        apply_event(slug, keeper.slug, AcceptStickEvent(), 6, connected)
 
-        state = apply_event(slug, keeper.slug, PassStickEvent(), 5, connected)
+        state = apply_event(slug, keeper.slug, PassStickEvent(), 7, connected)
 
         assert state.round_number == 3
         assert state.round_message is None

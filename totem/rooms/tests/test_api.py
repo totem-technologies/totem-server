@@ -221,11 +221,12 @@ class TestPostEvent:
     def test_keeper_pass_can_include_optional_prompt(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         user1 = UserFactory()
+        user2 = UserFactory()
         session = SessionFactory(space__author=keeper)
-        session.attendees.add(keeper, user1)
+        session.attendees.add(keeper, user1, user2)
         Room.objects.get_or_create_for_session(session)
 
-        connected = {keeper.slug, user1.slug}
+        connected = {keeper.slug, user1.slug, user2.slug}
 
         with (
             patch("totem.rooms.api.get_connected_participants", return_value=connected),
