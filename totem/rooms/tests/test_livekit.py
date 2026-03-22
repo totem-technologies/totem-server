@@ -7,6 +7,7 @@ from livekit import api
 from totem.rooms.livekit import (
     LiveKitConfigurationError,
     create_access_token,
+    get_connected_participants,
     mute_all_participants,
     mute_participant,
     remove_participant,
@@ -77,6 +78,52 @@ class TestCreateAccessToken:
 
         with pytest.raises(LiveKitConfigurationError):
             create_access_token(user, session.slug)
+
+
+# ---------------------------------------------------------------------------
+# get_connected_participants
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.enable_socket
+class TestGetConnectedParticipants:
+    @override_settings(**LK_SETTINGS)
+    def test_excludes_disconnected_participants(self):
+        connected = _make_participant("user-1")
+        connected.state = api.ParticipantInfo.State.ACTIVE
+
+        disconnected = _make_participant("user-2")
+        disconnected.state = api.ParticipantInfo.State.DISCONNECTED
+
+        mock_resp = MagicMock()
+        mock_resp.participants = [connected, disconnected]
+
+        mock_lkapi = _make_mock_lkapi()
+        mock_lkapi.room.list_participants.return_value = mock_resp
+
+        with patch("totem.rooms.livekit.api.LiveKitAPI", return_value=mock_lkapi):
+            identities = get_connected_participants("room-1")
+
+        assert identities == {"user-1"}
+
+    @override_settings(**LK_SETTINGS)
+    def test_returns_empty_set_when_all_disconnected(self):
+        disconnected_1 = _make_participant("user-1")
+        disconnected_1.state = api.ParticipantInfo.State.DISCONNECTED
+
+        disconnected_2 = _make_participant("user-2")
+        disconnected_2.state = api.ParticipantInfo.State.DISCONNECTED
+
+        mock_resp = MagicMock()
+        mock_resp.participants = [disconnected_1, disconnected_2]
+
+        mock_lkapi = _make_mock_lkapi()
+        mock_lkapi.room.list_participants.return_value = mock_resp
+
+        with patch("totem.rooms.livekit.api.LiveKitAPI", return_value=mock_lkapi):
+            identities = get_connected_participants("room-1")
+
+        assert identities == set()
 
 
 # ---------------------------------------------------------------------------
