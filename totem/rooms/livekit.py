@@ -32,7 +32,7 @@ def _get_api():
 async def _get_connected_participants(room_name: str) -> set[str]:
     async with _get_api() as lkapi:
         resp = await lkapi.room.list_participants(api.ListParticipantsRequest(room=room_name))
-        return {p.identity for p in resp.participants}
+        return {p.identity for p in resp.participants if p.state != api.ParticipantInfo.State.DISCONNECTED}
 
 
 async def _publish_state(room_name: str, state: RoomState) -> None:
@@ -156,6 +156,8 @@ async def _mute_all_participants(room_name: str, except_identity: str | None = N
         tasks = []
         for participant in resp.participants:
             if except_identity and participant.identity == except_identity:
+                continue
+            if participant.state == api.ParticipantInfo.State.DISCONNECTED:
                 continue
             for track in participant.tracks:
                 if track.type == api.TrackType.AUDIO:
