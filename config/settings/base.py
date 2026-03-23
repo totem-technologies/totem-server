@@ -304,6 +304,14 @@ MAILERSEND_DOMAIN_ID = env("MAILERSEND_DOMAIN_ID", default="")
 BREVO_API_KEY = env("BREVO_API_KEY", default="")
 SEND_BREVO_EMAILS = env.bool("SEND_BREVO_EMAILS", default=False)
 
+# DEEP LINKING
+# ------------------------------------------------------------------------------
+# SHA-256 certificate fingerprint from Google Play Console for Android App Links.
+ANDROID_CERT_FINGERPRINT = env("ANDROID_CERT_FINGERPRINT", default="")
+IOS_TEAM_ID = env("IOS_TEAM_ID", default="LNLXP4VK97")
+IOS_BUNDLE_ID = env("IOS_BUNDLE_ID", default="org.totem.ios")
+ANDROID_PACKAGE_NAME = env("ANDROID_PACKAGE_NAME", default="org.totem.app")
+
 # ADMIN
 # ------------------------------------------------------------------------------
 # Django Admin URL.
