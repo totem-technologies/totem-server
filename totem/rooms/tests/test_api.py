@@ -218,6 +218,36 @@ class TestPostEvent:
         assert resp.status_code == 200
         mock_mute_all.assert_called_once_with(session.slug, except_identity=user.slug)
 
+    def test_keeper_pass_can_include_optional_prompt(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        user1 = UserFactory()
+        user2 = UserFactory()
+        session = SessionFactory(space__author=keeper)
+        session.attendees.add(keeper, user1, user2)
+        Room.objects.get_or_create_for_session(session)
+
+        connected = {keeper.slug, user1.slug, user2.slug}
+
+        with (
+            patch("totem.rooms.api.get_connected_participants", return_value=connected),
+            patch("totem.rooms.api.publish_state"),
+            patch("totem.rooms.api.mute_all_participants"),
+        ):
+            start = _post_event(client, session.slug, {"type": "start_room"}, 0)
+            assert start.status_code == 200
+
+            resp = _post_event(
+                client,
+                session.slug,
+                {"type": "pass_stick", "prompt": "What are you carrying today?"},
+                1,
+            )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["round_number"] == 2
+        assert data["round_message"] == "What are you carrying today?"
+
 
 @pytest.mark.django_db
 class TestGetState:

@@ -68,8 +68,8 @@ def apply_event(
         match event:
             case StartRoomEvent():
                 _handle_start(room, actor, connected)
-            case PassStickEvent():
-                _handle_pass(room, actor, connected)
+            case PassStickEvent(prompt=prompt):
+                _handle_pass(room, actor, connected, prompt)
             case AcceptStickEvent():
                 _handle_accept(room, actor, connected)
             case ForcePassStickEvent():
@@ -248,9 +248,11 @@ def _handle_start(room: Room, actor: str, connected: set[str]) -> None:
     room.turn_state = TurnState.SPEAKING
     room.current_speaker = room.keeper
     room.next_speaker = next_slug or room.keeper
+    room.round_number = 1
+    room.round_message = None
 
 
-def _handle_pass(room: Room, actor: str, connected: set[str]) -> None:
+def _handle_pass(room: Room, actor: str, connected: set[str], prompt: str | None) -> None:
     _require_active(room)
     _require_keeper_in_room(room)
 
@@ -258,6 +260,22 @@ def _handle_pass(room: Room, actor: str, connected: set[str]) -> None:
         raise TransitionError(
             code=ErrorCode.NOT_CURRENT_SPEAKER,
             message="Only the current speaker or keeper can pass the stick",
+        )
+
+    if prompt is not None and actor != room.keeper:
+        raise TransitionError(
+            code=ErrorCode.NOT_KEEPER,
+            message="Only the keeper can set a round prompt",
+        )
+
+    keeper_starts_round = (
+        actor == room.keeper and room.current_speaker == room.keeper and room.turn_state == TurnState.SPEAKING
+    )
+
+    if prompt is not None and not keeper_starts_round:
+        raise TransitionError(
+            code=ErrorCode.INVALID_TRANSITION,
+            message="Round prompt can only be set when keeper passes from their own turn",
         )
 
     if room.turn_state == TurnState.PASSING and actor == room.keeper:
@@ -274,6 +292,9 @@ def _handle_pass(room: Room, actor: str, connected: set[str]) -> None:
 
         room.next_speaker = next_slug
     else:
+        if keeper_starts_round:
+            room.round_number += 1
+            room.round_message = prompt
         room.turn_state = TurnState.PASSING
 
 
