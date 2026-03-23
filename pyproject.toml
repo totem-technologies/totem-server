@@ -5,71 +5,71 @@ description = ""
 readme = "README.md"
 requires-python = "==3.13.*"
 dependencies = [
-    "argon2-cffi<26",
-    "cssselect<2",
-    "environs[django]<15",
-    "google-api-python-client<3",
-    "google-auth-oauthlib<2",
-    "lxml<7",
-    "markdown<3.11.0",
-    "mrml<0.3.0",
-    "Pillow<13",
-    "posthog<8.0.0",
-    "psycopg[binary]<4",
-    "python-dateutil<3",
-    "pytz",
-    "qrcode<9",
-    "requests<3",
-    "sentry-sdk[django]<3",
-    "whitenoise<7",
-    # Django dependencies
-    "django-allauth<66",
-    "django-anymail<15",
-    "django-auditlog<4",
-    "django-cors-headers<5",
-    "django-imagekit<7.0.0",
-    "django-impersonate<2",
-    "django-ninja<2",
-    "django-storages[s3]<2",
-    "django-taggit<7",
-    "django-timezone-field<8",
-    "tzdata",
-    "django<6.1",
-    "pyjwt>=2.10.1",
-    "firebase-admin>=6.8.0",
-    "tenacity>=9.1.2",
-    "livekit-api<2",
-    "granian<3",
-    "dynimg<=0.2.0",
+  "argon2-cffi<26",
+  "cssselect<2",
+  "environs[django]<15",
+  "google-api-python-client<3",
+  "google-auth-oauthlib<2",
+  "lxml<7",
+  "markdown<3.11.0",
+  "mrml<0.3.0",
+  "Pillow<13",
+  "posthog<8.0.0",
+  "psycopg[binary]<4",
+  "python-dateutil<3",
+  "pytz",
+  "qrcode<9",
+  "requests<3",
+  "sentry-sdk[django]<3",
+  "whitenoise<7",
+  # Django dependencies
+  "django-allauth<66",
+  "django-anymail<15",
+  "django-auditlog<4",
+  "django-cors-headers<5",
+  "django-imagekit<7.0.0",
+  "django-impersonate<2",
+  "django-ninja<2",
+  "django-storages[s3]<2",
+  "django-taggit<7",
+  "django-timezone-field<8",
+  "tzdata",
+  "django<6.1",
+  "pyjwt>=2.10.1",
+  "firebase-admin>=6.8.0",
+  "tenacity>=9.1.2",
+  "livekit-api<2",
+  "granian<3",
+  "dynimg<=0.2.0",
 ]
 
 [dependency-groups]
 dev = [
-    "ipdb==0.13.13",
-    "watchfiles<2",
-    "uv",
+  "ipdb==0.13.13",
+  "watchfiles<2",
+  "uv",
 
-    # Testing
-    "mypy<2",
-    "django-stubs[compatible-mypy]<6",
-    "pytest<10",
-    "pytest-sugar<2",
-    "pytest-socket<1",
+  # Testing
+  "mypy<2",
+  "django-stubs[compatible-mypy]<7",
+  "pytest<10",
+  "pytest-sugar<2",
+  "pytest-socket<1",
 
-    # Code quality
-    "coverage<8.0.0",
-    "pip-tools<8",
-    "pre-commit<5",
-    "ruff",
+  # Code quality
+  "coverage<8.0.0",
+  "pip-tools<8",
+  "pre-commit<5",
+  "ruff",
 
-    # Django
-    "django-debug-toolbar<7",
-    "django-extensions<5",
-    "factory-boy<4",
-    "pytest-cov<8",
-    "pytest-django<5",
-    "pytest-xdist<4",
-    "debugpy"
+  # Django
+  "django-debug-toolbar<7",
+  "django-extensions<5",
+  "factory-boy<4",
+  "pytest-cov<8",
+  "pytest-django<5",
+  "pytest-xdist<4",
+  "debugpy",
 ]
 
 
@@ -79,8 +79,8 @@ minversion = "6.0"
 addopts = "--ds=config.settings.test --reuse-db"
 python_files = ["tests.py", "test_*.py"]
 filterwarnings = [
-    # "ignore::pydantic.warnings.PydanticDeprecatedSince20",
-    "ignore:::httplib2.*",
+  # "ignore::pydantic.warnings.PydanticDeprecatedSince20",
+  "ignore:::httplib2.*",
 ]
 
 # ==== Coverage ====
@@ -112,25 +112,25 @@ django_settings_module = "config.settings.test"
 # ==== Ruff =====
 [tool.ruff]
 # Exclude a variety of commonly ignored directories.
-exclude = ["migrations",".venv"]
+exclude = ["migrations", ".venv"]
 line-length = 120
 
 [tool.ruff.lint]
 # Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
 ignore = ["E501", "DJ001", "DJ008", "DJ012"]
 select = [
-    # pycodestyle
-    "E",
-    # Pyflakes
-    "F",
-    # # pyupgrade
-    # "UP",
-    # # flake8-bugbear
-    # "B",
-    # isort
-    "I",
-    # django
-    "DJ"
+  # pycodestyle
+  "E",
+  # Pyflakes
+  "F",
+  # # pyupgrade
+  # "UP",
+  # # flake8-bugbear
+  # "B",
+  # isort
+  "I",
+  # django
+  "DJ",
 ]
 
 [tool.ruff.lint.mccabe]
