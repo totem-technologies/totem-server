@@ -131,16 +131,22 @@ def get_state(
     room = Room.objects.for_session(session_slug).first()  # type: ignore
 
     if not room:
-        return Status(404, RoomErrorResponse(
-            code=ErrorCode.NOT_FOUND,
-            message="Room not found",
-        ))
+        return Status(
+            404,
+            RoomErrorResponse(
+                code=ErrorCode.NOT_FOUND,
+                message="Room not found",
+            ),
+        )
 
     if not room.session.attendees.filter(slug=user.slug).exists():
-        return Status(403, RoomErrorResponse(
-            code=ErrorCode.NOT_IN_ROOM,
-            message="You are not an attendee of this session",
-        ))
+        return Status(
+            403,
+            RoomErrorResponse(
+                code=ErrorCode.NOT_IN_ROOM,
+                message="You are not an attendee of this session",
+            ),
+        )
 
     return Status(200, room.to_state())
 
@@ -164,10 +170,13 @@ def join_room(
 
     session = Session.objects.filter(slug=session_slug).first()
     if not session:
-        return Status(404, RoomErrorResponse(
-            code=ErrorCode.NOT_FOUND,
-            message="Session not found",
-        ))
+        return Status(
+            404,
+            RoomErrorResponse(
+                code=ErrorCode.NOT_FOUND,
+                message="Session not found",
+            ),
+        )
 
     if not session.can_join(user):
         return RoomErrorResponse(
