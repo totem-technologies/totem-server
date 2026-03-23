@@ -5,14 +5,18 @@ from django.db import models
 
 class ReferralChoices(models.TextChoices):
     DEFAULT = "default", "I'm not sure"
-    SEARCH = "search", "Search Results"
-    SOCIAL = "social", "Social Media"
+    SEARCH = "search", "Search Engine"
+    CHATGPT = "chatgpt", "ChatGPT"
     KEEPER = "keeper", "A Keeper"
+    SOCIAL = "social", "Social Media"
+    PHYSICAL_MEDIA = "physical_media", "Physical Media"
+    BLOG = "blog", "Blog or Article"
+    FRIEND = "friend", "A friend"
+    OTHER = "other", "Other"
+    # Kept for backward compat (existing records):
     PAMPHLET = "pamphlet", "Pamphlet"
-    BLOG = "blog", "Blog"
     NEWSLETTER = "newsletter", "Newsletter"
     DREAM = "dream", "✨A Dream✨"
-    OTHER = "other", "Other"
 
 
 class OnboardModel(models.Model):
