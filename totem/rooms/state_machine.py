@@ -205,8 +205,8 @@ def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
         if slug not in reconciled:
             reconciled.append(slug)
 
-    # Append any newly connected members
-    for slug in connected:
+    # Append any newly connected members (sorted for deterministic order)
+    for slug in sorted(connected):
         if slug not in reconciled:
             reconciled.append(slug)
 

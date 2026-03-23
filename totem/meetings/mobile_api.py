@@ -4,7 +4,7 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from livekit import api
-from ninja import Router
+from ninja import Router, Status
 
 import totem.meetings.livekit_provider as livekit
 from totem.meetings.livekit_provider import (
@@ -45,12 +45,12 @@ def get_livekit_token(request: HttpRequest, event_slug: str):
     try:
         event = Session.objects.get(slug=event_slug)
     except Session.DoesNotExist:
-        return 404, ErrorResponseSchema(error="Session not found")
+        return Status(404, ErrorResponseSchema(error="Session not found"))
 
     is_joinable = event.can_join(user=user)
     if not is_joinable:
         logging.warning("User %s attempted to join non-joinable event %s", user.slug, event.slug)
-        return 403, ErrorResponseSchema(error="Session is not joinable at this time.")
+        return Status(403, ErrorResponseSchema(error="Session is not joinable at this time."))
 
     try:
         # Initialize the room with the speaking order if not already done
@@ -71,13 +71,13 @@ def get_livekit_token(request: HttpRequest, event_slug: str):
         return LivekitTokenResponseSchema(token=token)
     except LiveKitConfigurationError as e:
         logging.error("LiveKit configuration error: %s", e)
-        return 500, ErrorResponseSchema(error="LiveKit service is not properly configured.")
+        return Status(500, ErrorResponseSchema(error="LiveKit service is not properly configured."))
     except api.TwirpError as e:
         logging.error("LiveKit API error in get_livekit_token: %s", e)
-        return 500, ErrorResponseSchema(error=f"Failed to create access token: {str(e)}")
+        return Status(500, ErrorResponseSchema(error=f"Failed to create access token: {str(e)}"))
     except Exception as e:
         logging.error("Unexpected error in get_livekit_token: %s", e, exc_info=True)
-        return 500, ErrorResponseSchema(error="An unexpected error occurred while creating access token.")
+        return Status(500, ErrorResponseSchema(error="An unexpected error occurred while creating access token."))
 
 
 @meetings_router.post(
@@ -96,23 +96,23 @@ def pass_totem_endpoint(request: HttpRequest, event_slug: str):
     event: Session = get_object_or_404(Session, slug=event_slug)
 
     if event.ended():
-        return 400, ErrorResponseSchema(error="Session has already ended.")
+        return Status(400, ErrorResponseSchema(error="Session has already ended."))
 
     try:
         livekit.pass_totem(event_slug, event.space.author.slug, user.slug)
         return HttpResponse(status=200)
     except RoomNotFoundError as e:
-        return 404, ErrorResponseSchema(error=str(e))
+        return Status(404, ErrorResponseSchema(error=str(e)))
     except KeeperNotInRoomError as e:
-        return 404, ErrorResponseSchema(error=str(e))
+        return Status(404, ErrorResponseSchema(error=str(e)))
     except UnauthorizedError as e:
-        return 403, ErrorResponseSchema(error=str(e))
+        return Status(403, ErrorResponseSchema(error=str(e)))
     except api.TwirpError as e:
         logging.error("LiveKit API error in pass_totem: %s", e)
-        return 500, ErrorResponseSchema(error=f"Failed to pass totem: {str(e)}")
+        return Status(500, ErrorResponseSchema(error=f"Failed to pass totem: {str(e)}"))
     except Exception as e:
         logging.error("Unexpected error in pass_totem: %s", e, exc_info=True)
-        return 500, ErrorResponseSchema(error="An unexpected error occurred while passing the totem.")
+        return Status(500, ErrorResponseSchema(error="An unexpected error occurred while passing the totem."))
 
 
 @meetings_router.post(
@@ -131,7 +131,7 @@ def accept_totem_endpoint(request: HttpRequest, event_slug: str):
     event: Session = get_object_or_404(Session, slug=event_slug)
 
     if event.ended():
-        return 400, ErrorResponseSchema(error="Session has already ended.")
+        return Status(400, ErrorResponseSchema(error="Session has already ended."))
 
     try:
         livekit.accept_totem(
@@ -141,17 +141,17 @@ def accept_totem_endpoint(request: HttpRequest, event_slug: str):
         )
         return HttpResponse(status=200)
     except RoomNotFoundError as e:
-        return 404, ErrorResponseSchema(error=str(e))
+        return Status(404, ErrorResponseSchema(error=str(e)))
     except KeeperNotInRoomError as e:
-        return 404, ErrorResponseSchema(error=str(e))
+        return Status(404, ErrorResponseSchema(error=str(e)))
     except NotCurrentSpeakerError as e:
-        return 403, ErrorResponseSchema(error=str(e))
+        return Status(403, ErrorResponseSchema(error=str(e)))
     except api.TwirpError as e:
         logging.error("LiveKit API error in accept_totem: %s", e)
-        return 500, ErrorResponseSchema(error=f"Failed to accept totem: {str(e)}")
+        return Status(500, ErrorResponseSchema(error=f"Failed to accept totem: {str(e)}"))
     except Exception as e:
         logging.error("Unexpected error in accept_totem: %s", e, exc_info=True)
-        return 500, ErrorResponseSchema(error="An unexpected error occurred while accepting the totem.")
+        return Status(500, ErrorResponseSchema(error="An unexpected error occurred while accepting the totem."))
 
 
 @meetings_router.post(
@@ -172,26 +172,26 @@ def start_room_endpoint(request: HttpRequest, event_slug: str):
 
     if not is_keeper:
         logging.warning("User %s attempted to start room for event %s", user.slug, event.slug)
-        return 403, ErrorResponseSchema(error="Only the Keeper can start the room.")
+        return Status(403, ErrorResponseSchema(error="Only the Keeper can start the room."))
 
     if event.ended():
-        return 400, ErrorResponseSchema(error="Session has already ended.")
+        return Status(400, ErrorResponseSchema(error="Session has already ended."))
 
     try:
         livekit.start_room(room_name=event.slug, keeper_slug=event.space.author.slug)
         return HttpResponse(status=200)
     except RoomNotFoundError as e:
-        return 404, ErrorResponseSchema(error=str(e))
+        return Status(404, ErrorResponseSchema(error=str(e)))
     except KeeperNotInRoomError as e:
-        return 404, ErrorResponseSchema(error=str(e))
+        return Status(404, ErrorResponseSchema(error=str(e)))
     except RoomAlreadyStartedError as e:
-        return 400, ErrorResponseSchema(error=str(e))
+        return Status(400, ErrorResponseSchema(error=str(e)))
     except api.TwirpError as e:
         logging.error("LiveKit API error in start_room: %s", e)
-        return 500, ErrorResponseSchema(error=f"Failed to start room: {str(e)}")
+        return Status(500, ErrorResponseSchema(error=f"Failed to start room: {str(e)}"))
     except Exception as e:
         logging.error("Unexpected error in start_room: %s", e, exc_info=True)
-        return 500, ErrorResponseSchema(error="An unexpected error occurred while starting the room.")
+        return Status(500, ErrorResponseSchema(error="An unexpected error occurred while starting the room."))
 
 
 @meetings_router.post(
@@ -212,7 +212,7 @@ def end_room_endpoint(request: HttpRequest, event_slug: str):
 
     if not is_keeper:
         logging.warning("User %s attempted to end room for event %s", user.slug, event.slug)
-        return 403, ErrorResponseSchema(error="Only the Keeper can end the room.")
+        return Status(403, ErrorResponseSchema(error="Only the Keeper can end the room."))
 
     try:
         livekit.end_room(event.slug)
@@ -220,15 +220,15 @@ def end_room_endpoint(request: HttpRequest, event_slug: str):
         event.save()
         return HttpResponse(status=200)
     except RoomNotFoundError as e:
-        return 404, ErrorResponseSchema(error=str(e))
+        return Status(404, ErrorResponseSchema(error=str(e)))
     except RoomAlreadyEndedError as e:
-        return 400, ErrorResponseSchema(error=str(e))
+        return Status(400, ErrorResponseSchema(error=str(e)))
     except api.TwirpError as e:
         logging.error("LiveKit API error in end_room: %s", e)
-        return 500, ErrorResponseSchema(error=f"Failed to end room: {str(e)}")
+        return Status(500, ErrorResponseSchema(error=f"Failed to end room: {str(e)}"))
     except Exception as e:
         logging.error("Unexpected error in end_room: %s", e, exc_info=True)
-        return 500, ErrorResponseSchema(error="An unexpected error occurred while ending the room.")
+        return Status(500, ErrorResponseSchema(error="An unexpected error occurred while ending the room."))
 
 
 @meetings_router.post(
@@ -249,24 +249,24 @@ def mute_participant_endpoint(request: HttpRequest, event_slug: str, participant
 
     if not is_keeper:
         logging.warning("User %s attempted to mute participant in event %s", user.slug, event_slug)
-        return 403, ErrorResponseSchema(error="Only the Keeper can mute participants.")
+        return Status(403, ErrorResponseSchema(error="Only the Keeper can mute participants."))
 
     if event.ended():
-        return 400, ErrorResponseSchema(error="Session has already ended.")
+        return Status(400, ErrorResponseSchema(error="Session has already ended."))
 
     try:
         livekit.mute_participant(event.slug, participant_identity)
         return HttpResponse(status=200)
     except ParticipantNotFoundError as e:
-        return 404, ErrorResponseSchema(error=str(e))
+        return Status(404, ErrorResponseSchema(error=str(e)))
     except NoAudioTrackError as e:
-        return 404, ErrorResponseSchema(error=str(e))
+        return Status(404, ErrorResponseSchema(error=str(e)))
     except api.TwirpError as e:
         logging.error("LiveKit API error in mute_participant: %s", e)
-        return 500, ErrorResponseSchema(error=f"Failed to mute participant: {str(e)}")
+        return Status(500, ErrorResponseSchema(error=f"Failed to mute participant: {str(e)}"))
     except Exception as e:
         logging.error("Unexpected error in mute_participant: %s", e, exc_info=True)
-        return 500, ErrorResponseSchema(error="An unexpected error occurred while muting participant.")
+        return Status(500, ErrorResponseSchema(error="An unexpected error occurred while muting participant."))
 
 
 @meetings_router.post(
@@ -287,20 +287,20 @@ def mute_all_participants_endpoint(request: HttpRequest, event_slug: str):
 
     if not is_keeper:
         logging.warning("User %s attempted to mute all participants in event %s", user.slug, event_slug)
-        return 403, ErrorResponseSchema(error="Only the Keeper can mute participants.")
+        return Status(403, ErrorResponseSchema(error="Only the Keeper can mute participants."))
 
     if event.ended():
-        return 400, ErrorResponseSchema(error="Session has already ended.")
+        return Status(400, ErrorResponseSchema(error="Session has already ended."))
 
     try:
         livekit.mute_all_participants(event.slug, except_identity=user.slug)
         return HttpResponse(status=200)
     except api.TwirpError as e:
         logging.error("LiveKit API error in mute_all_participants: %s", e)
-        return 500, ErrorResponseSchema(error=f"Failed to mute all participants: {str(e)}")
+        return Status(500, ErrorResponseSchema(error=f"Failed to mute all participants: {str(e)}"))
     except Exception as e:
         logging.error("Unexpected error in mute_all_participants: %s", e, exc_info=True)
-        return 500, ErrorResponseSchema(error="An unexpected error occurred while muting all participants.")
+        return Status(500, ErrorResponseSchema(error="An unexpected error occurred while muting all participants."))
 
 
 @meetings_router.post(
@@ -321,25 +321,25 @@ def remove_participant_endpoint(request: HttpRequest, event_slug: str, participa
 
     if not is_keeper:
         logging.warning("User %s attempted to remove participant from event %s", user.slug, event_slug)
-        return 403, ErrorResponseSchema(error="Only the Keeper can remove participants.")
+        return Status(403, ErrorResponseSchema(error="Only the Keeper can remove participants."))
 
     if event.space.author.slug == participant_identity:
-        return 403, ErrorResponseSchema(error="Cannot remove the keeper from the room.")
+        return Status(403, ErrorResponseSchema(error="Cannot remove the keeper from the room."))
 
     if event.ended():
-        return 400, ErrorResponseSchema(error="Session has already ended.")
+        return Status(400, ErrorResponseSchema(error="Session has already ended."))
 
     try:
         livekit.remove_participant(event.slug, participant_identity)
         return HttpResponse(status=200)
     except ParticipantNotFoundError as e:
-        return 404, ErrorResponseSchema(error=str(e))
+        return Status(404, ErrorResponseSchema(error=str(e)))
     except api.TwirpError as e:
         logging.error("LiveKit API error in remove_participant: %s", e)
-        return 500, ErrorResponseSchema(error=f"Failed to remove participant: {str(e)}")
+        return Status(500, ErrorResponseSchema(error=f"Failed to remove participant: {str(e)}"))
     except Exception as e:
         logging.error("Unexpected error in remove_participant: %s", e, exc_info=True)
-        return 500, ErrorResponseSchema(error="An unexpected error occurred while removing participant.")
+        return Status(500, ErrorResponseSchema(error="An unexpected error occurred while removing participant."))
 
 
 @meetings_router.post(
@@ -360,24 +360,24 @@ def reorder_participants_endpoint(request: HttpRequest, event_slug: str, order: 
 
     if not is_keeper:
         logging.warning("User %s attempted to reorder participants in event %s", user.slug, event_slug)
-        return 403, ErrorResponseSchema(error="Only the Keeper can reorder participants.")
+        return Status(403, ErrorResponseSchema(error="Only the Keeper can reorder participants."))
 
     if event.ended():
-        return 400, ErrorResponseSchema(error="Session has already ended.")
+        return Status(400, ErrorResponseSchema(error="Session has already ended."))
 
     try:
         new_order = livekit.reorder(event.slug, order.order)
         return LivekitOrderSchema(order=new_order)
     except RoomNotFoundError as e:
-        return 404, ErrorResponseSchema(error=str(e))
+        return Status(404, ErrorResponseSchema(error=str(e)))
     except RoomAlreadyEndedError as e:
-        return 400, ErrorResponseSchema(error=str(e))
+        return Status(400, ErrorResponseSchema(error=str(e)))
     except api.TwirpError as e:
         logging.error("LiveKit API error in reorder: %s", e)
-        return 500, ErrorResponseSchema(error=f"Failed to reorder participants: {str(e)}")
+        return Status(500, ErrorResponseSchema(error=f"Failed to reorder participants: {str(e)}"))
     except Exception as e:
         logging.error("Unexpected error in reorder: %s", e, exc_info=True)
-        return 500, ErrorResponseSchema(error="An unexpected error occurred while reordering participants.")
+        return Status(500, ErrorResponseSchema(error="An unexpected error occurred while reordering participants."))
 
 
 @meetings_router.get(
@@ -398,16 +398,16 @@ def get_room_state_endpoint(request: HttpRequest, event_slug: str):
     is_joinable = event.can_join(user=user)
     if not is_joinable:
         logging.warning("User %s attempted to join non-joinable event %s", user.slug, event.slug)
-        return 403, ErrorResponseSchema(error="Session is not joinable at this time.")
+        return Status(403, ErrorResponseSchema(error="Session is not joinable at this time."))
 
     try:
         state = livekit.get_room_state(event.slug)
         return state
     except RoomNotFoundError as e:
-        return 404, ErrorResponseSchema(error=str(e))
+        return Status(404, ErrorResponseSchema(error=str(e)))
     except api.TwirpError as e:
         logging.error("LiveKit API error in get_room_state: %s", e)
-        return 500, ErrorResponseSchema(error=f"Failed to retrieve room state: {str(e)}")
+        return Status(500, ErrorResponseSchema(error=f"Failed to retrieve room state: {str(e)}"))
     except Exception as e:
         logging.error("Unexpected error in get_room_state: %s", e, exc_info=True)
-        return 500, ErrorResponseSchema(error="An unexpected error occurred while retrieving room state.")
+        return Status(500, ErrorResponseSchema(error="An unexpected error occurred while retrieving room state."))

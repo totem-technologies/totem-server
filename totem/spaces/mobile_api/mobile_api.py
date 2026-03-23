@@ -5,7 +5,7 @@ from django.db.models import Count, DateTimeField, ExpressionWrapper, F
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from ninja import Router
+from ninja import Router, Status
 from ninja.errors import AuthorizationError
 from ninja.pagination import paginate
 
@@ -97,7 +97,7 @@ def post_session_feedback(request: HttpRequest, event_slug: str, payload: Sessio
         defaults=defaults,
     )
 
-    return 204, None
+    return Status(204, None)
 
 
 @spaces_router.get("/sessions/history", response={200: list[SessionDetailSchema]}, url_name="sessions_history")

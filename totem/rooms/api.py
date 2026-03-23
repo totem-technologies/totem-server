@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 
 from django.http import HttpRequest
-from ninja import Router
+from ninja import Router, Status
 
 from totem.spaces.models import Session
 from totem.users import analytics
@@ -111,7 +111,7 @@ def post_event(
                 analytics.user_banned_from_room(banned_user, session_slug)
             remove_participant(session_slug, slug, reason=RemoveReason.BAN)
 
-    return 200, state
+    return Status(200, state)
 
 
 @router.get(
@@ -131,18 +131,18 @@ def get_state(
     room = Room.objects.for_session(session_slug).first()  # type: ignore
 
     if not room:
-        return 404, RoomErrorResponse(
+        return Status(404, RoomErrorResponse(
             code=ErrorCode.NOT_FOUND,
             message="Room not found",
-        )
+        ))
 
     if not room.session.attendees.filter(slug=user.slug).exists():
-        return 403, RoomErrorResponse(
+        return Status(403, RoomErrorResponse(
             code=ErrorCode.NOT_IN_ROOM,
             message="You are not an attendee of this session",
-        )
+        ))
 
-    return 200, room.to_state()
+    return Status(200, room.to_state())
 
 
 # ---------------------------------------------------------------------------
@@ -164,10 +164,10 @@ def join_room(
 
     session = Session.objects.filter(slug=session_slug).first()
     if not session:
-        return 404, RoomErrorResponse(
+        return Status(404, RoomErrorResponse(
             code=ErrorCode.NOT_FOUND,
             message="Session not found",
-        )
+        ))
 
     if not session.can_join(user):
         return RoomErrorResponse(
@@ -201,7 +201,7 @@ def join_room(
     session.joined.add(user)
     analytics.event_joined(user, session)
 
-    return 200, JoinResponse(token=token, is_already_present=is_already_connected)
+    return Status(200, JoinResponse(token=token, is_already_present=is_already_connected))
 
 
 def _get_room_and_require_keeper(user: User, session_slug: str) -> Room | RoomErrorResponse:
@@ -239,7 +239,7 @@ def mute(
             code=ErrorCode.LIVEKIT_ERROR, message="LiveKit service is not properly configured"
         ).as_http_response()
 
-    return 200, None
+    return Status(200, None)
 
 
 @router.post(
@@ -264,7 +264,7 @@ def mute_all(
             code=ErrorCode.LIVEKIT_ERROR, message="LiveKit service is not properly configured"
         ).as_http_response()
 
-    return 200, None
+    return Status(200, None)
 
 
 @router.post(
@@ -301,4 +301,4 @@ def remove(
     if removed_user:
         analytics.user_removed_from_room(removed_user, session_slug)
 
-    return 200, RemoveParticipantPayload(identity=participant_identity, reason=reason)
+    return Status(200, RemoveParticipantPayload(identity=participant_identity, reason=reason))

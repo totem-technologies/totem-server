@@ -1,7 +1,7 @@
 import os
 
 from django.http import HttpRequest
-from ninja import File, NinjaAPI, Router, Schema
+from ninja import File, NinjaAPI, Router, Schema, Status
 from ninja.files import UploadedFile
 
 from totem.spaces.api import router as spaces_router
@@ -32,7 +32,7 @@ class Message(Schema):
 def current_user(request: HttpRequest):
     if request.user.is_authenticated:
         return request.user
-    return 404, {"message": "Not found"}
+    return Status(404, {"message": "Not found"})
 
 
 class AvatarUpdate(Schema):
@@ -43,7 +43,7 @@ class AvatarUpdate(Schema):
 @api.post("/user/avatarupdate", response={200: None, 404: Message}, url_name="user_avatar_update")
 def user_avatar_update(request: HttpRequest, avatar_data: AvatarUpdate):
     if not request.user.is_authenticated:
-        return 404, {"message": "Not found"}
+        return Status(404, {"message": "Not found"})
     user: User = request.user  # type: ignore
     if avatar_data.avatar_type:
         user.profile_avatar_type = avatar_data.avatar_type
@@ -56,7 +56,7 @@ def user_avatar_update(request: HttpRequest, avatar_data: AvatarUpdate):
 @api.post("/user/avatarimage", response={200: None, 404: Message}, url_name="user_upload_profile_image")
 def user_upload_profile_image(request, file: UploadedFile = File(...)):  # type: ignore
     if not request.user.is_authenticated:
-        return 404, {"message": "Not found"}
+        return Status(404, {"message": "Not found"})
     user: User = request.user  # type: ignore
     user.profile_image.save(file.name, file)
     user.save()

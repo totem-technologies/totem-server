@@ -10,7 +10,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Annotated, Literal, Optional, Union
 
-from ninja import Field, Schema
+from ninja import Field, Schema, Status
 from pydantic import ConfigDict
 
 # ---------------------------------------------------------------------------
@@ -257,15 +257,15 @@ class RoomErrorResponse(Schema):
                 | ErrorCode.NOT_JOINABLE
                 | ErrorCode.BANNED
             ):
-                return 403, self
+                return Status(403, self)
             case ErrorCode.NOT_FOUND:
-                return 404, self
+                return Status(404, self)
             case ErrorCode.STALE_VERSION:
-                return 409, self
+                return Status(409, self)
             case ErrorCode.LIVEKIT_ERROR:
-                return 500, self
+                return Status(500, self)
             case _:
-                return 400, self
+                return Status(400, self)
 
 
 # ---------------------------------------------------------------------------

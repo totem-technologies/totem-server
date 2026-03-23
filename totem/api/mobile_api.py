@@ -2,7 +2,7 @@ import jwt
 from django.conf import settings
 from django.http import HttpRequest
 from django.utils import timezone
-from ninja import Router
+from ninja import Router, Status
 from ninja.errors import ValidationError
 from ninja.security import HttpBearer
 
@@ -74,7 +74,7 @@ def register_fcm_token(request: HttpRequest, payload: FCMTokenRegisterSchema):
         defaults={"active": True, "updated_at": timezone.now()},
     )
 
-    return 201, device
+    return Status(201, device)
 
 
 @router.delete("/fcm/unregister/{token}", response={204: None}, url_name="unregister_fcm_token")
@@ -83,4 +83,4 @@ def unregister_fcm_token(request: HttpRequest, token: str):
     device = FCMDevice.objects.filter(token=token, user=request.user).first()
     if device:
         device.delete()
-    return 204, None
+    return Status(204, None)
