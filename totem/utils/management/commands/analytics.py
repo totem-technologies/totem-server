@@ -23,31 +23,31 @@ class Command(BaseCommand):
             space_id=options["space_slug"],
             event_id=options["event_slug"],
             author_slug=options["author_slug"],
-            top_events=5,
+            top_sessions=5,
         )
 
         # Print results
         self.stdout.write("\n=== Totem Analytics ===")
         self.stdout.write(f"Period: {stats.date_range.label()}")
-        self.stdout.write(f"Total sessions: {stats.total_events}")
-        self.stdout.write(f"Sessions with attendees: {stats.events_with_attendees}")
-        self.stdout.write(f"Sessions with no attendees: {stats.events_no_attendees}")
-        self.stdout.write(f"Total attendees (including duplicates): {stats.total_attendees}")
-        self.stdout.write(f"Unique attendees: {stats.unique_attendees}")
-        self.stdout.write(f"Sessions with joins: {stats.events_with_joins}")
-        self.stdout.write(f"Sessions with no joins: {stats.events_no_joins}")
-        self.stdout.write(f"Total joins (including duplicates): {stats.total_joins}")
-        self.stdout.write(f"Unique joins: {stats.unique_joins}")
+        self.stdout.write(f"Total sessions: {stats.total_sessions}")
+        self.stdout.write(f"Sessions with signups: {stats.sessions_with_signups}")
+        self.stdout.write(f"Sessions with no signups: {stats.sessions_no_signups}")
+        self.stdout.write(f"Total signups (including duplicates): {stats.total_signups}")
+        self.stdout.write(f"Unique signups: {stats.unique_signups}")
+        self.stdout.write(f"Sessions with participants: {stats.sessions_with_participants}")
+        self.stdout.write(f"Sessions with no participants: {stats.sessions_no_participants}")
+        self.stdout.write(f"Total participants (including duplicates): {stats.total_participants}")
+        self.stdout.write(f"Unique participants: {stats.unique_participants}")
 
-        if stats.avg_attendees_per_event is not None:
-            self.stdout.write(f"Average attendees per session: {stats.avg_attendees_per_event:.1f}")
-        if stats.avg_joins_per_event is not None:
-            self.stdout.write(f"Average joins per session: {stats.avg_joins_per_event:.1f}")
+        if stats.avg_signups_per_session is not None:
+            self.stdout.write(f"Average signups per session: {stats.avg_signups_per_session:.1f}")
+        if stats.avg_participants_per_session is not None:
+            self.stdout.write(f"Average participants per session: {stats.avg_participants_per_session:.1f}")
 
-        if stats.top_events:
+        if stats.top_sessions:
             self.stdout.write("\nTop 5 Most Popular Sessions:")
-            for session in stats.top_events:
+            for s in stats.top_sessions:
                 self.stdout.write(
-                    f"- {session['space_title']} [{session['event_slug']}] ({session['start'][:10]}) - "
-                    f"{session['attendees']} attendees, {session['joined']} joined"
+                    f"- {s['space_title']} [{s['session_slug']}] ({s['start'][:10]}) - "
+                    f"{s['signups']} signups, {s['participants']} participants"
                 )

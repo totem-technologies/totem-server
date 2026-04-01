@@ -99,7 +99,7 @@ class TestSessionStatsExport:
         assert response["Content-Type"] == "text/plain"
         content = response.content.decode()
         assert "Session Stats:" in content
-        assert "Total events:" in content
+        assert "Total sessions:" in content
 
     def test_invalid_period_shows_form(self, admin_client):
         url = reverse("admin:exports_download", args=["session-stats"])
@@ -139,5 +139,5 @@ class TestGrantMetricsExport:
         url = reverse("admin:exports_download", args=["grant-metrics"])
         response = admin_client.get(url, {"year": str(timezone.now().year)})
         content = response.content.decode()
-        assert "Total participants (lifetime):  " in content
-        assert "Total sessions hosted:          " in content
+        assert "Unique participants (lifetime):" in content
+        assert "Total sessions hosted:" in content

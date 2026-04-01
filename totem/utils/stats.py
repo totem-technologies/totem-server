@@ -26,18 +26,18 @@ class DateRange:
 @dataclass(frozen=True)
 class SessionStats:
     date_range: DateRange
-    total_events: int
-    events_with_attendees: int
-    events_no_attendees: int
-    total_attendees: int
-    unique_attendees: int
-    events_with_joins: int
-    events_no_joins: int
-    total_joins: int
-    unique_joins: int
-    avg_attendees_per_event: float | None
-    avg_joins_per_event: float | None
-    top_events: list[dict[str, Any]]
+    total_sessions: int
+    sessions_with_signups: int
+    sessions_no_signups: int
+    total_signups: int
+    unique_signups: int
+    sessions_with_participants: int
+    sessions_no_participants: int
+    total_participants: int
+    unique_participants: int
+    avg_signups_per_session: float | None
+    avg_participants_per_session: float | None
+    top_sessions: list[dict[str, Any]]
 
     def asdict(self) -> dict[str, Any]:
         data = asdict(self)
@@ -117,7 +117,7 @@ def session_queryset(
     event_id: int | None = None,
     author_slug: str | None = None,
 ) -> QuerySet[Session]:
-    filters = Q(start__gte=date_range.start) & Q(start__lt=date_range.end)
+    filters = Q(start__gte=date_range.start) & Q(start__lt=date_range.end) & Q(cancelled=False)
     if space_id is not None:
         filters &= Q(circle_id=space_id)
     if event_id is not None:
@@ -141,82 +141,92 @@ def compute_session_stats(
     space_id: int | None = None,
     event_id: int | None = None,
     author_slug: str | None = None,
-    top_events: int = 5,
+    top_sessions: int = 5,
 ) -> SessionStats:
-    events = session_queryset(
+    sessions = session_queryset(
         date_range=date_range,
         space_id=space_id,
         event_id=event_id,
         author_slug=author_slug,
     )
 
-    total_events = events.count()
+    total_sessions = sessions.count()
 
-    # Attendees
-    attendee_through = Session.attendees.through
-    attendee_session_field = _session_fk_field_name(attendee_through)
-    attendee_links = attendee_through.objects.filter(**{f"{attendee_session_field}__in": events.values("id")})
-    total_attendees = attendee_links.count()
-    unique_attendees = attendee_links.values("user_id").distinct().count()
+    # Signups (users who registered for a session)
+    signup_through = Session.attendees.through
+    signup_session_field = _session_fk_field_name(signup_through)
+    signup_links = signup_through.objects.filter(**{f"{signup_session_field}__in": sessions.values("id")})
+    total_signups = signup_links.count()
+    unique_signups = signup_links.values("user_id").distinct().count()
 
-    attendees_per_event = attendee_links.values(attendee_session_field).annotate(attendee_count=Count("user_id"))
-    attendees_per_event_with_people = attendees_per_event.filter(attendee_count__gt=1)
-    events_with_attendees = attendees_per_event_with_people.count()
-    events_no_attendees = total_events - events_with_attendees
-    total_attendees_in_attended_events = (
-        attendees_per_event_with_people.aggregate(total=Sum("attendee_count"))["total"] or 0
+    signups_per_session = signup_links.values(signup_session_field).annotate(signup_count=Count("user_id"))
+    signups_per_session_with_people = signups_per_session.filter(signup_count__gt=1)
+    sessions_with_signups = signups_per_session_with_people.count()
+    sessions_no_signups = total_sessions - sessions_with_signups
+    total_signups_in_active_sessions = (
+        signups_per_session_with_people.aggregate(total=Sum("signup_count"))["total"] or 0
     )
-    avg_attendees_per_event = (
-        (total_attendees_in_attended_events / events_with_attendees) if events_with_attendees > 0 else None
+    avg_signups_per_session = (
+        (total_signups_in_active_sessions / sessions_with_signups) if sessions_with_signups > 0 else None
     )
 
-    # Joins
-    joined_through = Session.joined.through
-    joined_session_field = _session_fk_field_name(joined_through)
-    joined_links = joined_through.objects.filter(**{f"{joined_session_field}__in": events.values("id")})
-    total_joins = joined_links.count()
-    unique_joins = joined_links.values("user_id").distinct().count()
+    # Participants (users who actually attended)
+    participant_through = Session.joined.through
+    participant_session_field = _session_fk_field_name(participant_through)
+    participant_links = participant_through.objects.filter(
+        **{f"{participant_session_field}__in": sessions.values("id")}
+    )
+    total_participants = participant_links.count()
+    unique_participants = participant_links.values("user_id").distinct().count()
 
-    joins_per_event = joined_links.values(joined_session_field).annotate(joined_count=Count("user_id"))
-    joins_per_event_with_people = joins_per_event.filter(joined_count__gt=1)
-    events_with_joins = joins_per_event_with_people.count()
-    events_no_joins = total_events - events_with_joins
-    total_joins_in_joined_events = joins_per_event_with_people.aggregate(total=Sum("joined_count"))["total"] or 0
-    avg_joins_per_event = (total_joins_in_joined_events / events_with_joins) if events_with_joins > 0 else None
+    participants_per_session = participant_links.values(participant_session_field).annotate(
+        participant_count=Count("user_id")
+    )
+    participants_per_session_with_people = participants_per_session.filter(participant_count__gt=1)
+    sessions_with_participants = participants_per_session_with_people.count()
+    sessions_no_participants = total_sessions - sessions_with_participants
+    total_participants_in_active_sessions = (
+        participants_per_session_with_people.aggregate(total=Sum("participant_count"))["total"] or 0
+    )
+    avg_participants_per_session = (
+        (total_participants_in_active_sessions / sessions_with_participants)
+        if sessions_with_participants > 0
+        else None
+    )
 
-    top_events_data: list[dict[str, Any]] = []
-    if top_events > 0:
-        for event in (
-            events.select_related("space")
+    top_sessions_data: list[dict[str, Any]] = []
+    if top_sessions > 0:
+        for session in (
+            sessions.select_related("space")
             .annotate(
-                attendee_count=Count("attendees", distinct=True),
-                joined_count=Count("joined", distinct=True),
+                signup_count=Count("attendees", distinct=True),
+                participant_count=Count("joined", distinct=True),
             )
-            .filter(attendee_count__gt=0)
-            .order_by("-attendee_count", "-joined_count", "start")[:top_events]
+            .filter(signup_count__gt=0)
+            .order_by("-signup_count", "-participant_count", "start")[:top_sessions]
         ):
-            top_events_data.append(
+            top_sessions_data.append(
                 {
-                    "space_title": event.space.title,
-                    "event_slug": event.slug,
-                    "start": event.start.isoformat(),
-                    "attendees": event.attendee_count,
-                    "joined": event.joined_count,
+                    "space_title": session.space.title,
+                    "session_slug": session.slug,
+                    "start": session.start.isoformat(),
+                    "signups": session.signup_count,
+                    "participants": session.participant_count,
                 }
             )
 
     return SessionStats(
         date_range=date_range,
-        total_events=total_events,
-        events_with_attendees=events_with_attendees,
-        events_no_attendees=events_no_attendees,
-        total_attendees=total_attendees,
-        unique_attendees=unique_attendees,
-        events_with_joins=events_with_joins,
-        events_no_joins=events_no_joins,
-        total_joins=total_joins,
-        unique_joins=unique_joins,
-        avg_attendees_per_event=avg_attendees_per_event,
-        avg_joins_per_event=avg_joins_per_event,
-        top_events=top_events_data,
+        total_sessions=total_sessions,
+        sessions_with_signups=sessions_with_signups,
+        sessions_no_signups=sessions_no_signups,
+        total_signups=total_signups,
+        unique_signups=unique_signups,
+        sessions_with_participants=sessions_with_participants,
+        sessions_no_participants=sessions_no_participants,
+        total_participants=total_participants,
+        unique_participants=unique_participants,
+        avg_signups_per_session=avg_signups_per_session,
+        avg_participants_per_session=avg_participants_per_session,
+        top_sessions=top_sessions_data,
     )

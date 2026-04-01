@@ -165,26 +165,26 @@ def _session_stats_export(period: str) -> HttpResponse:
     lines = [
         f"Session Stats: {stats.date_range.label()}",
         f"{'=' * 40}",
-        f"Total events:              {stats.total_events}",
-        f"Events with attendees:     {stats.events_with_attendees}",
-        f"Events without attendees:  {stats.events_no_attendees}",
-        f"Total attendees:           {stats.total_attendees}",
-        f"Unique attendees:          {stats.unique_attendees}",
-        f"Avg attendees/event:       {stats.avg_attendees_per_event or 'N/A'}",
+        f"Total sessions:                {stats.total_sessions}",
+        f"Sessions with signups:         {stats.sessions_with_signups}",
+        f"Sessions without signups:      {stats.sessions_no_signups}",
+        f"Total signups:                 {stats.total_signups}",
+        f"Unique signups:                {stats.unique_signups}",
+        f"Avg signups/session:           {stats.avg_signups_per_session or 'N/A'}",
         "",
-        f"Events with joins:         {stats.events_with_joins}",
-        f"Events without joins:      {stats.events_no_joins}",
-        f"Total joins:               {stats.total_joins}",
-        f"Unique joins:              {stats.unique_joins}",
-        f"Avg joins/event:           {stats.avg_joins_per_event or 'N/A'}",
+        f"Sessions with participants:    {stats.sessions_with_participants}",
+        f"Sessions without participants: {stats.sessions_no_participants}",
+        f"Total participants:            {stats.total_participants}",
+        f"Unique participants:           {stats.unique_participants}",
+        f"Avg participants/session:      {stats.avg_participants_per_session or 'N/A'}",
     ]
 
-    if stats.top_events:
-        lines += ["", "Top events:"]
-        for i, event in enumerate(stats.top_events, 1):
+    if stats.top_sessions:
+        lines += ["", "Top sessions:"]
+        for i, s in enumerate(stats.top_sessions, 1):
             lines.append(
-                f"  {i}. {event['space_title']} ({event['event_slug']}) "
-                f"- {event['attendees']} attendees, {event['joined']} joined"
+                f"  {i}. {s['space_title']} ({s['session_slug']}) "
+                f"- {s['signups']} signups, {s['participants']} participants"
             )
 
     return text_response(f"session-stats-{period}", "\n".join(lines))

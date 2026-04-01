@@ -92,9 +92,10 @@ def compute_grant_metrics(year: int) -> str:
     user_first_session: dict[int, datetime] = {}
     user_session_counts: Counter[int] = Counter()
     monthly_user_joins: dict[str, set[int]] = {}
-    total_joins_all = 0
+    total_participants_all = 0
+    sessions_with_participants = 0
     total_signup_seats = 0
-    total_join_seats = 0
+    total_participant_seats = 0
     full_count = 0
 
     for s in all_sessions:
@@ -106,12 +107,14 @@ def compute_grant_metrics(year: int) -> str:
         # Lifetime totals
         all_joined_ids.update(joined)
         all_signup_ids.update(attendees)
-        total_joins_all += joined_count
+        total_participants_all += joined_count
+        if joined_count > 0:
+            sessions_with_participants += 1
 
         # Conversion rate accumulators
         if attendee_count > 0:
             total_signup_seats += attendee_count
-            total_join_seats += joined_count
+            total_participant_seats += joined_count
 
         # Full sessions
         if attendee_count >= s.seats:
@@ -135,10 +138,12 @@ def compute_grant_metrics(year: int) -> str:
             monthly_user_joins[month_key] = set()
         monthly_user_joins[month_key].update(joined)
 
-    total_participants = len(all_joined_ids)
+    total_unique_participants = len(all_joined_ids)
     unique_signups = len(all_signup_ids)
-    avg_attendees = total_joins_all / total_sessions if total_sessions > 0 else 0
-    conversion_rate = total_join_seats / total_signup_seats * 100 if total_signup_seats > 0 else 0
+    avg_participants = (
+        total_participants_all / sessions_with_participants if sessions_with_participants > 0 else 0
+    )
+    conversion_rate = total_participant_seats / total_signup_seats * 100 if total_signup_seats > 0 else 0
 
     # ── New vs returning participants ──
     new_participants = sum(1 for uid in this_year_joined if user_first_session.get(uid, now) >= year_start)
@@ -146,7 +151,7 @@ def compute_grant_metrics(year: int) -> str:
 
     # ── Repeat attendance ──
     users_with_repeat = sum(1 for count in user_session_counts.values() if count > 1)
-    repeat_rate = users_with_repeat / total_participants * 100 if total_participants > 0 else 0
+    repeat_rate = users_with_repeat / total_unique_participants * 100 if total_unique_participants > 0 else 0
     if user_session_counts:
         avg_sessions_per_user = sum(user_session_counts.values()) / len(user_session_counts)
     else:
@@ -254,10 +259,11 @@ def compute_grant_metrics(year: int) -> str:
     lines.append("")
     lines.append("GROWTH & REACH")
     lines.append("-" * 40)
-    lines.append(f"Total participants (lifetime):  {total_participants}")
+    lines.append(f"Unique participants (lifetime):  {total_unique_participants}")
     lines.append(f"Unique signups (lifetime):      {unique_signups}")
     lines.append(f"Total sessions hosted:          {total_sessions}")
-    lines.append(f"Avg attendees per session:      {avg_attendees:.1f}")
+    lines.append(f"Sessions with participants:     {sessions_with_participants}")
+    lines.append(f"Avg participants/session:       {avg_participants:.1f}")
     lines.append("")
     lines.append(f"Unique participants ({year}):    {len(this_year_joined)}")
     lines.append(f"Unique participants ({prev_year}):    {len(prev_year_joined)}")
@@ -282,7 +288,7 @@ def compute_grant_metrics(year: int) -> str:
     lines.append("")
     lines.append("ENGAGEMENT & RETENTION (among joined participants)")
     lines.append("-" * 40)
-    lines.append(f"Repeat attendance rate:         {repeat_rate:.1f}% ({users_with_repeat} of {total_participants})")
+    lines.append(f"Repeat attendance rate:         {repeat_rate:.1f}% ({users_with_repeat} of {total_unique_participants})")
     lines.append(f"Avg sessions per user:          {avg_sessions_per_user:.1f}")
     lines.append("")
     lines.append("REFERRAL SOURCES (among onboarded users)")
@@ -326,11 +332,13 @@ def compute_grant_metrics(year: int) -> str:
     lines.append("")
     lines.append("NOTES")
     lines.append("-" * 40)
-    lines.append("- Two cohorts are used: 'joined participants' (users who attended a session)")
+    lines.append("- Two cohorts are used: 'participants' (users who attended a session)")
     lines.append("  and 'onboarded users' (completed onboarding, may not have attended). Each")
     lines.append("  section header indicates which cohort it describes.")
-    lines.append("- 'Unique signups' = distinct users who signed up for any session")
-    lines.append("- 'Attendance conversion rate' = total joined seats / total signed-up seats")
+    lines.append("- 'Signups' = users who registered for a session")
+    lines.append("- 'Participants' = users who actually attended a session")
+    lines.append("- 'Avg participants/session' = only counts sessions where someone attended")
+    lines.append("- 'Attendance conversion rate' = total participant seats / total signup seats")
     lines.append("- Timezone is used as a proxy for geographic reach (no country data collected)")
     lines.append("- US classification is approximate based on timezone prefixes")
     lines.append("- Session completion/stay duration not currently tracked")

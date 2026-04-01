@@ -43,10 +43,10 @@ class Command(BaseCommand):
             help="Optional filepath to write output instead of stdout.",
         )
         parser.add_argument(
-            "--top-events",
+            "--top-sessions",
             type=int,
             default=5,
-            help="Number of top events to include in yearly totals (default: 5).",
+            help="Number of top sessions to include in yearly totals (default: 5).",
         )
         parser.add_argument("--space-slug", type=int, help="Filter by specific space id")
         parser.add_argument("--event-slug", type=int, help="Filter by specific event id")
@@ -76,7 +76,7 @@ class Command(BaseCommand):
                 space_id=space_id,
                 event_id=event_id,
                 author_slug=author_slug,
-                top_events=options["top_events"],
+                top_sessions=options["top_sessions"],
             )
 
             months: list[dict[str, object]] = []
@@ -87,7 +87,7 @@ class Command(BaseCommand):
                     space_id=space_id,
                     event_id=event_id,
                     author_slug=author_slug,
-                    top_events=0,
+                    top_sessions=0,
                 )
                 months.append(
                     {
@@ -106,11 +106,15 @@ class Command(BaseCommand):
         prev_year = recap["years"][str(compare_year)]["year_total"]
         recap["comparison"] = {
             "year_total": {
-                "total_events_pct_change": _pct_change(this_year["total_events"], prev_year["total_events"]),
-                "unique_attendees_pct_change": _pct_change(
-                    this_year["unique_attendees"], prev_year["unique_attendees"]
+                "total_sessions_pct_change": _pct_change(
+                    this_year["total_sessions"], prev_year["total_sessions"]
                 ),
-                "unique_joins_pct_change": _pct_change(this_year["unique_joins"], prev_year["unique_joins"]),
+                "unique_signups_pct_change": _pct_change(
+                    this_year["unique_signups"], prev_year["unique_signups"]
+                ),
+                "unique_participants_pct_change": _pct_change(
+                    this_year["unique_participants"], prev_year["unique_participants"]
+                ),
             }
         }
 
@@ -136,27 +140,27 @@ class Command(BaseCommand):
             stats = recap["years"][str(y)]["year_total"]
             lines.append(
                 f"{label} {y}: "
-                f"{stats['total_events']} sessions, "
-                f"{stats['unique_attendees']} unique attendees, "
-                f"{stats['unique_joins']} unique joins"
+                f"{stats['total_sessions']} sessions, "
+                f"{stats['unique_signups']} unique signups, "
+                f"{stats['unique_participants']} unique participants"
             )
 
         _year_line(year, "This year")
         _year_line(compare_year, "Last year")
 
-        pct = recap["comparison"]["year_total"]["total_events_pct_change"]
+        pct = recap["comparison"]["year_total"]["total_sessions_pct_change"]
         pct_text = "n/a" if pct is None else f"{pct:+.1f}%"
-        lines.append(f"YoY total events change: {pct_text}")
+        lines.append(f"YoY total sessions change: {pct_text}")
 
         for y in years:
-            top_events = recap["years"][str(y)]["year_total"]["top_events"]
-            if top_events:
+            top_sessions = recap["years"][str(y)]["year_total"]["top_sessions"]
+            if top_sessions:
                 lines.append("")
                 lines.append(f"Top sessions ({y}):")
-                for event in top_events:
+                for s in top_sessions:
                     lines.append(
-                        f"- {event['circle_title']} [{event['event_slug']}] ({event['start'][:10]}) - "
-                        f"{event['attendees']} attendees, {event['joined']} joined"
+                        f"- {s['space_title']} [{s['session_slug']}] ({s['start'][:10]}) - "
+                        f"{s['signups']} signups, {s['participants']} participants"
                     )
 
         self._write_output("\n".join(lines), options["output"])
@@ -177,17 +181,17 @@ class Command(BaseCommand):
             fieldnames=[
                 "year",
                 "month",
-                "total_events",
-                "events_with_attendees",
-                "events_no_attendees",
-                "total_attendees",
-                "unique_attendees",
-                "events_with_joins",
-                "events_no_joins",
-                "total_joins",
-                "unique_joins",
-                "avg_attendees_per_event",
-                "avg_joins_per_event",
+                "total_sessions",
+                "sessions_with_signups",
+                "sessions_no_signups",
+                "total_signups",
+                "unique_signups",
+                "sessions_with_participants",
+                "sessions_no_participants",
+                "total_participants",
+                "unique_participants",
+                "avg_signups_per_session",
+                "avg_participants_per_session",
             ],
         )
         writer.writeheader()
@@ -199,17 +203,17 @@ class Command(BaseCommand):
                     {
                         "year": int(year_str),
                         "month": stats["month"],
-                        "total_events": stats["total_events"],
-                        "events_with_attendees": stats["events_with_attendees"],
-                        "events_no_attendees": stats["events_no_attendees"],
-                        "total_attendees": stats["total_attendees"],
-                        "unique_attendees": stats["unique_attendees"],
-                        "events_with_joins": stats["events_with_joins"],
-                        "events_no_joins": stats["events_no_joins"],
-                        "total_joins": stats["total_joins"],
-                        "unique_joins": stats["unique_joins"],
-                        "avg_attendees_per_event": stats["avg_attendees_per_event"],
-                        "avg_joins_per_event": stats["avg_joins_per_event"],
+                        "total_sessions": stats["total_sessions"],
+                        "sessions_with_signups": stats["sessions_with_signups"],
+                        "sessions_no_signups": stats["sessions_no_signups"],
+                        "total_signups": stats["total_signups"],
+                        "unique_signups": stats["unique_signups"],
+                        "sessions_with_participants": stats["sessions_with_participants"],
+                        "sessions_no_participants": stats["sessions_no_participants"],
+                        "total_participants": stats["total_participants"],
+                        "unique_participants": stats["unique_participants"],
+                        "avg_signups_per_session": stats["avg_signups_per_session"],
+                        "avg_participants_per_session": stats["avg_participants_per_session"],
                     }
                 )
 
@@ -218,17 +222,17 @@ class Command(BaseCommand):
                 {
                     "year": int(year_str),
                     "month": "year_total",
-                    "total_events": year_total["total_events"],
-                    "events_with_attendees": year_total["events_with_attendees"],
-                    "events_no_attendees": year_total["events_no_attendees"],
-                    "total_attendees": year_total["total_attendees"],
-                    "unique_attendees": year_total["unique_attendees"],
-                    "events_with_joins": year_total["events_with_joins"],
-                    "events_no_joins": year_total["events_no_joins"],
-                    "total_joins": year_total["total_joins"],
-                    "unique_joins": year_total["unique_joins"],
-                    "avg_attendees_per_event": year_total["avg_attendees_per_event"],
-                    "avg_joins_per_event": year_total["avg_joins_per_event"],
+                    "total_sessions": year_total["total_sessions"],
+                    "sessions_with_signups": year_total["sessions_with_signups"],
+                    "sessions_no_signups": year_total["sessions_no_signups"],
+                    "total_signups": year_total["total_signups"],
+                    "unique_signups": year_total["unique_signups"],
+                    "sessions_with_participants": year_total["sessions_with_participants"],
+                    "sessions_no_participants": year_total["sessions_no_participants"],
+                    "total_participants": year_total["total_participants"],
+                    "unique_participants": year_total["unique_participants"],
+                    "avg_signups_per_session": year_total["avg_signups_per_session"],
+                    "avg_participants_per_session": year_total["avg_participants_per_session"],
                 }
             )
 
