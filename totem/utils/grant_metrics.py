@@ -140,9 +140,7 @@ def compute_grant_metrics(year: int) -> str:
 
     total_unique_participants = len(all_joined_ids)
     unique_signups = len(all_signup_ids)
-    avg_participants = (
-        total_participants_all / sessions_with_participants if sessions_with_participants > 0 else 0
-    )
+    avg_participants = total_participants_all / sessions_with_participants if sessions_with_participants > 0 else 0
     conversion_rate = total_participant_seats / total_signup_seats * 100 if total_signup_seats > 0 else 0
 
     # ── New vs returning participants ──
@@ -288,7 +286,9 @@ def compute_grant_metrics(year: int) -> str:
     lines.append("")
     lines.append("ENGAGEMENT & RETENTION (among joined participants)")
     lines.append("-" * 40)
-    lines.append(f"Repeat attendance rate:         {repeat_rate:.1f}% ({users_with_repeat} of {total_unique_participants})")
+    lines.append(
+        f"Repeat attendance rate:         {repeat_rate:.1f}% ({users_with_repeat} of {total_unique_participants})"
+    )
     lines.append(f"Avg sessions per user:          {avg_sessions_per_user:.1f}")
     lines.append("")
     lines.append("REFERRAL SOURCES (among onboarded users)")

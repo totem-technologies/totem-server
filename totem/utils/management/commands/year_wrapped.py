@@ -106,12 +106,8 @@ class Command(BaseCommand):
         prev_year = recap["years"][str(compare_year)]["year_total"]
         recap["comparison"] = {
             "year_total": {
-                "total_sessions_pct_change": _pct_change(
-                    this_year["total_sessions"], prev_year["total_sessions"]
-                ),
-                "unique_signups_pct_change": _pct_change(
-                    this_year["unique_signups"], prev_year["unique_signups"]
-                ),
+                "total_sessions_pct_change": _pct_change(this_year["total_sessions"], prev_year["total_sessions"]),
+                "unique_signups_pct_change": _pct_change(this_year["unique_signups"], prev_year["unique_signups"]),
                 "unique_participants_pct_change": _pct_change(
                     this_year["unique_participants"], prev_year["unique_participants"]
                 ),

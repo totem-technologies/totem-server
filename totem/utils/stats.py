@@ -189,9 +189,7 @@ def compute_session_stats(
         participants_per_session_with_people.aggregate(total=Sum("participant_count"))["total"] or 0
     )
     avg_participants_per_session = (
-        (total_participants_in_active_sessions / sessions_with_participants)
-        if sessions_with_participants > 0
-        else None
+        (total_participants_in_active_sessions / sessions_with_participants) if sessions_with_participants > 0 else None
     )
 
     top_sessions_data: list[dict[str, Any]] = []
