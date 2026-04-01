@@ -1,6 +1,5 @@
 import csv
-import io
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any, Callable
 
@@ -172,7 +171,7 @@ def _session_stats_export(period: str) -> HttpResponse:
         f"Total attendees:           {stats.total_attendees}",
         f"Unique attendees:          {stats.unique_attendees}",
         f"Avg attendees/event:       {stats.avg_attendees_per_event or 'N/A'}",
-        f"",
+        "",
         f"Events with joins:         {stats.events_with_joins}",
         f"Events without joins:      {stats.events_no_joins}",
         f"Total joins:               {stats.total_joins}",
