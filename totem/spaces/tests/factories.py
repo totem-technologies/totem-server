@@ -46,8 +46,3 @@ class SpaceCategoryFactory(DjangoModelFactory, metaclass=BaseMetaFactory[SpaceCa
 
     class Meta:  # type: ignore
         model = SpaceCategory
-
-
-SpaceFactory = SpaceFactory
-SessionFactory = SessionFactory
-SpaceCategoryFactory = SpaceCategoryFactory

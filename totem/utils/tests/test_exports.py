@@ -72,7 +72,7 @@ class TestOnboardedNoSession90DaysExport:
         assert onboard.user.email in content
 
     def test_excludes_non_onboarded_user(self, admin_client):
-        user = UserFactory(email="notonboarded@test.example", onboarded=False)
+        UserFactory(email="notonboarded@test.example", onboarded=False)
         url = reverse("admin:exports_download", args=["onboarded-no-session-90-days"])
         response = admin_client.get(url)
         content = response.content.decode()
