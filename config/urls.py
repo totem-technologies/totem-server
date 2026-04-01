@@ -17,6 +17,7 @@ from totem.plans.urls import PlansSitemap
 from totem.repos.urls import ReposSitemap
 from totem.spaces.urls import SpacesSitemap
 from totem.users import views as user_views
+from totem.utils.exports import get_url_patterns as export_url_patterns
 
 sitemaps = {
     "pages": PagesSitemap(),
@@ -58,6 +59,7 @@ def reservedView(request):
 admin_urls = (
     # Use default login view for admin
     [path("login/", RedirectView.as_view(pattern_name=settings.LOGIN_URL, permanent=True, query_string=True))]
+    + export_url_patterns()
     + admin.site.get_urls(),
     "admin",
     admin.site.name,

@@ -1,0 +1,32 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}{{ export.name }} | {{ site_title }}{% endblock %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; <a href="{% url 'admin:exports_index' %}">{% trans 'Data Exports' %}</a>
+    &rsaquo; {{ export.name }}
+  </div>
+{% endblock %}
+
+{% block content %}
+<p>{{ export.description }}</p>
+
+<form method="get">
+  <fieldset class="module aligned">
+    {% for field in form %}
+    <div class="form-row">
+      {{ field.errors }}
+      {{ field.label_tag }}
+      {{ field }}
+      {% if field.help_text %}<p class="help">{{ field.help_text }}</p>{% endif %}
+    </div>
+    {% endfor %}
+  </fieldset>
+  <div class="submit-row">
+    <input type="submit" value="{% trans 'Download' %}" class="default">
+  </div>
+</form>
+{% endblock %}

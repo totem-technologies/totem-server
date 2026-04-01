@@ -38,7 +38,8 @@
       "WebFetch(domain:developers.google.com)",
       "WebFetch(domain:stackoverflow.com)",
       "WebFetch(domain:www.reddit.com)",
-      "WebFetch(domain:gist.github.com)"
+      "WebFetch(domain:gist.github.com)",
+      "WebSearch"
     ]
   }
 }

@@ -1,0 +1,38 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Data Exports | {{ site_title }}{% endblock %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+    &rsaquo; {% trans 'Data Exports' %}
+  </div>
+{% endblock %}
+
+{% block content %}
+<p>Download predefined data exports.</p>
+
+{% if exports %}
+<table>
+<thead>
+<tr>
+  <th>Export</th>
+  <th>Description</th>
+  <th></th>
+</tr>
+</thead>
+<tbody>
+{% for export in exports %}
+<tr>
+  <td><strong>{{ export.name }}</strong></td>
+  <td>{{ export.description }}</td>
+  <td><a href="{{ export.url }}" class="button">{% if export.has_options %}Options{% else %}Download{% endif %}</a></td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+{% else %}
+<p>No exports available.</p>
+{% endif %}
+{% endblock %}

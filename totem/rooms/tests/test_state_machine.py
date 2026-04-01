@@ -184,11 +184,14 @@ def _setup_room(keeper: User, attendees: list[User]):
     Create a Session + Room with the given keeper and attendees.
     Returns (room, session_slug).
     All attendees should include the keeper.
+    Sets talking_order to match the attendees list order so tests are deterministic.
     """
     session = SessionFactory(space__author=keeper)
     for u in attendees:
         session.attendees.add(u)
     room = Room.objects.get_or_create_for_session(session)
+    room.talking_order = [u.slug for u in attendees]
+    room.save(update_fields=["talking_order"])
     return room, session.slug
 
 
