@@ -180,7 +180,11 @@ def compute_grant_metrics(year: int) -> str:
     friend_referrals = 0
     referral_lines: list[str] = []
     for r in referral_counts:
-        label = ReferralChoices(r["referral_source"]).label
+        source = r["referral_source"]
+        try:
+            label = ReferralChoices(source).label
+        except ValueError:
+            label = source or "Unknown"
         referral_lines.append(f"  {label}: {r['count']}")
         if r["referral_source"] == "friend":
             friend_referrals = r["count"]
