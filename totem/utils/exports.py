@@ -122,7 +122,7 @@ def _onboarded_no_session_90_days() -> HttpResponse:
 
     cutoff = timezone.now() - timedelta(days=90)
     users = (
-        User.objects.filter(onboard__onboarded=True)
+        User.objects.filter(onboard__onboarded=True, newsletter_consent=True)
         .exclude(sessions_joined__start__gte=cutoff)
         .distinct()
         .order_by("email")
@@ -136,7 +136,7 @@ register_export(
     Export(
         slug="onboarded-no-session-90-days",
         name="Onboarded, no session in 90 days",
-        description="Users who completed onboarding but have not attended a session in the last 90 days.",
+        description="Newsletter subscribers who completed onboarding but have not attended a session in the last 90 days.",
         query=_onboarded_no_session_90_days,
     )
 )

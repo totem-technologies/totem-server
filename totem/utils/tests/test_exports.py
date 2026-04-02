@@ -47,14 +47,21 @@ class TestOnboardedNoSession90DaysExport:
         assert response["Content-Type"] == "text/csv"
 
     def test_includes_onboarded_user_with_no_sessions(self, admin_client):
-        onboard = OnboardModelFactory(onboarded=True)
+        onboard = OnboardModelFactory(onboarded=True, user__newsletter_consent=True)
         url = reverse("admin:exports_download", args=["onboarded-no-session-90-days"])
         response = admin_client.get(url)
         content = response.content.decode()
         assert onboard.user.email in content
 
+    def test_excludes_user_without_newsletter_consent(self, admin_client):
+        onboard = OnboardModelFactory(onboarded=True, user__newsletter_consent=False)
+        url = reverse("admin:exports_download", args=["onboarded-no-session-90-days"])
+        response = admin_client.get(url)
+        content = response.content.decode()
+        assert onboard.user.email not in content
+
     def test_excludes_user_with_recent_session(self, admin_client):
-        onboard = OnboardModelFactory(onboarded=True)
+        onboard = OnboardModelFactory(onboarded=True, user__newsletter_consent=True)
         session = SessionFactory(start=timezone.now() - timedelta(days=30))
         session.joined.add(onboard.user)
         url = reverse("admin:exports_download", args=["onboarded-no-session-90-days"])
@@ -63,7 +70,7 @@ class TestOnboardedNoSession90DaysExport:
         assert onboard.user.email not in content
 
     def test_includes_user_with_old_session(self, admin_client):
-        onboard = OnboardModelFactory(onboarded=True)
+        onboard = OnboardModelFactory(onboarded=True, user__newsletter_consent=True)
         session = SessionFactory(start=timezone.now() - timedelta(days=120))
         session.joined.add(onboard.user)
         url = reverse("admin:exports_download", args=["onboarded-no-session-90-days"])
