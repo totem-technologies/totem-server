@@ -1,3 +1,5 @@
+import re
+
 import markdown
 from django import forms
 from django.contrib.admin import widgets as admin_widgets
@@ -8,6 +10,8 @@ from django.forms import widgets
 from django.template import Context, Template
 from django.utils.html import strip_tags
 from django.utils.safestring import mark_safe
+
+_IMAGE_SLUG_RE = re.compile(r'\{%\s*image\s+slug="([^"]+)"\s*%\}')
 
 
 class _MarkdownWidget(widgets.Textarea):
@@ -56,10 +60,19 @@ class MarkdownMixin:
     def render_markdown(content: str):
         if not content:
             return ""
-        templatetags = "\n".join(["{% load image %}"]) + "\n"
-        content = content or ""
+        templatetags = "{% load image %}\n"
         md = markdown.Markdown(extensions=["toc", "sane_lists", "nl2br"]).convert(content)
-        return Template(templatetags + md).render(Context())
+
+        # Prefetch all referenced images in one query to avoid N+1
+        from totem.uploads.models import Image
+
+        slugs = set(_IMAGE_SLUG_RE.findall(content))
+        if slugs:
+            image_cache = {img.slug: img for img in Image.objects.filter(slug__in=slugs)}
+        else:
+            image_cache = {}
+
+        return Template(templatetags + md).render(Context({"_image_cache": image_cache}))
 
     @property
     def content_html(self):

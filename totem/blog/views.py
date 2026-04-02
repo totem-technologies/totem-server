@@ -16,9 +16,10 @@ class BlogPostDetailView(DetailView):  # pyright: ignore[reportMissingTypeArgume
     context_object_name = "post"
 
     def get_queryset(self):
+        qs = BlogPost.objects.select_related("author")
         if self.request.user.is_staff:
-            return BlogPost.objects.all()
-        return BlogPost.objects.filter(publish=True)
+            return qs
+        return qs.filter(publish=True)
 
     def get_object(self, queryset=None):
         post = super().get_object(queryset)
@@ -34,9 +35,10 @@ class BlogPostListView(ListView):  # pyright: ignore[reportMissingTypeArgument]
     paginate_by = 12
 
     def get_queryset(self):
+        qs = BlogPost.objects.select_related("author")
         if self.request.user.is_staff:
-            return BlogPost.objects.all()
-        return BlogPost.objects.filter(publish=True)
+            return qs
+        return qs.filter(publish=True)
 
 
 @dataclass
