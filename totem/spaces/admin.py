@@ -9,6 +9,8 @@ from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
 
+from totem.rooms.models import Room
+from totem.rooms.schemas import RoomStatus
 from totem.users.models import User
 from totem.utils.admin import StaleDataCheckAdminMixin
 
@@ -154,6 +156,43 @@ class SessionFeedbackInline(admin.TabularInline):
     readonly_fields = ("user", "feedback", "message", "date_created")
 
 
+class RoomInline(admin.StackedInline):
+    model = Room
+    extra = 0
+    max_num = 1
+    can_delete = False
+    fields = ("status", "room_turn_state", "end_reason", "room_state_version")
+    readonly_fields = ("room_turn_state", "room_state_version")
+
+    @admin.display(description="Turn State")
+    def room_turn_state(self, obj: Room) -> str:
+        return obj.turn_state
+
+    @admin.display(description="State Version")
+    def room_state_version(self, obj: Room) -> int:
+        return obj.state_version
+
+    def _format_choice_label(self, value: object, fallback_label: object) -> str:
+        if isinstance(value, str) and value:
+            return value.replace("_", " ").title()
+        return str(fallback_label)
+
+    @override
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        form_field = super().formfield_for_dbfield(db_field, request, **kwargs)
+        if form_field is None:
+            return None
+        if db_field.name == "status":
+            form_field.label = "Room Status"
+        if db_field.name == "end_reason":
+            form_field.label = "End Reason"
+        if db_field.name in {"status", "end_reason"}:
+            form_field.choices = [
+                (value, self._format_choice_label(value, label)) for value, label in form_field.choices
+            ]
+        return form_field
+
+
 @final
 @admin.register(Session)
 class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
@@ -162,7 +201,7 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
     autocomplete_fields = ["attendees", "joined"]
     readonly_fields = ("date_created", "date_modified")
     actions = [copy_session]
-    inlines = [SessionFeedbackInline]
+    inlines = [SessionFeedbackInline, RoomInline]
 
     @override
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
@@ -194,7 +233,24 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
         ),
     )
 
+    def _sync_session_ended_at(self, session: Session) -> None:
+        room = Room.objects.filter(session=session).first()
+        if room is None:
+            return
+        if room.status == RoomStatus.ENDED and session.ended_at is None:
+            session.ended_at = timezone.now()
+            session.save(update_fields=["ended_at"])
+            return
+        if room.status != RoomStatus.ENDED and session.ended_at is not None:
+            session.ended_at = None
+            session.save(update_fields=["ended_at"])
+
     @override
     def save_model(self, request: HttpRequest, obj: Session, form: "ModelForm[Session]", change: bool):
         obj.save_to_calendar()
         super().save_model(request, obj, form, change)
+
+    @override
+    def save_related(self, request: HttpRequest, form: ModelForm, formsets: list[Any], change: bool) -> None:
+        super().save_related(request, form, formsets, change)
+        self._sync_session_ended_at(form.instance)
