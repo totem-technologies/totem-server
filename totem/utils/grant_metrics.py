@@ -93,6 +93,8 @@ def compute_grant_metrics(year: int) -> str:
     user_session_counts: Counter[int] = Counter()
     monthly_user_joins: dict[str, set[int]] = {}
     total_participants_all = 0
+    this_year_total_joins = 0
+    prev_year_total_joins = 0
     sessions_with_participants = 0
     total_signup_seats = 0
     total_participant_seats = 0
@@ -123,8 +125,10 @@ def compute_grant_metrics(year: int) -> str:
         # Year buckets
         if year_start <= s.start < year_end:
             this_year_joined.update(joined)
+            this_year_total_joins += joined_count
         elif prev_start <= s.start < prev_end:
             prev_year_joined.update(joined)
+            prev_year_total_joins += joined_count
 
         # Per-user stats
         for uid in joined:
@@ -257,19 +261,27 @@ def compute_grant_metrics(year: int) -> str:
     lines.append("")
     lines.append("GROWTH & REACH")
     lines.append("-" * 40)
+    lines.append(f"Total joins (lifetime):          {total_participants_all}")
     lines.append(f"Unique participants (lifetime):  {total_unique_participants}")
     lines.append(f"Unique signups (lifetime):      {unique_signups}")
     lines.append(f"Total sessions hosted:          {total_sessions}")
     lines.append(f"Sessions with participants:     {sessions_with_participants}")
     lines.append(f"Avg participants/session:       {avg_participants:.1f}")
     lines.append("")
+    lines.append(f"Total joins ({year}):             {this_year_total_joins}")
+    lines.append(f"Total joins ({prev_year}):             {prev_year_total_joins}")
+    if prev_year_total_joins > 0:
+        yoy_joins = (this_year_total_joins - prev_year_total_joins) / prev_year_total_joins * 100
+        lines.append(f"Total joins YoY growth:         {yoy_joins:+.1f}%")
+    else:
+        lines.append(f"Total joins YoY growth:         N/A (no {prev_year} data)")
     lines.append(f"Unique participants ({year}):    {len(this_year_joined)}")
     lines.append(f"Unique participants ({prev_year}):    {len(prev_year_joined)}")
     if prev_year_joined:
         yoy_growth = (len(this_year_joined) - len(prev_year_joined)) / len(prev_year_joined) * 100
-        lines.append(f"Year-over-year growth:          {yoy_growth:+.1f}%")
+        lines.append(f"Unique participants YoY growth: {yoy_growth:+.1f}%")
     else:
-        lines.append(f"Year-over-year growth:          N/A (no {prev_year} data)")
+        lines.append(f"Unique participants YoY growth: N/A (no {prev_year} data)")
     lines.append("")
     lines.append(f"Full sessions (at capacity):    {full_count} ({_pct(full_count, total_sessions)} of sessions)")
     lines.append("")
@@ -335,6 +347,7 @@ def compute_grant_metrics(year: int) -> str:
     lines.append("- Two cohorts are used: 'participants' (users who attended a session)")
     lines.append("  and 'onboarded users' (completed onboarding, may not have attended). Each")
     lines.append("  section header indicates which cohort it describes.")
+    lines.append("- 'Total joins' = sum of all join events (one user joining 3 sessions = 3 joins)")
     lines.append("- 'Signups' = users who registered for a session")
     lines.append("- 'Participants' = users who actually attended a session")
     lines.append("- 'Avg participants/session' = only counts sessions where someone attended")
