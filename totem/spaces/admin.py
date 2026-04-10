@@ -9,6 +9,7 @@ from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
 
+from totem.rooms.models import Room
 from totem.users.models import User
 from totem.utils.admin import StaleDataCheckAdminMixin
 
@@ -160,7 +161,7 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
     list_display = ("start", "title", "space", "slug")
     list_filter = [AuthorDropdownFilter, SpaceDropdownFilter, "start", "listed", "open", "cancelled"]
     autocomplete_fields = ["attendees", "joined"]
-    readonly_fields = ("date_created", "date_modified")
+    readonly_fields = ("date_created", "date_modified", "room_link")
     actions = [copy_session]
     inlines = [SessionFeedbackInline]
 
@@ -187,12 +188,24 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
                 )
             },
         ),
+        ("Room", {"fields": ("room_link",)}),
         ("Visibility", {"fields": ("listed", "open", "cancelled")}),
         (
             "Automated Sent Notifications (Advanced)",
             {"fields": ("notified", "notified_missed", "notified_tomorrow", "advertised"), "classes": ("collapse",)},
         ),
     )
+
+    @admin.display(description="Room")
+    def room_link(self, obj: Session) -> str:
+        from django.utils.html import format_html
+
+        try:
+            room = obj.room
+        except Room.DoesNotExist:
+            return "No room created yet"
+        url = reverse("admin:rooms_room_change", args=[room.pk])
+        return format_html('<a href="{}">View Room ({})</a>', url, room.status)
 
     @override
     def save_model(self, request: HttpRequest, obj: Session, form: "ModelForm[Session]", change: bool):
