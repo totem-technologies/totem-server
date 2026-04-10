@@ -1,10 +1,13 @@
 from typing import final, override
 
 from django.contrib import admin
+from django.db import transaction
+from django.utils import timezone
 from django.utils.html import format_html
 
 from totem.rooms.models import Room, RoomEventLog
 from totem.rooms.schemas import RoomStatus
+from totem.spaces.models import Session
 from totem.utils.admin import StaleDataCheckAdminMixin
 
 
@@ -84,12 +87,11 @@ class RoomAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         super().save_model(request, obj, form, change)
         # Sync session.ended_at when room status changes
-        session = obj.session
-        if obj.status == RoomStatus.ENDED and session.ended_at is None:
-            from django.utils import timezone
-
-            session.ended_at = timezone.now()
-            session.save(update_fields=["ended_at"])
-        elif obj.status != RoomStatus.ENDED and session.ended_at is not None:
-            session.ended_at = None
-            session.save(update_fields=["ended_at"])
+        with transaction.atomic():
+            session = Session.objects.select_for_update().get(pk=obj.session_id)
+            if obj.status == RoomStatus.ENDED and session.ended_at is None:
+                session.ended_at = timezone.now()
+                session.save(update_fields=["ended_at"])
+            elif obj.status != RoomStatus.ENDED and session.ended_at is not None:
+                session.ended_at = None
+                session.save(update_fields=["ended_at"])

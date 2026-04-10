@@ -200,8 +200,9 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
     def room_link(self, obj: Session) -> str:
         from django.utils.html import format_html
 
-        room = Room.objects.filter(session=obj).first()
-        if room is None:
+        try:
+            room = obj.room
+        except Room.DoesNotExist:
             return "No room created yet"
         url = reverse("admin:rooms_room_change", args=[room.pk])
         return format_html('<a href="{}">View Room ({})</a>', url, room.status)
