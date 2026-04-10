@@ -24,12 +24,36 @@ class RoomEventLogInline(admin.TabularInline):
 class RoomAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
     list_display = ("session", "status", "turn_state", "state_version")
     list_filter = ("status",)
-    readonly_fields = ("session_link", "turn_state", "state_version", "keeper", "current_speaker", "next_speaker", "talking_order", "banned_participants", "round_number", "round_message")
+    readonly_fields = (
+        "session_link",
+        "turn_state",
+        "state_version",
+        "keeper",
+        "current_speaker",
+        "next_speaker",
+        "talking_order",
+        "banned_participants",
+        "round_number",
+        "round_message",
+    )
     inlines = [RoomEventLogInline]
 
     fieldsets = (
         (None, {"fields": ("session_link", "status", "end_reason")}),
-        ("State", {"fields": ("turn_state", "state_version", "keeper", "current_speaker", "next_speaker", "round_number", "round_message")}),
+        (
+            "State",
+            {
+                "fields": (
+                    "turn_state",
+                    "state_version",
+                    "keeper",
+                    "current_speaker",
+                    "next_speaker",
+                    "round_number",
+                    "round_message",
+                )
+            },
+        ),
         ("Participants", {"fields": ("talking_order", "banned_participants")}),
     )
 
