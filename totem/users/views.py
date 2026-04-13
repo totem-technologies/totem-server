@@ -6,6 +6,7 @@ from auditlog.models import LogEntry
 from django import forms
 from django.contrib import messages
 from django.contrib.auth import login as auth_login
+from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
@@ -158,6 +159,11 @@ def login_view(request: HttpRequest):
 
 def signup_view(request: HttpRequest):
     return _auth_view(request, SignupForm, "users/signup.html")
+
+
+def logout_view(request: HttpRequest):
+    auth_logout(request)
+    return redirect("pages:home")
 
 
 def user_deactivated_view(request: HttpRequest):

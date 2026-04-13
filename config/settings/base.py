@@ -75,14 +75,12 @@ DJANGO_APPS = [
     "django.forms",
 ]
 THIRD_PARTY_APPS = [
-    "allauth.account",
-    "allauth.socialaccount",
-    "allauth",
     "auditlog",
     "corsheaders",
     "imagekit",
     "impersonate",
     "ninja",
+    "oauth2_provider",
     "taggit",
 ]
 
@@ -160,7 +158,7 @@ MIDDLEWARE = [
     "impersonate.middleware.ImpersonateMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "allauth.account.middleware.AccountMiddleware",
+
     "totem.utils.middleware.robotnoindex",
     "totem.utils.middleware.TimezoneMiddleware",
     "totem.utils.middleware.CDNGuard",
@@ -248,7 +246,6 @@ TEMPLATES = [
                 "django.template.context_processors.tz",
                 "django.contrib.messages.context_processors.messages",
                 "django.template.context_processors.csp",
-                "totem.users.context_processors.allauth_settings",
             ],
             "loaders": default_loaders if DEBUG else cached_loaders,
         },
@@ -345,25 +342,15 @@ LOGGING = {
 }
 
 
-# django-allauth
+# django-oauth-toolkit
 # ------------------------------------------------------------------------------
-ACCOUNT_ALLOW_REGISTRATION = env.bool("DJANGO_ACCOUNT_ALLOW_REGISTRATION", True)
-# https://django-allauth.readthedocs.io/en/latest/configuration.html
-ACCOUNT_LOGIN_METHODS = {"email"}
-# https://django-allauth.readthedocs.io/en/latest/configuration.html
-ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
-# https://django-allauth.readthedocs.io/en/latest/configuration.html
-ACCOUNT_USER_MODEL_USERNAME_FIELD = None
-# https://django-allauth.readthedocs.io/en/latest/configuration.html
-ACCOUNT_EMAIL_VERIFICATION = "mandatory"
-# https://django-allauth.readthedocs.io/en/latest/configuration.html
-ACCOUNT_ADAPTER = "totem.users.adapters.AccountAdapter"
-# https://django-allauth.readthedocs.io/en/latest/forms.html
-ACCOUNT_FORMS = {"signup": "totem.users.forms.UserSignupForm"}
-# https://django-allauth.readthedocs.io/en/latest/configuration.html
-SOCIALACCOUNT_ADAPTER = "totem.users.adapters.SocialAccountAdapter"
-# https://django-allauth.readthedocs.io/en/latest/forms.html
-SOCIALACCOUNT_FORMS = {"signup": "totem.users.forms.UserSocialSignupForm"}
+OAUTH2_PROVIDER = {
+    "ACCESS_TOKEN_EXPIRE_SECONDS": 3600,  # 60 min (matches current JWT)
+    "REFRESH_TOKEN_EXPIRE_SECONDS": 60 * 60 * 24 * 365,  # 1 year
+    "ROTATE_REFRESH_TOKEN": True,
+    "SCOPES": {"read": "Read scope", "write": "Write scope"},
+    "OAUTH2_BACKEND_CLASS": "oauth2_provider.oauth2_backends.JSONOAuthLibCore",
+}
 
 
 # Your stuff...

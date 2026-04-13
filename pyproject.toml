@@ -23,7 +23,6 @@ dependencies = [
   "sentry-sdk[django]<3",
   "whitenoise<7",
   # Django dependencies
-  "django-allauth<66",
   "django-anymail<15",
   "django-auditlog<4",
   "django-cors-headers<5",
@@ -41,6 +40,7 @@ dependencies = [
   "livekit-api<2",
   "granian<3",
   "dynimg<=0.2.0",
+  "django-oauth-toolkit>=3.2.0",
 ]
 
 [dependency-groups]

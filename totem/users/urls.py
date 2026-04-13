@@ -2,6 +2,7 @@ from django.urls import path
 
 from totem.users.views import (
     login_view,
+    logout_view,
     signup_view,
     user_dashboard_view,
     user_deactivated_view,
@@ -19,6 +20,7 @@ urlpatterns = [
     path("~redirect/", view=user_redirect_view, name="redirect"),
     path("login/verify-pin/", verify_pin_view, name="verify-pin"),
     path("login/", login_view, name="login"),
+    path("logout/", logout_view, name="logout"),
     path("signup/", signup_view, name="signup"),
     path("deactivated/", user_deactivated_view, name="deactivated"),
     path("dashboard/", user_dashboard_view, name="dashboard"),
