@@ -1,10 +1,7 @@
-import jwt
-from django.conf import settings
 from django.http import HttpRequest
 from django.utils import timezone
 from ninja import Router, Status
 from ninja.errors import ValidationError
-from ninja.security import HttpBearer
 
 from totem.blog.mobile_api import blog_router
 from totem.meetings.mobile_api import meetings_router
@@ -15,39 +12,10 @@ from totem.onboard.mobile_api import onboard_router
 from totem.rooms.api import router as rooms_router
 from totem.spaces.mobile_api.mobile_api import spaces_router
 from totem.users.mobile_api import user_router
-from totem.users.models import User
 
-from .auth import JWTSchema
+from .oauth import OAuth2TokenAuth
 
-
-class JWTAuth(HttpBearer):
-    def authenticate(self, request: HttpRequest, token: str) -> User | None:
-        try:
-            # Decode JWT token
-            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=["HS256"])
-            data = JWTSchema(**payload)
-
-            # Check if token is expired
-            if not data.exp or timezone.now() > data.exp:
-                return None
-
-            # Get user
-            try:
-                user = User.objects.get(api_key=data.api_key, pk=data.pk)
-
-                # Check if user is active
-                if not user.is_active:
-                    return None
-                request.user = user
-                return user
-            except User.DoesNotExist:
-                return None
-        except jwt.PyJWTError:
-            return None
-
-
-# Create router
-router = Router(auth=JWTAuth())
+router = Router(auth=OAuth2TokenAuth())
 router.add_router("/users", user_router)
 router.add_router("/onboard", onboard_router)
 router.add_router("/spaces", spaces_router)

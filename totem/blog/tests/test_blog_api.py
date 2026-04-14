@@ -2,7 +2,7 @@ import pytest
 from django.test import Client
 from django.urls import reverse
 
-from totem.api.auth import generate_jwt_token
+from totem.api.oauth import create_oauth_tokens
 from totem.blog.tests.factories import BlogPostFactory
 from totem.users.models import User
 
@@ -73,7 +73,7 @@ class TestBlogAPI:
         """
         auth_user.is_staff = True
         auth_user.save()
-        token = generate_jwt_token(auth_user)
+        token = create_oauth_tokens(auth_user).access_token
         unpublished_post = BlogPostFactory(publish=False)
         url = reverse("mobile-api:get_post", kwargs={"slug": unpublished_post.slug})
         response = client.get(url, headers={"Authorization": f"Bearer {token}"})

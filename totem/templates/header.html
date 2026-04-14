@@ -161,9 +161,10 @@
               >
             </li>
             <li>
-              <a class="hover:text-tblue pr-5" href="{% url "users:logout" %}"
-                >Logout</a
-              >
+              <form method="post" action="{% url "users:logout" %}">
+                {% csrf_token %}
+                <button type="submit" class="hover:text-tblue pr-5">Logout</button>
+              </form>
             </li>
           </ul>
         {% else %}

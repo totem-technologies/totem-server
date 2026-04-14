@@ -1,4 +1,3 @@
-import hashlib
 import secrets
 import time
 import uuid
@@ -297,73 +296,3 @@ class ActionToken(models.Model):
         cls.objects.filter(expires_at__lt=timezone.now()).delete()
 
 
-class RefreshTokenManager(models.Manager):
-    @staticmethod
-    def _hash_token(token_string: str) -> str:
-        """Hash a token using SHA-256.
-
-        SHA-256 is appropriate for cryptographically random tokens because:
-        - Tokens have 256-bits of entropy (no dictionary attack risk)
-        - Fast hashing enables O(1) lookups vs O(n) iteration
-        - Industry standard for API tokens (GitHub, AWS, etc.)
-        """
-        return hashlib.sha256(token_string.encode()).hexdigest()
-
-    def generate_token(self, user) -> tuple[str, "RefreshToken"]:
-        """Generate a new refresh token for a user."""
-        # Generate a random 256-bit token
-        token_string = secrets.token_hex(32)  # 32 bytes = 256 bits
-
-        # Hash token for storage using SHA-256
-        token_hash = self._hash_token(token_string)
-
-        # Create token in database
-        token_obj: RefreshToken = self.create(user=user, token_hash=token_hash)
-
-        # Check if user has too many tokens and remove oldest ones
-        MAX_TOKENS_PER_USER = 200  # Max 200 tokens per user
-        user_tokens = self.filter(user=user).order_by("-created_at")
-        if user_tokens.count() > MAX_TOKENS_PER_USER:
-            for token in user_tokens[MAX_TOKENS_PER_USER:]:
-                token.delete()
-
-        return token_string, token_obj
-
-    def validate_token(self, token_string):
-        """Validate a refresh token. Returns (user, token_obj) if valid."""
-        token_hash = self._hash_token(token_string)
-
-        # Direct O(1) lookup by hash
-        token = self.filter(token_hash=token_hash, is_active=True).first()
-        if not token:
-            return None, None
-
-        # Update last used timestamp
-        token.last_used_at = timezone.now()
-        token.save(update_fields=["last_used_at"])
-        return token.user, token
-
-
-class RefreshToken(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="refresh_tokens")
-    token_hash = models.CharField(max_length=64, unique=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    last_used_at = models.DateTimeField(auto_now=True)
-    is_active = models.BooleanField(default=True)
-
-    objects: RefreshTokenManager = RefreshTokenManager()  # type: ignore
-
-    class Meta:
-        indexes = [
-            models.Index(fields=["user", "created_at"]),
-        ]
-
-    def invalidate(self):
-        """Invalidate this token."""
-        self.is_active = False
-        self.save(update_fields=["is_active"])
-
-    @classmethod
-    def invalidate_all_for_user(cls, user):
-        """Invalidate all tokens for a user across all devices."""
-        cls.objects.filter(user=user).update(is_active=False)

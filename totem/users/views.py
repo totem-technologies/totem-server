@@ -11,6 +11,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.http import Http404, HttpRequest, HttpResponseForbidden
+from django.views.decorators.http import require_POST
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -161,6 +162,7 @@ def signup_view(request: HttpRequest):
     return _auth_view(request, SignupForm, "users/signup.html")
 
 
+@require_POST
 def logout_view(request: HttpRequest):
     auth_logout(request)
     return redirect("pages:home")

@@ -1,26 +1,27 @@
 from datetime import timedelta
 
-import jwt
 import pytest
-from django.conf import settings
 from django.core import mail
 from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
+from oauth2_provider.models import AccessToken
+from oauth2_provider.models import RefreshToken as OAuthRefreshToken
 
-from totem.users.models import LoginPin, RefreshToken, User
+from totem.api.oauth import create_oauth_tokens
+from totem.users.models import LoginPin, User
 from totem.users.tests.factories import UserFactory
 
 
 @pytest.fixture
-def setup_user():
+def setup_user(oauth_app):
     return UserFactory(email="test@example.com")
 
 
 class TestPinRequestEndpoint:
     """Test the PIN request endpoint."""
 
-    def test_request_pin_new_user(self, client: Client, db):
+    def test_request_pin_new_user(self, client: Client, db, oauth_app):
         """Test requesting a PIN for a new user."""
         email = "neWuser+1234@example.COM"
         normalized_email = User.objects.normalize_email(email)
@@ -46,7 +47,7 @@ class TestPinRequestEndpoint:
         assert mail.outbox[0].to == [normalized_email]
         assert pin.pin in mail.outbox[0].body
 
-    def test_request_pin_existing_user_preserves_password(self, client: Client, db):
+    def test_request_pin_existing_user_preserves_password(self, client: Client, db, oauth_app):
         """Existing user requesting a PIN should not change their password."""
         email = "eXisting@example.COM"
         normalized_email = User.objects.normalize_email(email)
@@ -90,7 +91,7 @@ class TestPinRequestEndpoint:
         assert mail.outbox[0].to == [user.email]
         assert pin.pin in mail.outbox[0].body
 
-    def test_request_pin_invalid_email(self, client: Client, db):
+    def test_request_pin_invalid_email(self, client: Client, db, oauth_app):
         """Test requesting a PIN with an invalid email address."""
         response = client.post(
             reverse("mobile-api:auth_request_pin"),
@@ -124,7 +125,7 @@ class TestPinValidationEndpoint:
     """Test the PIN validation endpoint."""
 
     def test_validate_pin_success(self, client: Client, db, setup_user):
-        """Test successful PIN validation."""
+        """Test successful PIN validation returns OAuth tokens."""
         user = setup_user
         pin = LoginPin.objects.generate_pin(user)
 
@@ -144,15 +145,11 @@ class TestPinValidationEndpoint:
         assert "refresh_token" in data
         assert data["expires_in"] == 3600
 
-        # Decode and verify access token
-        payload = jwt.decode(data["access_token"], settings.SECRET_KEY, algorithms=["HS256"])
-        assert str(user.api_key) == payload["api_key"]
-        assert "exp" in payload
+        # Verify tokens exist in DOT tables
+        assert AccessToken.objects.filter(token=data["access_token"], user=user).exists()
+        assert OAuthRefreshToken.objects.filter(token=data["refresh_token"], user=user).exists()
 
-        # Verify refresh token was created
-        assert RefreshToken.objects.filter(user=user).exists()
-
-    def test_validate_pin_nonexistent_user(self, client: Client, db):
+    def test_validate_pin_nonexistent_user(self, client: Client, db, oauth_app):
         """Test PIN validation with nonexistent user."""
         response = client.post(
             reverse("mobile-api:auth_validate_pin"),
@@ -255,14 +252,13 @@ class TestRefreshTokenEndpoint:
     """Test the token refresh endpoint."""
 
     def test_refresh_token_success(self, client: Client, db, setup_user):
-        """Test successful token refresh."""
-        # Setup: create a refresh token
+        """Test successful token refresh with token rotation."""
         user = setup_user
-        refresh_token, token_obj = RefreshToken.objects.generate_token(user)
+        tokens = create_oauth_tokens(user)
 
         response = client.post(
             reverse("mobile-api:auth_refresh"),
-            data={"refresh_token": refresh_token},
+            data={"refresh_token": tokens.refresh_token},
             content_type="application/json",
         )
 
@@ -270,14 +266,20 @@ class TestRefreshTokenEndpoint:
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
-        assert data["refresh_token"] == refresh_token
+        assert "refresh_token" in data
         assert data["expires_in"] == 3600
 
-        # Verify token was updated (last_used_at)
-        token_obj.refresh_from_db()
-        assert (timezone.now() - token_obj.last_used_at).total_seconds() < 10
+        # Token should have been rotated (new refresh token)
+        assert data["refresh_token"] != tokens.refresh_token
 
-    def test_refresh_token_invalid_token(self, client: Client, db):
+        # Old refresh token should be revoked
+        old_refresh = OAuthRefreshToken.objects.get(token=tokens.refresh_token)
+        assert old_refresh.revoked is not None
+
+        # New tokens should be valid
+        assert AccessToken.objects.filter(token=data["access_token"], user=user).exists()
+
+    def test_refresh_token_invalid_token(self, client: Client, db, oauth_app):
         """Test refresh with invalid token."""
         response = client.post(
             reverse("mobile-api:auth_refresh"),
@@ -290,9 +292,8 @@ class TestRefreshTokenEndpoint:
 
     def test_refresh_token_deactivated_account(self, client: Client, db, setup_user):
         """Test refresh with deactivated account."""
-        # Setup: create a refresh token
         user = setup_user
-        refresh_token, token_obj = RefreshToken.objects.generate_token(user)
+        tokens = create_oauth_tokens(user)
 
         # Deactivate user
         user.is_active = False
@@ -300,16 +301,66 @@ class TestRefreshTokenEndpoint:
 
         response = client.post(
             reverse("mobile-api:auth_refresh"),
-            data={"refresh_token": refresh_token},
+            data={"refresh_token": tokens.refresh_token},
             content_type="application/json",
         )
 
         assert response.status_code == 401
         assert response.json() == {"detail": "ACCOUNT_DEACTIVATED"}
 
-        # Verify token was invalidated
-        token_obj.refresh_from_db()
-        assert token_obj.is_active is False
+        # Verify token was revoked
+        old_refresh = OAuthRefreshToken.objects.get(token=tokens.refresh_token)
+        assert old_refresh.revoked is not None
+
+    def test_refresh_token_grace_period(self, client: Client, db, setup_user):
+        """Test that a recently-revoked refresh token returns the replacement tokens (grace period)."""
+        user = setup_user
+        tokens = create_oauth_tokens(user)
+
+        # Use the refresh token once (rotates it)
+        first_response = client.post(
+            reverse("mobile-api:auth_refresh"),
+            data={"refresh_token": tokens.refresh_token},
+            content_type="application/json",
+        )
+        assert first_response.status_code == 200
+        first_data = first_response.json()
+
+        # Use the old (now revoked) refresh token again within grace period
+        second_response = client.post(
+            reverse("mobile-api:auth_refresh"),
+            data={"refresh_token": tokens.refresh_token},
+            content_type="application/json",
+        )
+
+        # Should succeed and return the same replacement tokens
+        assert second_response.status_code == 200
+        second_data = second_response.json()
+        assert second_data["access_token"] == first_data["access_token"]
+        assert second_data["refresh_token"] == first_data["refresh_token"]
+
+    def test_refresh_token_past_grace_period(self, client: Client, db, setup_user, settings):
+        """Test that a revoked token past the grace period is rejected."""
+        settings.OAUTH2_PROVIDER = {**settings.OAUTH2_PROVIDER, "REFRESH_TOKEN_GRACE_PERIOD_SECONDS": 0}
+        user = setup_user
+        tokens = create_oauth_tokens(user)
+
+        # Use the refresh token once (rotates it)
+        client.post(
+            reverse("mobile-api:auth_refresh"),
+            data={"refresh_token": tokens.refresh_token},
+            content_type="application/json",
+        )
+
+        # Try again with no grace period
+        response = client.post(
+            reverse("mobile-api:auth_refresh"),
+            data={"refresh_token": tokens.refresh_token},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 401
+        assert response.json() == {"detail": "REAUTH_REQUIRED"}
 
 
 class TestLogoutEndpoint:
@@ -317,13 +368,12 @@ class TestLogoutEndpoint:
 
     def test_logout_success(self, client: Client, db, setup_user):
         """Test successful logout."""
-        # Setup: create a refresh token
         user = setup_user
-        refresh_token, token_obj = RefreshToken.objects.generate_token(user)
+        tokens = create_oauth_tokens(user)
 
         response = client.post(
             reverse("mobile-api:auth_logout"),
-            data={"refresh_token": refresh_token},
+            data={"refresh_token": tokens.refresh_token},
             content_type="application/json",
         )
 
@@ -331,11 +381,14 @@ class TestLogoutEndpoint:
         assert response.status_code == 200
         assert response.json() == {"message": "Successfully logged out"}
 
-        # Verify token was invalidated
-        token_obj.refresh_from_db()
-        assert token_obj.is_active is False
+        # Verify refresh token was revoked
+        old_refresh = OAuthRefreshToken.objects.get(token=tokens.refresh_token)
+        assert old_refresh.revoked is not None
 
-    def test_logout_invalid_token(self, client: Client, db):
+        # Verify access token was deleted (DOT's revoke() deletes access tokens)
+        assert not AccessToken.objects.filter(token=tokens.access_token).exists()
+
+    def test_logout_invalid_token(self, client: Client, db, oauth_app):
         """Test logout with invalid token."""
         response = client.post(
             reverse("mobile-api:auth_logout"),
@@ -374,9 +427,8 @@ class TestFixedPinEndpoint:
         assert "refresh_token" in data
         assert data["expires_in"] == 3600
 
-        # Decode and verify access token
-        payload = jwt.decode(data["access_token"], settings.SECRET_KEY, algorithms=["HS256"])
-        assert str(user.api_key) == payload["api_key"]
+        # Verify OAuth tokens exist
+        assert AccessToken.objects.filter(token=data["access_token"], user=user).exists()
 
     def test_fixed_pin_disabled(self, client: Client, db, setup_user):
         """Test fixed PIN validation when disabled."""
@@ -469,3 +521,40 @@ class TestFixedPinEndpoint:
 
         assert response.status_code == 401
         assert response.json() == {"detail": "PIN_EXPIRED"}
+
+
+class TestOAuthTokenOnProtectedEndpoint:
+    """Test that OAuth tokens work on protected mobile endpoints."""
+
+    def test_oauth_token_works(self, client: Client, db, setup_user):
+        """Test that a DOT access token authenticates on protected endpoints."""
+        user = setup_user
+        tokens = create_oauth_tokens(user)
+
+        response = client.get(
+            reverse("mobile-api:user_current"),
+            HTTP_AUTHORIZATION=f"Bearer {tokens.access_token}",
+        )
+
+        assert response.status_code == 200
+        assert response.json()["email"] == user.email
+
+    def test_expired_oauth_token_rejected(self, client: Client, db, setup_user, oauth_app):
+        """Test that an expired DOT token is rejected."""
+        from oauth2_provider.models import AccessToken as AT
+
+        user = setup_user
+        expired_token = AT.objects.create(
+            user=user,
+            application=oauth_app,
+            token="expired-test-token",
+            expires=timezone.now() - timedelta(minutes=5),
+            scope="read write",
+        )
+
+        response = client.get(
+            reverse("mobile-api:user_current"),
+            HTTP_AUTHORIZATION=f"Bearer {expired_token.token}",
+        )
+
+        assert response.status_code == 401

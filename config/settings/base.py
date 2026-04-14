@@ -345,11 +345,11 @@ LOGGING = {
 # django-oauth-toolkit
 # ------------------------------------------------------------------------------
 OAUTH2_PROVIDER = {
-    "ACCESS_TOKEN_EXPIRE_SECONDS": 3600,  # 60 min (matches current JWT)
+    "ACCESS_TOKEN_EXPIRE_SECONDS": 3600,  # 60 min
     "REFRESH_TOKEN_EXPIRE_SECONDS": 60 * 60 * 24 * 365,  # 1 year
     "ROTATE_REFRESH_TOKEN": True,
+    "REFRESH_TOKEN_GRACE_PERIOD_SECONDS": 120,  # Allow old refresh token for 2 min after rotation
     "SCOPES": {"read": "Read scope", "write": "Write scope"},
-    "OAUTH2_BACKEND_CLASS": "oauth2_provider.oauth2_backends.JSONOAuthLibCore",
 }
 
 

@@ -3,8 +3,9 @@ from datetime import timedelta
 from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
+from oauth2_provider.models import AccessToken
 
-from totem.api.auth import generate_jwt_token
+from totem.api.oauth import create_oauth_tokens
 from totem.users.tests.factories import UserFactory
 
 
@@ -13,7 +14,6 @@ class TestProtectedMobileEndpoint:
 
     def test_current_user_with_valid_token(self, client: Client, db, auth_user, auth_token):
         """Test accessing the currentuser endpoint with a valid token."""
-        # Construct the authorization header
         auth_header = f"Bearer {auth_token}"
 
         response = client.get(reverse("mobile-api:user_current"), HTTP_AUTHORIZATION=auth_header)
@@ -40,13 +40,17 @@ class TestProtectedMobileEndpoint:
         # Should return 401 Unauthorized
         assert response.status_code == 401
 
-    def test_current_user_with_expired_token(self, client: Client, db, auth_user):
+    def test_current_user_with_expired_token(self, client: Client, db, auth_user, oauth_app):
         """Test accessing the currentuser endpoint with an expired token."""
-        # Create an expired token by setting expire_at to a time in the past
-        expired_time = timezone.now() - timedelta(minutes=5)  # Expired 5 minutes ago
-        expired_token = generate_jwt_token(auth_user, expire_at=expired_time)
+        expired_token = AccessToken.objects.create(
+            user=auth_user,
+            application=oauth_app,
+            token="expired-test-token",
+            expires=timezone.now() - timedelta(minutes=5),
+            scope="read write",
+        )
 
-        auth_header = f"Bearer {expired_token}"
+        auth_header = f"Bearer {expired_token.token}"
 
         response = client.get(reverse("mobile-api:user_current"), HTTP_AUTHORIZATION=auth_header)
 
@@ -66,16 +70,16 @@ class TestProtectedMobileEndpoint:
         # Should return 401 Unauthorized
         assert response.status_code == 401
 
-    def test_current_user_with_nonexistent_user(self, client: Client, db):
+    def test_current_user_with_nonexistent_user(self, client: Client, db, oauth_app):
         """Test accessing the currentuser endpoint with a token for a deleted user."""
         # Create a user and get a token
         temp_user = UserFactory()
-        token = generate_jwt_token(temp_user)
+        tokens = create_oauth_tokens(temp_user)
 
         # Delete the user
         temp_user.delete()
 
-        auth_header = f"Bearer {token}"
+        auth_header = f"Bearer {tokens.access_token}"
 
         response = client.get(reverse("mobile-api:user_current"), HTTP_AUTHORIZATION=auth_header)
 

@@ -4,22 +4,22 @@ import pytest
 from django.test import Client
 from django.urls import reverse
 
-from totem.api.auth import generate_jwt_token
+from totem.api.oauth import create_oauth_tokens
 from totem.notifications.models import FCMDevice
 from totem.notifications.tests.factories import FCMDeviceFactory
 from totem.users.tests.factories import UserFactory
 
 
 @pytest.fixture
-def auth_user():
+def auth_user(oauth_app):
     """Create a user for testing authentication."""
     return UserFactory(email="fcm_test@example.com")
 
 
 @pytest.fixture
 def auth_token(auth_user):
-    """Generate a valid auth token for the test user."""
-    return generate_jwt_token(auth_user)
+    """Generate a valid OAuth access token for the test user."""
+    return create_oauth_tokens(auth_user).access_token
 
 
 TOKEN_SEED = 1
