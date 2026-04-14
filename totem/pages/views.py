@@ -3,6 +3,7 @@ import random
 import uuid
 from dataclasses import dataclass
 from typing import Optional
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
@@ -151,7 +152,11 @@ def redirect(request, slug):
     except Redirect.DoesNotExist:
         raise Http404
     redirect.increment_count()
-    return django_redirect(to=redirect.url, permanent=redirect.permanent)
+    parsed = urlparse(redirect.url)
+    params = parse_qsl(parsed.query)
+    params.append(("rid", str(redirect.pk)))
+    url = urlunparse(parsed._replace(query=urlencode(params)))
+    return django_redirect(to=url, permanent=redirect.permanent)
 
 
 @login_required

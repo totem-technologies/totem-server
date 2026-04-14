@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from urllib.parse import urljoin
 
 from django.conf import settings
@@ -47,5 +49,5 @@ class Redirect(SluggedModel):
         return urljoin(settings.SITE_BASE_URL, self.url)
 
     @classmethod
-    def get_by_slug(cls, slug):
+    def get_by_slug(cls, slug: str) -> Redirect:
         return cls.objects.filter(Q(slug=slug) | Q(alternate_slug=slug)).get()
