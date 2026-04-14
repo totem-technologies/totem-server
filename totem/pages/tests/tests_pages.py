@@ -55,7 +55,9 @@ class RedirectViewTest(TestCase):
         response = self.client.get(reverse("pages:redirect", kwargs={"slug": redirect.slug}))
         self.assertEqual(response.status_code, 301)
         resp_url = getattr(response, "url")
-        self.assertIn(f"rid={redirect.pk}", resp_url)
+        self.assertIn("utm_source=redirect", resp_url)
+        self.assertIn("utm_medium=link", resp_url)
+        self.assertIn(f"utm_campaign={redirect.slug}", resp_url)
         self.assertTrue(resp_url.startswith(redirect.url))
         redirect.refresh_from_db()
         self.assertEqual(redirect.count, 1)
@@ -65,7 +67,7 @@ class RedirectViewTest(TestCase):
         response = self.client.get(reverse("pages:redirect", kwargs={"slug": redirect.slug}))
         resp_url = getattr(response, "url")
         self.assertIn("foo=bar", resp_url)
-        self.assertIn(f"rid={redirect.pk}", resp_url)
+        self.assertIn(f"utm_campaign={redirect.slug}", resp_url)
 
     def test_redirect_not_found(self):
         response = self.client.get(reverse("pages:redirect", args=["not-found"]))

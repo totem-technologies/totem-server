@@ -154,7 +154,11 @@ def redirect(request, slug):
     redirect.increment_count()
     parsed = urlparse(redirect.url)
     params = parse_qsl(parsed.query)
-    params.append(("rid", str(redirect.pk)))
+    params.extend([
+        ("utm_source", "redirect"),
+        ("utm_medium", "link"),
+        ("utm_campaign", redirect.slug),
+    ])
     url = urlunparse(parsed._replace(query=urlencode(params)))
     return django_redirect(to=url, permanent=redirect.permanent)
 
