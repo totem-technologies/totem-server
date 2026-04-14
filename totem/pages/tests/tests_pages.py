@@ -55,9 +55,17 @@ class RedirectViewTest(TestCase):
         response = self.client.get(reverse("pages:redirect", kwargs={"slug": redirect.slug}))
         self.assertEqual(response.status_code, 301)
         resp_url = getattr(response, "url")
-        self.assertEqual(resp_url, redirect.url)
+        self.assertIn(f"rid={redirect.pk}", resp_url)
+        self.assertTrue(resp_url.startswith(redirect.url))
         redirect.refresh_from_db()
         self.assertEqual(redirect.count, 1)
+
+    def test_redirect_preserves_existing_query_params(self):
+        redirect = Redirect.objects.create(slug="withquery", url="https://example.com/page?foo=bar")
+        response = self.client.get(reverse("pages:redirect", kwargs={"slug": redirect.slug}))
+        resp_url = getattr(response, "url")
+        self.assertIn("foo=bar", resp_url)
+        self.assertIn(f"rid={redirect.pk}", resp_url)
 
     def test_redirect_not_found(self):
         response = self.client.get(reverse("pages:redirect", args=["not-found"]))
