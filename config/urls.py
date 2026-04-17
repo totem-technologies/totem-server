@@ -96,8 +96,9 @@ def asset_links(request):
 
 
 urlpatterns = [
-    path(".well-known/apple-app-site-association", apple_app_site_association),
-    path(".well-known/assetlinks.json", asset_links),
+    # Deep link metadata endpoints disabled for now.
+    # path(".well-known/apple-app-site-association", apple_app_site_association),
+    # path(".well-known/assetlinks.json", asset_links),
     path("", include("totem.pages.urls", namespace="pages")),
     path("plans/", include("totem.plans.urls", namespace="plans")),
     path("course/", include("totem.course.urls", namespace="course")),
