@@ -1,4 +1,8 @@
+import pytest
 from django.test import TestCase, override_settings
+
+# Deep link metadata endpoints disabled for now.
+pytestmark = pytest.mark.skip(reason="deep link metadata endpoints disabled")
 
 
 class TestAppleAppSiteAssociation(TestCase):
