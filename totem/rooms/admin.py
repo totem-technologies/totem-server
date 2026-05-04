@@ -81,18 +81,25 @@ class RoomAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
     def session_link(self, obj: Room) -> str:
         from django.urls import reverse
 
-        url = reverse("admin:spaces_session_change", args=[obj.session_id])
+        url = reverse("admin:spaces_session_change", args=[obj.session.id])
         return format_html('<a href="{}">{}</a>', url, obj.session)
 
     @admin.action(description="End selected rooms")
     def end_rooms(self, request, queryset):
         with transaction.atomic():
+            updated_count = 0
             for room in queryset:
                 if room.status != RoomStatus.ENDED:
                     room.status = RoomStatus.ENDED
                     room.save(update_fields=["status"])
-                    # The save_model logic will handle setting session.ended_at
-            self.message_user(request, f"Ended {queryset.count()} room(s).")
+
+                    session = Session.objects.select_for_update().get(pk=room.session.id)
+                    if session.ended_at is None:
+                        session.ended_at = timezone.now()
+                        session.save(update_fields=["ended_at"])
+                    updated_count += 1
+
+            self.message_user(request, f"Ended {updated_count} room(s).")
 
     @override
     def save_model(self, request, obj, form, change):

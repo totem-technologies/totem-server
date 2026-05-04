@@ -275,7 +275,7 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         if self.ended_at is not None:
             return True
         if self.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT:
-            # For LiveKit sessions, rely on the explicit ended_at timestamp to determine if the session has ended.
+            # Rely on the explicit ended_at timestamp to determine if the session has ended.
             # This will allow participants to rejoin active sessions after 1-hour timeout.
             return False
         return self.start + datetime.timedelta(minutes=self.duration_minutes) < timezone.now()
