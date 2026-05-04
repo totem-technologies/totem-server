@@ -110,13 +110,15 @@ class TestSessionModel:
 
     def test_can_join_google_meet_within_time(self, db):
         user = UserFactory()
-        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5))
+        space = SpaceFactory(meeting_provider=Space.MeetingProviderChoices.GOOGLE_MEET)
+        session = SessionFactory(space=space, start=timezone.now() - datetime.timedelta(minutes=5))
         session.attendees.add(user)
         assert session.can_join(user)
 
     def test_can_join_google_meet_after_duration(self, db):
         user = UserFactory()
-        session = SessionFactory(start=timezone.now() - datetime.timedelta(hours=2))
+        space = SpaceFactory(meeting_provider=Space.MeetingProviderChoices.GOOGLE_MEET)
+        session = SessionFactory(space=space, start=timezone.now() - datetime.timedelta(hours=2))
         session.attendees.add(user)
         assert not session.can_join(user)
 
@@ -161,4 +163,13 @@ class TestSessionModel:
         session = SessionFactory(space=space, start=timezone.now() - datetime.timedelta(hours=2))
         session.attendees.add(user)
         # Staff can join even if not joined before
+        assert session.can_join(user)
+
+    def test_can_join_livekit_within_60min_before_start(self, db):
+        user = UserFactory()
+        space = SpaceFactory(meeting_provider=Space.MeetingProviderChoices.LIVEKIT)
+        session = SessionFactory(space=space, start=timezone.now() + datetime.timedelta(minutes=30))
+        session.attendees.add(user)
+        session.joined.add(user)
+        # Within 60-min grace_before for joined user
         assert session.can_join(user)
