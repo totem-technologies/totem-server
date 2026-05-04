@@ -259,15 +259,25 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         now = timezone.now()
         grace_before = datetime.timedelta(minutes=15)
         grace_after = _default_grace_period
-        if user.is_staff or user in self.joined.all():
+
+        is_returning_or_staff = user.is_staff or user in self.joined.all()
+        if is_returning_or_staff:
             # Come back any time if already joined.
             grace_before = datetime.timedelta(minutes=60)
             grace_after = datetime.timedelta(minutes=self.duration_minutes)
+
+            if self.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT:
+                return self.start - grace_before < now
+
         return self.start - grace_before < now < self.start + grace_after
 
     def ended(self):
         if self.ended_at is not None:
             return True
+        if self.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT:
+            # For LiveKit sessions, rely on the explicit ended_at timestamp to determine if the session has ended.
+            # This will allow participants to rejoin active sessions after 1-hour timeout.
+            return False
         return self.start + datetime.timedelta(minutes=self.duration_minutes) < timezone.now()
 
     def remove_attendee(self, user):
