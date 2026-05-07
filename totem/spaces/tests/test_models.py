@@ -1,9 +1,13 @@
+import datetime
+
 from django.core import mail
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.utils import timezone
 
 from totem.users.tests.factories import UserFactory
 
+from ..models import Space
 from ..views import ics_hash
 from .factories import SessionFactory, SpaceFactory
 
@@ -103,3 +107,69 @@ class TestSessionModel:
         assert "http://testserver/spaces/session" in message
         session.refresh_from_db()
         assert session.notified_tomorrow
+
+    def test_can_join_google_meet_within_time(self, db):
+        user = UserFactory()
+        space = SpaceFactory(meeting_provider=Space.MeetingProviderChoices.GOOGLE_MEET)
+        session = SessionFactory(space=space, start=timezone.now() - datetime.timedelta(minutes=5))
+        session.attendees.add(user)
+        assert session.can_join(user)
+
+    def test_can_join_google_meet_after_duration(self, db):
+        user = UserFactory()
+        space = SpaceFactory(meeting_provider=Space.MeetingProviderChoices.GOOGLE_MEET)
+        session = SessionFactory(space=space, start=timezone.now() - datetime.timedelta(hours=2))
+        session.attendees.add(user)
+        assert not session.can_join(user)
+
+    def test_can_join_livekit_within_time(self, db):
+        user = UserFactory()
+        space = SpaceFactory(meeting_provider=Space.MeetingProviderChoices.LIVEKIT)
+        session = SessionFactory(space=space, start=timezone.now() - datetime.timedelta(minutes=5))
+        session.attendees.add(user)
+        assert session.can_join(user)
+
+    def test_can_join_livekit_after_duration_not_ended(self, db):
+        user = UserFactory()
+        space = SpaceFactory(meeting_provider=Space.MeetingProviderChoices.LIVEKIT)
+        session = SessionFactory(space=space, start=timezone.now() - datetime.timedelta(hours=2))
+        session.attendees.add(user)
+        # Not joined yet, so can't join after duration
+        assert not session.can_join(user)
+
+    def test_can_join_livekit_after_duration_joined_not_ended(self, db):
+        user = UserFactory()
+        space = SpaceFactory(meeting_provider=Space.MeetingProviderChoices.LIVEKIT)
+        session = SessionFactory(space=space, start=timezone.now() - datetime.timedelta(hours=2))
+        session.attendees.add(user)
+        session.joined.add(user)
+        # Joined and not ended, so can rejoin
+        assert session.can_join(user)
+
+    def test_can_join_livekit_after_duration_ended(self, db):
+        user = UserFactory()
+        space = SpaceFactory(meeting_provider=Space.MeetingProviderChoices.LIVEKIT)
+        session = SessionFactory(
+            space=space, start=timezone.now() - datetime.timedelta(hours=2), ended_at=timezone.now()
+        )
+        session.attendees.add(user)
+        session.joined.add(user)
+        # Ended, so can't join
+        assert not session.can_join(user)
+
+    def test_can_join_livekit_staff_after_duration_not_ended(self, db):
+        user = UserFactory(is_staff=True)
+        space = SpaceFactory(meeting_provider=Space.MeetingProviderChoices.LIVEKIT)
+        session = SessionFactory(space=space, start=timezone.now() - datetime.timedelta(hours=2))
+        session.attendees.add(user)
+        # Staff can join even if not joined before
+        assert session.can_join(user)
+
+    def test_can_join_livekit_within_60min_before_start(self, db):
+        user = UserFactory()
+        space = SpaceFactory(meeting_provider=Space.MeetingProviderChoices.LIVEKIT)
+        session = SessionFactory(space=space, start=timezone.now() + datetime.timedelta(minutes=30))
+        session.attendees.add(user)
+        session.joined.add(user)
+        # Within 60-min grace_before for joined user
+        assert session.can_join(user)

@@ -5,6 +5,7 @@ from django.core import mail
 from django.utils import timezone
 
 from totem.email.exceptions import EmailBounced
+from totem.spaces.models import Space
 from totem.spaces.tasks import notify_missed_session
 from totem.spaces.tests.factories import SessionFactory, SpaceFactory
 from totem.users.tests.factories import UserFactory
@@ -93,6 +94,34 @@ class TestMissedSessionTask:
         event.attendees.add(user)
         event.save()
         assert event.ended() is True
+        notify_missed_session()
+        event.refresh_from_db()
+        assert event.notified_missed is True
+        assert len(mail.outbox) == 1
+
+    def test_notify_missed_livekit_not_ended(self, db):
+        """LiveKit session that has passed its duration but not explicitly ended should not trigger notify_missed."""
+        space = SpaceFactory(meeting_provider=Space.MeetingProviderChoices.LIVEKIT)
+        event = SessionFactory(space=space, start=timezone.now() - timedelta(hours=1, minutes=30))
+        user = UserFactory()
+        event.attendees.add(user)
+        event.save()
+        assert event.ended() is False  # LiveKit not ended
+        notify_missed_session()
+        event.refresh_from_db()
+        assert event.notified_missed is False
+        assert mail.outbox == []
+
+    def test_notify_missed_livekit_ended(self, db):
+        """LiveKit session that has been explicitly ended should trigger notify_missed even if within duration."""
+        space = SpaceFactory(meeting_provider=Space.MeetingProviderChoices.LIVEKIT)
+        event = SessionFactory(
+            space=space, start=timezone.now() - timedelta(hours=1, minutes=30), ended_at=timezone.now()
+        )
+        user = UserFactory()
+        event.attendees.add(user)
+        event.save()
+        assert event.ended() is True  # Explicitly ended
         notify_missed_session()
         event.refresh_from_db()
         assert event.notified_missed is True
