@@ -8,6 +8,16 @@
         "path": "/dev/healthcheck/",
         "contents": "ITSALLOK",
         "attempts": 5
+      },
+      {
+        "type": "liveness",
+        "name": "web liveness",
+        "path": "/dev/healthcheck/",
+        "content": "ITSALLOK",
+        "timeout": 10,
+        "wait": 10,
+        "attempts": 3,
+        "initialDelay": 30
       }
     ]
   },

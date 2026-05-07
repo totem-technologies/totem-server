@@ -2,15 +2,19 @@ import base64
 import logging
 from dataclasses import dataclass
 
+import httplib2
 from django.conf import settings
 from google.auth.credentials import Credentials
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
+from google_auth_httplib2 import AuthorizedHttp
 from googleapiclient.discovery import build
 from googleapiclient.discovery_cache.base import Cache
 from googleapiclient.errors import HttpError
 from requests.auth import AuthBase
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
+
+GOOGLE_API_TIMEOUT_SECONDS = 30
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +126,8 @@ def _init(service_json=settings.GOOGLE_SERVICE_SECRET_JSON):
         SCOPES = ["https://www.googleapis.com/auth/calendar"]
         credentials = service_account.Credentials.from_service_account_info(service_json, scopes=SCOPES)
         credentials = credentials.with_subject("bo@totem.org")
-        service = build("calendar", "v3", credentials=credentials, cache=MemoryCache())
+        authed_http = AuthorizedHttp(credentials, http=httplib2.Http(timeout=GOOGLE_API_TIMEOUT_SECONDS))
+        service = build("calendar", "v3", http=authed_http, cache=MemoryCache())
     if credentials.expired or credentials.token is None:
         credentials.refresh(Request())
     return service

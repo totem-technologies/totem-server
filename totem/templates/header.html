@@ -1,7 +1,7 @@
 {% load static %}
 {% load avatar %}
 <header
-  class="body-font min-h-[65px] border-b-[1px] border-gray-300 px-2 text-gray-600 md:px-5">
+  class="body-font min-h-16.25 border-b border-gray-300 px-2 text-gray-600 md:px-5">
   <div
     class="center drawer drawer-end mx-auto flex flex-wrap items-center justify-between py-3 md:px-5">
     <input id="nav-bar-drawer" type="checkbox" class="drawer-toggle" />
@@ -161,9 +161,12 @@
               >
             </li>
             <li>
-              <a class="hover:text-tblue pr-5" href="{% url "account_logout" %}"
-                >Logout</a
-              >
+              <form method="post" action="{% url "users:logout" %}">
+                {% csrf_token %}
+                <button type="submit" class="hover:text-tblue pr-5">
+                  Logout
+                </button>
+              </form>
             </li>
           </ul>
         {% else %}

@@ -98,7 +98,7 @@ def send_batch_request(api_key, batch_data):
     url = urljoin(MAILERLITE_BASE_URL, MAILERLITE_BATCH_URL)
     dict_batch = [asdict(request) for request in batch_data]
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
-    response = session.post(url, headers=headers, json={"requests": dict_batch})
+    response = session.post(url, headers=headers, json={"requests": dict_batch}, timeout=30)
     return response.json()
 
 

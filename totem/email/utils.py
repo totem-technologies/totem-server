@@ -66,7 +66,7 @@ def send_brevo_email(
         to=[Recipient(email=recipient)],
         replyTo=Recipient(email=settings.EMAIL_SUPPORT_ADDRESS),
     )
-    response = session.post(api_url, headers=headers, json=data.model_dump())
+    response = session.post(api_url, headers=headers, json=data.model_dump(), timeout=10)
     if not fail_silently:
         response.raise_for_status()
     return response.status_code
