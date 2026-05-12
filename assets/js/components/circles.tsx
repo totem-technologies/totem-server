@@ -344,8 +344,8 @@ function DesktopEvent(props: { event: SessionListSchema }) {
         </div>
       </div>
       <div class="divider divider-horizontal self-stretch" />
-      <div class="flex items-center justify-center gap-5">
-        <div>{getAvatar(props.event)}</div>
+      <div class="flex shrink-0 items-center justify-center gap-5">
+        <div class="shrink-0">{getAvatar(props.event)}</div>
         <div class="text-lg">
           {getFirstName(props.event.space.author.name ?? "Keeper")}
         </div>
