@@ -16,7 +16,18 @@ SECRET_KEY = env(
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
 # Allow all hosts in local dev (OrbStack uses dynamic IPs)
 ALLOWED_HOSTS = ["*"]
-CSRF_TRUSTED_ORIGINS = [f"https://{SITE_HOST}", f"http://{SITE_HOST}"]
+
+# Local Flutter web dev server (sample_flutter). Listed in both CORS and CSRF
+# trusted origins so it can make credentialed cross-origin requests.
+_FLUTTER_DEV_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
+
+CSRF_TRUSTED_ORIGINS = [
+    f"https://{SITE_HOST}",
+    f"http://{SITE_HOST}",
+    *_FLUTTER_DEV_ORIGINS,
+]
+CORS_ALLOWED_ORIGINS += _FLUTTER_DEV_ORIGINS  # noqa: F405
+CORS_ALLOW_CREDENTIALS = True
 
 # CACHES
 # ------------------------------------------------------------------------------

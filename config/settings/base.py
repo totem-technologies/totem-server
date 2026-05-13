@@ -266,8 +266,11 @@ FIXTURE_DIRS = (str(APPS_DIR / "fixtures"),)
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#session-cookie-age
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 7 * 52  # 1 year
-# https://docs.djangoproject.com/en/dev/ref/settings/#csrf-cookie-httponly
-CSRF_COOKIE_HTTPONLY = True
+# CSRF cookie must be readable by JS so SPA clients (Flutter web at /room/) can
+# echo the token in the X-CSRFToken header. Django docs note that HTTPONLY here
+# offers no real protection because the token is also rendered in the DOM via
+# {% csrf_token %}.
+CSRF_COOKIE_HTTPONLY = False
 # https://docs.djangoproject.com/en/dev/ref/settings/#x-frame-options
 X_FRAME_OPTIONS = "DENY"
 

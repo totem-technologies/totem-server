@@ -1,6 +1,7 @@
 import os
 
 from django.http import HttpRequest
+from django.middleware.csrf import get_token
 from ninja import File, NinjaAPI, Router, Schema, Status
 from ninja.files import UploadedFile
 
@@ -30,6 +31,7 @@ class Message(Schema):
 
 @api.get("/auth/currentuser", response={200: PublicUserSchema, 404: Message})
 def current_user(request: HttpRequest):
+    get_token(request)
     if request.user.is_authenticated:
         return request.user
     return Status(404, {"message": "Not found"})
