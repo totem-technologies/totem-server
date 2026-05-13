@@ -12,4 +12,9 @@ urlpatterns = [
     ),
     path("healthcheck/", views.healthcheck, name="healthcheck"),
     path("widgets/", TemplateView.as_view(template_name="dev/widgets.html"), name="widgets"),
+    path(
+        "room-links/",
+        TemplateView.as_view(template_name="dev/room_links.html"),
+        name="room-links",
+    ),
 ]

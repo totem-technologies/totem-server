@@ -16,18 +16,7 @@ SECRET_KEY = env(
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
 # Allow all hosts in local dev (OrbStack uses dynamic IPs)
 ALLOWED_HOSTS = ["*"]
-
-# Local Flutter web dev server (sample_flutter). Listed in both CORS and CSRF
-# trusted origins so it can make credentialed cross-origin requests.
-_FLUTTER_DEV_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"]
-
-CSRF_TRUSTED_ORIGINS = [
-    f"https://{SITE_HOST}",
-    f"http://{SITE_HOST}",
-    *_FLUTTER_DEV_ORIGINS,
-]
-CORS_ALLOWED_ORIGINS += _FLUTTER_DEV_ORIGINS  # noqa: F405
-CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = [f"https://{SITE_HOST}", f"http://{SITE_HOST}"]
 
 # CACHES
 # ------------------------------------------------------------------------------
@@ -76,6 +65,12 @@ MIDDLEWARE += ["debug_toolbar.middleware.DebugToolbarMiddleware"]  # noqa: F405
 
 # https://django-debug-toolbar.readthedocs.io/en/latest/configuration.html#debug-toolbar-config
 def show_toolbar(request):
+    # Skip the toolbar for /room/* — it instruments every request and the
+    # Flutter dev server fires hundreds of tiny .dart.lib.js asset loads on a
+    # cold reload. With the toolbar active a hard refresh takes ~45s; without
+    # it, a couple of seconds.
+    if request.path.startswith("/room/"):
+        return False
     return DEBUG
 
 

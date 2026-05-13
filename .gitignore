@@ -291,5 +291,6 @@ openapi.json
 .mailpit
 .aider*
 
+/scratch/
 
 sample_flutter

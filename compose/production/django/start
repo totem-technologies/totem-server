@@ -5,9 +5,37 @@ set -o pipefail
 set -o nounset
 
 
+# Granian tuning for 1 vCPU / 2 GB RAM Dokku VM.
+#
+# - 1 worker: matches the single CPU; multiple workers just thrash the
+#   scheduler and double resident memory. (Maintainer recommends 1 per
+#   container; orchestrate scale via more containers if needed.)
+# - --runtime-mode mt: explicit multi-threaded Tokio. Maintainer recommends
+#   for Django.
+# - --runtime-threads 2: small Rust thread pool to drive accept/IO.
+# - --blocking-threads 4: Python WSGI workers. Sync DB calls + the sync
+#   /room/* reverse proxy each block one of these; 4 covers light
+#   concurrent traffic without GIL contention overhead.
+# - --backpressure 512: max *connections* (including idle keep-alives) per
+#   worker. Default of 30 starves on HTTP/2 fan-out (e.g. CDN proxying
+#   /room/*); 512 leaves plenty of headroom while staying well below FD
+#   limits.
+# - --backlog 1024: kernel listen() queue. Default; matters during burst.
+# - --workers-max-rss 1024: respawn worker if RSS exceeds ~1 GiB so a leak
+#   can't OOM-kill the 2 GB box. Sized for a steady-state Django RSS of
+#   250-500 MiB; leaves ~800 MiB for Postgres + OS + cron jobs +
+#   kernel page cache.
+# - --workers-lifetime 24h / --workers-kill-timeout 1m: scheduled rotation
+#   to cap fragmentation-driven memory growth.
 exec granian --interface wsgi config.wsgi:application \
 --host 0.0.0.0 --port $PORT \
---workers=${WEB_CONCURRENCY:-2} \
---blocking-threads=${GRANIAN_BLOCKING_THREADS:-4} \
---http 1 --backpressure 30 \
---workers-lifetime 24h --workers-kill-timeout 1m
+--workers ${WEB_CONCURRENCY:-1} \
+--runtime-mode mt \
+--runtime-threads ${GRANIAN_RUNTIME_THREADS:-2} \
+--blocking-threads ${GRANIAN_BLOCKING_THREADS:-4} \
+--backlog ${GRANIAN_BACKLOG:-1024} \
+--backpressure ${GRANIAN_BACKPRESSURE:-512} \
+--workers-max-rss ${GRANIAN_WORKERS_MAX_RSS:-1024} \
+--workers-lifetime ${GRANIAN_WORKERS_LIFETIME:-24h} \
+--workers-kill-timeout ${GRANIAN_WORKERS_KILL_TIMEOUT:-1m} \
+--http 1

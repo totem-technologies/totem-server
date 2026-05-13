@@ -470,6 +470,24 @@ PROXIED_SITE_BASE_URL = env(
     default="https://cf.totem.org/",
 )
 
+# Flutter web "room" app — reverse-proxied at /room/ so it shares an origin
+# with Django (cookies + CSRF Just Work, no CORS). Default points at the
+# local Flutter dev server (`flutter run -d chrome --web-port=5173`). In
+# prod, set ROOM_APP_PROXY_BASE_URL to wherever the built Flutter app is
+# hosted (e.g. a Cloudflare Pages URL).
+ROOM_APP_PROXY_BASE_URL = env(
+    "ROOM_APP_PROXY_BASE_URL",
+    default="http://host.docker.internal:5173",
+)
+# Hostname:port the *browser* uses to reach the room app upstream — sent as
+# the Host header so any URLs the upstream embeds (e.g. dwds dev-tooling)
+# are resolvable from the browser. In prod this matches the public hostname
+# of the upstream (e.g. the Pages URL).
+ROOM_APP_PROXY_BROWSER_HOST = env(
+    "ROOM_APP_PROXY_BROWSER_HOST",
+    default="localhost:5173",
+)
+
 
 # Social
 # ------------------------------------------------------------------------------

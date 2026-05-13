@@ -10,11 +10,24 @@ python manage.py migrate --noinput
 echo "----------------------------------------"
 echo "URL: https://totem.local"
 echo "----------------------------------------"
+
+# Granian tuning:
+# - 1 worker: single dev box, no benefit from process parallelism.
+# - --runtime-mode mt: maintainer's recommendation for Django.
+# - --blocking-threads 8: lets the sync /room/* proxy serve Flutter dev's
+#   HTTP/2 fan-out without all asset requests serializing through one thread.
+# - --backpressure 1024: each *connection* (incl. keep-alives) takes a slot.
+#   The Granian default of 30 throttled Flutter dev mode under OrbStack's
+#   HTTP/2 fan-out, batching requests at ~20 per ~5s.
 exec granian --interface wsgi config.wsgi:application --reload --reload-paths 'totem' \
 --host 0.0.0.0 --port 8000 \
---workers=${WEB_CONCURRENCY:-1} \
---blocking-threads=${GRANIAN_BLOCKING_THREADS:-4} \
---http 1 --backpressure 30
+--workers 1 \
+--runtime-mode mt \
+--runtime-threads 2 \
+--blocking-threads 8 \
+--backlog 2048 \
+--backpressure 1024 \
+--http 1
 
 # We use 'python -m debugpy' to wrap the granian execution.
 # --wait-for-client is optional; remove it if you want the app to start immediately.
