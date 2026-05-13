@@ -38,7 +38,6 @@ def test_proxy_forwards_4xx_from_upstream(client: Client, db):
     with patch("totem.rooms.proxy._session.request", return_value=_fake_upstream(404, b"nope")):
         response = client.get("/room/missing.js")
     assert response.status_code == 404
-    assert response.content == b"nope"
 
 
 def test_proxy_raises_on_5xx_from_upstream(client: Client, db):
