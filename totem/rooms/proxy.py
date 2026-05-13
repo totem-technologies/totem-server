@@ -12,9 +12,8 @@ What it does:
   `--base-href` flag and always serves `<base href="/">`, which would
   send asset URLs and SPA routes to the wrong path. Prod builds with
   `--base-href=/room/` so the rewrite is unnecessary there.
-- SPA fallback: for top-level HTML navigation to a path the upstream
-  doesn't recognize (e.g. `/room/lobby`), serves index.html so the SPA
-  router can resolve the path on the client.
+- SPA fallback: for top-level HTML navigation, serves index.html so the
+  SPA router resolves the path on the client
 - Forwards conditional-request headers so soft refreshes hit 304 Not
   Modified instead of re-downloading the whole asset bundle.
 - Overrides the upstream Host header so any URLs the upstream embeds
@@ -52,7 +51,7 @@ _FORWARDED_RESPONSE_HEADERS = frozenset(
         "Accept-Ranges",
         "Content-Range",
         # Content negotiation:
-        "Content-Encoding",
+        # "Content-Encoding", # Allowing this will double-encode compressed assets, let django figure it out.
         "Content-Language",
     )
 )
@@ -135,9 +134,7 @@ def room_app_proxy(request: HttpRequest, path: str = "") -> HttpResponse | Strea
     # them with full request context, and Django shows the user its
     # standard 500 page. The (5, 60) tuple is connect/read; the long read
     # timeout is for multi-MB wasm/dart bundles.
-    upstream = _session.request(
-        request.method, url, headers=forward_headers, stream=True, timeout=(5, 60)
-    )
+    upstream = _session.request(request.method, url, headers=forward_headers, stream=True, timeout=(5, 60))
     if 500 <= upstream.status_code < 600:
         # 4xx is forwarded — `404` from upstream means the asset genuinely
         # doesn't exist and the browser should see that. Only 5xx is an
