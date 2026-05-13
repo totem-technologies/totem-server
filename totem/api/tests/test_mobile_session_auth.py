@@ -61,3 +61,18 @@ def test_user_update_csrf_enforced_for_session(db):
     assert response.status_code == 403
     user.refresh_from_db()
     assert user.name == "Old Name"
+
+
+def test_invalid_bearer_falls_through_to_session(db):
+    """An Authorization header with a garbage token must not short-circuit
+    auth — Ninja should fall through to `django_auth` and accept the
+    session cookie. Locks in the JWTAuth → django_auth precedence order.
+    """
+    user = UserFactory(name="Cookie User")
+    client = Client(HTTP_AUTHORIZATION="Bearer not-a-real-jwt")
+    client.force_login(user)
+
+    response = client.get(reverse("mobile-api:user_current"))
+
+    assert response.status_code == 200
+    assert response.json()["name"] == "Cookie User"
