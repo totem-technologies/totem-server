@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 import pytest
 import requests
-from django.test import Client
+from django.test import Client, override_settings
 
 
 def test_proxy_rejects_non_get(client: Client, db):
@@ -31,6 +31,7 @@ def _fake_upstream(status: int, body: bytes = b"", content_type: str = "text/pla
     return r
 
 
+@override_settings(DEBUG=True)
 def test_proxy_forwards_4xx_from_upstream(client: Client, db):
     """A 404 (or other 4xx) upstream is the asset's real status — the
     browser should see it, not a Django 500.
@@ -49,6 +50,7 @@ def test_proxy_raises_on_5xx_from_upstream(client: Client, db):
             client.get("/room/foo.js", raise_request_exception=True)
 
 
+@override_settings(DEBUG=True)
 def test_proxy_response_headers_allow_list(client: Client, db):
     """Upstream-sourced sensitive headers (Set-Cookie, HSTS, CSP, server
     info) must not survive the proxy; only the allow-listed caching/range
@@ -80,3 +82,15 @@ def test_proxy_response_headers_allow_list(client: Client, db):
     assert "Content-Security-Policy" not in response.headers
     assert "Server" not in response.headers or "leak" not in response["Server"]
     assert "X-Powered-By" not in response.headers
+
+
+@override_settings(DEBUG=False)
+def test_proxy_refuses_to_stream_assets_in_prod(client: Client, db):
+    """In prod, assets must be served by the CDN — the proxy refusing to
+    stream them guards against accidentally pointing prod traffic at a
+    dev server.
+    """
+    fake = _fake_upstream(200, b"console.log('hi');", "application/javascript")
+    with patch("totem.rooms.proxy._session.request", return_value=fake):
+        with pytest.raises(Exception, match="Asset proxy should only be activated in dev"):
+            client.get("/room/foo.js", raise_request_exception=True)

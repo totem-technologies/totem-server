@@ -150,6 +150,9 @@ def room_app_proxy(request: HttpRequest, path: str = "") -> HttpResponse | Strea
         body = _rewrite_dev_base_href(upstream.content)
         response = HttpResponse(body, status=upstream.status_code, content_type=content_type)
     else:
+        if not settings.DEBUG:
+            # In production, assets should be served by CDN
+            raise Exception("Asset proxy should only be activated in dev.")
         response = StreamingHttpResponse(
             upstream.iter_content(chunk_size=64 * 1024),
             status=upstream.status_code,
