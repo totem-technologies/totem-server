@@ -46,16 +46,17 @@ async def _publish_state(room_name: str, state: RoomState) -> None:
 
 
 @async_to_sync
-async def get_connected_participants(room_name: str) -> set[str]:
+async def get_connected_participants(room_name: str) -> set[str] | None:
     """
     Returns the set of user slugs currently connected to the LiveKit room.
-    Gracefully returns an empty set on errors or missing config.
+    Returns None when LiveKit is unreachable so callers can distinguish
+    "empty room" from "could not check room".
     """
     try:
         return await _get_connected_participants(room_name)
     except api.TwirpError:
         logger.debug("Could not fetch participants for room %s", room_name, exc_info=True)
-        return set()
+        return None
 
 
 @async_to_sync

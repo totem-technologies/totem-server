@@ -44,7 +44,8 @@ def _end_session(session: Session, keeper: User, connected_participants: set[str
 def end_sessions_without_keeper() -> int:
     """End sessions where the keeper has not joined within 5 minutes of the session start.
 
-    Checks both the database joined list and LiveKit room presence for reliability.
+    Uses LiveKit presence when available, but skips sessions if participant
+    lookup fails so a LiveKit outage cannot terminate active rooms.
     """
     grace_period = timedelta(minutes=5)
     sessions_to_check = Session.objects.filter(
@@ -58,6 +59,10 @@ def end_sessions_without_keeper() -> int:
         keeper: User = session.space.author
 
         connected_participants = get_connected_participants(session.slug)
+        if connected_participants is None:
+            logging.warning("Skipped session %s because LiveKit participants could not be fetched", session.slug)
+            continue
+
         keeper_in_livekit = keeper.slug in connected_participants
         if keeper_in_livekit:
             continue

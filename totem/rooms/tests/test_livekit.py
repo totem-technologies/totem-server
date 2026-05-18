@@ -125,6 +125,16 @@ class TestGetConnectedParticipants:
 
         assert identities == set()
 
+    @override_settings(**LK_SETTINGS)
+    def test_returns_none_when_livekit_unreachable(self):
+        with patch(
+            "totem.rooms.livekit._get_connected_participants",
+            side_effect=api.TwirpError(code="500", status=1, msg="livekit unavailable"),
+        ):
+            identities = get_connected_participants("room-1")
+
+        assert identities is None
+
 
 # ---------------------------------------------------------------------------
 # mute_participant

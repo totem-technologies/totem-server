@@ -163,3 +163,21 @@ class TestEndSessions:
         assert room.status == RoomStatus.ENDED
         assert room.end_reason == EndReason.ROOM_EMPTY
         mock_publish.assert_called_once()
+
+    def test_skips_session_when_livekit_is_unreachable(self):
+        session, keeper = _make_active_session_without_keeper()
+        session.joined.add(keeper)
+        room = Room.objects.get_or_create_for_session(session)
+
+        with (
+            patch("totem.rooms.tasks.get_connected_participants", return_value=None),
+            patch("totem.rooms.tasks.publish_state") as mock_publish,
+        ):
+            count = end_sessions_without_keeper()
+
+        assert count == 0
+        session.refresh_from_db()
+        assert session.ended_at is None
+        room.refresh_from_db()
+        assert room.status != RoomStatus.ENDED
+        mock_publish.assert_not_called()
