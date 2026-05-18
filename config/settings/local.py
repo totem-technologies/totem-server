@@ -65,6 +65,12 @@ MIDDLEWARE += ["debug_toolbar.middleware.DebugToolbarMiddleware"]  # noqa: F405
 
 # https://django-debug-toolbar.readthedocs.io/en/latest/configuration.html#debug-toolbar-config
 def show_toolbar(request):
+    # Skip the toolbar for /room/* — it instruments every request and the
+    # Flutter dev server fires hundreds of tiny .dart.lib.js asset loads on a
+    # cold reload. With the toolbar active a hard refresh takes ~45s; without
+    # it, a couple of seconds.
+    if request.path.startswith("/room/"):
+        return False
     return DEBUG
 
 

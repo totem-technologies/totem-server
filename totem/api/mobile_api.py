@@ -4,7 +4,7 @@ from django.http import HttpRequest
 from django.utils import timezone
 from ninja import Router, Status
 from ninja.errors import ValidationError
-from ninja.security import HttpBearer
+from ninja.security import HttpBearer, django_auth
 
 from totem.blog.mobile_api import blog_router
 from totem.meetings.mobile_api import meetings_router
@@ -46,8 +46,10 @@ class JWTAuth(HttpBearer):
             return None
 
 
-# Create router
-router = Router(auth=JWTAuth())
+# Create router. JWTAuth is tried first for the native Flutter app; django_auth
+# (session cookie + CSRF) is the fallback used by the Flutter web build hosted
+# at /room/ — same endpoints, same shapes, just a different credential.
+router = Router(auth=[JWTAuth(), django_auth])
 router.add_router("/users", user_router)
 router.add_router("/onboard", onboard_router)
 router.add_router("/spaces", spaces_router)

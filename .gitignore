@@ -290,3 +290,7 @@ openapi.json
 !.envs/.ci/
 .mailpit
 .aider*
+
+/scratch/
+
+sample_flutter

@@ -266,8 +266,11 @@ FIXTURE_DIRS = (str(APPS_DIR / "fixtures"),)
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#session-cookie-age
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 7 * 52  # 1 year
-# https://docs.djangoproject.com/en/dev/ref/settings/#csrf-cookie-httponly
-CSRF_COOKIE_HTTPONLY = True
+# CSRF cookie must be readable by JS so SPA clients (Flutter web at /room/) can
+# echo the token in the X-CSRFToken header. Django docs note that HTTPONLY here
+# offers no real protection because the token is also rendered in the DOM via
+# {% csrf_token %}.
+CSRF_COOKIE_HTTPONLY = False
 # https://docs.djangoproject.com/en/dev/ref/settings/#x-frame-options
 X_FRAME_OPTIONS = "DENY"
 
@@ -465,6 +468,24 @@ AUDITLOG_EXCLUDE_TRACKING_MODELS = ["totem.email.models.EmailLog"]
 PROXIED_SITE_BASE_URL = env(
     "PROXIED_SITE_BASE_URL",
     default="https://cf.totem.org/",
+)
+
+# Flutter web "room" app — reverse-proxied at /room/ so it shares an origin
+# with Django (cookies + CSRF Just Work, no CORS). Default points at the
+# local Flutter dev server (`flutter run -d chrome --web-port=5173`). In
+# prod, set ROOM_APP_PROXY_BASE_URL to wherever the built Flutter app is
+# hosted (e.g. a Cloudflare Pages URL).
+ROOM_APP_PROXY_BASE_URL = env(
+    "ROOM_APP_PROXY_BASE_URL",
+    default="http://host.docker.internal:5173",
+)
+# Hostname:port the *browser* uses to reach the room app upstream — sent as
+# the Host header so any URLs the upstream embeds (e.g. dwds dev-tooling)
+# are resolvable from the browser. In prod this matches the public hostname
+# of the upstream (e.g. the Pages URL).
+ROOM_APP_PROXY_BROWSER_HOST = env(
+    "ROOM_APP_PROXY_BROWSER_HOST",
+    default="localhost:5173",
 )
 
 

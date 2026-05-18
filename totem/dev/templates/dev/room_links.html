@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+  <section class="m-auto max-w-2xl p-10">
+    <h1 class="h1 pb-6">Room app links (dev)</h1>
+    <p class="pb-4">
+      These are normal Django-rendered anchors that point at routes inside
+      the proxied Flutter web app. Clicking them does a full navigation —
+      Django serves the proxied index.html, Flutter boots, and go_router
+      resolves the path on the client.
+    </p>
+    <ul class="list-disc pl-6 space-y-2">
+      <li><a class="link" href="/room/">/room/ (home)</a></li>
+      <li><a class="link" href="/room/lobby">/room/lobby</a></li>
+      <li><a class="link" href="/room/circle/alpha">/room/circle/alpha</a></li>
+      <li><a class="link" href="/room/circle/beta">/room/circle/beta</a></li>
+    </ul>
+  </section>
+{% endblock %}
