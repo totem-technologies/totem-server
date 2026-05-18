@@ -23,13 +23,39 @@ def _make_active_session_without_keeper():
 
 
 @pytest.mark.django_db
-class TestEndSessionsWithoutKeeper:
-    def test_ends_room_when_keeper_absent(self):
+class TestEndSessions:
+    def test_ends_empty_room(self):
         session, keeper = _make_active_session_without_keeper()
         room = Room.objects.get_or_create_for_session(session)
 
         with (
-            patch("totem.rooms.tasks.get_connected_participants", return_value=set()),
+            patch(
+                "totem.rooms.tasks.get_connected_participants",
+                return_value=session.joined.values_list("slug", flat=True),
+            ),
+            patch("totem.rooms.tasks.publish_state"),
+        ):
+            count = end_sessions_without_keeper()
+
+        assert count == 1
+        room.refresh_from_db()
+        assert room.status == RoomStatus.ENDED
+        assert room.turn_state == TurnState.IDLE
+        assert room.current_speaker is None
+        assert room.next_speaker is None
+        assert room.end_reason == EndReason.ROOM_EMPTY
+
+    def test_ends_room_when_keeper_absent(self):
+        session, keeper = _make_active_session_without_keeper()
+        other_user = UserFactory()
+        session.joined.add(other_user)
+        room = Room.objects.get_or_create_for_session(session)
+
+        with (
+            patch(
+                "totem.rooms.tasks.get_connected_participants",
+                return_value=session.joined.values_list("slug", flat=True),
+            ),
             patch("totem.rooms.tasks.publish_state"),
         ):
             count = end_sessions_without_keeper()
@@ -47,7 +73,10 @@ class TestEndSessionsWithoutKeeper:
         Room.objects.get_or_create_for_session(session)
 
         with (
-            patch("totem.rooms.tasks.get_connected_participants", return_value=set()),
+            patch(
+                "totem.rooms.tasks.get_connected_participants",
+                return_value=session.joined.values_list("slug", flat=True),
+            ),
             patch("totem.rooms.tasks.publish_state") as mock_publish,
         ):
             end_sessions_without_keeper()
@@ -62,7 +91,10 @@ class TestEndSessionsWithoutKeeper:
         # No Room created for this session
 
         with (
-            patch("totem.rooms.tasks.get_connected_participants", return_value=set()),
+            patch(
+                "totem.rooms.tasks.get_connected_participants",
+                return_value=session.joined.values_list("slug", flat=True),
+            ),
             patch("totem.rooms.tasks.publish_state"),
         ):
             count = end_sessions_without_keeper()
@@ -78,7 +110,10 @@ class TestEndSessionsWithoutKeeper:
         room.save()
 
         with (
-            patch("totem.rooms.tasks.get_connected_participants", return_value=set()),
+            patch(
+                "totem.rooms.tasks.get_connected_participants",
+                return_value=session.joined.values_list("slug", flat=True),
+            ),
             patch("totem.rooms.tasks.publish_state") as mock_publish,
         ):
             end_sessions_without_keeper()
@@ -109,3 +144,22 @@ class TestEndSessionsWithoutKeeper:
             count = end_sessions_without_keeper()
 
         assert count == 2  # both sessions ended despite first publish failure
+
+    def test_ends_session_when_keeper_has_joined_but_left(self):
+        session, keeper = _make_active_session_without_keeper()
+        session.joined.add(keeper)
+        room = Room.objects.get_or_create_for_session(session)
+
+        with (
+            patch("totem.rooms.tasks.get_connected_participants", return_value=set()),
+            patch("totem.rooms.tasks.publish_state") as mock_publish,
+        ):
+            count = end_sessions_without_keeper()
+
+        assert count == 1
+        session.refresh_from_db()
+        assert session.ended_at is not None
+        room.refresh_from_db()
+        assert room.status == RoomStatus.ENDED
+        assert room.end_reason == EndReason.ROOM_EMPTY
+        mock_publish.assert_called_once()
