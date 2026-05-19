@@ -31,7 +31,7 @@ class TestEndSessions:
         with (
             patch(
                 "totem.rooms.tasks.get_connected_participants",
-                return_value=session.joined.values_list("slug", flat=True),
+                return_value=set(session.joined.values_list("slug", flat=True)),
             ),
             patch("totem.rooms.tasks.publish_state"),
         ):
@@ -54,7 +54,7 @@ class TestEndSessions:
         with (
             patch(
                 "totem.rooms.tasks.get_connected_participants",
-                return_value=session.joined.values_list("slug", flat=True),
+                return_value=set(session.joined.values_list("slug", flat=True)),
             ),
             patch("totem.rooms.tasks.publish_state"),
         ):
@@ -75,7 +75,7 @@ class TestEndSessions:
         with (
             patch(
                 "totem.rooms.tasks.get_connected_participants",
-                return_value=session.joined.values_list("slug", flat=True),
+                return_value=set(session.joined.values_list("slug", flat=True)),
             ),
             patch("totem.rooms.tasks.publish_state") as mock_publish,
         ):
@@ -93,7 +93,7 @@ class TestEndSessions:
         with (
             patch(
                 "totem.rooms.tasks.get_connected_participants",
-                return_value=session.joined.values_list("slug", flat=True),
+                return_value=set(session.joined.values_list("slug", flat=True)),
             ),
             patch("totem.rooms.tasks.publish_state"),
         ):
@@ -112,7 +112,7 @@ class TestEndSessions:
         with (
             patch(
                 "totem.rooms.tasks.get_connected_participants",
-                return_value=session.joined.values_list("slug", flat=True),
+                return_value=set(session.joined.values_list("slug", flat=True)),
             ),
             patch("totem.rooms.tasks.publish_state") as mock_publish,
         ):

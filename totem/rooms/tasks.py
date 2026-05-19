@@ -11,14 +11,15 @@ from totem.spaces.models import Session
 from totem.users.models import User
 
 
-def _end_session(session: Session, keeper: User, connected_participants: set[str]):
+def _end_session(session: Session, connected_participants: set[str]):
+    keeper = session.space.author
     session.ended_at = timezone.now()
     session.save(update_fields=["ended_at"])
 
     room = Room.objects.for_session(session.slug).first()
     if room and room.status != RoomStatus.ENDED:
         try:
-            if len(connected_participants) > 0:
+            if connected_participants:
                 reason = EndReason.KEEPER_ABSENT
             else:
                 reason = EndReason.ROOM_EMPTY
@@ -67,7 +68,7 @@ def end_sessions_without_keeper() -> int:
         if keeper_in_livekit:
             continue
 
-        _end_session(session, keeper, connected_participants)
+        _end_session(session, connected_participants)
         ended_count += 1
 
     return ended_count
