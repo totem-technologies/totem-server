@@ -77,7 +77,7 @@ def post_event(
 ):
     user: User = request.user  # type: ignore
     actor = user.slug
-    connected = get_connected_participants(session_slug)
+    connected = get_connected_participants(session_slug) or set()
 
     try:
         state = apply_event(
@@ -203,7 +203,7 @@ def join_room(
     is_already_connected = False
     if session.joined.count() > 0:
         try:
-            is_already_connected = user.slug in get_connected_participants(session_slug)
+            is_already_connected = user.slug in (get_connected_participants(session_slug) or set())
         except Exception:
             logger.exception("Failed to determine if user is already connected to LiveKit")
 
