@@ -5,8 +5,7 @@ import jwt
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
-from ninja import Router, Schema
-from ninja.errors import AuthenticationError
+from ninja import Router, Schema, Status
 
 from totem.email import emails
 from totem.email.emails import login_pin_email
@@ -20,13 +19,10 @@ router = Router()
 
 # Enum for error messages
 class AuthErrors(Enum):
-    RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED"
     INVALID_EMAIL = "INVALID_EMAIL"
     PIN_EXPIRED = "PIN_EXPIRED"
     INCORRECT_PIN = "INCORRECT_PIN"
-    TOO_MANY_ATTEMPTS = "TOO_MANY_ATTEMPTS"
     REAUTH_REQUIRED = "REAUTH_REQUIRED"
-    NETWORK_ERROR = "NETWORK_ERROR"
     ACCOUNT_DEACTIVATED = "ACCOUNT_DEACTIVATED"
 
 
@@ -80,7 +76,7 @@ def check_account_deactivated(user: User) -> bool:
 
 
 # Endpoints
-@router.post("/request-pin", response={200: MessageResponse, 429: ErrorResponse}, url_name="auth_request_pin")
+@router.post("/request-pin", response={200: MessageResponse, 401: ErrorResponse}, url_name="auth_request_pin")
 def request_pin(request, data: PinRequestSchema):
     """
     Request a PIN code to be sent via email.
@@ -90,7 +86,7 @@ def request_pin(request, data: PinRequestSchema):
     try:
         User(email=data.email).full_clean(exclude=["password"], validate_unique=False)
     except DjangoValidationError:
-        raise AuthenticationError(message=AuthErrors.INVALID_EMAIL.value)
+        return Status(401, ErrorResponse(error=AuthErrors.INVALID_EMAIL.value))
 
     # Get or create user
     user, created = User.objects.get_or_create(
@@ -112,7 +108,7 @@ def request_pin(request, data: PinRequestSchema):
     try:
         login_pin_email(user.email, pin.pin).send()
     except EmailBounced:
-        raise AuthenticationError(message=AuthErrors.INVALID_EMAIL.value)
+        return Status(401, ErrorResponse(error=AuthErrors.INVALID_EMAIL.value))
 
     if created:
         emails.welcome_email(user).send()
@@ -121,9 +117,7 @@ def request_pin(request, data: PinRequestSchema):
     return {"message": "PIN sent to your email"}
 
 
-@router.post(
-    "/validate-pin", response={200: TokenResponse, 400: ErrorResponse, 429: ErrorResponse}, url_name="auth_validate_pin"
-)
+@router.post("/validate-pin", response={200: TokenResponse, 401: ErrorResponse}, url_name="auth_validate_pin")
 def validate_pin(request, data: ValidatePinSchema):
     """
     Validate PIN and issue token pair.
@@ -133,17 +127,17 @@ def validate_pin(request, data: ValidatePinSchema):
         normalized_email = User.objects.normalize_email(data.email)
         user = User.objects.get(email=normalized_email)
     except User.DoesNotExist:
-        raise AuthenticationError(message=AuthErrors.INCORRECT_PIN.value)
+        return Status(401, ErrorResponse(error=AuthErrors.INCORRECT_PIN.value))
 
     # Validate PIN
     is_valid, _ = LoginPin.objects.validate_pin(user, data.pin)
 
     if not is_valid:
-        raise AuthenticationError(message=AuthErrors.PIN_EXPIRED.value)
+        return Status(401, ErrorResponse(error=AuthErrors.PIN_EXPIRED.value))
 
     # Check if account is deactivated
     if check_account_deactivated(user):
-        raise AuthenticationError(message=AuthErrors.ACCOUNT_DEACTIVATED.value)
+        return Status(401, ErrorResponse(error=AuthErrors.ACCOUNT_DEACTIVATED.value))
 
     # Generate tokens
     refresh_token_string, _ = RefreshToken.objects.generate_token(user)
@@ -156,7 +150,7 @@ def validate_pin(request, data: ValidatePinSchema):
     }
 
 
-@router.post("/refresh", response={200: TokenResponse, 400: ErrorResponse, 429: ErrorResponse}, url_name="auth_refresh")
+@router.post("/refresh", response={200: TokenResponse, 401: ErrorResponse}, url_name="auth_refresh")
 def refresh_token(request, data: RefreshTokenSchema):
     """
     Refresh access token using a valid refresh token.
@@ -165,13 +159,13 @@ def refresh_token(request, data: RefreshTokenSchema):
     user, token_obj = RefreshToken.objects.validate_token(data.refresh_token)
 
     if not user or not token_obj:
-        raise AuthenticationError(message=AuthErrors.REAUTH_REQUIRED.value)
+        return Status(401, ErrorResponse(error=AuthErrors.REAUTH_REQUIRED.value))
 
     # Check if account is deactivated
     if check_account_deactivated(user):
         # Invalidate token since account is deactivated
         token_obj.invalidate()
-        raise AuthenticationError(message=AuthErrors.ACCOUNT_DEACTIVATED.value)
+        return Status(401, ErrorResponse(error=AuthErrors.ACCOUNT_DEACTIVATED.value))
 
     # Generate new access token
     access_token = generate_jwt_token(user)
@@ -183,7 +177,7 @@ def refresh_token(request, data: RefreshTokenSchema):
     }
 
 
-@router.post("/logout", response={200: MessageResponse, 400: ErrorResponse}, url_name="auth_logout")
+@router.post("/logout", response={200: MessageResponse}, url_name="auth_logout")
 def logout(request, data: RefreshTokenSchema):
     """
     Logout by invalidating a refresh token.

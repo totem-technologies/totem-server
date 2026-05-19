@@ -99,7 +99,7 @@ class TestPinRequestEndpoint:
         )
 
         assert response.status_code == 401
-        assert response.json() == {"detail": "INVALID_EMAIL"}
+        assert response.json() == {"error": "INVALID_EMAIL"}
 
         # Ensure no user was created
         assert User.objects.count() == 0
@@ -164,7 +164,7 @@ class TestPinValidationEndpoint:
         )
 
         assert response.status_code == 401
-        assert response.json() == {"detail": "INCORRECT_PIN"}
+        assert response.json() == {"error": "INCORRECT_PIN"}
 
     def test_validate_pin_incorrect_pin(self, client: Client, db, setup_user):
         """Test PIN validation with incorrect PIN."""
@@ -181,7 +181,7 @@ class TestPinValidationEndpoint:
         )
 
         assert response.status_code == 401
-        assert response.json() == {"detail": "PIN_EXPIRED"}
+        assert response.json() == {"error": "PIN_EXPIRED"}
 
         # Check failed attempts counter
         pin.refresh_from_db()
@@ -206,7 +206,7 @@ class TestPinValidationEndpoint:
         )
 
         assert response.status_code == 401
-        assert response.json() == {"detail": "PIN_EXPIRED"}
+        assert response.json() == {"error": "PIN_EXPIRED"}
 
     def test_validate_pin_too_many_attempts(self, client: Client, db, setup_user):
         """Test PIN validation with too many attempts."""
@@ -227,7 +227,7 @@ class TestPinValidationEndpoint:
         )
 
         assert response.status_code == 401
-        assert response.json() == {"detail": "PIN_EXPIRED"}
+        assert response.json() == {"error": "PIN_EXPIRED"}
 
     def test_validate_pin_deactivated_account(self, client: Client, db, setup_user):
         """Test PIN validation with deactivated account."""
@@ -248,7 +248,7 @@ class TestPinValidationEndpoint:
         )
 
         assert response.status_code == 401
-        assert response.json() == {"detail": "ACCOUNT_DEACTIVATED"}
+        assert response.json() == {"error": "ACCOUNT_DEACTIVATED"}
 
 
 class TestRefreshTokenEndpoint:
@@ -286,7 +286,7 @@ class TestRefreshTokenEndpoint:
         )
 
         assert response.status_code == 401
-        assert response.json() == {"detail": "REAUTH_REQUIRED"}
+        assert response.json() == {"error": "REAUTH_REQUIRED"}
 
     def test_refresh_token_deactivated_account(self, client: Client, db, setup_user):
         """Test refresh with deactivated account."""
@@ -305,7 +305,7 @@ class TestRefreshTokenEndpoint:
         )
 
         assert response.status_code == 401
-        assert response.json() == {"detail": "ACCOUNT_DEACTIVATED"}
+        assert response.json() == {"error": "ACCOUNT_DEACTIVATED"}
 
         # Verify token was invalidated
         token_obj.refresh_from_db()
@@ -395,7 +395,7 @@ class TestFixedPinEndpoint:
         )
 
         assert response.status_code == 401
-        assert response.json() == {"detail": "PIN_EXPIRED"}
+        assert response.json() == {"error": "PIN_EXPIRED"}
 
     def test_fixed_pin_incorrect(self, client: Client, db, setup_user):
         """Test fixed PIN validation with incorrect PIN."""
@@ -414,7 +414,7 @@ class TestFixedPinEndpoint:
         )
 
         assert response.status_code == 401
-        assert response.json() == {"detail": "PIN_EXPIRED"}
+        assert response.json() == {"error": "PIN_EXPIRED"}
 
     def test_fixed_pin_fallback_after_regular_pin(self, client: Client, db, setup_user):
         """Test that fixed PIN works as fallback when regular PIN exists but is wrong."""
@@ -468,4 +468,4 @@ class TestFixedPinEndpoint:
         )
 
         assert response.status_code == 401
-        assert response.json() == {"detail": "PIN_EXPIRED"}
+        assert response.json() == {"error": "PIN_EXPIRED"}
