@@ -19,13 +19,10 @@ router = Router()
 
 # Enum for error messages
 class AuthErrors(Enum):
-    RATE_LIMIT_EXCEEDED = "RATE_LIMIT_EXCEEDED"
     INVALID_EMAIL = "INVALID_EMAIL"
     PIN_EXPIRED = "PIN_EXPIRED"
     INCORRECT_PIN = "INCORRECT_PIN"
-    TOO_MANY_ATTEMPTS = "TOO_MANY_ATTEMPTS"
     REAUTH_REQUIRED = "REAUTH_REQUIRED"
-    NETWORK_ERROR = "NETWORK_ERROR"
     ACCOUNT_DEACTIVATED = "ACCOUNT_DEACTIVATED"
 
 
@@ -180,7 +177,7 @@ def refresh_token(request, data: RefreshTokenSchema):
     }
 
 
-@router.post("/logout", response={200: MessageResponse, 400: ErrorResponse}, url_name="auth_logout")
+@router.post("/logout", response={200: MessageResponse}, url_name="auth_logout")
 def logout(request, data: RefreshTokenSchema):
     """
     Logout by invalidating a refresh token.
