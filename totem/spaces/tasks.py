@@ -1,9 +1,9 @@
 from datetime import timedelta
 
-from django.db.models import DateTimeField, ExpressionWrapper, F
+from django.db.models import DateTimeField, ExpressionWrapper, F, Q
 from django.utils import timezone
 
-from .models import Session
+from .models import Session, Space
 
 
 def notify_session_ready():
@@ -41,16 +41,20 @@ def advertise_session():
 
 def notify_missed_session():
     now = timezone.now()
-    recently_ended_sessions = Session.objects.alias(
-        end_time=ExpressionWrapper(
-            F("start") + F("duration_minutes") * timedelta(minutes=1),
-            output_field=DateTimeField(),
-        ),
-    ).filter(
-        end_time__gte=now - timedelta(hours=1),
-        end_time__lt=now,
-        cancelled=False,
-        notified_missed=False,
+    recently_ended_sessions = (
+        Session.objects.alias(
+            end_time=ExpressionWrapper(
+                F("start") + F("duration_minutes") * timedelta(minutes=1),
+                output_field=DateTimeField(),
+            ),
+        )
+        .filter(
+            end_time__gte=now - timedelta(hours=1),
+            end_time__lt=now,
+            cancelled=False,
+            notified_missed=False,
+        )
+        .filter(Q(ended_at__isnull=False) | ~Q(space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT))
     )
     print(f"Notifying {len(recently_ended_sessions)} missed sessions")
     for session in recently_ended_sessions:
