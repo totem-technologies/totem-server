@@ -1,3 +1,4 @@
+import pytest
 from django.core import mail
 from django.core.exceptions import ValidationError
 from django.test import TestCase
@@ -55,6 +56,20 @@ class SpaceModelTest(TestCase):
 
 
 class TestSessionModel:
+    def test_seats_cannot_be_zero(self, db):
+        session = SessionFactory(seats=0)
+        with pytest.raises(ValidationError):
+            session.full_clean()
+
+    def test_seats_cannot_be_negative(self, db):
+        session = SessionFactory(seats=-5)
+        with pytest.raises(ValidationError):
+            session.full_clean()
+
+    def test_seats_minimum_is_one(self, db):
+        session = SessionFactory(seats=1)
+        session.full_clean()  # should not raise
+
     def test_notify(self, db):
         user = UserFactory()
         session = SessionFactory()
