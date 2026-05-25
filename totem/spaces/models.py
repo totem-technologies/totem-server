@@ -177,7 +177,7 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
     notified_tomorrow = models.BooleanField(default=False)
     notified_missed = models.BooleanField(default=False)
     open = models.BooleanField(default=True, help_text="Is this session open for more attendees?")
-    seats = models.IntegerField(default=8)
+    seats = models.IntegerField(default=8, validators=[MinValueValidator(1)])
     start = models.DateTimeField(default=timezone.now)
 
     class Meta:  # pyright: ignore [reportIncompatibleVariableOverride]
