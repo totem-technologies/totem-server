@@ -4,6 +4,8 @@ from .base import env
 
 SITE_HOST: str = SITE_HOST  # noqa: F405
 
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 # GENERAL
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#debug

@@ -110,8 +110,10 @@ def _rewrite_dev_base_href(body: bytes) -> bytes:
     """
     if not settings.DEBUG:
         return body
-    return body.replace(b'<base href="/">', b'<base href="/room/">').replace(
-        b'<base href="$FLUTTER_BASE_HREF">', b'<base href="/room/">'
+    return (
+        body.replace(b'<base href="/">', b'<base href="/room/">')
+        .replace(b'<base href="$FLUTTER_BASE_HREF">', b'<base href="/room/">')
+        .replace(b'<base href="/" />', b'<base href="/room/" />')
     )
 
 
