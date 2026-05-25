@@ -1,5 +1,7 @@
 import base64
 import logging
+import socket
+import ssl
 from dataclasses import dataclass
 
 import httplib2
@@ -144,10 +146,13 @@ def _to_gcal_id(s: str) -> str:
     return base64.b32hexencode(s.encode()).strip(b"=").lower().decode()
 
 
+TRANSIENT_NETWORK_ERRORS = (ConnectionError, TimeoutError, ssl.SSLError, socket.timeout, httplib2.HttpLib2Error)
+
+
 @retry(
-    stop=stop_after_attempt(2),  # Total number of attempts (initial + 1 retry)
-    wait=wait_fixed(1),  # Wait 1 second between retries
-    retry=retry_if_exception_type(BrokenPipeError),
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(1),
+    retry=retry_if_exception_type(TRANSIENT_NETWORK_ERRORS),
 )
 def save_event(event_id: str, start: str, end: str, summary: str, description: str) -> "CalendarEvent | None":
     if not settings.SAVE_TO_GOOGLE_CALENDAR:
