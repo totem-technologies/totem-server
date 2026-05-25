@@ -84,6 +84,26 @@ def test_proxy_response_headers_allow_list(client: Client, db):
     assert "X-Powered-By" not in response.headers
 
 
+@override_settings(DEBUG=True, ROOM_APP_PROXY_BROWSER_HOST="cf-pages.totem.org")
+def test_proxy_sets_host_header_to_browser_host(client: Client, db):
+    """The upstream Host header is `ROOM_APP_PROXY_BROWSER_HOST`, not the
+    request's own host. In dev this differs from the server-reachable
+    `ROOM_APP_PROXY_BASE_URL` host (the docker-internal vs. browser split);
+    in prod it must be set to match the upstream's public hostname so the
+    CDN routes the request and embedded URLs resolve.
+    """
+    captured: dict[str, str] = {}
+
+    def fake_request(method, url, *, headers, **kwargs):
+        captured.update(headers)
+        return _fake_upstream(200, b"<html></html>", "text/html")
+
+    with patch("totem.rooms.proxy._session.request", side_effect=fake_request):
+        client.get("/room/index.html")
+
+    assert captured["Host"] == "cf-pages.totem.org"
+
+
 @override_settings(DEBUG=False)
 def test_proxy_refuses_to_stream_assets_in_prod(client: Client, db):
     """In prod, assets must be served by the CDN — the proxy refusing to
