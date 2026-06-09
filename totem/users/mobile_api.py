@@ -1,6 +1,7 @@
 import pytz
 from auditlog.context import disable_auditlog
 from auditlog.models import LogEntry
+from django.conf import settings
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
 from ninja import File, Router
@@ -118,7 +119,10 @@ def submit_feedback(request: HttpRequest, payload: FeedbackSchema):
         is_spam = any(word in cleaned["message"] for word in banned_words)
         Feedback.objects.create(**cleaned, user=request.user)
         if not is_spam:
-            notify_slack(f"Feedback from {user.name}! \nMessage: \n{form.cleaned_data['message']}")
+            notify_slack(
+                f"Feedback from {user.name}! \nMessage: \n{form.cleaned_data['message']}",
+                channel=settings.SLACK_FEEDBACK_CHANNEL_ID,
+            )
         return True
 
     return False

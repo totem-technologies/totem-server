@@ -4,6 +4,7 @@ from urllib.parse import quote
 from auditlog.context import disable_auditlog
 from auditlog.models import LogEntry
 from django import forms
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required
@@ -378,6 +379,9 @@ def user_feedback_view(request):
                 Feedback.objects.create(**cleaned)
             messages.success(request, FEEDBACK_SUCCESS_MESSAGE)
             if not is_spam:
-                notify_slack(f"Feedback from {name}! \nMessage: \n{form.cleaned_data['message']}")
+                notify_slack(
+                    f"Feedback from {name}! \nMessage: \n{form.cleaned_data['message']}",
+                    channel=settings.SLACK_FEEDBACK_CHANNEL_ID,
+                )
             form = FeedbackForm()
     return render(request, "users/feedback.html", context={"form": form})

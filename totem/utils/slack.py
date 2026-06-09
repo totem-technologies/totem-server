@@ -17,15 +17,16 @@ USER_ID_CACHE: dict[str, str] = {}
 requests_session = requests.Session()
 
 
-def notify_slack(message: str, email_to_mention: str | None = None):
-    global_pool.add_task(_notify_task, message, email_to_mention)
+def notify_slack(message: str, email_to_mention: str | None = None, channel: str | None = None):
+    global_pool.add_task(_notify_task, message, email_to_mention, channel)
 
 
-def _notify_task(message: str, email_to_mention: str | None):
+def _notify_task(message: str, email_to_mention: str | None, channel: str | None):
     logger.info("Sending message to Slack")
     _send_slack_message(
         message=message,
         email_to_mention=email_to_mention,
+        channel=channel,
     )
 
 
@@ -77,25 +78,26 @@ def _get_user_id_from_email(email: str) -> str | None:
         raise ValueError(f"Slack API error looking up email {email}: {error_message}")
 
 
-def _send_slack_message(message: str, email_to_mention: str | None = None) -> None:
+def _send_slack_message(message: str, email_to_mention: str | None = None, channel: str | None = None) -> None:
     """
     Sends a message to a Slack channel, optionally mentioning a user by email.
 
     Args:
         message: The base message text.
-        token: The Slack Bot OAuth token.
-        channel_id: The ID of the target Slack channel.
         email_to_mention: The email address of the user to mention (optional).
+        channel: The ID of the target Slack channel. Defaults to SLACK_CHANNEL_ID.
 
     Returns:
         True if the message was sent successfully, False otherwise.
     """
+    channel = channel or SLACK_CHANNEL_ID
+
     if not SLACK_BOT_TOKEN:
         logger.info("Slack disabled")
         logger.info(f"SLACK MESSAGE: {message}, EMAIL: {email_to_mention}")
         return
 
-    if not SLACK_CHANNEL_ID:
+    if not channel:
         raise ValueError("Slack token or channel ID is missing.")
 
     user_id_to_mention = None
@@ -113,7 +115,7 @@ def _send_slack_message(message: str, email_to_mention: str | None = None) -> No
         # Keep final_message as the original message
 
     headers = {"Authorization": f"Bearer {SLACK_BOT_TOKEN}", "Content-Type": "application/json; charset=utf-8"}
-    payload = {"channel": SLACK_CHANNEL_ID, "text": final_message}
+    payload = {"channel": channel, "text": final_message}
 
     response = requests_session.post(SLACK_API_URL_POST, headers=headers, json=payload, timeout=10)
     response.raise_for_status()
@@ -121,7 +123,7 @@ def _send_slack_message(message: str, email_to_mention: str | None = None) -> No
     data = response.json()
 
     if data.get("ok"):
-        logging.info(f"Message successfully sent to channel {SLACK_CHANNEL_ID}")
+        logging.info(f"Message successfully sent to channel {channel}")
     else:
         error_message = data.get("error", "unknown_error")
         logging.error(f"Slack API error sending message: {error_message}")

@@ -1,6 +1,8 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 import pytest
+from django.conf import settings
 from django.contrib.messages import get_messages
 from django.http import HttpResponseRedirect
 from django.test import TestCase
@@ -197,6 +199,15 @@ class UserFeedbackViewTest(TestCase):
         self.assertEqual(Feedback.objects.count(), 0)
         messages = [str(m) for m in get_messages(response.wsgi_request)]
         self.assertNotIn(FEEDBACK_SUCCESS_MESSAGE, messages)
+
+    @patch("totem.users.views.notify_slack")
+    def test_user_feedback_notifies_feedback_channel(self, mock_notify_slack):
+        user = UserFactory()
+        self.client.force_login(user)
+        response = self.client.post(reverse("users:feedback"), data={"message": "Test feedback"})
+        self.assertEqual(response.status_code, 200)
+        mock_notify_slack.assert_called_once()
+        self.assertEqual(mock_notify_slack.call_args.kwargs["channel"], settings.SLACK_FEEDBACK_CHANNEL_ID)
 
 
 class TestDashboard:

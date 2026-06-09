@@ -435,6 +435,7 @@ SAVE_TO_GOOGLE_CALENDAR = env.bool("SAVE_TO_GOOGLE_CALENDAR", default=False)
 # ------------------------------------------------------------------------------
 SLACK_BOT_TOKEN = env("SLACK_BOT_TOKEN", default=None)
 SLACK_CHANNEL_ID = env("SLACK_CHANNEL_ID", default=None)
+SLACK_FEEDBACK_CHANNEL_ID = env("SLACK_FEEDBACK_CHANNEL_ID", default=SLACK_CHANNEL_ID)
 
 
 # Impersonate
