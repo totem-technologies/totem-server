@@ -2,7 +2,6 @@ from unittest.mock import patch
 
 import pytest
 from django.test import Client
-from pytest_socket import disable_socket
 
 from totem.api.auth import generate_jwt_token
 from totem.users.models import User
@@ -52,7 +51,3 @@ def client_with_user():
     user = UserFactory()
     token = generate_jwt_token(user)
     return Client(HTTP_AUTHORIZATION=f"Bearer {token}"), user
-
-
-def pytest_runtest_setup():
-    disable_socket()
