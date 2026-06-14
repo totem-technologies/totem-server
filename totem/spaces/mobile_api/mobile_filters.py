@@ -91,7 +91,7 @@ def upcoming_recommended_sessions(user: User | None, categories: list[str] | Non
     # filter author
     if author:
         events = events.filter(space__author__slug=author)
-    return events
+    return events.distinct().order_by("start")
 
 
 def session_detail_schema(session: Session, user: User):
