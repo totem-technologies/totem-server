@@ -268,6 +268,36 @@ class TestMobileApiSpaces:
         data = response.json()
         assert len(data) == 2
 
+    def test_recommended_spaces_with_categories(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+
+        allies = SpaceCategoryFactory(name="Allies", slug="allies")
+        love_emotions = SpaceCategoryFactory(name="Love & Emotions", slug="love-emotions")
+        mothers = SpaceCategoryFactory(name="Mothers", slug="mothers")
+        queer = SpaceCategoryFactory(name="Queer", slug="queer")
+
+        space_love_emotions = SpaceFactory(published=True, categories=[love_emotions], title="Love & Emotions")
+        space_mothers = SpaceFactory(published=True, categories=[mothers], title="Mothers")
+        space_queer = SpaceFactory(published=True, categories=[queer], title="Queer")
+        space_allies = SpaceFactory(published=True, categories=[allies], title="Allies")
+        space_allies_2 = SpaceFactory(published=True, categories=[allies], title="Allies 2")
+
+        SessionFactory(space=space_love_emotions, title="Love & Emotions")
+        SessionFactory(space=space_mothers, title="Mothers")
+        SessionFactory(space=space_queer, title="Queer")
+        SessionFactory(space=space_allies, title="Allies")
+        SessionFactory(space=space_allies_2, title="Allies 2")
+
+        url = reverse("mobile-api:recommended_spaces")
+
+        response = client.get(url, {"categories": ["allies"], "limit": 2})
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 2
+        assert data[0]["space"]["slug"] == space_allies.slug
+        assert data[1]["space"]["slug"] == space_allies_2.slug
+
     def test_summary_upcoming_section(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         OnboardModelFactory(user=user)

@@ -5,7 +5,7 @@ from django.db.models import Count, DateTimeField, ExpressionWrapper, F
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from ninja import Router, Status
+from ninja import Query, Router, Status
 from ninja.errors import AuthorizationError
 from ninja.pagination import paginate
 
@@ -113,7 +113,7 @@ def get_sessions_history(request: HttpRequest):
 
 
 @spaces_router.get("/sessions/recommended", response={200: list[SessionDetailSchema]}, url_name="recommended_spaces")
-def get_recommended_spaces(request: HttpRequest, limit: int = 3, categories: list[str] | None = None):
+def get_recommended_spaces(request: HttpRequest, limit: int = 3, categories: list[str] | None = Query(None)):
     user: User = request.user  # type: ignore
 
     recommended_sessions = upcoming_recommended_sessions(user, categories=categories)[:limit]
