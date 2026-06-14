@@ -285,8 +285,8 @@ class TestMobileApiSpaces:
         SessionFactory(space=space_love_emotions, title="Love & Emotions")
         SessionFactory(space=space_mothers, title="Mothers")
         SessionFactory(space=space_queer, title="Queer")
-        SessionFactory(space=space_allies, title="Allies")
-        SessionFactory(space=space_allies_2, title="Allies 2")
+        SessionFactory(space=space_allies, start=timezone.now() + timedelta(days=1))
+        SessionFactory(space=space_allies_2, start=timezone.now() + timedelta(days=2))
 
         url = reverse("mobile-api:recommended_spaces")
 
