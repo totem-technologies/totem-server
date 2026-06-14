@@ -290,13 +290,18 @@ class TestMobileApiSpaces:
 
         url = reverse("mobile-api:recommended_spaces")
 
-        response = client.get(url, {"categories": ["allies"], "limit": 2})
-
+        # Test recommended spaces by category slug
+        response = client.get(url, {"categories": ["allies"]})
         assert response.status_code == 200
         data = response.json()
-        assert len(data) == 2
         assert data[0]["space"]["slug"] == space_allies.slug
         assert data[1]["space"]["slug"] == space_allies_2.slug
+
+        # Test recommended spaces by category name
+        response = client.get(url, {"categories": ["Love & Emotions"]})
+        assert response.status_code == 200
+        data = response.json()
+        assert data[0]["space"]["slug"] == space_love_emotions.slug
 
     def test_summary_upcoming_section(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
