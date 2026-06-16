@@ -118,3 +118,19 @@ class TestSessionModel:
         assert "http://testserver/spaces/session" in message
         session.refresh_from_db()
         assert session.notified_tomorrow
+
+    def test_join_url_livekit(self, db):
+        from ..models import Space
+
+        space = SpaceFactory(meeting_provider=Space.MeetingProviderChoices.LIVEKIT)
+        session = SessionFactory(space=space)
+        url = session.join_url()
+        assert f"/room/{session.slug}" in url
+
+    def test_join_url_google_meet(self, db):
+        from ..models import Space
+
+        meeting_url = "https://meet.google.com/abc-defg-hij"
+        space = SpaceFactory(meeting_provider=Space.MeetingProviderChoices.GOOGLE_MEET)
+        session = SessionFactory(space=space, meeting_url=meeting_url)
+        assert session.join_url() == meeting_url

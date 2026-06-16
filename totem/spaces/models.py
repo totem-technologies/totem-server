@@ -354,6 +354,15 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
     def cal_link(self):
         return full_url(self.get_absolute_url())
 
+    def join_url(self) -> str:
+        match self.space.meeting_provider:
+            case Space.MeetingProviderChoices.LIVEKIT:
+                return full_url(reverse("rooms:room_app_path", kwargs={"path": self.slug}))
+            case Space.MeetingProviderChoices.GOOGLE_MEET:
+                return self.meeting_url
+            case _:
+                return self.meeting_url
+
     def save_to_calendar(self):
         cal_event = calendar.save_event(
             event_id=self.slug,
