@@ -1,5 +1,3 @@
-import { postData } from "@/libs/postData"
-import { timestampToDateString, timestampToTimeString } from "@/libs/time"
 import { useKeyDownEvent } from "@solid-primitives/keyboard"
 import { useQuery } from "@tanstack/solid-query"
 import {
@@ -12,6 +10,8 @@ import {
   Suspense,
   Switch,
 } from "solid-js"
+import { postData } from "@/libs/postData"
+import { timestampToDateString, timestampToTimeString } from "@/libs/time"
 import { type SessionDetailSchema, totemSpacesApiEventDetail } from "../client"
 import AddToCalendarButton from "./AddToCalendarButton"
 import ErrorBoundary from "./errors"
@@ -21,8 +21,6 @@ import { useTotemTip } from "./tooltip"
 function capitalize(str: string) {
   return str.charAt(0).toUpperCase() + str.slice(1)
 }
-
-
 
 const spacesListLink = "/spaces/"
 
@@ -221,17 +219,6 @@ function EventInfo(props: {
     await postData(props.eventStore.rsvp_url, { action: "remove" })
     props.refetchEvent()
   }
-
-  function isSameOrigin(url?: string | null) {
-    if (!url) return false
-    try {
-      const parsedUrl = new URL(url, window.location.origin)
-      return parsedUrl.hostname === window.location.hostname
-    } catch {
-      return false
-    }
-  }
-
   return (
     <DetailBox>
       <div class="flex flex-wrap justify-between gap-x-4 gap-y-2 pb-2">
@@ -284,7 +271,7 @@ function EventInfo(props: {
             <p class="pb-4">The session is starting soon.</p>
             <a
               class="btn btn-primary w-full"
-              target={isSameOrigin(props.eventStore.join_url) ? "_self" : "_blank"}
+              target="_blank"
               href={props.eventStore.join_url ?? ""}
               rel="noreferrer">
               Enter Space
