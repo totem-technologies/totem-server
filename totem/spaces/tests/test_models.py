@@ -130,7 +130,7 @@ class TestSessionModel:
     def test_join_url_google_meet(self, db):
         from ..models import Space
 
-        meeting_url = "https://meet.google.com/abc-defg-hij"
+        meeting_url = "https://example.com"
         space = SpaceFactory(meeting_provider=Space.MeetingProviderChoices.GOOGLE_MEET)
         session = SessionFactory(space=space, meeting_url=meeting_url)
         assert session.join_url() == meeting_url
