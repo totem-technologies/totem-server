@@ -268,6 +268,76 @@ class TestMobileApiSpaces:
         data = response.json()
         assert len(data) == 2
 
+    def test_recommended_spaces_with_categories(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+
+        allies = SpaceCategoryFactory(name="Allies", slug="allies")
+        love_emotions = SpaceCategoryFactory(name="Love & Emotions", slug="love-emotions")
+        mothers = SpaceCategoryFactory(name="Mothers", slug="mothers")
+        queer = SpaceCategoryFactory(name="Queer", slug="queer")
+
+        space_love_emotions = SpaceFactory(published=True, categories=[love_emotions], title="Love & Emotions")
+        space_mothers = SpaceFactory(published=True, categories=[mothers], title="Mothers")
+        space_queer = SpaceFactory(published=True, categories=[queer], title="Queer")
+        space_allies = SpaceFactory(published=True, categories=[allies], title="Allies")
+        space_allies_2 = SpaceFactory(published=True, categories=[allies], title="Allies 2")
+
+        SessionFactory(space=space_love_emotions, title="Love & Emotions")
+        SessionFactory(space=space_mothers, title="Mothers")
+        SessionFactory(space=space_queer, title="Queer")
+        SessionFactory(space=space_allies, start=timezone.now() + timedelta(days=1))
+        SessionFactory(space=space_allies_2, start=timezone.now() + timedelta(days=2))
+
+        url = reverse("mobile-api:recommended_spaces")
+
+        # Test recommended spaces by category slug
+        response = client.get(url, {"categories": ["allies"]})
+        assert response.status_code == 200
+        data = response.json()
+        assert data[0]["space"]["slug"] == space_allies.slug
+        assert data[1]["space"]["slug"] == space_allies_2.slug
+
+        # Test recommended spaces by category name
+        response = client.get(url, {"categories": ["Love & Emotions"]})
+        assert response.status_code == 200
+        data = response.json()
+        assert data[0]["space"]["slug"] == space_love_emotions.slug
+
+    def test_recommended_spaces_with_multiple_categories(self, client_with_user: tuple[Client, User]):
+        client, _ = client_with_user
+
+        cat1 = SpaceCategoryFactory(name="A", slug="a")
+        cat2 = SpaceCategoryFactory(name="B", slug="b")
+
+        space_both = SpaceFactory(published=True, categories=[cat1, cat2])
+        space_a = SpaceFactory(published=True, categories=[cat1])
+
+        SessionFactory(space=space_both)
+        SessionFactory(space=space_a)
+
+        url = reverse("mobile-api:recommended_spaces")
+
+        response = client.get(url, {"categories": ["a", "b"]})
+
+        data = response.json()
+
+        slugs = [item["space"]["slug"] for item in data]
+        assert len(slugs) == len(set(slugs)), f"Duplicates found in results: {slugs}"
+        assert len(data) == 2
+
+    def test_recommended_spaces_handles_name_and_slug_mixed(self, client_with_user: tuple[Client, User]):
+        client, _ = client_with_user
+
+        cat1 = SpaceCategoryFactory(name="Special", slug="special")
+        space = SpaceFactory(published=True, categories=[cat1])
+        SessionFactory(space=space)
+
+        url = reverse("mobile-api:recommended_spaces")
+
+        response = client.get(url, {"categories": ["special", "special"]})
+        assert response.status_code == 200
+        assert len(response.json()) == 1
+
     def test_summary_upcoming_section(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         OnboardModelFactory(user=user)
