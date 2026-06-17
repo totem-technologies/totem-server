@@ -157,7 +157,7 @@ def join(request, session_slug):
     if session.can_join(user):
         session.joined.add(user)
         analytics.event_joined(user, session)
-        return redirect(session.join_url(), permanent=False)
+        return redirect(session.room_url(), permanent=False)
 
     if session.started():
         messages.info(request, "This session has already started.")

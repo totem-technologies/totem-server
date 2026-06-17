@@ -174,7 +174,7 @@ class TestJoinView:
         client.force_login(user)
         response = client.get(reverse("spaces:join", kwargs={"session_slug": event.slug}))
         assert response.status_code == 302
-        assert event.join_url() in response.url
+        assert event.room_url() in response.url
         assert user in event.joined.all()
 
     def test_join_attending_late(self, client, db):
@@ -201,7 +201,7 @@ class TestJoinView:
         url = JoinSessionAction(user=user, parameters={"session_slug": event.slug}).build_url()
         response = client.get(url)
         assert response.status_code == 302
-        assert event.join_url() in response.url
+        assert event.room_url() in response.url
         assert user in event.joined.all()
 
 

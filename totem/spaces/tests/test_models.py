@@ -124,7 +124,7 @@ class TestSessionModel:
 
         space = SpaceFactory(meeting_provider=Space.MeetingProviderChoices.LIVEKIT)
         session = SessionFactory(space=space)
-        url = session.join_url()
+        url = session.room_url()
         assert f"/room/{session.slug}" in url
 
     def test_join_url_google_meet(self, db):
@@ -133,4 +133,4 @@ class TestSessionModel:
         meeting_url = "https://example.com"
         space = SpaceFactory(meeting_provider=Space.MeetingProviderChoices.GOOGLE_MEET)
         session = SessionFactory(space=space, meeting_url=meeting_url)
-        assert session.join_url() == meeting_url
+        assert session.room_url() == meeting_url
