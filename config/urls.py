@@ -15,7 +15,6 @@ from totem.blog.urls import BlogSitemap
 from totem.pages.urls import PagesSitemap
 from totem.plans.urls import PlansSitemap
 from totem.repos.urls import ReposSitemap
-from totem.rooms.proxy import room_app_proxy
 from totem.spaces.urls import SpacesSitemap
 from totem.users import views as user_views
 from totem.utils.exports import get_url_patterns as export_url_patterns
@@ -129,8 +128,7 @@ urlpatterns = [
     path("onboard/", include("totem.onboard.urls")),
     path("dev/", include("totem.dev.urls", namespace="dev")),
     # Reverse-proxy the Flutter web "room" app so it shares this origin.
-    path("room/", room_app_proxy, name="room_app"),
-    path("room/<path:path>", room_app_proxy),
+    path("room/", include("totem.rooms.urls", namespace="rooms")),
     # Redirects
     path("circles/", RedirectView.as_view(url="/spaces/", permanent=True)),
     path("circles/<path:path>", RedirectView.as_view(url="/spaces/%(path)s", permanent=True)),
