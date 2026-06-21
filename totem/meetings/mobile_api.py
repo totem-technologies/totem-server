@@ -20,6 +20,8 @@ from totem.meetings.livekit_provider import (
 )
 from totem.meetings.room_state import SessionState
 from totem.meetings.schemas import ErrorResponseSchema, LivekitOrderSchema, LivekitTokenResponseSchema
+from totem.rooms.models import Room
+from totem.rooms.schemas import RoomStatus
 from totem.spaces.models import Session
 from totem.users import analytics
 from totem.users.models import User
@@ -43,30 +45,36 @@ def get_livekit_token(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
 
     try:
-        event = Session.objects.get(slug=event_slug)
+        session = Session.objects.get(slug=event_slug)
     except Session.DoesNotExist:
         return Status(404, ErrorResponseSchema(error="Session not found"))
 
-    is_joinable = event.can_join(user=user)
+    is_joinable = session.can_join(user=user)
     if not is_joinable:
-        logging.warning("User %s attempted to join non-joinable event %s", user.slug, event.slug)
+        logging.warning("User %s attempted to join non-joinable event %s", user.slug, session.slug)
         return Status(403, ErrorResponseSchema(error="Session is not joinable at this time."))
+
+    # Defense-in-depth: reject join if the room has already ended,
+    # even if can_join passed (e.g. ended_at may be out of sync).
+    room = Room.objects.for_session(session.slug).first()
+    if room and room.status == RoomStatus.ENDED:
+        return Status(403, ErrorResponseSchema(error="This session has ended"))
 
     try:
         # Initialize the room with the speaking order if not already done
-        speaking_order = event.attendees.all()
+        speaking_order = session.attendees.all()
         livekit.initialize_room(
-            room_name=event.slug,
+            room_name=session.slug,
             speaking_order=[attendee.slug for attendee in speaking_order],
-            keeper_slug=event.space.author.slug,
+            keeper_slug=session.space.author.slug,
         )
 
         # Create and return the access token
-        token = livekit.create_access_token(user, event)
+        token = livekit.create_access_token(user, session)
 
         # Record that the user has joined the event
-        event.joined.add(user)
-        analytics.event_joined(user, event)
+        session.joined.add(user)
+        analytics.event_joined(user, session)
 
         return LivekitTokenResponseSchema(token=token)
     except LiveKitConfigurationError as e:

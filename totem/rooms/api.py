@@ -38,6 +38,7 @@ from .schemas import (
     RemoveReason,
     RoomErrorResponse,
     RoomState,
+    RoomStatus,
     StartRoomEvent,
     TransitionError,
 )
@@ -185,6 +186,12 @@ def join_room(
         ).as_http_response()
 
     room = Room.objects.get_or_create_for_session(session)
+    if room.status == RoomStatus.ENDED:
+        return RoomErrorResponse(
+            code=ErrorCode.ROOM_ALREADY_ENDED,
+            message="This session has ended",
+        ).as_http_response()
+
     if user.slug in room.banned_participants:
         return RoomErrorResponse(
             code=ErrorCode.BANNED,

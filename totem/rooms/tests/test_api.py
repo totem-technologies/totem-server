@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from totem.rooms.livekit import LiveKitConfigurationError
 from totem.rooms.models import Room
-from totem.rooms.schemas import RemoveReason
+from totem.rooms.schemas import EndReason, RemoveReason, RoomStatus
 from totem.spaces.models import Space
 from totem.spaces.tests.factories import SessionFactory
 from totem.users.models import User
@@ -501,6 +501,32 @@ class TestJoinRoom:
 
         assert resp.status_code == 403
         assert resp.json()["code"] == "not_joinable"
+
+    def test_join_ended_room_rejected(self, client_with_user: tuple[Client, User]):
+        """Room in ENDED status rejects join even if ended_at is out of sync."""
+        import datetime
+
+        client, user = client_with_user
+        start = timezone.now() - datetime.timedelta(minutes=5)
+        session = SessionFactory(
+            space__author=user,
+            space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+            start=start,
+            duration_minutes=60,
+        )
+        session.attendees.add(user)
+        session.joined.add(user)
+
+        # Create room and set it to ENDED, but leave session.ended_at as None to simulate the sync gap.
+        room = Room.objects.get_or_create_for_session(session)
+        room.status = RoomStatus.ENDED
+        room.end_reason = EndReason.KEEPER_ABSENT
+        room.save()
+
+        resp = client.post(f"{BASE}/{session.slug}/join")
+
+        assert resp.status_code == 403
+        assert resp.json()["code"] == "room_already_ended"
 
 
 # ---------------------------------------------------------------------------
