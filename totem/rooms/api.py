@@ -10,9 +10,10 @@ from __future__ import annotations
 import logging
 
 from django.http import HttpRequest
+from django.utils import timezone
 from ninja import Router, Status
 
-from totem.spaces.models import Session
+from totem.spaces.models import Session, Space
 from totem.users import analytics
 from totem.users.models import User
 
@@ -38,6 +39,7 @@ from .schemas import (
     RemoveReason,
     RoomErrorResponse,
     RoomState,
+    RoomStatus,
     StartRoomEvent,
     TransitionError,
 )
@@ -185,6 +187,30 @@ def join_room(
         ).as_http_response()
 
     room = Room.objects.get_or_create_for_session(session)
+    if room.status == RoomStatus.ENDED:
+        return RoomErrorResponse(
+            code=ErrorCode.ROOM_ALREADY_ENDED,
+            message="This session has ended",
+        ).as_http_response()
+
+    now = timezone.now()
+    need_participants = session.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT and (
+        (now > session.end() and user != session.space.author) or session.joined.count() > 0
+    )
+    connected: set[str] | None = None
+    if need_participants:
+        try:
+            connected = get_connected_participants(session_slug)
+        except Exception:
+            logger.exception("Failed to fetch connected participants from LiveKit")
+
+    if now > session.end() and user != session.space.author:
+        if connected is not None and len(connected) == 0:
+            return RoomErrorResponse(
+                code=ErrorCode.NOT_JOINABLE,
+                message="This session has ended",
+            ).as_http_response()
+
     if user.slug in room.banned_participants:
         return RoomErrorResponse(
             code=ErrorCode.BANNED,
@@ -200,12 +226,7 @@ def join_room(
             message="LiveKit service is not properly configured",
         ).as_http_response()
 
-    is_already_connected = False
-    if session.joined.count() > 0:
-        try:
-            is_already_connected = user.slug in (get_connected_participants(session_slug) or set())
-        except Exception:
-            logger.exception("Failed to determine if user is already connected to LiveKit")
+    is_already_connected = bool(connected and user.slug in connected)
 
     session.joined.add(user)
     analytics.event_joined(user, session)

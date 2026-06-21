@@ -256,6 +256,7 @@ class RoomErrorResponse(Schema):
                 | ErrorCode.NOT_NEXT_SPEAKER
                 | ErrorCode.NOT_JOINABLE
                 | ErrorCode.BANNED
+                | ErrorCode.ROOM_ALREADY_ENDED
             ):
                 return Status(403, self)
             case ErrorCode.NOT_FOUND:
