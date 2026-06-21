@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 
 from django.http import HttpRequest
+from django.utils import timezone
 from ninja import Router, Status
 
 from totem.spaces.models import Session
@@ -191,6 +192,17 @@ def join_room(
             code=ErrorCode.ROOM_ALREADY_ENDED,
             message="This session has ended",
         ).as_http_response()
+
+    # Do not allow joining empty rooms past the scheduled duration.
+    # The Keeper can always rejoin.
+    now = timezone.now()
+    if now > session.end() and user != session.space.author:
+        connected = get_connected_participants(session_slug)
+        if connected is not None and len(connected) == 0:
+            return RoomErrorResponse(
+                code=ErrorCode.NOT_JOINABLE,
+                message="This session has ended",
+            ).as_http_response()
 
     if user.slug in room.banned_participants:
         return RoomErrorResponse(
