@@ -1,3 +1,4 @@
+import datetime
 from unittest.mock import patch
 
 import pytest
@@ -317,7 +318,6 @@ BASE = "/api/mobile/protected/rooms"
 
 def _make_joinable_session(keeper: User, attendees: list[User] | None = None):
     """Create a session that is currently joinable (start time in the near past)."""
-    import datetime
 
     start = timezone.now() - datetime.timedelta(minutes=5)
     session = SessionFactory(space__author=keeper, start=start)
@@ -420,7 +420,6 @@ class TestJoinRoom:
         assert resp.json()["is_already_present"] is True
 
     def test_join_rejoin_livekit_after_timeout(self, client_with_user: tuple[Client, User]):
-        import datetime
 
         client, user = client_with_user
         # Session started 65 min ago (past the 60-min duration)
@@ -445,7 +444,6 @@ class TestJoinRoom:
         assert resp.json()["token"] == "fake-jwt-token"
 
     def test_join_rejoin_livekit_denied_when_ended(self, client_with_user: tuple[Client, User]):
-        import datetime
 
         client, user = client_with_user
         start = timezone.now() - datetime.timedelta(minutes=65)
@@ -466,7 +464,6 @@ class TestJoinRoom:
         assert resp.json()["code"] == "not_joinable"
 
     def test_join_rejoin_google_meet_after_timeout(self, client_with_user: tuple[Client, User]):
-        import datetime
 
         client, user = client_with_user
         start = timezone.now() - datetime.timedelta(minutes=65)
@@ -484,7 +481,6 @@ class TestJoinRoom:
         assert resp.json()["code"] == "not_joinable"
 
     def test_join_livekit_first_time_after_timeout(self, client_with_user: tuple[Client, User]):
-        import datetime
 
         client, user = client_with_user
         start = timezone.now() - datetime.timedelta(minutes=65)
@@ -504,7 +500,6 @@ class TestJoinRoom:
 
     def test_join_ended_room_rejected(self, client_with_user: tuple[Client, User]):
         """Room in ENDED status rejects join even if ended_at is out of sync."""
-        import datetime
 
         client, user = client_with_user
         start = timezone.now() - datetime.timedelta(minutes=5)
@@ -530,7 +525,6 @@ class TestJoinRoom:
 
     def test_join_empty_room_past_duration_rejected(self, client_with_user: tuple[Client, User]):
         """After duration_minutes, joining an empty room is blocked (safety net)."""
-        import datetime
 
         client, user = client_with_user
         keeper = UserFactory()
@@ -553,7 +547,6 @@ class TestJoinRoom:
 
     def test_join_populated_room_past_duration_allowed(self, client_with_user: tuple[Client, User]):
         """Past duration but room has participants — rejoin should still be allowed."""
-        import datetime
 
         client, user = client_with_user
         keeper = UserFactory()

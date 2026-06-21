@@ -196,8 +196,15 @@ def join_room(
     # Do not allow joining empty rooms past the scheduled duration.
     # The Keeper can always rejoin.
     now = timezone.now()
+    need_participants = (now > session.end() and user != session.space.author) or session.joined.count() > 0
+    connected: set[str] | None = None
+    if need_participants:
+        try:
+            connected = get_connected_participants(session_slug)
+        except Exception:
+            logger.exception("Failed to fetch connected participants from LiveKit")
+
     if now > session.end() and user != session.space.author:
-        connected = get_connected_participants(session_slug)
         if connected is not None and len(connected) == 0:
             return RoomErrorResponse(
                 code=ErrorCode.NOT_JOINABLE,
@@ -219,12 +226,7 @@ def join_room(
             message="LiveKit service is not properly configured",
         ).as_http_response()
 
-    is_already_connected = False
-    if session.joined.count() > 0:
-        try:
-            is_already_connected = user.slug in (get_connected_participants(session_slug) or set())
-        except Exception:
-            logger.exception("Failed to determine if user is already connected to LiveKit")
+    is_already_connected = bool(connected and user.slug in connected)
 
     session.joined.add(user)
     analytics.event_joined(user, session)

@@ -258,11 +258,8 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
             return False
         now = timezone.now()
         grace_before = datetime.timedelta(minutes=15)
-        grace_after = _default_grace_period
         if user.is_staff or user in self.joined.all():
-            # Come back any time if already joined.
             grace_before = datetime.timedelta(minutes=60)
-            grace_after = datetime.timedelta(minutes=self.duration_minutes)
 
         # For LiveKit, previously-joined users can rejoin as long as the session hasn't been explicitly ended.
         if self.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT and user in self.joined.all():
@@ -271,6 +268,10 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
             return self.start - grace_before < now
 
         # Time-based check for Google Meet and first-time LiveKit joiners
+        grace_after = _default_grace_period
+        if user.is_staff or user in self.joined.all():
+            grace_after = datetime.timedelta(minutes=self.duration_minutes)
+
         if self.ended():
             return False
         return self.start - grace_before < now < self.start + grace_after
