@@ -7,6 +7,7 @@ from django.utils import timezone
 from totem.rooms.livekit import LiveKitConfigurationError
 from totem.rooms.models import Room
 from totem.rooms.schemas import RemoveReason
+from totem.spaces.models import Space
 from totem.spaces.tests.factories import SessionFactory
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
@@ -417,6 +418,89 @@ class TestJoinRoom:
         assert resp.status_code == 200
         assert resp.json()["token"] == "fake-jwt-token"
         assert resp.json()["is_already_present"] is True
+
+    def test_join_rejoin_livekit_after_timeout(self, client_with_user: tuple[Client, User]):
+        import datetime
+
+        client, user = client_with_user
+        # Session started 65 min ago (past the 60-min duration)
+        start = timezone.now() - datetime.timedelta(minutes=65)
+        session = SessionFactory(
+            space__author=user,
+            space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+            start=start,
+            duration_minutes=60,
+        )
+        session.attendees.add(user)
+        session.joined.add(user)
+        # No ended_at set, session is still active
+
+        with (
+            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.api.get_connected_participants", return_value={}),
+        ):
+            resp = client.post(f"{BASE}/{session.slug}/join")
+
+        assert resp.status_code == 200
+        assert resp.json()["token"] == "fake-jwt-token"
+
+    def test_join_rejoin_livekit_denied_when_ended(self, client_with_user: tuple[Client, User]):
+        import datetime
+
+        client, user = client_with_user
+        start = timezone.now() - datetime.timedelta(minutes=65)
+        session = SessionFactory(
+            space__author=user,
+            space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+            start=start,
+            duration_minutes=60,
+        )
+        session.attendees.add(user)
+        session.joined.add(user)
+        session.ended_at = timezone.now()
+        session.save()
+
+        resp = client.post(f"{BASE}/{session.slug}/join")
+
+        assert resp.status_code == 403
+        assert resp.json()["code"] == "not_joinable"
+
+    def test_join_rejoin_google_meet_after_timeout(self, client_with_user: tuple[Client, User]):
+        import datetime
+
+        client, user = client_with_user
+        start = timezone.now() - datetime.timedelta(minutes=65)
+        session = SessionFactory(
+            space__author=user,
+            start=start,
+            duration_minutes=60,
+        )
+        session.attendees.add(user)
+        session.joined.add(user)
+
+        resp = client.post(f"{BASE}/{session.slug}/join")
+
+        assert resp.status_code == 403
+        assert resp.json()["code"] == "not_joinable"
+
+    def test_join_livekit_first_time_after_timeout(self, client_with_user: tuple[Client, User]):
+        import datetime
+
+        client, user = client_with_user
+        start = timezone.now() - datetime.timedelta(minutes=65)
+        session = SessionFactory(
+            space__author=user,
+            space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+            start=start,
+            duration_minutes=60,
+        )
+        session.attendees.add(user)
+        # user has NOT joined before
+
+        resp = client.post(f"{BASE}/{session.slug}/join")
+
+        assert resp.status_code == 403
+        assert resp.json()["code"] == "not_joinable"
 
 
 # ---------------------------------------------------------------------------
