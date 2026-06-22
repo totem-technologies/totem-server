@@ -89,7 +89,7 @@ class TestUserIndexView:
         url = reverse("users:profile")
         response = client.get(url)
         assert isinstance(response, HttpResponseRedirect)
-        assert response.url == reverse("users:signup") + "?next=" + url
+        assert response.url == reverse("users:login") + "?next=" + url
 
         url = reverse("users:index")
         user = UserFactory(onboarded=False)
