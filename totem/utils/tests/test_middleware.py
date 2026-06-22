@@ -5,12 +5,22 @@ from unittest.mock import Mock
 import pytest
 from django.contrib.auth import get_user_model
 from django.http import HttpRequest
+from django.urls import reverse
 from django.utils import timezone
 
 from totem.users.tests.factories import UserFactory
 from totem.utils.middleware import TimezoneMiddleware
 
 User = get_user_model()
+
+
+@pytest.mark.django_db
+def test_csrf_cookie_always_set(client):
+    """The frontend reads the csrftoken cookie to authorize POSTs (see bot.ts and
+    postData.ts). The login page renders no {% csrf_token %} tag, so the cookie
+    must be guaranteed by middleware rather than as a template side effect."""
+    response = client.get(reverse("users:login"))
+    assert "csrftoken" in response.cookies
 
 
 @pytest.fixture

@@ -18,7 +18,7 @@ class TestHoneypotProtection:
 
         # Submit signup with empty honeypot
         response = client.post(
-            reverse("users:signup"),
+            reverse("users:login"),
             {
                 "email": email,
                 "website": "",  # Honeypot field empty
@@ -65,7 +65,7 @@ class TestHoneypotProtection:
 
         # Submit signup with filled honeypot
         response = client.post(
-            reverse("users:signup"),
+            reverse("users:login"),
             {
                 "email": email,
                 "website": "Buy cheap meds!",  # Bot filled the honeypot!
