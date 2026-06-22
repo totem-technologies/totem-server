@@ -12,8 +12,16 @@ from urllib.parse import parse_qs, urlparse
 import pytest
 import requests
 from django.test import Client, override_settings
+from django.urls import reverse
 
 from totem.users.tests.factories import UserFactory
+
+
+def test_room_root_redirects_to_home(client: Client, db):
+    """The bare /room/ URL has no room context so it always redirects to the home page"""
+    response = client.get("/room/")
+    assert response.status_code == 302
+    assert response.url == reverse("pages:home")
 
 
 def test_proxy_redirects_unauthenticated_to_login(client: Client, db):
@@ -25,12 +33,6 @@ def test_proxy_redirects_unauthenticated_to_login(client: Client, db):
     qs = parse_qs(parsed.query)
     assert "next" in qs
     assert qs["next"][0] == "/room/some-room-slug"
-
-
-def test_proxy_redirects_unauthenticated_root_to_login(client: Client, db):
-    """The bare /room/ path also redirects unauthenticated users."""
-    response = client.get("/room/")
-    assert response.status_code == 302
 
 
 @override_settings(DEBUG=True)
