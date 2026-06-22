@@ -1,3 +1,4 @@
+import datetime
 from unittest.mock import patch
 
 import pytest
@@ -6,7 +7,8 @@ from django.utils import timezone
 
 from totem.rooms.livekit import LiveKitConfigurationError
 from totem.rooms.models import Room
-from totem.rooms.schemas import RemoveReason
+from totem.rooms.schemas import EndReason, RemoveReason, RoomStatus
+from totem.spaces.models import Space
 from totem.spaces.tests.factories import SessionFactory
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
@@ -316,8 +318,6 @@ BASE = "/api/mobile/protected/rooms"
 
 def _make_joinable_session(keeper: User, attendees: list[User] | None = None):
     """Create a session that is currently joinable (start time in the near past)."""
-    import datetime
-
     start = timezone.now() - datetime.timedelta(minutes=5)
     session = SessionFactory(space__author=keeper, start=start)
     session.attendees.add(keeper)
@@ -406,6 +406,8 @@ class TestJoinRoom:
     def test_join_already_connected(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         session = _make_joinable_session(user)
+        session.space.meeting_provider = Space.MeetingProviderChoices.LIVEKIT
+        session.space.save()
         session.joined.add(user)
 
         with (
@@ -417,6 +419,141 @@ class TestJoinRoom:
         assert resp.status_code == 200
         assert resp.json()["token"] == "fake-jwt-token"
         assert resp.json()["is_already_present"] is True
+
+    def test_join_rejoin_livekit_after_timeout(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        start = timezone.now() - datetime.timedelta(minutes=65)
+        session = SessionFactory(
+            space__author=user,
+            space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+            start=start,
+            duration_minutes=60,
+        )
+        session.attendees.add(user)
+        session.joined.add(user)
+
+        with (
+            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.api.get_connected_participants", return_value={}),
+        ):
+            resp = client.post(f"{BASE}/{session.slug}/join")
+
+        assert resp.status_code == 200
+        assert resp.json()["token"] == "fake-jwt-token"
+
+    def test_join_rejoin_livekit_denied_when_ended(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        start = timezone.now() - datetime.timedelta(minutes=65)
+        session = SessionFactory(
+            space__author=user,
+            space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+            start=start,
+            duration_minutes=60,
+        )
+        session.attendees.add(user)
+        session.joined.add(user)
+        session.ended_at = timezone.now()
+        session.save()
+
+        resp = client.post(f"{BASE}/{session.slug}/join")
+
+        assert resp.status_code == 403
+        assert resp.json()["code"] == "not_joinable"
+
+    def test_join_rejoin_google_meet_after_timeout(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        start = timezone.now() - datetime.timedelta(minutes=65)
+        session = SessionFactory(
+            space__author=user,
+            start=start,
+            duration_minutes=60,
+        )
+        session.attendees.add(user)
+        session.joined.add(user)
+
+        resp = client.post(f"{BASE}/{session.slug}/join")
+
+        assert resp.status_code == 403
+        assert resp.json()["code"] == "not_joinable"
+
+    def test_join_livekit_first_time_after_timeout(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        start = timezone.now() - datetime.timedelta(minutes=65)
+        session = SessionFactory(
+            space__author=user,
+            space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+            start=start,
+            duration_minutes=60,
+        )
+        session.attendees.add(user)
+
+        resp = client.post(f"{BASE}/{session.slug}/join")
+
+        assert resp.status_code == 403
+        assert resp.json()["code"] == "not_joinable"
+
+    def test_join_ended_room_rejected(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        start = timezone.now() - datetime.timedelta(minutes=5)
+        session = SessionFactory(
+            space__author=user,
+            space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+            start=start,
+            duration_minutes=60,
+        )
+        session.attendees.add(user)
+        session.joined.add(user)
+
+        room = Room.objects.get_or_create_for_session(session)
+        room.status = RoomStatus.ENDED
+        room.end_reason = EndReason.KEEPER_ABSENT
+        room.save()
+
+        resp = client.post(f"{BASE}/{session.slug}/join")
+
+        assert resp.status_code == 403
+        assert resp.json()["code"] == "room_already_ended"
+
+    def test_join_empty_room_past_duration_rejected(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        keeper = UserFactory()
+        start = timezone.now() - datetime.timedelta(minutes=65)
+        session = SessionFactory(
+            space__author=keeper,
+            space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+            start=start,
+            duration_minutes=60,
+        )
+        session.attendees.add(keeper, user)
+        session.joined.add(user)
+
+        with patch("totem.rooms.api.get_connected_participants", return_value=set()):
+            resp = client.post(f"{BASE}/{session.slug}/join")
+
+        assert resp.status_code == 403
+        assert resp.json()["code"] == "not_joinable"
+
+    def test_join_populated_room_past_duration_allowed(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        keeper = UserFactory()
+        start = timezone.now() - datetime.timedelta(minutes=65)
+        session = SessionFactory(
+            space__author=keeper,
+            space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+            start=start,
+            duration_minutes=60,
+        )
+        session.attendees.add(keeper, user)
+        session.joined.add(user)
+
+        with (
+            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug}),
+        ):
+            resp = client.post(f"{BASE}/{session.slug}/join")
+
+        assert resp.status_code == 200
+        assert resp.json()["token"] == "fake-jwt-token"
 
 
 # ---------------------------------------------------------------------------
@@ -530,6 +667,7 @@ class TestRemoveParticipant:
         resp = client.post(f"{BASE}/{session.slug}/remove/{keeper.slug}")
 
         assert resp.status_code == 400
+        assert resp.json()["code"] == "invalid_transition"
 
 
 # ---------------------------------------------------------------------------
