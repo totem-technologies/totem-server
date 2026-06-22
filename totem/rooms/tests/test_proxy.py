@@ -7,14 +7,61 @@ against the Flutter dev server.
 """
 
 from unittest.mock import patch
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 import requests
 from django.test import Client, override_settings
 
+from totem.users.tests.factories import UserFactory
+
+
+def test_proxy_redirects_unauthenticated_to_login(client: Client, db):
+    """Unauthenticated requests to /room/ must redirect to login with
+    a `next` parameter pointing back to the original URL."""
+    response = client.get("/room/some-room-slug")
+    assert response.status_code == 302
+    parsed = urlparse(response.url)
+    qs = parse_qs(parsed.query)
+    assert "next" in qs
+    assert qs["next"][0] == "/room/some-room-slug"
+
+
+def test_proxy_redirects_unauthenticated_root_to_login(client: Client, db):
+    """The bare /room/ path also redirects unauthenticated users."""
+    response = client.get("/room/")
+    assert response.status_code == 302
+
+
+@override_settings(DEBUG=True)
+def test_authenticated_user_can_access_room_after_login(client: Client, db):
+    """After logging in, the user must be able to reach the original /room/ URL they were trying to access."""
+    original_url = "/room/some-room-slug"
+
+    # unauthenticated request gets redirected to login
+    response = client.get(original_url)
+    assert response.status_code == 302
+    parsed = urlparse(response.url)
+    qs = parse_qs(parsed.query)
+    assert qs["next"][0] == original_url
+
+    # simulate login and re-request the original URL. now it should reach the proxy
+    user = UserFactory()
+    client.force_login(user)
+
+    with patch(
+        "totem.rooms.proxy._session.request",
+        return_value=_fake_upstream(200, b"<html><body>Flutter App</body></html>", "text/html"),
+    ):
+        response = client.get(original_url)
+    assert response.status_code == 200
+    assert b"Flutter App" in response.content
+
 
 def test_proxy_rejects_non_get(client: Client, db):
     """POST/PUT/etc. must not silently downgrade to GET upstream."""
+    user = UserFactory()
+    client.force_login(user)
     for method in ("post", "put", "patch", "delete"):
         response = getattr(client, method)("/room/something")
         assert response.status_code == 405, f"{method} should 405"
@@ -36,6 +83,8 @@ def test_proxy_forwards_4xx_from_upstream(client: Client, db):
     """A 404 (or other 4xx) upstream is the asset's real status — the
     browser should see it, not a Django 500.
     """
+    user = UserFactory()
+    client.force_login(user)
     with patch("totem.rooms.proxy._session.request", return_value=_fake_upstream(404, b"nope")):
         response = client.get("/room/missing.js")
     assert response.status_code == 404
@@ -45,6 +94,8 @@ def test_proxy_raises_on_5xx_from_upstream(client: Client, db):
     """Upstream 5xx means *we* have a problem (CDN misconfig, origin down).
     Raise so Django returns 500 and Sentry alerts with request context.
     """
+    user = UserFactory()
+    client.force_login(user)
     with patch("totem.rooms.proxy._session.request", return_value=_fake_upstream(503, b"down")):
         with pytest.raises(requests.exceptions.HTTPError):
             client.get("/room/foo.js", raise_request_exception=True)
@@ -56,6 +107,8 @@ def test_proxy_response_headers_allow_list(client: Client, db):
     info) must not survive the proxy; only the allow-listed caching/range
     headers come through.
     """
+    user = UserFactory()
+    client.force_login(user)
     fake = _fake_upstream(200, b"console.log('hi');", "application/javascript")
     fake.headers.update(
         {
@@ -92,6 +145,8 @@ def test_proxy_sets_host_header_to_browser_host(client: Client, db):
     in prod it must be set to match the upstream's public hostname so the
     CDN routes the request and embedded URLs resolve.
     """
+    user = UserFactory()
+    client.force_login(user)
     captured: dict[str, str] = {}
 
     def fake_request(method, url, *, headers, **kwargs):
@@ -110,6 +165,8 @@ def test_proxy_refuses_to_stream_assets_in_prod(client: Client, db):
     stream them guards against accidentally pointing prod traffic at a
     dev server.
     """
+    user = UserFactory()
+    client.force_login(user)
     fake = _fake_upstream(200, b"console.log('hi');", "application/javascript")
     with patch("totem.rooms.proxy._session.request", return_value=fake):
         with pytest.raises(Exception, match="Asset proxy should only be activated in dev"):
