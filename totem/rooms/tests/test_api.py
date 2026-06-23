@@ -560,6 +560,32 @@ class TestJoinRoom:
         assert resp.status_code == 200
         assert resp.json()["token"] == "fake-jwt-token"
 
+    def test_join_rejoin_livekit_past_duration_lk_unreachable(self, client_with_user: tuple[Client, User]):
+        """Non-keeper rejoin past duration when LiveKit is unreachable still succeeds"""
+        client, user = client_with_user
+        keeper = UserFactory()
+        start = timezone.now() - datetime.timedelta(minutes=65)
+        session = SessionFactory(
+            space__author=keeper,
+            space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+            start=start,
+            duration_minutes=60,
+        )
+        session.attendees.add(keeper, user)
+        session.joined.add(user)
+
+        with (
+            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),
+            patch(
+                "totem.rooms.api.get_connected_participants",
+                side_effect=Exception("LiveKit unavailable"),
+            ),
+        ):
+            resp = client.post(f"{BASE}/{session.slug}/join")
+
+        assert resp.status_code == 200
+        assert resp.json()["token"] == "fake-jwt-token"
+
 
 # ---------------------------------------------------------------------------
 # Mute

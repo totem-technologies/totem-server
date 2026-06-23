@@ -194,9 +194,11 @@ def join_room(
         ).as_http_response()
 
     # Do not allow joining empty rooms past the scheduled duration.
-    # The Keeper can always rejoin.
+    # The Keeper can always rejoin. Only applies to LiveKit rooms.
     now = timezone.now()
-    need_participants = (now > session.end() and user != session.space.author) or session.joined.count() > 0
+    need_participants = session.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT and (
+        (now > session.end() and user != session.space.author) or session.joined.count() > 0
+    )
     connected: set[str] | None = None
     if need_participants:
         try:
