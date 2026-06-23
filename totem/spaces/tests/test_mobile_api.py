@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from totem.onboard.tests.factories import OnboardModelFactory
+from totem.rooms.models import Room
 from totem.spaces.models import SessionFeedback, SessionFeedbackOptions
 from totem.spaces.tests.factories import SessionFactory, SpaceCategoryFactory, SpaceFactory
 from totem.users.models import User
@@ -96,6 +97,50 @@ class TestMobileApiSpaces:
         response = client.get(reverse("mobile-api:mobile_spaces_list"))
         assert response.status_code == 200
         assert response.json()["items"] == []
+
+    def test_list_spaces_excludes_banned_session(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        session_visible = SessionFactory()
+        session_visible.attendees.add(user)
+        session_visible.save()
+
+        session_banned = SessionFactory()
+        session_banned.attendees.add(user)
+        session_banned.save()
+
+        room = Room.objects.get_or_create_for_session(session_banned)
+        room.banned_participants = [user.slug]
+        room.save()
+
+        url = reverse("mobile-api:mobile_spaces_list")
+        response = client.get(url)
+
+        assert response.status_code == 200
+        items = response.json()["items"]
+        slugs = {item["slug"] for item in items}
+        assert session_visible.space.slug in slugs
+        for item in items:
+            next_event_slugs = {e["slug"] for e in item.get("next_events", [])}
+            assert session_banned.slug not in next_event_slugs
+
+    def test_list_spaces_excludes_banned_session_space_when_only_session(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        session = SessionFactory()
+        session.attendees.add(user)
+        session.save()
+
+        room = Room.objects.get_or_create_for_session(session)
+        room.banned_participants = [user.slug]
+        room.save()
+
+        url = reverse("mobile-api:mobile_spaces_list")
+        response = client.get(url)
+
+        assert response.status_code == 200
+        items = response.json()["items"]
+        for item in items:
+            if item["slug"] == session.space.slug:
+                assert item["next_events"] == []
 
     def test_get_session_detail(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
