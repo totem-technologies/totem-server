@@ -11,7 +11,7 @@ from totem.spaces.models import Session, Space
 from totem.users.models import User
 
 
-def _upcoming_sessions_qs(user: User | None = None) -> QuerySet[Session]:
+def upcoming_sessions_queryset(user: User | None = None) -> QuerySet[Session]:
     qs = Session.objects.filter(start__gte=timezone.now()).order_by("start").prefetch_related("attendees")
     if user and user.is_authenticated:
         qs = qs.exclude(room__banned_participants__contains=[user.slug])
@@ -28,7 +28,7 @@ def get_upcoming_spaces_list(user: User | None = None) -> QuerySet[Space]:
             "subscribed",
             Prefetch(
                 "sessions",
-                queryset=_upcoming_sessions_qs(user),
+                queryset=upcoming_sessions_queryset(user),
                 to_attr="upcoming_sessions",
             ),
         )
@@ -46,7 +46,7 @@ def upcoming_recommended_spaces(user: User | None, categories: list[str] | None 
             "subscribed",
             Prefetch(
                 "sessions",
-                queryset=_upcoming_sessions_qs(user),
+                queryset=upcoming_sessions_queryset(user),
                 to_attr="upcoming_sessions",
             ),
         )
@@ -71,7 +71,7 @@ def upcoming_recommended_sessions(user: User | None, categories: list[str] | Non
             "space__subscribed",
             Prefetch(
                 "space__sessions",
-                queryset=_upcoming_sessions_qs(user),
+                queryset=upcoming_sessions_queryset(user),
                 to_attr="upcoming_sessions",
             ),
         )

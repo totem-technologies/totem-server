@@ -23,14 +23,6 @@ class RoomEventLogInline(admin.TabularInline):
         return False
 
 
-def _resolve_user_name(slug: str) -> str:
-    """Resolve a user slug to a display name. Falls back to the slug."""
-    user = User.objects.filter(slug=slug).first()
-    if user:
-        return user.name or user.email or slug
-    return slug
-
-
 @final
 @admin.register(Room)
 class RoomAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
@@ -69,6 +61,35 @@ class RoomAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
         ("Participants", {"fields": ("talking_order_display", "banned_participants_display")}),
     )
 
+    @staticmethod
+    def _resolve_names(slugs: list[str]) -> dict[str, str]:
+        if not slugs:
+            return {}
+        users = User.objects.filter(slug__in=slugs).values("slug", "name", "email")
+        result: dict[str, str] = {}
+        for u in users:
+            result[u["slug"]] = u["name"] or u["email"] or u["slug"]
+        # Include slugs not found in DB
+        for slug in slugs:
+            if slug not in result:
+                result[slug] = slug
+        return result
+
+    def _format_slug_list(self, slugs: list[str]) -> str:
+        if not slugs:
+            return "—"
+        names = self._resolve_names(slugs)
+        parts = [f"{names[s]} ({s})" for s in slugs]
+        return format_html("<br>".join(["{}"] * len(parts)), *parts)
+
+    @admin.display(description="Banned Participants")
+    def banned_participants_display(self, obj: Room) -> str:
+        return self._format_slug_list(obj.banned_participants)
+
+    @admin.display(description="Talking Order")
+    def talking_order_display(self, obj: Room) -> str:
+        return self._format_slug_list(obj.talking_order)
+
     def _format_choice_label(self, value: object, fallback_label: object) -> str:
         if isinstance(value, str) and value:
             return value.replace("_", " ").title()
@@ -91,26 +112,6 @@ class RoomAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
 
         url = reverse("admin:spaces_session_change", args=[obj.session_id])
         return format_html('<a href="{}">{}</a>', url, obj.session)
-
-    @admin.display(description="Banned Participants")
-    def banned_participants_display(self, obj: Room) -> str:
-        if not obj.banned_participants:
-            return "—"
-        names = []
-        for slug in obj.banned_participants:
-            name = _resolve_user_name(slug)
-            names.append(f"{name} ({slug})")
-        return format_html("<br>".join(["{}"] * len(names)), *names)
-
-    @admin.display(description="Talking Order")
-    def talking_order_display(self, obj: Room) -> str:
-        if not obj.talking_order:
-            return "—"
-        names = []
-        for slug in obj.talking_order:
-            name = _resolve_user_name(slug)
-            names.append(f"{name} ({slug})")
-        return format_html("<br>".join(["{}"] * len(names)), *names)
 
     @override
     def save_model(self, request, obj, form, change):
