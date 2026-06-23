@@ -8,6 +8,7 @@ from django.utils.html import format_html
 from totem.rooms.models import Room, RoomEventLog
 from totem.rooms.schemas import RoomStatus
 from totem.spaces.models import Session
+from totem.users.models import User
 from totem.utils.admin import StaleDataCheckAdminMixin
 
 
@@ -22,6 +23,14 @@ class RoomEventLogInline(admin.TabularInline):
         return False
 
 
+def _resolve_user_name(slug: str) -> str:
+    """Resolve a user slug to a display name. Falls back to the slug."""
+    user = User.objects.filter(slug=slug).first()
+    if user:
+        return user.name or user.email or slug
+    return slug
+
+
 @final
 @admin.register(Room)
 class RoomAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
@@ -34,8 +43,8 @@ class RoomAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
         "keeper",
         "current_speaker",
         "next_speaker",
-        "talking_order",
-        "banned_participants",
+        "talking_order_display",
+        "banned_participants_display",
         "round_number",
         "round_message",
     )
@@ -57,7 +66,7 @@ class RoomAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
                 )
             },
         ),
-        ("Participants", {"fields": ("talking_order", "banned_participants")}),
+        ("Participants", {"fields": ("talking_order_display", "banned_participants_display")}),
     )
 
     def _format_choice_label(self, value: object, fallback_label: object) -> str:
@@ -82,6 +91,26 @@ class RoomAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
 
         url = reverse("admin:spaces_session_change", args=[obj.session_id])
         return format_html('<a href="{}">{}</a>', url, obj.session)
+
+    @admin.display(description="Banned Participants")
+    def banned_participants_display(self, obj: Room) -> str:
+        if not obj.banned_participants:
+            return "—"
+        names = []
+        for slug in obj.banned_participants:
+            name = _resolve_user_name(slug)
+            names.append(f"{name} ({slug})")
+        return format_html("<br>".join(["{}"] * len(names)), *names)
+
+    @admin.display(description="Talking Order")
+    def talking_order_display(self, obj: Room) -> str:
+        if not obj.talking_order:
+            return "—"
+        names = []
+        for slug in obj.talking_order:
+            name = _resolve_user_name(slug)
+            names.append(f"{name} ({slug})")
+        return format_html("<br>".join(["{}"] * len(names)), *names)
 
     @override
     def save_model(self, request, obj, form, change):
