@@ -93,7 +93,6 @@ LOCAL_APPS = [
     "totem.course",
     "totem.dev",
     "totem.email",
-    "totem.meetings",
     "totem.onboard",
     "totem.pages",
     "totem.plans",
@@ -124,7 +123,7 @@ AUTH_USER_MODEL = "users.User"
 # https://docs.djangoproject.com/en/dev/ref/settings/#login-redirect-url
 LOGIN_REDIRECT_URL = "users:redirect"
 # https://docs.djangoproject.com/en/dev/ref/settings/#login-url
-LOGIN_URL = "users:signup"
+LOGIN_URL = "users:login"
 
 # PASSWORDS
 # ------------------------------------------------------------------------------
@@ -156,6 +155,7 @@ MIDDLEWARE = [
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "totem.utils.middleware.EnsureCsrfCookie",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "impersonate.middleware.ImpersonateMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",

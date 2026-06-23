@@ -256,24 +256,20 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
     def can_join(self, user):
         if self.cancelled or user not in self.attendees.all():
             return False
+        is_joined = user in self.joined.all()
         now = timezone.now()
-        grace_before = datetime.timedelta(minutes=15)
-        if user.is_staff or user in self.joined.all():
-            grace_before = datetime.timedelta(minutes=60)
+        grace_before = datetime.timedelta(minutes=60 if (user.is_staff or is_joined) else 15)
 
-        # For LiveKit, previously-joined users can rejoin as long as the session hasn't been explicitly ended.
-        if self.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT and user in self.joined.all():
+        if self.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT and is_joined:
             if self.ended_at is not None:
                 return False
             return self.start - grace_before < now
 
-        # Time-based check for Google Meet and first-time LiveKit joiners
-        grace_after = _default_grace_period
-        if user.is_staff or user in self.joined.all():
-            grace_after = datetime.timedelta(minutes=self.duration_minutes)
-
         if self.ended():
             return False
+        grace_after = (
+            datetime.timedelta(minutes=self.duration_minutes) if (user.is_staff or is_joined) else _default_grace_period
+        )
         return self.start - grace_before < now < self.start + grace_after
 
     def ended(self):

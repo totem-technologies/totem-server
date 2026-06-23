@@ -7,7 +7,6 @@ from ninja.errors import ValidationError
 from ninja.security import HttpBearer, django_auth
 
 from totem.blog.mobile_api import blog_router
-from totem.meetings.mobile_api import meetings_router
 from totem.notifications.models import FCMDevice
 from totem.notifications.schemas import FCMTokenRegisterSchema, FCMTokenResponseSchema
 from totem.notifications.validators import validate_fcm_token
@@ -54,7 +53,6 @@ router.add_router("/users", user_router)
 router.add_router("/onboard", onboard_router)
 router.add_router("/spaces", spaces_router)
 router.add_router("/blog", blog_router)
-router.add_router("/meetings", meetings_router)
 router.add_router("/rooms", rooms_router)
 
 

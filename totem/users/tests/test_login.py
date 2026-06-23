@@ -44,12 +44,12 @@ class TestLogInView:
         with pytest.raises(User.DoesNotExist):
             User.objects.get(email=email)
 
-        # Check signup form has newsletter consent
-        response = client.get(reverse("users:signup"))
+        # The unified login/signup page offers the newsletter consent for new users
+        response = client.get(reverse("users:login"))
         assert "newsletter_consent" in response.content.decode()
 
-        # Submit signup with consent
-        response = client.post(reverse("users:signup"), {"email": email, "newsletter_consent": True})
+        # Submit with consent
+        response = client.post(reverse("users:login"), {"email": email, "newsletter_consent": True})
         assert response.status_code == 302
         assert response.url.startswith(reverse("users:verify-pin"))
 
@@ -61,6 +61,23 @@ class TestLogInView:
         user = User.objects.get(email=email)
         assert user.newsletter_consent is True
         assert not user.verified
+
+    def test_signup_url_redirects_to_login(self, client):
+        # The old signup page now lives on the unified login page.
+        response = client.get(reverse("users:signup"))
+        assert response.status_code == 302
+        assert response.url == reverse("users:login")
+
+    def test_signup_url_redirect_preserves_next(self, client):
+        response = client.get(reverse("users:signup") + "?next=/my-dest-url")
+        assert response.status_code == 302
+        assert response.url == reverse("users:login") + "?next=/my-dest-url"
+
+    def test_login_page_has_combined_copy(self, client):
+        # The single page should make it clear it handles both new and returning users.
+        content = client.get(reverse("users:login")).content.decode().lower()
+        assert "sign up" in content
+        assert "log in" in content
 
     def test_login_existing_user(self, client):
         # Create an existing user

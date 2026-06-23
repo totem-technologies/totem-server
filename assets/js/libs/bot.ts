@@ -1,3 +1,5 @@
+import { getCsrfToken } from "./csrf"
+
 /**
  * Initializes the bot detection functionality and attaches event listeners to forms with `data-bot="true"`.
  */
@@ -13,7 +15,7 @@ export default function () {
       const csrfInput = document.createElement("input")
       csrfInput.type = "hidden"
       csrfInput.name = "csrfmiddlewaretoken"
-      csrfInput.value = window.TOTEM_DATA.csrf_token
+      csrfInput.value = getCsrfToken()
       form.appendChild(csrfInput)
       if (form instanceof HTMLFormElement) {
         form.submit()

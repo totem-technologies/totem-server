@@ -13,7 +13,7 @@ from django.http import HttpRequest
 from django.utils import timezone
 from ninja import Router, Status
 
-from totem.spaces.models import Session
+from totem.spaces.models import Session, Space
 from totem.users import analytics
 from totem.users.models import User
 

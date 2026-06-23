@@ -1,3 +1,5 @@
+import { getCsrfToken } from "./csrf"
+
 export async function postData(
   url: string,
   data: Record<string, unknown> = {}
@@ -5,7 +7,7 @@ export async function postData(
   return await fetch(url, {
     method: "POST",
     body: new URLSearchParams({
-      csrfmiddlewaretoken: window.TOTEM_DATA.csrf_token,
+      csrfmiddlewaretoken: getCsrfToken(),
       ...data,
     }),
     headers: {

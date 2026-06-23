@@ -15,7 +15,6 @@ declare global {
   function copyTextToClipboard(element: HTMLElement): void
   var TOTEM_DATA: {
     debug: boolean
-    csrf_token: string
     is_authenticated: boolean
     reload_on_login: boolean
   }

@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import requests
 from django.conf import settings
+from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -121,6 +122,7 @@ _ALLOWED_METHODS = ("GET", "HEAD")
 
 
 @csrf_exempt
+@login_required
 def room_app_proxy(request: HttpRequest, path: str = "") -> HttpResponse | StreamingHttpResponse:
     if request.method not in _ALLOWED_METHODS:
         return HttpResponse(status=405, headers={"Allow": ", ".join(_ALLOWED_METHODS)})

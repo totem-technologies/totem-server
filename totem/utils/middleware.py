@@ -3,10 +3,27 @@ from typing import TYPE_CHECKING
 
 from django.conf import settings
 from django.http import Http404, HttpRequest
+from django.middleware.csrf import get_token
 from django.utils import timezone
 
 if TYPE_CHECKING:
     from totem.users.models import User
+
+
+class EnsureCsrfCookie:
+    """Always send the csrftoken cookie so the JS frontend can read it.
+
+    Forms are submitted by JS (see assets/js/libs/bot.ts and postData.ts) which
+    echoes the cookie value back as the CSRF token, and pages don't render a
+    {% csrf_token %} tag. CSRF_COOKIE_HTTPONLY is False so the cookie is readable.
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request: HttpRequest):
+        get_token(request)
+        return self.get_response(request)
 
 
 def robotnoindex(get_response):

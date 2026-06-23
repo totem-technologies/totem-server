@@ -24,7 +24,7 @@ from totem.spaces.filters import (
 from totem.utils.slack import notify_slack
 
 from . import analytics
-from .forms import LoginForm, SignupForm
+from .forms import SignupForm
 from .models import Feedback, KeeperProfile, LoginPin, User
 
 logger = logging.getLogger(__name__)
@@ -154,11 +154,17 @@ def verify_pin_view(request: HttpRequest):
 
 
 def login_view(request: HttpRequest):
-    return _auth_view(request, LoginForm, "users/login.html")
+    # Single page that handles both logging in and signing up. Whether the email
+    # belongs to a new or returning user is determined later in _auth_view via
+    # get_or_create, so the same form and template serve both cases.
+    return _auth_view(request, SignupForm, "users/login.html")
 
 
 def signup_view(request: HttpRequest):
-    return _auth_view(request, SignupForm, "users/signup.html")
+    # Signing up and logging in now share one page; keep the old URL working.
+    login_url = reverse("users:login")
+    query = request.GET.urlencode(safe="/")
+    return redirect(f"{login_url}?{query}" if query else login_url)
 
 
 def user_deactivated_view(request: HttpRequest):

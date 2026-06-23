@@ -2,7 +2,7 @@
 {% load i18n %}
 {% load static %}
 {# djlint:off #}
-{% block head_title %}{% translate "Log In Required" %}{% endblock head_title %}
+{% block head_title %}{% translate "Log In or Sign Up" %}{% endblock head_title %}
 {# djlint:on #}
 {% block javascript %}
   <script>
@@ -10,22 +10,64 @@
   </script>
 {% endblock javascript %}
 {% block inner %}
-  <h2 class="h2">Log in</h2>
-  <div class="mt-5">
-    <p>Enter your email here to receive a verification code.</p>
-    <form class="login mt-5" data-bot="true" method="post">
-      {{ form }}
-      <button
-        class="btn btn-primary mt-4 flex w-full justify-center"
-        type="submit">
-        Send Code
-      </button>
-    </form>
+  <div class="flex flex-col items-center text-center">
+    <img
+      class="h-11 w-auto"
+      src="{% static 'images/totem-symbol.png' %}"
+      alt="" />
+    <h1 class="text-tslate mt-6 font-sans text-2xl font-semibold">
+      Log in or sign up
+    </h1>
+    <p class="mt-2 max-w-xs text-sm leading-relaxed text-gray-400">
+      Enter your email and we'll send you a verification code. New here? We'll
+      create your account.
+    </p>
   </div>
-{% endblock inner %}
-{% block after %}
-  <p class="text-center text-gray-400">
-    Don't have an account?
-    <a class="a" href="{% url 'users:signup' %}">Sign up!</a>
+  <form class="login mt-7 flex flex-col gap-4" data-bot="true" method="post">
+    {{ form.website.as_field_group }}
+    {{ form.success_url }}
+    {% if form.non_field_errors %}
+      <div class="alert alert-error" role="alert">
+        {% for error in form.non_field_errors %}<p>{{ error }}</p>{% endfor %}
+      </div>
+    {% endif %}
+    <div class="w-full">
+      <label class="sr-only" for="id_email">Email address</label>
+      <input
+        type="email"
+        name="email"
+        id="id_email"
+        placeholder="you@example.com"
+        autocomplete="email"
+        value="{{ form.email.value|default:'' }}"
+        {% if form.email.errors %}aria-invalid="true"{% endif %}
+        required />
+      {% if form.email.errors %}
+        <div class="text-error mt-2 text-sm">
+          {% for error in form.email.errors %}<p>{{ error }}</p>{% endfor %}
+        </div>
+      {% endif %}
+    </div>
+    <label class="flex cursor-pointer items-center gap-3">
+      <input
+        type="checkbox"
+        name="newsletter_consent"
+        class="checkbox checkbox-sm"
+        {% if form.newsletter_consent.value %}checked{% endif %} />
+      <span class="text-gray-400"
+        >Send me occasional email updates (optional)</span
+      >
+    </label>
+    <button class="btn btn-primary mt-1 w-full" type="submit">Continue</button>
+  </form>
+  <p class="mt-6 text-center text-xs leading-relaxed text-gray-400">
+    By continuing, you agree to our
+    <a class="underline hover:text-gray-600" href="{% url 'pages:tos' %}"
+      >Terms of Service</a
+    >
+    and
+    <a class="underline hover:text-gray-600" href="{% url 'pages:privacy' %}"
+      >Privacy Policy</a
+    >.
   </p>
-{% endblock after %}
+{% endblock inner %}

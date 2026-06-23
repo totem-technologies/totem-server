@@ -151,7 +151,7 @@ class TestJoinView:
         event = SessionFactory()
         response = client.get(reverse("spaces:join", kwargs={"session_slug": event.slug}))
         assert response.status_code == 302
-        assert "signup" in response.url
+        assert reverse("users:login") in response.url
 
     def test_join_not_attend(self, client, db):
         event = SessionFactory()
@@ -290,7 +290,7 @@ class TestRSVPView:
         event = SessionFactory()
         response = client.get(reverse("spaces:rsvp", kwargs={"session_slug": event.slug}))
         assert response.status_code == 302
-        assert "signup" in response.url
+        assert reverse("users:login") in response.url
 
     def test_rsvp_not_attend(self, client, db):
         event = SessionFactory()

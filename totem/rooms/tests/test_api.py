@@ -407,6 +407,8 @@ class TestJoinRoom:
     def test_join_already_connected(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         session = _make_joinable_session(user)
+        session.space.meeting_provider = Space.MeetingProviderChoices.LIVEKIT
+        session.space.save()
         session.joined.add(user)
 
         with (
@@ -420,7 +422,6 @@ class TestJoinRoom:
         assert resp.json()["is_already_present"] is True
 
     def test_join_rejoin_livekit_after_timeout(self, client_with_user: tuple[Client, User]):
-
         client, user = client_with_user
         # Session started 65 min ago (past the 60-min duration)
         start = timezone.now() - datetime.timedelta(minutes=65)
@@ -444,7 +445,6 @@ class TestJoinRoom:
         assert resp.json()["token"] == "fake-jwt-token"
 
     def test_join_rejoin_livekit_denied_when_ended(self, client_with_user: tuple[Client, User]):
-
         client, user = client_with_user
         start = timezone.now() - datetime.timedelta(minutes=65)
         session = SessionFactory(
@@ -464,7 +464,6 @@ class TestJoinRoom:
         assert resp.json()["code"] == "not_joinable"
 
     def test_join_rejoin_google_meet_after_timeout(self, client_with_user: tuple[Client, User]):
-
         client, user = client_with_user
         start = timezone.now() - datetime.timedelta(minutes=65)
         session = SessionFactory(
@@ -481,7 +480,6 @@ class TestJoinRoom:
         assert resp.json()["code"] == "not_joinable"
 
     def test_join_livekit_first_time_after_timeout(self, client_with_user: tuple[Client, User]):
-
         client, user = client_with_user
         start = timezone.now() - datetime.timedelta(minutes=65)
         session = SessionFactory(
@@ -499,8 +497,6 @@ class TestJoinRoom:
         assert resp.json()["code"] == "not_joinable"
 
     def test_join_ended_room_rejected(self, client_with_user: tuple[Client, User]):
-        """Room in ENDED status rejects join even if ended_at is out of sync."""
-
         client, user = client_with_user
         start = timezone.now() - datetime.timedelta(minutes=5)
         session = SessionFactory(
@@ -524,8 +520,6 @@ class TestJoinRoom:
         assert resp.json()["code"] == "room_already_ended"
 
     def test_join_empty_room_past_duration_rejected(self, client_with_user: tuple[Client, User]):
-        """After duration_minutes, joining an empty room is blocked (safety net)."""
-
         client, user = client_with_user
         keeper = UserFactory()
         start = timezone.now() - datetime.timedelta(minutes=65)
@@ -537,7 +531,6 @@ class TestJoinRoom:
         )
         session.attendees.add(keeper, user)
         session.joined.add(user)
-        # Room not ended, ended_at not set — but the room is empty
 
         with patch("totem.rooms.api.get_connected_participants", return_value=set()):
             resp = client.post(f"{BASE}/{session.slug}/join")
@@ -546,8 +539,6 @@ class TestJoinRoom:
         assert resp.json()["code"] == "not_joinable"
 
     def test_join_populated_room_past_duration_allowed(self, client_with_user: tuple[Client, User]):
-        """Past duration but room has participants — rejoin should still be allowed."""
-
         client, user = client_with_user
         keeper = UserFactory()
         start = timezone.now() - datetime.timedelta(minutes=65)
@@ -681,6 +672,7 @@ class TestRemoveParticipant:
         resp = client.post(f"{BASE}/{session.slug}/remove/{keeper.slug}")
 
         assert resp.status_code == 400
+        assert resp.json()["code"] == "invalid_transition"
 
 
 # ---------------------------------------------------------------------------
