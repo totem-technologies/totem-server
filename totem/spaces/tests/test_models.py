@@ -1,7 +1,11 @@
+import io
+
 import pytest
 from django.core import mail
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
+from PIL import Image, ImageOps
 
 from totem.users.tests.factories import UserFactory
 
@@ -14,6 +18,37 @@ def test_ics_hash():
     user_ics_key = 123456
     expected_hash = "e35dadad16952b194afc"
     assert ics_hash(slug, user_ics_key) == expected_hash
+
+
+@pytest.mark.django_db
+def test_space_image_bakes_in_exif_orientation():
+    """A Space image with EXIF orientation should be physically rotated on save."""
+    img = Image.new("RGB", (100, 100))
+    img.paste((255, 0, 0), (0, 0, 50, 50))  # top-left: red
+    img.paste((0, 255, 0), (50, 0, 100, 50))
+    img.paste((0, 0, 255), (0, 50, 50, 100))
+    img.paste((255, 255, 0), (50, 50, 100, 100))
+    exif = Image.Exif()
+    exif[0x0112] = 6  # rotate 90° clockwise to display
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", exif=exif)
+    raw = buf.getvalue()
+
+    expected = ImageOps.exif_transpose(Image.open(io.BytesIO(raw))).convert("RGB")
+
+    space = SpaceFactory()
+    space.image.save("cover.jpg", SimpleUploadedFile("cover.jpg", raw, "image/jpeg"))
+    space.refresh_from_db()
+
+    with space.image.open("rb") as fh:
+        processed = Image.open(fh).convert("RGB").resize((100, 100))
+
+    def dominant(image, x, y):
+        r, g, b = image.getpixel((x, y))[:3]
+        return (255 if r > 128 else 0, 255 if g > 128 else 0, 255 if b > 128 else 0)
+
+    assert dominant(processed, 25, 25) == dominant(expected, 25, 25)
+    assert dominant(processed, 25, 25) != (255, 0, 0)
 
 
 class SpaceModelTest(TestCase):

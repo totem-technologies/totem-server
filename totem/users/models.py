@@ -16,13 +16,14 @@ from django.utils.html import strip_tags
 from django.utils.translation import gettext_lazy as _
 from imagekit import ImageSpec
 from imagekit.models import ProcessedImageField
-from imagekit.processors import ResizeToFill
+from imagekit.processors import ResizeToFill, Transpose
 from timezone_field import TimeZoneField
 
 from totem.email.utils import validate_email_blocked
 from totem.users.managers import TotemUserManager as UserManager
 from totem.utils.fields import MaxLengthTextField
 from totem.utils.hash import basic_hash
+from totem.utils.images import ConvertToSRGB
 from totem.utils.md import MarkdownField, MarkdownMixin
 from totem.utils.models import AdminURLMixin, SluggedModel
 
@@ -36,9 +37,12 @@ if TYPE_CHECKING:
 
 
 class ProfileImageSpec(ImageSpec):
-    processors = [ResizeToFill(1000, 1000)]
+    # Transpose first to bake in EXIF orientation (e.g. phone photos), then convert any
+    # wide-gamut (Display P3) profile to sRGB. Resizing afterwards drops both tags.
+    processors = [Transpose(), ConvertToSRGB(), ResizeToFill(1000, 1000)]
     format = "WEBP"
-    options = {"quality": 80, "optimize": True}
+    # method=5: near-best WEBP compression search for a fraction of method=6's encode time.
+    options = {"quality": 80, "method": 5}
 
 
 def upload_to_id_image(instance, filename: str):

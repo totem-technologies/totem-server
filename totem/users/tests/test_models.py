@@ -1,5 +1,9 @@
+import io
+
 import pytest
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
+from PIL import Image, ImageOps
 
 from totem.users.models import LoginPin, User
 from totem.users.tests.factories import UserFactory
@@ -7,6 +11,50 @@ from totem.users.tests.factories import UserFactory
 
 def test_user_get_absolute_url(user: User):
     assert user.get_absolute_url() == f"/users/u/{user.slug}/"
+
+
+def _make_oriented_image(orientation: int) -> bytes:
+    """Build a JPEG with four distinct colored quadrants and an EXIF orientation tag.
+
+    The pixels are stored un-rotated; the EXIF orientation tag (0x0112) tells viewers
+    how to display them. A correct uploader must bake that rotation into the pixels.
+    """
+    img = Image.new("RGB", (100, 100))
+    img.paste((255, 0, 0), (0, 0, 50, 50))  # top-left: red
+    img.paste((0, 255, 0), (50, 0, 100, 50))  # top-right: green
+    img.paste((0, 0, 255), (0, 50, 50, 100))  # bottom-left: blue
+    img.paste((255, 255, 0), (50, 50, 100, 100))  # bottom-right: yellow
+
+    exif = Image.Exif()
+    exif[0x0112] = orientation
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", exif=exif)
+    return buf.getvalue()
+
+
+@pytest.mark.django_db
+def test_profile_image_bakes_in_exif_orientation(user: User):
+    """A profile image with EXIF orientation should be physically rotated on save."""
+    raw = _make_oriented_image(orientation=6)  # 6 == rotate 90° clockwise to display
+
+    # Reference: the pixels as they should look once orientation is applied.
+    expected = ImageOps.exif_transpose(Image.open(io.BytesIO(raw))).convert("RGB")
+
+    user.profile_image.save("photo.jpg", SimpleUploadedFile("photo.jpg", raw, "image/jpeg"))
+    user.refresh_from_db()
+
+    with user.profile_image.open("rb") as fh:
+        processed = Image.open(fh).convert("RGB").resize((100, 100))
+
+    # Top-left quadrant must match the oriented reference, not the raw (red) source.
+    assert _dominant_color(processed, 25, 25) == _dominant_color(expected, 25, 25)
+    assert _dominant_color(processed, 25, 25) != (255, 0, 0)
+
+
+def _dominant_color(img: Image.Image, x: int, y: int) -> tuple[int, int, int]:
+    """Snap a sampled pixel to pure primary channels to ignore compression noise."""
+    r, g, b = img.getpixel((x, y))[:3]
+    return (255 if r > 128 else 0, 255 if g > 128 else 0, 255 if b > 128 else 0)
 
 
 @pytest.mark.django_db

@@ -6,9 +6,10 @@ from django.urls import reverse
 from django.utils import timezone
 from imagekit import ImageSpec
 from imagekit.models import ProcessedImageField
-from imagekit.processors import ResizeToFit
+from imagekit.processors import ResizeToFit, Transpose
 
 from totem.utils.hash import basic_hash
+from totem.utils.images import ConvertToSRGB
 from totem.utils.md import MarkdownField, MarkdownMixin
 from totem.utils.models import AdminURLMixin, SluggedModel
 
@@ -16,9 +17,12 @@ User = get_user_model()
 
 
 class BlogImageSpec(ImageSpec):
-    processors = [ResizeToFit(1500, 1500)]
+    # Bake in EXIF orientation and convert any wide-gamut (Display P3) profile to sRGB
+    # before resizing (which drops both tags).
+    processors = [Transpose(), ConvertToSRGB(), ResizeToFit(1500, 1500)]
     format = "WEBP"
-    options = {"quality": 80, "optimize": True}
+    # method=5: near-best WEBP compression search for a fraction of method=6's encode time.
+    options = {"quality": 80, "method": 5}
 
 
 def upload_to_id_image(instance, filename: str):

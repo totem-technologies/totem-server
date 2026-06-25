@@ -13,7 +13,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from imagekit import ImageSpec
 from imagekit.models import ProcessedImageField
-from imagekit.processors import ResizeToFit
+from imagekit.processors import ResizeToFit, Transpose
 from taggit.managers import TaggableManager
 
 from totem.email.emails import (
@@ -32,6 +32,7 @@ from totem.notifications.notifications import (
 from totem.spaces import jsonld
 from totem.utils.fields import MaxLengthTextField
 from totem.utils.hash import basic_hash, hmac
+from totem.utils.images import ConvertToSRGB
 from totem.utils.md import MarkdownField, MarkdownMixin
 from totem.utils.models import AdminURLMixin, BaseModel, SluggedModel
 from totem.utils.slack import notify_slack
@@ -56,9 +57,12 @@ class SessionState(Enum):
 
 
 class SpaceImageSpec(ImageSpec):
-    processors = [ResizeToFit(1500, 1500)]
+    # Bake in EXIF orientation and convert any wide-gamut (Display P3) profile to sRGB
+    # before resizing (which drops both tags).
+    processors = [Transpose(), ConvertToSRGB(), ResizeToFit(1500, 1500)]
     format = "WEBP"
-    options = {"quality": 80, "optimize": True}
+    # method=5: near-best WEBP compression search for a fraction of method=6's encode time.
+    options = {"quality": 80, "method": 5}
 
 
 def upload_to_id_image(instance, filename: str):
