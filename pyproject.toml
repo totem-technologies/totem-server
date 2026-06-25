@@ -50,6 +50,8 @@ dev = [
   "uv",
 
   # Testing
+  "mypy<3",
+  "django-stubs[compatible-mypy]<7",
   "pytest<10",
   "pytest-sugar<2",
   "pytest-socket<1",
@@ -119,3 +121,22 @@ max-complexity = 10
 # ==== isort ====
 [tool.ruff.lint.isort]
 known-first-party = ["totem", "config"]
+
+
+# ==== mypy ====
+[tool.mypy]
+python_version = "3.13"
+check_untyped_defs = true
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+plugins = ["mypy_django_plugin.main"]
+
+[[tool.mypy.overrides]]
+# Django migrations should not produce any errors:
+module = "*.migrations.*"
+ignore_errors = true
+
+[tool.django-stubs]
+django_settings_module = "config.settings.test"
