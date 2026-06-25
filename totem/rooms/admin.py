@@ -8,6 +8,7 @@ from django.utils.html import format_html
 from totem.rooms.models import Room, RoomEventLog
 from totem.rooms.schemas import RoomStatus
 from totem.spaces.models import Session
+from totem.users.models import User
 from totem.utils.admin import StaleDataCheckAdminMixin
 
 
@@ -34,8 +35,8 @@ class RoomAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
         "keeper",
         "current_speaker",
         "next_speaker",
-        "talking_order",
-        "banned_participants",
+        "talking_order_display",
+        "banned_participants_display",
         "round_number",
         "round_message",
     )
@@ -57,8 +58,37 @@ class RoomAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
                 )
             },
         ),
-        ("Participants", {"fields": ("talking_order", "banned_participants")}),
+        ("Participants", {"fields": ("talking_order_display", "banned_participants_display")}),
     )
+
+    @staticmethod
+    def _resolve_names(slugs: list[str]) -> dict[str, str]:
+        if not slugs:
+            return {}
+        users = User.objects.filter(slug__in=slugs).values("slug", "name", "email")
+        result: dict[str, str] = {}
+        for u in users:
+            result[u["slug"]] = u["name"] or u["email"] or u["slug"]
+        # Include slugs not found in DB
+        for slug in slugs:
+            if slug not in result:
+                result[slug] = slug
+        return result
+
+    def _format_slug_list(self, slugs: list[str]) -> str:
+        if not slugs:
+            return "—"
+        names = self._resolve_names(slugs)
+        parts = [f"{names[s]} ({s})" for s in slugs]
+        return format_html("<br>".join(["{}"] * len(parts)), *parts)
+
+    @admin.display(description="Banned Participants")
+    def banned_participants_display(self, obj: Room) -> str:
+        return self._format_slug_list(obj.banned_participants)
+
+    @admin.display(description="Talking Order")
+    def talking_order_display(self, obj: Room) -> str:
+        return self._format_slug_list(obj.talking_order)
 
     def _format_choice_label(self, value: object, fallback_label: object) -> str:
         if isinstance(value, str) and value:

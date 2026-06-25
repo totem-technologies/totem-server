@@ -734,3 +734,38 @@ class TestUnbanParticipant:
 
         assert resp.status_code == 200
         assert participant.slug not in resp.json()["banned_participants"]
+
+    def test_unbanned_user_can_rejoin(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        participant = UserFactory()
+        session = _make_joinable_session(keeper, attendees=[participant])
+        room = Room.objects.get_or_create_for_session(session)
+        room.banned_participants = [participant.slug]
+        room.save()
+
+        # Banned user cannot join
+        participant_client = Client()
+        participant_client.force_login(participant)
+        resp = participant_client.post(f"{BASE}/{session.slug}/join")
+        assert resp.status_code == 403
+        assert resp.json()["code"] == "banned"
+
+        # Keeper unbans the participant
+        with (
+            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug}),
+            patch("totem.rooms.api.publish_state"),
+        ):
+            unban_resp = _post_event(
+                client, session.slug, {"type": "unban_participant", "participant_slug": participant.slug}, 0
+            )
+        assert unban_resp.status_code == 200
+
+        # Unbanned user can now join
+        with (
+            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug}),
+        ):
+            join_resp = participant_client.post(f"{BASE}/{session.slug}/join")
+
+        assert join_resp.status_code == 200
+        assert join_resp.json()["token"] == "fake-jwt-token"

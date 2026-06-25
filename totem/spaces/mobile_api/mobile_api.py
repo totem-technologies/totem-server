@@ -1,7 +1,7 @@
 import datetime
 
 from django.db import transaction
-from django.db.models import Count, DateTimeField, ExpressionWrapper, F
+from django.db.models import Count, DateTimeField, ExpressionWrapper, F, Prefetch
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -16,6 +16,7 @@ from totem.spaces.mobile_api.mobile_filters import (
     space_detail_schema,
     upcoming_recommended_sessions,
     upcoming_recommended_spaces,
+    upcoming_sessions_queryset,
 )
 from totem.spaces.mobile_api.mobile_schemas import (
     MobileSpaceDetailSchema,
@@ -52,28 +53,39 @@ def list_subscriptions(request: HttpRequest):
 @spaces_router.get("/", response={200: list[MobileSpaceDetailSchema]}, url_name="mobile_spaces_list")
 @paginate
 def list_spaces(request):
-    spaces = get_upcoming_spaces_list()
-    return [space_detail_schema(space, request.user) for space in spaces]
+    user: User = request.user  # type: ignore
+    spaces = get_upcoming_spaces_list(user)
+    return [space_detail_schema(space, user) for space in spaces]
 
 
 @spaces_router.get("/space/{space_slug}", response={200: MobileSpaceDetailSchema}, url_name="spaces_detail")
 def get_space_detail(request: HttpRequest, space_slug: str):
     user: User = request.user  # type: ignore
-    space = get_object_or_404(Space, slug=space_slug)
+    space = get_object_or_404(
+        Space.objects.prefetch_related(
+            Prefetch("sessions", queryset=upcoming_sessions_queryset(user), to_attr="upcoming_sessions"),
+        ),
+        slug=space_slug,
+    )
     return space_detail_schema(space, user)
 
 
 @spaces_router.get("/keeper/{slug}/", response={200: list[MobileSpaceDetailSchema]}, url_name="keeper_spaces")
 def get_keeper_spaces(request: HttpRequest, slug: str):
     user: User = request.user  # type: ignore
-    spaces = get_upcoming_spaces_list().filter(author__slug=slug)
+    spaces = get_upcoming_spaces_list(user).filter(author__slug=slug)
     return [space_detail_schema(space, user) for space in spaces]
 
 
 @spaces_router.get("/session/{event_slug}", response={200: SessionDetailSchema}, url_name="session_detail")
 def get_session_detail(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
-    session = get_object_or_404(Session, slug=event_slug)
+    session = get_object_or_404(
+        Session.objects.select_related("space").prefetch_related(
+            Prefetch("space__sessions", queryset=upcoming_sessions_queryset(user), to_attr="upcoming_sessions"),
+        ),
+        slug=event_slug,
+    )
     return session_detail_schema(session, user)
 
 
@@ -131,7 +143,7 @@ def get_recommended_spaces(request: HttpRequest, limit: int = 3, categories: lis
 def get_spaces_summary(request: HttpRequest):
     user: User = request.user  # type: ignore
 
-    spaces_qs = get_upcoming_spaces_list()
+    spaces_qs = get_upcoming_spaces_list(user)
 
     # The upcoming events that the user is subscribed to
     end_time_expression = ExpressionWrapper(
@@ -141,6 +153,7 @@ def get_spaces_summary(request: HttpRequest):
     upcoming_sessions = (
         Session.objects.annotate(end_time=end_time_expression)
         .filter(attendees=user, cancelled=False, end_time__gt=timezone.now())
+        .exclude(room__banned_participants__contains=[user.slug])
         .select_related("space")
         .prefetch_related("space__author", "space__categories", "attendees", "space__subscribed")
         .annotate(

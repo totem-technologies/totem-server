@@ -11,8 +11,14 @@ from totem.spaces.models import Session, Space
 from totem.users.models import User
 
 
-def get_upcoming_spaces_list() -> QuerySet[Space]:
-    """Get all published spaces with upcoming events."""
+def upcoming_sessions_queryset(user: User | None = None) -> QuerySet[Session]:
+    qs = Session.objects.filter(start__gte=timezone.now()).order_by("start").prefetch_related("attendees")
+    if user and user.is_authenticated:
+        qs = qs.exclude(room__banned_participants__contains=[user.slug])
+    return qs
+
+
+def get_upcoming_spaces_list(user: User | None = None) -> QuerySet[Space]:
     return (
         Space.objects.filter(published=True, sessions__start__gte=timezone.now())
         .distinct()
@@ -22,9 +28,7 @@ def get_upcoming_spaces_list() -> QuerySet[Space]:
             "subscribed",
             Prefetch(
                 "sessions",
-                queryset=Session.objects.filter(start__gte=timezone.now())
-                .order_by("start")
-                .prefetch_related("attendees"),
+                queryset=upcoming_sessions_queryset(user),
                 to_attr="upcoming_sessions",
             ),
         )
@@ -42,9 +46,7 @@ def upcoming_recommended_spaces(user: User | None, categories: list[str] | None 
             "subscribed",
             Prefetch(
                 "sessions",
-                queryset=Session.objects.filter(start__gte=timezone.now())
-                .order_by("start")
-                .prefetch_related("attendees"),
+                queryset=upcoming_sessions_queryset(user),
                 to_attr="upcoming_sessions",
             ),
         )
@@ -69,9 +71,7 @@ def upcoming_recommended_sessions(user: User | None, categories: list[str] | Non
             "space__subscribed",
             Prefetch(
                 "space__sessions",
-                queryset=Session.objects.filter(start__gte=timezone.now())
-                .order_by("start")
-                .prefetch_related("attendees"),
+                queryset=upcoming_sessions_queryset(user),
                 to_attr="upcoming_sessions",
             ),
         )
@@ -91,6 +91,9 @@ def upcoming_recommended_sessions(user: User | None, categories: list[str] | Non
     # filter author
     if author:
         events = events.filter(space__author__slug=author)
+    # filter banned sessions
+    if user and user.is_authenticated:
+        events = events.exclude(room__banned_participants__contains=[user.slug])
     return events.distinct().order_by("start")
 
 
