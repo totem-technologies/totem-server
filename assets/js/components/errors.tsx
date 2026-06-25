@@ -5,8 +5,6 @@ function InstrumentedErrorBoundary(props: { children: JSXElement }) {
     <ErrorBoundary
       fallback={(error, reset) => {
         console.log("ErrorBoundary fallback", error)
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
-        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
         ;(globalThis as any).Sentry?.captureException(error)
         return (
           <div>

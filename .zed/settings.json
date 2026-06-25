@@ -1,26 +1,13 @@
 // Folder-specific settings
 //
-// For a full list of overridable settings, and general information on folder-specific settings,
-// see the documentation: https://zed.dev/docs/configuring-zed#settings-files
+// JS/TS/TSX linting + formatting (oxlint/oxfmt) come from the oxc-zed extension:
+// https://github.com/oxc-project/oxc-zed — no per-language config needed here.
+//
+// We only override HTML: the extension would format .html with oxfmt, which
+// can't parse our Jinja templates, so pin HTML to prettier instead.
 {
   "languages": {
     "HTML": {
-      "formatter": {
-        "external": {
-          "command": "./node_modules/.bin/prettier",
-          "arguments": ["--stdin-filepath", "{buffer_path}"]
-        }
-      }
-    },
-    "JavaScript": {
-      "formatter": {
-        "external": {
-          "command": "./node_modules/.bin/prettier",
-          "arguments": ["--stdin-filepath", "{buffer_path}"]
-        }
-      }
-    },
-    "TypeScript": {
       "formatter": {
         "external": {
           "command": "./node_modules/.bin/prettier",

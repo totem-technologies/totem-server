@@ -1,6 +1,11 @@
-# Ignore all HTML files:
+# Prettier only formats Jinja/HTML templates (see the `format` script and .zed/settings.json).
+# JS/TS/JSON are owned by oxfmt. This file is also consumed by oxfmt as a default ignore.
 totem/**/*.css
 .zed/**/*
 *.min.*
 *.mjml
 totem/static/js/bundles/*
+# Jinja interpolation inside <style> CSS confuses prettier's CSS parser.
+totem/utils/templates/img_gen/_base.html
+# Partial template fragments with unbalanced tags can't be parsed standalone.
+totem/pages/templates/pages/team.html

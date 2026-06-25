@@ -434,10 +434,8 @@ function DetailSidebar(props: DetailSidebarProps) {
             <Loading />
           </Match>
           <Match when={query.data}>
-            {/* biome-ignore lint/style/noNonNullAssertion: <explanation> */}
             <EventInfo eventStore={query.data!} refetchEvent={refetch} />
             <Show when={query.data?.subscribed !== null}>
-              {/* biome-ignore lint/style/noNonNullAssertion: <explanation> */}
               <Subscribe event={query.data!} refetchEvent={refetch} />
             </Show>
           </Match>

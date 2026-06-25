@@ -19,6 +19,12 @@ test: test-python test-js
 test-js:
 	bun run test:ci
 
+lint:
+	bun run lint
+
+format:
+	bun run format
+
 test-python:
 	@${RUN_DJANGO} coverage run -m pytest -n auto
 

@@ -29,7 +29,6 @@ function EditAvatar() {
     modalRef?.close()
   }
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: <explanation>
     <div
       onClick={() => modalRef?.showModal()}
       onKeyDown={() => modalRef?.showModal()}
@@ -43,7 +42,6 @@ function EditAvatar() {
           type={user()?.profile_avatar_type}
         />
         <div class="absolute right-2 bottom-2 rounded-full bg-white p-1">
-          {/* biome-ignore lint/a11y/noSvgWithoutTitle: <explanation> */}
           <svg
             width="20"
             height="20"
@@ -58,7 +56,6 @@ function EditAvatar() {
         <dialog ref={modalRef} id="attending_modal" class="modal">
           <Show when={query.isSuccess} fallback={"Loading..."}>
             <EditAvatarModal
-              //biome-ignore lint/style/noNonNullAssertion: <explanation>
               user={user()!}
               closeModal={closeModal}
               refetch={() => {
@@ -150,8 +147,6 @@ function EditAvatarModal(props: {
           </div>
         </div>
       </Show>
-      {/* biome-ignore lint/a11y/useKeyWithClickEvents: <explanation> */}
-      {/** biome-ignore lint/a11y/noStaticElementInteractions: <explanation> */}
       <div
         class="relative mb-5 inline-block cursor-pointer"
         onClick={clickHandler}>
