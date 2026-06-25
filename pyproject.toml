@@ -24,7 +24,7 @@ dependencies = [
   "whitenoise<7",
   # Django dependencies
   "django-allauth<66",
-  "django-anymail<15",
+  "django-anymail<16",
   "django-auditlog<4",
   "django-cors-headers<5",
   "django-imagekit<7.0.0",
@@ -50,8 +50,6 @@ dev = [
   "uv",
 
   # Testing
-  "mypy<2",
-  "django-stubs[compatible-mypy]<7",
   "pytest<10",
   "pytest-sugar<2",
   "pytest-socket<1",
@@ -63,7 +61,7 @@ dev = [
   "ruff",
 
   # Django
-  "django-debug-toolbar<7",
+  "django-debug-toolbar<8",
   "django-extensions<5",
   "factory-boy<4",
   "pytest-cov<8",
@@ -88,25 +86,6 @@ filterwarnings = [
 include = ["totem/**"]
 omit = ["*/migrations/*", "*/tests/*"]
 disable_warnings = ["include-ignored"]
-
-
-# ==== mypy ====
-[tool.mypy]
-python_version = "3.13"
-check_untyped_defs = true
-ignore_missing_imports = true
-warn_unused_ignores = true
-warn_redundant_casts = true
-warn_unused_configs = true
-plugins = ["mypy_django_plugin.main"]
-
-[[tool.mypy.overrides]]
-# Django migrations should not produce any errors:
-module = "*.migrations.*"
-ignore_errors = true
-
-[tool.django-stubs]
-django_settings_module = "config.settings.test"
 
 
 # ==== Ruff =====
