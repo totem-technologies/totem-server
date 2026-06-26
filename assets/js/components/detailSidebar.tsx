@@ -330,16 +330,16 @@ function Subscribe(props: {
   event: SessionDetailSchema
   refetchEvent: () => void
 }) {
-  const subscribe_url = `/spaces/subscribe/${props.event.space.slug}/`
+  const subscribeUrl = () => `/spaces/subscribe/${props.event.space.slug}/`
   async function handleSubscribe(e: Event) {
     e.preventDefault()
-    await postData(subscribe_url, { action: "subscribe" })
+    await postData(subscribeUrl(), { action: "subscribe" })
     props.refetchEvent()
   }
 
   async function handleUnsubscribe(e: Event) {
     e.preventDefault()
-    await postData(subscribe_url, { action: "unsubscribe" })
+    await postData(subscribeUrl(), { action: "unsubscribe" })
     props.refetchEvent()
   }
 
@@ -402,7 +402,9 @@ function DetailSidebar(props: DetailSidebarProps) {
       setShowAttendingPopup(false)
     }
   })
+  // eslint-disable-next-line solid/reactivity -- eventid is a fixed web-component attribute in this MPA; it never changes after mount
   if (!props.eventid)
+    // eslint-disable-next-line solid/components-return-once -- see above: eventid is static, so this early return is safe
     return (
       <DetailBox>
         <div class="text-center">

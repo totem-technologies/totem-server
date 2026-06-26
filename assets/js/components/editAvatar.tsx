@@ -117,9 +117,11 @@ function EditAvatarModal(props: {
   refetch: () => void
 }) {
   const [avatarType, setAvatarType] = createSignal<ProfileAvatarTypeEnum>(
+    // eslint-disable-next-line solid/reactivity -- seed the signal from the prop once; props are static in this MPA
     props.user.profile_avatar_type
   )
   const [error, setError] = createSignal<string | null>(null)
+  // eslint-disable-next-line solid/reactivity -- avatarType() is read synchronously before the first await, so it is tracked
   createEffect(async () => {
     try {
       await setUpdate(avatarType(), false)

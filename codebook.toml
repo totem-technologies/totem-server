@@ -34,6 +34,7 @@ words = [
     "onboarded",
     "playsinline",
     "posthog",
+    "proxiedsite",
     "pyright",
     "queryset",
     "signup",
@@ -44,6 +45,7 @@ words = [
     "tblue",
     "tcreme",
     "tiedye",
+    "tippy",
     "tmauve",
     "totemcircles",
     "tpink",
@@ -53,7 +55,6 @@ words = [
     "tshadow",
     "urlpatterns",
     "waitlist",
-    "proxiedsite",
     "wght",
     "woff",
 ]

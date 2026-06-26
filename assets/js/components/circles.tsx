@@ -87,6 +87,7 @@ function CircleListProvider(props: { children: JSXElement }) {
     void refetch()
   }
   const [filters] = createResource(
+    // eslint-disable-next-line solid/reactivity -- createResource fetcher is async by design; the rule misreads the options arg as a reactive source
     async () => {
       return (await totemSpacesApiFilterOptions({})).data
     },
