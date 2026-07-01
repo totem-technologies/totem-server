@@ -357,7 +357,14 @@ def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set
         )
 
     remaining = [s for s in room.talking_order if s not in new_set]
-    room.talking_order = [*new_order, *remaining]
+    merged = [*new_order, *remaining]
+
+    # Normalize keeper-first
+    if room.keeper in merged and merged[0] != room.keeper:
+        merged.remove(room.keeper)
+        merged.insert(0, room.keeper)
+
+    room.talking_order = merged
 
     if room.current_speaker:
         room.next_speaker = _next_in_order(room.talking_order, room.current_speaker, connected)

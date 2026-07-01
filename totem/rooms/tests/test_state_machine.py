@@ -488,7 +488,10 @@ class TestReorder:
         new_order = list(reversed(current_order))
         state = apply_event(slug, keeper.slug, ReorderEvent(talking_order=new_order), 1, connected)
 
-        assert state.talking_order == new_order
+        # Keeper is expected at first
+        assert state.talking_order[0] == keeper.slug
+        expected = [keeper.slug] + [s for s in new_order if s != keeper.slug]
+        assert state.talking_order == expected
 
     def test_non_keeper_cannot_reorder(self):
         keeper = UserFactory()
@@ -575,9 +578,10 @@ class TestReorder:
         new_order = list(reversed(current_order))
         state = apply_event(slug, keeper.slug, ReorderEvent(talking_order=new_order), 1, new_connected)
 
-        assert state.talking_order[: len(new_order)] == new_order
+        expected_head = [keeper.slug] + [s for s in new_order if s != keeper.slug]
+        assert state.talking_order[: len(expected_head)] == expected_head
         assert user3.slug in state.talking_order
-        assert state.talking_order.index(user3.slug) >= len(new_order)
+        assert state.talking_order.index(user3.slug) >= len(expected_head)
 
 
 @pytest.mark.django_db
