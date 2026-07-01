@@ -553,6 +553,32 @@ class TestReorder:
             apply_event(slug, keeper.slug, ReorderEvent(talking_order=["someone_else"]), 1, connected)
         assert exc_info.value.code == ErrorCode.INVALID_PARTICIPANT_ORDER
 
+    def test_reorder_when_new_participant_connected(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        user2 = UserFactory()
+        user3 = UserFactory()
+        slug_setup = _setup_room(keeper, [keeper, user1, user2])
+        _, slug = slug_setup
+        connected = {keeper.slug, user1.slug, user2.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+
+        room = Room.objects.for_session(slug).first()
+        assert room
+        current_order = list(room.talking_order)
+
+        room.session.attendees.add(user3)
+        new_connected = {keeper.slug, user1.slug, user2.slug, user3.slug}
+
+        # Keeper reorders based on the previously seen talking_order (doesn't know about user3 yet)
+        new_order = list(reversed(current_order))
+        state = apply_event(slug, keeper.slug, ReorderEvent(talking_order=new_order), 1, new_connected)
+
+        assert state.talking_order[: len(new_order)] == new_order
+        assert user3.slug in state.talking_order
+        assert state.talking_order.index(user3.slug) >= len(new_order)
+
 
 @pytest.mark.django_db
 class TestEndRoom:

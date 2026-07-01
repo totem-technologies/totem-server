@@ -341,13 +341,24 @@ def _handle_force_pass(room: Room, actor: str, connected: set[str]) -> None:
 def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set[str]) -> None:
     _require_keeper(room, actor)
 
-    if set(new_order) != set(room.talking_order):
+    current_set = set(room.talking_order)
+    new_set = set(new_order)
+
+    # Every slug in the new order must be in the current talking order.
+    # The client may not know about newly-connected participants (added by
+    # _reconcile_talking_order), so we allow the new_order to be a subset
+    # and append the remaining slugs at the end.
+    unknown = new_set - current_set
+    if unknown:
         raise TransitionError(
             code=ErrorCode.INVALID_PARTICIPANT_ORDER,
-            message="New order must contain exactly the same participants",
+            message="New order contains unknown participants",
+            detail=f"Unknown slugs: {', '.join(sorted(unknown))}",
         )
 
-    room.talking_order = new_order
+    remaining = [s for s in room.talking_order if s not in new_set]
+    room.talking_order = [*new_order, *remaining]
+
     if room.current_speaker:
         room.next_speaker = _next_in_order(room.talking_order, room.current_speaker, connected)
 
