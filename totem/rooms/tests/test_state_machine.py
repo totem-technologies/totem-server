@@ -544,7 +544,7 @@ class TestReorder:
         # next_speaker should skip disconnected user1 and land on user2
         assert state.next_speaker == user2.slug
 
-    def test_reorder_must_have_same_participants(self):
+    def test_reorder_rejects_unknown_participant(self):
         keeper = UserFactory()
         user1 = UserFactory()
         _, slug = _setup_room(keeper, [keeper, user1])
@@ -555,6 +555,8 @@ class TestReorder:
         with pytest.raises(TransitionError) as exc_info:
             apply_event(slug, keeper.slug, ReorderEvent(talking_order=["someone_else"]), 1, connected)
         assert exc_info.value.code == ErrorCode.INVALID_PARTICIPANT_ORDER
+        assert "unknown participants" in exc_info.value.message.lower()
+        assert "someone_else" in (exc_info.value.detail or "")
 
     def test_reorder_when_new_participant_connected(self):
         keeper = UserFactory()
