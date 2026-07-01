@@ -671,6 +671,45 @@ class TestRemoveParticipant:
 
 
 # ---------------------------------------------------------------------------
+# Disable Camera
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestDisableCamera:
+    def test_disable_camera_success(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        session.attendees.add(keeper)
+        Room.objects.get_or_create_for_session(session)
+
+        with patch("totem.rooms.api.disable_camera_participant") as mock_disable:
+            resp = client.post(f"{BASE}/{session.slug}/disable-camera/some-participant")
+
+        assert resp.status_code == 200
+        mock_disable.assert_called_once_with(session.slug, "some-participant")
+
+    def test_disable_camera_not_keeper(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        keeper = UserFactory()
+        session = SessionFactory(space__author=keeper)
+        session.attendees.add(keeper, user)
+        Room.objects.get_or_create_for_session(session)
+
+        resp = client.post(f"{BASE}/{session.slug}/disable-camera/some-participant")
+
+        assert resp.status_code == 403
+        assert resp.json()["code"] == "not_keeper"
+
+    def test_disable_camera_room_not_found(self, client_with_user: tuple[Client, User]):
+        client, _ = client_with_user
+
+        resp = client.post(f"{BASE}/nonexistent/disable-camera/some-participant")
+
+        assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
 # Ban / Unban
 # ---------------------------------------------------------------------------
 

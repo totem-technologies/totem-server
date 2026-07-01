@@ -20,6 +20,7 @@ from totem.users.models import User
 from .livekit import (
     LiveKitConfigurationError,
     create_access_token,
+    disable_camera_participant,
     get_connected_participants,
     mute_all_participants,
     mute_participant,
@@ -264,6 +265,32 @@ def mute(
 
     try:
         mute_participant(session_slug, participant_identity)
+    except LiveKitConfigurationError:
+        return RoomErrorResponse(
+            code=ErrorCode.LIVEKIT_ERROR, message="LiveKit service is not properly configured"
+        ).as_http_response()
+
+    return Status(200, None)
+
+
+@router.post(
+    "/{session_slug}/disable-camera/{participant_identity}",
+    response={200: None, **ERROR_RESPONSES},
+    summary="Disable a participant's camera",
+    description="Keeper disables a specific participant's camera.",
+)
+def disable_camera(
+    request: HttpRequest,
+    session_slug: str,
+    participant_identity: str,
+):
+    user: User = request.user  # type: ignore
+    result = _get_room_and_require_keeper(user, session_slug)
+    if isinstance(result, RoomErrorResponse):
+        return result.as_http_response()
+
+    try:
+        disable_camera_participant(session_slug, participant_identity)
     except LiveKitConfigurationError:
         return RoomErrorResponse(
             code=ErrorCode.LIVEKIT_ERROR, message="LiveKit service is not properly configured"

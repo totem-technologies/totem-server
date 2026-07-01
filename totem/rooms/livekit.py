@@ -126,7 +126,8 @@ def create_access_token(user: User, room_name: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-async def _mute_participant(room_name: str, identity: str) -> None:
+async def _mute_track_for_participant(room_name: str, identity: str, track_type: api.TrackType) -> None:
+    """Mute a specific track type (AUDIO or VIDEO) for a participant."""
     async with _get_api() as lkapi:
         participant = await lkapi.room.get_participant(api.RoomParticipantIdentity(room=room_name, identity=identity))
         if not participant:
@@ -134,7 +135,7 @@ async def _mute_participant(room_name: str, identity: str) -> None:
 
         track_sid = None
         for track in participant.tracks:
-            if track.type == api.TrackType.AUDIO:
+            if track.type == track_type:
                 track_sid = track.sid
                 break
 
@@ -151,11 +152,11 @@ async def _mute_participant(room_name: str, identity: str) -> None:
         )
 
 
-async def _mute_all_participants(room_name: str, except_identity: str | None = None) -> None:
-    """
-    Mute all participants in a room except for the specified identity. Optimization: Use asyncio.gather to make
-    all the api calls concurrently.
-    """
+async def _mute_track_for_all_participants(
+    room_name: str, track_type: api.TrackType, except_identity: str | None = None
+) -> None:
+    """Mute a specific track type for all participants in a room. Uses asyncio.gather for concurrency."""
+    label = "audio" if track_type == api.TrackType.AUDIO else "video"
     async with _get_api() as lkapi:
         resp = await lkapi.room.list_participants(api.ListParticipantsRequest(room=room_name))
         tasks = []
@@ -165,7 +166,7 @@ async def _mute_all_participants(room_name: str, except_identity: str | None = N
             if participant.state == api.ParticipantInfo.State.DISCONNECTED:
                 continue
             for track in participant.tracks:
-                if track.type == api.TrackType.AUDIO:
+                if track.type == track_type:
                     tasks.append(
                         lkapi.room.mute_published_track(
                             api.MuteRoomTrackRequest(
@@ -179,7 +180,7 @@ async def _mute_all_participants(room_name: str, except_identity: str | None = N
         results = await asyncio.gather(*tasks, return_exceptions=True)
         for result in results:
             if isinstance(result, Exception):
-                logger.exception("Failed to mute participant in room %s", room_name, exc_info=result)
+                logger.exception("Failed to mute %s for participant in room %s", label, room_name, exc_info=result)
 
 
 async def _remove_participant(room_name: str, identity: str, reason: RemoveReason = RemoveReason.REMOVE) -> None:
@@ -204,13 +205,25 @@ async def _remove_participant(room_name: str, identity: str, reason: RemoveReaso
 @async_to_sync
 async def mute_participant(room_name: str, identity: str) -> None:
     """Mute a specific participant's audio track."""
-    await _mute_participant(room_name, identity)
+    await _mute_track_for_participant(room_name, identity, api.TrackType.AUDIO)
 
 
 @async_to_sync
 async def mute_all_participants(room_name: str, except_identity: str | None = None) -> None:
     """Mute all participants, optionally skipping one. Logs and continues on individual failures."""
-    await _mute_all_participants(room_name, except_identity)
+    await _mute_track_for_all_participants(room_name, api.TrackType.AUDIO, except_identity)
+
+
+@async_to_sync
+async def disable_camera_participant(room_name: str, identity: str) -> None:
+    """Disable a specific participant's camera track."""
+    await _mute_track_for_participant(room_name, identity, api.TrackType.VIDEO)
+
+
+@async_to_sync
+async def disable_camera_all_participants(room_name: str, except_identity: str | None = None) -> None:
+    """Disable camera for all participants, optionally skipping one. Logs and continues on individual failures."""
+    await _mute_track_for_all_participants(room_name, api.TrackType.VIDEO, except_identity)
 
 
 @async_to_sync
