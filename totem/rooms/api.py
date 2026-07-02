@@ -8,6 +8,7 @@ LiveKit integration, and HTTP concerns. Kept as thin as possible.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 
 from django.http import HttpRequest
 from django.utils import timezone
@@ -20,6 +21,7 @@ from totem.users.models import User
 from .livekit import (
     LiveKitConfigurationError,
     create_access_token,
+    disable_camera_participant,
     get_connected_participants,
     mute_all_participants,
     mute_participant,
@@ -246,6 +248,22 @@ def _get_room_and_require_keeper(user: User, session_slug: str) -> Room | RoomEr
     return room
 
 
+def _keeper_livekit_action(user: User, session_slug: str, action: Callable[[], None]):
+    """Helper: verify the user is the keeper, then run a LiveKit call with shared error handling."""
+    result = _get_room_and_require_keeper(user, session_slug)
+    if isinstance(result, RoomErrorResponse):
+        return result.as_http_response()
+
+    try:
+        action()
+    except LiveKitConfigurationError:
+        return RoomErrorResponse(
+            code=ErrorCode.LIVEKIT_ERROR, message="LiveKit service is not properly configured"
+        ).as_http_response()
+
+    return Status(200, None)
+
+
 @router.post(
     "/{session_slug}/mute/{participant_identity}",
     response={200: None, **ERROR_RESPONSES},
@@ -258,18 +276,24 @@ def mute(
     participant_identity: str,
 ):
     user: User = request.user  # type: ignore
-    result = _get_room_and_require_keeper(user, session_slug)
-    if isinstance(result, RoomErrorResponse):
-        return result.as_http_response()
+    return _keeper_livekit_action(user, session_slug, lambda: mute_participant(session_slug, participant_identity))
 
-    try:
-        mute_participant(session_slug, participant_identity)
-    except LiveKitConfigurationError:
-        return RoomErrorResponse(
-            code=ErrorCode.LIVEKIT_ERROR, message="LiveKit service is not properly configured"
-        ).as_http_response()
 
-    return Status(200, None)
+@router.post(
+    "/{session_slug}/disable-camera/{participant_identity}",
+    response={200: None, **ERROR_RESPONSES},
+    summary="Disable a participant's camera",
+    description="Keeper disables a specific participant's camera.",
+)
+def disable_camera(
+    request: HttpRequest,
+    session_slug: str,
+    participant_identity: str,
+):
+    user: User = request.user  # type: ignore
+    return _keeper_livekit_action(
+        user, session_slug, lambda: disable_camera_participant(session_slug, participant_identity)
+    )
 
 
 @router.post(
@@ -283,18 +307,9 @@ def mute_all(
     session_slug: str,
 ):
     user: User = request.user  # type: ignore
-    result = _get_room_and_require_keeper(user, session_slug)
-    if isinstance(result, RoomErrorResponse):
-        return result.as_http_response()
-
-    try:
-        mute_all_participants(session_slug, except_identity=user.slug)
-    except LiveKitConfigurationError:
-        return RoomErrorResponse(
-            code=ErrorCode.LIVEKIT_ERROR, message="LiveKit service is not properly configured"
-        ).as_http_response()
-
-    return Status(200, None)
+    return _keeper_livekit_action(
+        user, session_slug, lambda: mute_all_participants(session_slug, except_identity=user.slug)
+    )
 
 
 @router.post(
