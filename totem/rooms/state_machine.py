@@ -342,6 +342,7 @@ def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set
     _require_keeper(room, actor)
 
     current_set = set(room.talking_order)
+    new_order = list(dict.fromkeys(new_order))
     new_set = set(new_order)
 
     # Every slug in the new order must be in the current talking order.

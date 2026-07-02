@@ -558,6 +558,18 @@ class TestReorder:
         assert "unknown participants" in exc_info.value.message.lower()
         assert "someone_else" in (exc_info.value.detail or "")
 
+    def test_reorder_ignores_duplicate_slugs(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        state = apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        state = apply_event(
+            slug, keeper.slug, ReorderEvent(talking_order=[user1.slug, user1.slug, keeper.slug]), 1, connected
+        )
+        assert state.talking_order == [keeper.slug, user1.slug]
+
     def test_reorder_when_new_participant_connected(self):
         keeper = UserFactory()
         user1 = UserFactory()
