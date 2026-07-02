@@ -25,7 +25,14 @@ from totem.spaces.mobile_api.mobile_schemas import (
     SpaceSchema,
     SummarySpacesSchema,
 )
-from totem.spaces.models import Session, SessionException, SessionFeedback, SessionFeedbackOptions, Space
+from totem.spaces.models import (
+    Session,
+    SessionException,
+    SessionFeedback,
+    SessionFeedbackOptions,
+    Space,
+    exclude_banned_sessions,
+)
 from totem.users.models import User
 
 spaces_router = Router(tags=["spaces"])
@@ -151,9 +158,12 @@ def get_spaces_summary(request: HttpRequest):
         output_field=DateTimeField(),
     )
     upcoming_sessions = (
-        Session.objects.annotate(end_time=end_time_expression)
-        .filter(attendees=user, cancelled=False, end_time__gt=timezone.now())
-        .exclude(room__banned_participants__contains=[user.slug])
+        exclude_banned_sessions(
+            Session.objects.annotate(end_time=end_time_expression).filter(
+                attendees=user, cancelled=False, end_time__gt=timezone.now()
+            ),
+            user,
+        )
         .select_related("space")
         .prefetch_related("space__author", "space__categories", "attendees", "space__subscribed")
         .annotate(

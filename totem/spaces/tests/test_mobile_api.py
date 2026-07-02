@@ -327,6 +327,26 @@ class TestMobileApiSpaces:
         assert response.status_code == 200
         assert response.json() == []
 
+    def test_sessions_history_excludes_banned_from_next_events(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        space = SpaceFactory(published=True)
+        joined_session = SessionFactory(space=space)
+        joined_session.joined.add(user)
+
+        banned_session = SessionFactory(space=space, start=timezone.now() + timedelta(days=1))
+        room = Room.objects.get_or_create_for_session(banned_session)
+        room.banned_participants = [user.slug]
+        room.save()
+
+        url = reverse("mobile-api:sessions_history")
+        response = client.get(url)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        next_event_slugs = {e["slug"] for e in data[0]["space"].get("next_events", [])}
+        assert banned_session.slug not in next_event_slugs
+
     def test_sessions_history_filters_unpublished_and_cancelled(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
 
@@ -686,6 +706,36 @@ class TestMobileApiSpaces:
         data = response.json()
         assert data["slug"] == event.slug
         assert data["attending"] is True
+
+    def test_rsvp_confirm_banned(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = SessionFactory(space__published=True)
+        room = Room.objects.get_or_create_for_session(event)
+        room.banned_participants = [user.slug]
+        room.save()
+
+        url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
+        response = client.post(url)
+
+        assert response.status_code == 403
+        assert not event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_confirm_excludes_banned_from_next_events(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        space = SpaceFactory(published=True)
+        event = SessionFactory(space=space)
+
+        banned_session = SessionFactory(space=space, start=timezone.now() + timedelta(days=1))
+        room = Room.objects.get_or_create_for_session(banned_session)
+        room.banned_participants = [user.slug]
+        room.save()
+
+        url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
+        response = client.post(url)
+
+        assert response.status_code == 200
+        next_event_slugs = {e["slug"] for e in response.json()["space"]["next_events"]}
+        assert banned_session.slug not in next_event_slugs
 
         assert event.attendees.filter(pk=user.pk).exists()
         assert event.space.subscribed.filter(pk=user.pk).exists()

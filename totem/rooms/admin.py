@@ -3,7 +3,8 @@ from typing import final, override
 from django.contrib import admin
 from django.db import transaction
 from django.utils import timezone
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
+from django.utils.safestring import mark_safe
 
 from totem.rooms.models import Room, RoomEventLog
 from totem.rooms.schemas import RoomStatus
@@ -63,24 +64,17 @@ class RoomAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
 
     @staticmethod
     def _resolve_names(slugs: list[str]) -> dict[str, str]:
-        if not slugs:
-            return {}
-        users = User.objects.filter(slug__in=slugs).values("slug", "name", "email")
-        result: dict[str, str] = {}
-        for u in users:
+        # Slugs missing from the DB fall back to the slug itself.
+        result: dict[str, str] = {s: s for s in slugs}
+        for u in User.objects.filter(slug__in=slugs).values("slug", "name", "email"):
             result[u["slug"]] = u["name"] or u["email"] or u["slug"]
-        # Include slugs not found in DB
-        for slug in slugs:
-            if slug not in result:
-                result[slug] = slug
         return result
 
     def _format_slug_list(self, slugs: list[str]) -> str:
         if not slugs:
             return "—"
         names = self._resolve_names(slugs)
-        parts = [f"{names[s]} ({s})" for s in slugs]
-        return format_html("<br>".join(["{}"] * len(parts)), *parts)
+        return format_html_join(mark_safe("<br>"), "{} ({})", ((names[s], s) for s in slugs))
 
     @admin.display(description="Banned Participants")
     def banned_participants_display(self, obj: Room) -> str:

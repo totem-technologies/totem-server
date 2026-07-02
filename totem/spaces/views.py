@@ -53,7 +53,7 @@ def session_detail(request, session_slug):
 
 def detail(request, slug):
     space = _get_space(slug)
-    session = space.next_session()
+    session = space.next_session(request.user)
     if not session:
         return _space_detail(request, request.user, space, session)
     return redirect("spaces:session_detail", session_slug=session.slug)

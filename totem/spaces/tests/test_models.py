@@ -2,11 +2,21 @@ import pytest
 from django.core import mail
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.utils import timezone
 
+from totem.rooms.models import Room
+from totem.users.models import User
 from totem.users.tests.factories import UserFactory
 
+from ..models import Session
 from ..views import ics_hash
 from .factories import SessionFactory, SpaceFactory
+
+
+def _ban_user(session: Session, user: User) -> None:
+    room = Room.objects.get_or_create_for_session(session)
+    room.banned_participants = [user.slug]
+    room.save()
 
 
 def test_ics_hash():
@@ -53,6 +63,15 @@ class SpaceModelTest(TestCase):
         self.assertEqual(space.subscribed.count(), 1)
         space.subscribed.remove(user)
         self.assertEqual(space.subscribed.count(), 0)
+
+    def test_next_session_excludes_banned(self):
+        user = UserFactory()
+        space = SpaceFactory()
+        first = SessionFactory(space=space, start=timezone.now() + timezone.timedelta(days=1))
+        second = SessionFactory(space=space, start=timezone.now() + timezone.timedelta(days=2))
+        _ban_user(first, user)
+        self.assertEqual(space.next_session(), first)
+        self.assertEqual(space.next_session(user), second)
 
 
 class TestSessionModel:
@@ -118,6 +137,59 @@ class TestSessionModel:
         assert "http://testserver/spaces/session" in message
         session.refresh_from_db()
         assert session.notified_tomorrow
+
+    def test_notify_skips_banned(self, db):
+        user = UserFactory()
+        banned = UserFactory()
+        session = SessionFactory()
+        session.attendees.add(user, banned)
+        _ban_user(session, banned)
+        session.notify()
+        assert len(mail.outbox) == 1
+        assert mail.outbox[0].to == [user.email]
+
+    def test_notify_tomorrow_skips_banned(self, db):
+        user = UserFactory()
+        banned = UserFactory()
+        session = SessionFactory()
+        session.attendees.add(user, banned)
+        _ban_user(session, banned)
+        session.notify_tomorrow()
+        assert len(mail.outbox) == 1
+        assert mail.outbox[0].to == [user.email]
+
+    def test_notify_missed_skips_banned(self, db):
+        user = UserFactory()
+        banned = UserFactory()
+        session = SessionFactory(start=timezone.now() - timezone.timedelta(hours=3))
+        session.attendees.add(user, banned)
+        _ban_user(session, banned)
+        session.notify_missed()
+        assert len(mail.outbox) == 1
+        assert mail.outbox[0].to == [user.email]
+
+    def test_can_attend_banned(self, db):
+        from ..models import SessionException
+
+        user = UserFactory()
+        session = SessionFactory()
+        _ban_user(session, user)
+        assert session.can_attend(user=user, silent=True) is False
+        with pytest.raises(SessionException):
+            session.can_attend(user=user)
+        with pytest.raises(SessionException):
+            session.add_attendee(user)
+        assert user not in session.attendees.all()
+
+    def test_advertise_skips_banned(self, db):
+        user = UserFactory()
+        banned = UserFactory()
+        session = SessionFactory()
+        session.space.subscribed.add(user, banned)
+        _ban_user(session, banned)
+        session.advertise()
+        assert len(mail.outbox) == 1
+        assert mail.outbox[0].to == [user.email]
 
     def test_join_url_livekit(self, db):
         from ..models import Space

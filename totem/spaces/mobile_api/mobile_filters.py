@@ -7,15 +7,13 @@ from totem.spaces.mobile_api.mobile_schemas import (
     NextSessionSchema,
     SessionDetailSchema,
 )
-from totem.spaces.models import Session, Space
+from totem.spaces.models import Session, Space, exclude_banned_sessions
 from totem.users.models import User
 
 
 def upcoming_sessions_queryset(user: User | None = None) -> QuerySet[Session]:
     qs = Session.objects.filter(start__gte=timezone.now()).order_by("start").prefetch_related("attendees")
-    if user and user.is_authenticated:
-        qs = qs.exclude(room__banned_participants__contains=[user.slug])
-    return qs
+    return exclude_banned_sessions(qs, user)
 
 
 def get_upcoming_spaces_list(user: User | None = None) -> QuerySet[Space]:
@@ -92,8 +90,7 @@ def upcoming_recommended_sessions(user: User | None, categories: list[str] | Non
     if author:
         events = events.filter(space__author__slug=author)
     # filter banned sessions
-    if user and user.is_authenticated:
-        events = events.exclude(room__banned_participants__contains=[user.slug])
+    events = exclude_banned_sessions(events, user)
     return events.distinct().order_by("start")
 
 
@@ -170,7 +167,7 @@ def space_detail_schema(space: Space, user: User):
     if hasattr(space, "upcoming_sessions"):
         upcoming_sessions = space.upcoming_sessions
     else:
-        upcoming_sessions = space.sessions.filter(start__gte=timezone.now()).order_by("start")
+        upcoming_sessions = upcoming_sessions_queryset(user).filter(space=space)
 
     next_events = [next_session_schema(event, user) for event in upcoming_sessions]
 
