@@ -805,6 +805,7 @@ class TestUnbanParticipant:
         state = apply_event(slug, keeper.slug, UnbanParticipantEvent(participantSlug=user1.slug), 2, {keeper.slug})
 
         assert user1.slug not in state.banned_participants
+        assert user1.slug not in state.talking_order
 
     def test_unban_not_banned_raises_error(self):
         keeper = UserFactory()
@@ -830,6 +831,20 @@ class TestUnbanParticipant:
         with pytest.raises(TransitionError) as exc_info:
             apply_event(slug, user1.slug, UnbanParticipantEvent(participantSlug=user2.slug), 2, connected)
         assert exc_info.value.code == ErrorCode.NOT_KEEPER
+
+    def test_cannot_unban_in_ended_room(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        apply_event(slug, keeper.slug, BanParticipantEvent(participantSlug=user1.slug), 1, connected)
+        apply_event(slug, keeper.slug, EndRoomEvent(reason=EndReason.KEEPER_ENDED), 2, {keeper.slug})
+
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(slug, keeper.slug, UnbanParticipantEvent(participantSlug=user1.slug), 3, {keeper.slug})
+        assert exc_info.value.code == ErrorCode.ROOM_ALREADY_ENDED
 
 
 # ---------------------------------------------------------------------------
