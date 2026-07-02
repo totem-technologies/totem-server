@@ -558,6 +558,23 @@ class TestReorder:
         assert "unknown participants" in exc_info.value.message.lower()
         assert "someone_else" in (exc_info.value.detail or "")
 
+    def test_reorder_rejects_empty_order(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        state = apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        version_before = state.version
+
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(slug, keeper.slug, ReorderEvent(talking_order=[]), 1, connected)
+        assert exc_info.value.code == ErrorCode.INVALID_PARTICIPANT_ORDER
+
+        room = Room.objects.for_session(slug).first()
+        assert room
+        assert room.state_version == version_before
+
     def test_reorder_ignores_duplicate_slugs(self):
         keeper = UserFactory()
         user1 = UserFactory()

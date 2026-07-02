@@ -341,15 +341,19 @@ def _handle_force_pass(room: Room, actor: str, connected: set[str]) -> None:
 def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set[str]) -> None:
     _require_keeper(room, actor)
 
-    current_set = set(room.talking_order)
     new_order = list(dict.fromkeys(new_order))
+    if not new_order:
+        raise TransitionError(
+            code=ErrorCode.INVALID_PARTICIPANT_ORDER,
+            message="New order cannot be empty",
+        )
     new_set = set(new_order)
 
     # Every slug in the new order must be in the current talking order.
     # The client may not know about newly-connected participants (added by
     # _reconcile_talking_order), so we allow the new_order to be a subset
     # and append the remaining slugs at the end.
-    unknown = new_set - current_set
+    unknown = new_set - set(room.talking_order)
     if unknown:
         raise TransitionError(
             code=ErrorCode.INVALID_PARTICIPANT_ORDER,
@@ -358,14 +362,10 @@ def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set
         )
 
     remaining = [s for s in room.talking_order if s not in new_set]
-    merged = [*new_order, *remaining]
+    room.talking_order = [*new_order, *remaining]
 
-    # Normalize keeper-first
-    if room.keeper in merged and merged[0] != room.keeper:
-        merged.remove(room.keeper)
-        merged.insert(0, room.keeper)
-
-    room.talking_order = merged
+    # Re-establish the keeper-first invariant via the canonical helper.
+    _reconcile_talking_order(room, connected)
 
     if room.current_speaker:
         room.next_speaker = _next_in_order(room.talking_order, room.current_speaker, connected)
