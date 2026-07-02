@@ -7,7 +7,7 @@ from django.utils import timezone
 from totem.spaces.schemas import NextSessionSchema, SessionDetailSchema, SessionSpaceSchema, SpaceDetailSchema
 from totem.users.models import User
 
-from .models import Session, Space, SpaceCategory
+from .models import Session, Space, SpaceCategory, exclude_banned_sessions
 
 
 def other_sessions_in_space(user: User | None, session: Session, limit: int = 10):
@@ -18,6 +18,7 @@ def other_sessions_in_space(user: User | None, session: Session, limit: int = 10
     else:
         sessions = sessions.filter(open=True, listed=True)
     sessions = sessions.exclude(slug=session.slug)
+    sessions = exclude_banned_sessions(sessions, user)
     sessions = sessions.order_by("start")
     if not user or not user.is_staff:
         sessions = sessions.filter(space__published=True)
@@ -33,6 +34,7 @@ def sessions_by_month(user: User | None, space_slug: str, month: int, year: int)
         sessions = sessions.filter(Q(open=True, listed=True) | Q(attendees=user))
     else:
         sessions = sessions.filter(open=True, listed=True)
+    sessions = exclude_banned_sessions(sessions, user)
     sessions = sessions.order_by("start")
     if not user or not user.is_staff:
         sessions = sessions.filter(space__published=True)
@@ -41,6 +43,7 @@ def sessions_by_month(user: User | None, space_slug: str, month: int, year: int)
 
 def all_upcoming_recommended_sessions(user: User | None, category: str | None = None, author: str | None = None):
     sessions = Session.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True)
+    sessions = exclude_banned_sessions(sessions, user)
     sessions = sessions.order_by("start")
     if not user or not user.is_staff:
         sessions = sessions.filter(space__published=True)
@@ -79,18 +82,19 @@ def upcoming_recommended_sessions(user: User | None, categories: list[str] | Non
     # filter author
     if author:
         sessions = sessions.filter(space__author__slug=author)
-    return sessions
+    return exclude_banned_sessions(sessions, user)
 
 
-def get_upcoming_sessions_for_spaces_list():
+def get_upcoming_sessions_for_spaces_list(user: User | None = None):
     """Get all upcoming events for spaces listing, including spaces with full events.
 
     Specifically designed for the spaces list API endpoint.
     Does NOT filter by seat availability, ensuring all spaces with upcoming events are shown.
     """
     first_category_subquery = SpaceCategory.objects.filter(space=OuterRef("space_id")).values("name")[:1]
+    sessions = Session.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True, space__published=True)
     return (
-        Session.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True, space__published=True)
+        exclude_banned_sessions(sessions, user)
         .select_related("space")
         .prefetch_related("space__author", "space__categories", "space__subscribed")
         .annotate(
@@ -104,6 +108,7 @@ def get_upcoming_sessions_for_spaces_list():
 
 def all_upcoming_recommended_spaces(user: User | None, category: str | None = None):
     sessions = Session.objects.filter(start__gte=timezone.now(), cancelled=False, open=True, listed=True)
+    sessions = exclude_banned_sessions(sessions, user)
     sessions = sessions.order_by("start")
     if not user or not user.is_staff:
         sessions = sessions.filter(space__published=True)
@@ -119,7 +124,8 @@ def all_upcoming_recommended_spaces(user: User | None, category: str | None = No
 def upcoming_attending_sessions(user: User, limit: int = 10):
     # 60 minutes in the past
     past = timezone.now() - datetime.timedelta(minutes=60)
-    return user.sessions_attending.filter(start__gte=past).filter(cancelled=False).order_by("start")[:limit]
+    sessions = user.sessions_attending.filter(start__gte=past).filter(cancelled=False)
+    return exclude_banned_sessions(sessions, user).order_by("start")[:limit]
 
 
 def upcoming_sessions_by_author(user: User, author: User, exclude_event: Session | None = None):
@@ -136,6 +142,7 @@ def upcoming_sessions_by_author(user: User, author: User, exclude_event: Session
     if exclude_event:
         upcoming_sessions = upcoming_sessions.exclude(pk=exclude_event.pk)
 
+    upcoming_sessions = exclude_banned_sessions(upcoming_sessions, user)
     upcoming_sessions = upcoming_sessions.select_related("space__author")
     return upcoming_sessions
 
@@ -180,7 +187,7 @@ def space_detail_schema(space: Space, user: User, session: Session | None = None
     category = space.categories.first()
     category_name = category.name if category else None
 
-    next_session = session or space.next_session()
+    next_session = session or space.next_session(user)
     next_session_schema: NextSessionSchema | None = None
     if next_session:
         seats_left = next_session.seats_left()

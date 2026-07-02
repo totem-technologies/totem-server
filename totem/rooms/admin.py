@@ -3,11 +3,13 @@ from typing import final, override
 from django.contrib import admin
 from django.db import transaction
 from django.utils import timezone
-from django.utils.html import format_html
+from django.utils.html import format_html, format_html_join
+from django.utils.safestring import mark_safe
 
 from totem.rooms.models import Room, RoomEventLog
 from totem.rooms.schemas import RoomStatus
 from totem.spaces.models import Session
+from totem.users.models import User
 from totem.utils.admin import StaleDataCheckAdminMixin
 
 
@@ -34,8 +36,8 @@ class RoomAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
         "keeper",
         "current_speaker",
         "next_speaker",
-        "talking_order",
-        "banned_participants",
+        "talking_order_display",
+        "banned_participants_display",
         "round_number",
         "round_message",
     )
@@ -57,8 +59,30 @@ class RoomAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
                 )
             },
         ),
-        ("Participants", {"fields": ("talking_order", "banned_participants")}),
+        ("Participants", {"fields": ("talking_order_display", "banned_participants_display")}),
     )
+
+    @staticmethod
+    def _resolve_names(slugs: list[str]) -> dict[str, str]:
+        # Slugs missing from the DB fall back to the slug itself.
+        result: dict[str, str] = {s: s for s in slugs}
+        for u in User.objects.filter(slug__in=slugs).values("slug", "name", "email"):
+            result[u["slug"]] = u["name"] or u["email"] or u["slug"]
+        return result
+
+    def _format_slug_list(self, slugs: list[str]) -> str:
+        if not slugs:
+            return "—"
+        names = self._resolve_names(slugs)
+        return format_html_join(mark_safe("<br>"), "{} ({})", ((names[s], s) for s in slugs))
+
+    @admin.display(description="Banned Participants")
+    def banned_participants_display(self, obj: Room) -> str:
+        return self._format_slug_list(obj.banned_participants)
+
+    @admin.display(description="Talking Order")
+    def talking_order_display(self, obj: Room) -> str:
+        return self._format_slug_list(obj.talking_order)
 
     def _format_choice_label(self, value: object, fallback_label: object) -> str:
         if isinstance(value, str) and value:

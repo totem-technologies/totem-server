@@ -1,13 +1,25 @@
 from django.test import TestCase
 from django.utils import timezone
 
+from totem.rooms.models import Room
 from totem.spaces.filters import (
     all_upcoming_recommended_sessions,
+    get_upcoming_sessions_for_spaces_list,
     other_sessions_in_space,
     sessions_by_month,
+    upcoming_attending_sessions,
+    upcoming_sessions_by_author,
 )
+from totem.spaces.models import Session
 from totem.spaces.tests.factories import SessionFactory, SpaceFactory
+from totem.users.models import User
 from totem.users.tests.factories import UserFactory
+
+
+def _ban_user(session: Session, user: User) -> None:
+    room = Room.objects.get_or_create_for_session(session)
+    room.banned_participants = [user.slug]
+    room.save()
 
 
 class TestFilters(TestCase):
@@ -171,3 +183,43 @@ class TestFilters(TestCase):
             self.user, self.space.slug, self.closed_session.start.month, self.closed_session.start.year
         )
         self.assertIn(self.closed_session, sessions)
+
+    def test_other_sessions_in_space_excludes_banned(self):
+        _ban_user(self.future_session2, self.user)
+        sessions = other_sessions_in_space(self.user, self.future_session)
+        self.assertNotIn(self.future_session2, sessions)
+
+    def test_sessions_by_month_excludes_banned(self):
+        _ban_user(self.future_session, self.user)
+        start = self.future_session.start
+        sessions = sessions_by_month(self.user, self.space.slug, start.month, start.year)
+        self.assertNotIn(self.future_session, sessions)
+        # Other users are unaffected
+        sessions = sessions_by_month(None, self.space.slug, start.month, start.year)
+        self.assertIn(self.future_session, sessions)
+
+    def test_all_upcoming_recommended_sessions_excludes_banned(self):
+        _ban_user(self.future_session, self.user)
+        sessions = all_upcoming_recommended_sessions(self.user)
+        self.assertNotIn(self.future_session, sessions)
+        self.assertIn(self.future_session2, sessions)
+
+    def test_get_upcoming_sessions_for_spaces_list_excludes_banned(self):
+        _ban_user(self.future_session, self.user)
+        sessions = get_upcoming_sessions_for_spaces_list(self.user)
+        self.assertNotIn(self.future_session, sessions)
+        self.assertIn(self.future_session2, sessions)
+
+    def test_upcoming_attending_sessions_excludes_banned(self):
+        self.future_session.attendees.add(self.user)
+        self.future_session2.attendees.add(self.user)
+        _ban_user(self.future_session2, self.user)
+        sessions = upcoming_attending_sessions(self.user)
+        self.assertIn(self.future_session, sessions)
+        self.assertNotIn(self.future_session2, sessions)
+
+    def test_upcoming_sessions_by_author_excludes_banned(self):
+        _ban_user(self.future_session, self.user)
+        sessions = upcoming_sessions_by_author(self.user, self.space.author)
+        self.assertNotIn(self.future_session, sessions)
+        self.assertIn(self.future_session2, sessions)

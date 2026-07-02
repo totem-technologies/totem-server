@@ -90,7 +90,7 @@ def upcoming_events(request, filters: EventCalendarFilterSchema = Query()):
 @router.get("/list", response={200: list[SpaceDetailSchema]}, tags=["spaces"], url_name="spaces_list")
 def list_spaces(request):
     # Get events with availability information
-    events = get_upcoming_sessions_for_spaces_list()
+    events = get_upcoming_sessions_for_spaces_list(request.user)
 
     # Build spaces list
     spaces_set = set()
