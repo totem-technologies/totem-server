@@ -87,6 +87,7 @@ function CircleListProvider(props: { children: JSXElement }) {
     void refetch()
   }
   const [filters] = createResource(
+    // eslint-disable-next-line solid/reactivity -- createResource fetcher is async by design; the rule misreads the options arg as a reactive source
     async () => {
       return (await totemSpacesApiFilterOptions({})).data
     },
@@ -215,7 +216,6 @@ function CirclesInner() {
                 No Spaces found. Try resetting the filters, or reloading the
                 page.
               </div>
-              {/* biome-ignore lint/a11y/useButtonType: <explanation> */}
               <button
                 class="btn btn-ghost btn-sm mt-5"
                 onClick={context?.reset}>
@@ -390,9 +390,7 @@ function FilterBar() {
       <div class="bg-tcreme sticky top-0 w-full border-b-2 border-gray-300 px-5 pt-2">
         <div>
           <DateRibbon
-            // biome-ignore lint/style/noNonNullAssertion: <explanation>
             chunks={context!.chunkedEvents()}
-            // biome-ignore lint/style/noNonNullAssertion: <explanation>
             activeID={context!.activeID()}
           />
         </div>
@@ -404,7 +402,6 @@ function FilterBar() {
             <button
               type="button"
               class="btn btn-ghost btn-sm font-normal"
-              // biome-ignore lint/style/noNonNullAssertion: <explanation>
               onClick={context!.reset}>
               Reset
             </button>

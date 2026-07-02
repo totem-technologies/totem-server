@@ -234,36 +234,42 @@ function SpacesListInner() {
                           {/* Next event info */}
                           <div class="mt-auto flex flex-col justify-between md:flex-row md:items-center">
                             <div>
-                              <p class="text-sm font-medium">
-                                Next session: {space.next_event?.title}
-                              </p>
-                              <div class="mt-2 flex gap-4">
-                                <div class="text-muted-foreground flex items-center text-xs">
-                                  <Calendar class="mr-1 h-3.5 w-3.5" />
-                                  {timestampToDateStringShort(
-                                    space.next_event?.start!
-                                  )}
-                                </div>
-                                <div class="text-muted-foreground flex items-center text-xs">
-                                  <Clock class="mr-1 h-3.5 w-3.5" />
-                                  {timestampToTimeString(
-                                    space.next_event?.start!
-                                  )}
-                                </div>
-                                {/* Add seats left info with armchair icon */}
-                                <div class="text-muted-foreground flex items-center text-xs">
-                                  <TbOutlineChairDirector class="mr-1 h-3.5 w-3.5" />
-                                  <Show
-                                    when={space.next_event?.seats_left! > 0}
-                                    fallback="Full">
-                                    {space.next_event?.seats_left!}{" "}
-                                    {space.next_event?.seats_left === 1
-                                      ? "seat"
-                                      : "seats"}{" "}
-                                    left
-                                  </Show>
-                                </div>
-                              </div>
+                              <Show when={space.next_event}>
+                                {(nextEvent) => (
+                                  <>
+                                    <p class="text-sm font-medium">
+                                      Next session: {nextEvent().title}
+                                    </p>
+                                    <div class="mt-2 flex gap-4">
+                                      <div class="text-muted-foreground flex items-center text-xs">
+                                        <Calendar class="mr-1 h-3.5 w-3.5" />
+                                        {timestampToDateStringShort(
+                                          nextEvent().start
+                                        )}
+                                      </div>
+                                      <div class="text-muted-foreground flex items-center text-xs">
+                                        <Clock class="mr-1 h-3.5 w-3.5" />
+                                        {timestampToTimeString(
+                                          nextEvent().start
+                                        )}
+                                      </div>
+                                      {/* Add seats left info with armchair icon */}
+                                      <div class="text-muted-foreground flex items-center text-xs">
+                                        <TbOutlineChairDirector class="mr-1 h-3.5 w-3.5" />
+                                        <Show
+                                          when={nextEvent().seats_left > 0}
+                                          fallback="Full">
+                                          {nextEvent().seats_left}{" "}
+                                          {nextEvent().seats_left === 1
+                                            ? "seat"
+                                            : "seats"}{" "}
+                                          left
+                                        </Show>
+                                      </div>
+                                    </div>
+                                  </>
+                                )}
+                              </Show>
                             </div>
 
                             <ChevronRight class="text-muted-foreground group-hover:text-primary hidden h-5 w-5 transition-colors md:block" />

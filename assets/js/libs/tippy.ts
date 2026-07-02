@@ -137,6 +137,7 @@ export function useTippy<T extends Element>(
     }
   })
 
+  // eslint-disable-next-line solid/reactivity -- this hook intentionally returns an accessor for the caller to track
   return () => current()
 }
 
@@ -184,5 +185,6 @@ export function useTippyHeadless<T extends Element>(
     }
   })
 
+  // eslint-disable-next-line solid/reactivity -- this hook intentionally returns an accessor for the caller to track
   return () => current()
 }

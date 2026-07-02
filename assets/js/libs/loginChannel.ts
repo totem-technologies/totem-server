@@ -5,14 +5,13 @@ const CHANNEL_NAME = "login"
 const LOGIN_MESSAGE = "logged_in"
 
 function init() {
-  // eslint-disable-next-line no-undef
   const channel = new BroadcastChannel(CHANNEL_NAME)
   channel.onmessage = (event) => {
     if (
       globalThis.TOTEM_DATA.reload_on_login === true &&
       event.data === LOGIN_MESSAGE
     ) {
-      // biome-ignore lint/correctness/noSelfAssign: This has an effect
+      // oxlint-disable-next-line no-self-assign -- reassigning href reloads the page without re-POSTing form data
       globalThis.location.href = globalThis.location.href
       // No .reload() as it sends POST data again.
       // globalThis.location.reload()

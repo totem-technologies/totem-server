@@ -26,7 +26,9 @@ function AddToCalendarButton(props: {
 
   // console.log(props)
   const debug = globalThis.TOTEM_DATA.debug ? "true" : "false"
-  const el = `<add-to-calendar-button
+  // Built in a tracked scope (called from JSX below) so the accessors above stay
+  // reactive and the button re-renders if props change.
+  const el = () => `<add-to-calendar-button
       styleLight="--btn-shadow:none; --btn-shadow-hover:none"
       inline
       hideBranding
@@ -42,7 +44,7 @@ function AddToCalendarButton(props: {
       endTime="${endTime()}"
       timeZone="${getTimeZone()}"></add-to-calendar-button>`
   // eslint-disable-next-line solid/no-innerhtml
-  return <div innerHTML={el} />
+  return <div innerHTML={el()} />
 }
 
 export default AddToCalendarButton
