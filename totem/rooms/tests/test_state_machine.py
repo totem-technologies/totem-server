@@ -488,7 +488,10 @@ class TestReorder:
         new_order = list(reversed(current_order))
         state = apply_event(slug, keeper.slug, ReorderEvent(talking_order=new_order), 1, connected)
 
-        assert state.talking_order == new_order
+        # Keeper is expected at first
+        assert state.talking_order[0] == keeper.slug
+        expected = [keeper.slug] + [s for s in new_order if s != keeper.slug]
+        assert state.talking_order == expected
 
     def test_non_keeper_cannot_reorder(self):
         keeper = UserFactory()
@@ -541,7 +544,7 @@ class TestReorder:
         # next_speaker should skip disconnected user1 and land on user2
         assert state.next_speaker == user2.slug
 
-    def test_reorder_must_have_same_participants(self):
+    def test_reorder_rejects_unknown_participant(self):
         keeper = UserFactory()
         user1 = UserFactory()
         _, slug = _setup_room(keeper, [keeper, user1])
@@ -552,6 +555,64 @@ class TestReorder:
         with pytest.raises(TransitionError) as exc_info:
             apply_event(slug, keeper.slug, ReorderEvent(talking_order=["someone_else"]), 1, connected)
         assert exc_info.value.code == ErrorCode.INVALID_PARTICIPANT_ORDER
+        assert "unknown participants" in exc_info.value.message.lower()
+        assert "someone_else" in (exc_info.value.detail or "")
+
+    def test_reorder_rejects_empty_order(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        state = apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        version_before = state.version
+
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(slug, keeper.slug, ReorderEvent(talking_order=[]), 1, connected)
+        assert exc_info.value.code == ErrorCode.INVALID_PARTICIPANT_ORDER
+
+        room = Room.objects.for_session(slug).first()
+        assert room
+        assert room.state_version == version_before
+
+    def test_reorder_ignores_duplicate_slugs(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        state = apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        state = apply_event(
+            slug, keeper.slug, ReorderEvent(talking_order=[user1.slug, user1.slug, keeper.slug]), 1, connected
+        )
+        assert state.talking_order == [keeper.slug, user1.slug]
+
+    def test_reorder_when_new_participant_connected(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        user2 = UserFactory()
+        user3 = UserFactory()
+        slug_setup = _setup_room(keeper, [keeper, user1, user2])
+        _, slug = slug_setup
+        connected = {keeper.slug, user1.slug, user2.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+
+        room = Room.objects.for_session(slug).first()
+        assert room
+        current_order = list(room.talking_order)
+
+        room.session.attendees.add(user3)
+        new_connected = {keeper.slug, user1.slug, user2.slug, user3.slug}
+
+        # Keeper reorders based on the previously seen talking_order (doesn't know about user3 yet)
+        new_order = list(reversed(current_order))
+        state = apply_event(slug, keeper.slug, ReorderEvent(talking_order=new_order), 1, new_connected)
+
+        expected_head = [keeper.slug] + [s for s in new_order if s != keeper.slug]
+        assert state.talking_order[: len(expected_head)] == expected_head
+        assert user3.slug in state.talking_order
+        assert state.talking_order.index(user3.slug) >= len(expected_head)
 
 
 @pytest.mark.django_db
