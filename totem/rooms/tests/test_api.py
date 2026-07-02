@@ -671,6 +671,45 @@ class TestRemoveParticipant:
 
 
 # ---------------------------------------------------------------------------
+# Disable Camera
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestDisableCamera:
+    def test_disable_camera_success(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        session.attendees.add(keeper)
+        Room.objects.get_or_create_for_session(session)
+
+        with patch("totem.rooms.api.disable_camera_participant") as mock_disable:
+            resp = client.post(f"{BASE}/{session.slug}/disable-camera/some-participant")
+
+        assert resp.status_code == 200
+        mock_disable.assert_called_once_with(session.slug, "some-participant")
+
+    def test_disable_camera_not_keeper(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        keeper = UserFactory()
+        session = SessionFactory(space__author=keeper)
+        session.attendees.add(keeper, user)
+        Room.objects.get_or_create_for_session(session)
+
+        resp = client.post(f"{BASE}/{session.slug}/disable-camera/some-participant")
+
+        assert resp.status_code == 403
+        assert resp.json()["code"] == "not_keeper"
+
+    def test_disable_camera_room_not_found(self, client_with_user: tuple[Client, User]):
+        client, _ = client_with_user
+
+        resp = client.post(f"{BASE}/nonexistent/disable-camera/some-participant")
+
+        assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
 # Ban / Unban
 # ---------------------------------------------------------------------------
 
@@ -734,3 +773,38 @@ class TestUnbanParticipant:
 
         assert resp.status_code == 200
         assert participant.slug not in resp.json()["banned_participants"]
+
+    def test_unbanned_user_can_rejoin(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        participant = UserFactory()
+        session = _make_joinable_session(keeper, attendees=[participant])
+        room = Room.objects.get_or_create_for_session(session)
+        room.banned_participants = [participant.slug]
+        room.save()
+
+        # Banned user cannot join
+        participant_client = Client()
+        participant_client.force_login(participant)
+        resp = participant_client.post(f"{BASE}/{session.slug}/join")
+        assert resp.status_code == 403
+        assert resp.json()["code"] == "banned"
+
+        # Keeper unbans the participant
+        with (
+            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug}),
+            patch("totem.rooms.api.publish_state"),
+        ):
+            unban_resp = _post_event(
+                client, session.slug, {"type": "unban_participant", "participant_slug": participant.slug}, 0
+            )
+        assert unban_resp.status_code == 200
+
+        # Unbanned user can now join
+        with (
+            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug}),
+        ):
+            join_resp = participant_client.post(f"{BASE}/{session.slug}/join")
+
+        assert join_resp.status_code == 200
+        assert join_resp.json()["token"] == "fake-jwt-token"
