@@ -7,7 +7,6 @@ from livekit import api
 from totem.rooms.livekit import (
     LiveKitConfigurationError,
     create_access_token,
-    disable_camera_all_participants,
     disable_camera_participant,
     get_connected_participants,
     mute_all_participants,
@@ -27,20 +26,29 @@ LK_SETTINGS = {
 # ---------------------------------------------------------------------------
 
 
-def _make_participant(identity: str, has_audio: bool = True, has_video: bool = True) -> MagicMock:
+def _make_track(track_type: api.TrackType, source: api.TrackSource, sid: str) -> MagicMock:
+    track = MagicMock()
+    track.type = track_type
+    track.source = source
+    track.sid = sid
+    return track
+
+
+def _make_participant(
+    identity: str, has_audio: bool = True, has_video: bool = True, has_screen_share: bool = False
+) -> MagicMock:
     participant = MagicMock()
     participant.identity = identity
     tracks: list[MagicMock] = []
+    if has_screen_share:
+        # Screen-share tracks come first so type-only matching would pick them
+        # over the camera/microphone tracks.
+        tracks.append(_make_track(api.TrackType.VIDEO, api.TrackSource.SCREEN_SHARE, "track-screen-789"))
+        tracks.append(_make_track(api.TrackType.AUDIO, api.TrackSource.SCREEN_SHARE_AUDIO, "track-screen-audio-987"))
     if has_audio:
-        track = MagicMock()
-        track.type = api.TrackType.AUDIO
-        track.sid = "track-audio-123"
-        tracks.append(track)
+        tracks.append(_make_track(api.TrackType.AUDIO, api.TrackSource.MICROPHONE, "track-audio-123"))
     if has_video:
-        track = MagicMock()
-        track.type = api.TrackType.VIDEO
-        track.sid = "track-video-456"
-        tracks.append(track)
+        tracks.append(_make_track(api.TrackType.VIDEO, api.TrackSource.CAMERA, "track-video-456"))
     participant.tracks = tracks
     return participant
 
@@ -166,6 +174,19 @@ class TestMuteParticipant:
         assert req.muted is True
 
     @override_settings(**LK_SETTINGS)
+    def test_mutes_microphone_not_screen_share_audio(self):
+        participant = _make_participant("user-1", has_screen_share=True)
+        mock_lkapi = _make_mock_lkapi()
+        mock_lkapi.room.get_participant.return_value = participant
+
+        with patch("totem.rooms.livekit.api.LiveKitAPI", return_value=mock_lkapi):
+            mute_participant("room-1", "user-1")
+
+        mock_lkapi.room.mute_published_track.assert_called_once()
+        req = mock_lkapi.room.mute_published_track.call_args[0][0]
+        assert req.track_sid == "track-audio-123"
+
+    @override_settings(**LK_SETTINGS)
     def test_no_audio_track_is_noop(self):
         participant = _make_participant("user-1", has_audio=False)
         mock_lkapi = _make_mock_lkapi()
@@ -228,6 +249,23 @@ class TestMuteAllParticipants:
 
         assert mock_lkapi.room.mute_published_track.call_count == 2
 
+    @override_settings(**LK_SETTINGS)
+    def test_skips_screen_share_audio_tracks(self):
+        p1 = _make_participant("user-1", has_screen_share=True)
+        p2 = _make_participant("user-2")
+
+        mock_resp = MagicMock()
+        mock_resp.participants = [p1, p2]
+
+        mock_lkapi = _make_mock_lkapi()
+        mock_lkapi.room.list_participants.return_value = mock_resp
+
+        with patch("totem.rooms.livekit.api.LiveKitAPI", return_value=mock_lkapi):
+            mute_all_participants("room-1")
+
+        muted_sids = {call[0][0].track_sid for call in mock_lkapi.room.mute_published_track.call_args_list}
+        assert muted_sids == {"track-audio-123"}
+
 
 # ---------------------------------------------------------------------------
 # disable_camera_participant
@@ -253,6 +291,19 @@ class TestDisableCameraParticipant:
         assert req.muted is True
 
     @override_settings(**LK_SETTINGS)
+    def test_mutes_camera_not_screen_share(self):
+        participant = _make_participant("user-1", has_screen_share=True)
+        mock_lkapi = _make_mock_lkapi()
+        mock_lkapi.room.get_participant.return_value = participant
+
+        with patch("totem.rooms.livekit.api.LiveKitAPI", return_value=mock_lkapi):
+            disable_camera_participant("room-1", "user-1")
+
+        mock_lkapi.room.mute_published_track.assert_called_once()
+        req = mock_lkapi.room.mute_published_track.call_args[0][0]
+        assert req.track_sid == "track-video-456"
+
+    @override_settings(**LK_SETTINGS)
     def test_no_video_track_is_noop(self):
         participant = _make_participant("user-1", has_video=False)
         mock_lkapi = _make_mock_lkapi()
@@ -272,63 +323,6 @@ class TestDisableCameraParticipant:
             disable_camera_participant("room-1", "user-1")
 
         mock_lkapi.room.mute_published_track.assert_not_called()
-
-
-# ---------------------------------------------------------------------------
-# disable_camera_all_participants
-# ---------------------------------------------------------------------------
-
-
-@pytest.mark.enable_socket
-class TestDisableCameraAllParticipants:
-    @override_settings(**LK_SETTINGS)
-    def test_disables_all_except_identity(self):
-        p1 = _make_participant("user-1")
-        p2 = _make_participant("user-2")
-        p3 = _make_participant("keeper")
-
-        mock_resp = MagicMock()
-        mock_resp.participants = [p1, p2, p3]
-
-        mock_lkapi = _make_mock_lkapi()
-        mock_lkapi.room.list_participants.return_value = mock_resp
-
-        with patch("totem.rooms.livekit.api.LiveKitAPI", return_value=mock_lkapi):
-            disable_camera_all_participants("room-1", except_identity="keeper")
-
-        assert mock_lkapi.room.mute_published_track.call_count == 2
-
-    @override_settings(**LK_SETTINGS)
-    def test_disables_all_when_no_exception(self):
-        p1 = _make_participant("user-1")
-        p2 = _make_participant("user-2")
-
-        mock_resp = MagicMock()
-        mock_resp.participants = [p1, p2]
-
-        mock_lkapi = _make_mock_lkapi()
-        mock_lkapi.room.list_participants.return_value = mock_resp
-
-        with patch("totem.rooms.livekit.api.LiveKitAPI", return_value=mock_lkapi):
-            disable_camera_all_participants("room-1")
-
-        assert mock_lkapi.room.mute_published_track.call_count == 2
-
-    @override_settings(**LK_SETTINGS)
-    def test_skips_participants_without_video(self):
-        p1 = _make_participant("user-1", has_video=False)
-        p2 = _make_participant("user-2")
-
-        mock_resp = MagicMock()
-        mock_resp.participants = [p1, p2]
-
-        mock_lkapi = _make_mock_lkapi()
-        mock_lkapi.room.list_participants.return_value = mock_resp
-
-        with patch("totem.rooms.livekit.api.LiveKitAPI", return_value=mock_lkapi):
-            disable_camera_all_participants("room-1")
-
-        assert mock_lkapi.room.mute_published_track.call_count == 1
 
 
 # ---------------------------------------------------------------------------

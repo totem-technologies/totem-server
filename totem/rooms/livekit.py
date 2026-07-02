@@ -126,8 +126,12 @@ def create_access_token(user: User, room_name: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-async def _mute_track_for_participant(room_name: str, identity: str, track_type: api.TrackType) -> None:
-    """Mute a specific track type (AUDIO or VIDEO) for a participant."""
+async def _mute_track_for_participant(room_name: str, identity: str, track_source: api.TrackSource) -> None:
+    """Mute a participant's track by source (MICROPHONE or CAMERA).
+
+    Matching on source, not type, so screen-share tracks (also AUDIO/VIDEO
+    typed) are left alone.
+    """
     async with _get_api() as lkapi:
         participant = await lkapi.room.get_participant(api.RoomParticipantIdentity(room=room_name, identity=identity))
         if not participant:
@@ -135,7 +139,7 @@ async def _mute_track_for_participant(room_name: str, identity: str, track_type:
 
         track_sid = None
         for track in participant.tracks:
-            if track.type == track_type:
+            if track.source == track_source:
                 track_sid = track.sid
                 break
 
@@ -153,10 +157,10 @@ async def _mute_track_for_participant(room_name: str, identity: str, track_type:
 
 
 async def _mute_track_for_all_participants(
-    room_name: str, track_type: api.TrackType, except_identity: str | None = None
+    room_name: str, track_source: api.TrackSource, except_identity: str | None = None
 ) -> None:
-    """Mute a specific track type for all participants in a room. Uses asyncio.gather for concurrency."""
-    label = "audio" if track_type == api.TrackType.AUDIO else "video"
+    """Mute tracks of a given source for all participants in a room. Uses asyncio.gather for concurrency."""
+    label = api.TrackSource.Name(track_source).lower()
     async with _get_api() as lkapi:
         resp = await lkapi.room.list_participants(api.ListParticipantsRequest(room=room_name))
         tasks = []
@@ -166,7 +170,7 @@ async def _mute_track_for_all_participants(
             if participant.state == api.ParticipantInfo.State.DISCONNECTED:
                 continue
             for track in participant.tracks:
-                if track.type == track_type:
+                if track.source == track_source:
                     tasks.append(
                         lkapi.room.mute_published_track(
                             api.MuteRoomTrackRequest(
@@ -204,26 +208,20 @@ async def _remove_participant(room_name: str, identity: str, reason: RemoveReaso
 
 @async_to_sync
 async def mute_participant(room_name: str, identity: str) -> None:
-    """Mute a specific participant's audio track."""
-    await _mute_track_for_participant(room_name, identity, api.TrackType.AUDIO)
+    """Mute a specific participant's microphone track."""
+    await _mute_track_for_participant(room_name, identity, api.TrackSource.MICROPHONE)
 
 
 @async_to_sync
 async def mute_all_participants(room_name: str, except_identity: str | None = None) -> None:
     """Mute all participants, optionally skipping one. Logs and continues on individual failures."""
-    await _mute_track_for_all_participants(room_name, api.TrackType.AUDIO, except_identity)
+    await _mute_track_for_all_participants(room_name, api.TrackSource.MICROPHONE, except_identity)
 
 
 @async_to_sync
 async def disable_camera_participant(room_name: str, identity: str) -> None:
     """Disable a specific participant's camera track."""
-    await _mute_track_for_participant(room_name, identity, api.TrackType.VIDEO)
-
-
-@async_to_sync
-async def disable_camera_all_participants(room_name: str, except_identity: str | None = None) -> None:
-    """Disable camera for all participants, optionally skipping one. Logs and continues on individual failures."""
-    await _mute_track_for_all_participants(room_name, api.TrackType.VIDEO, except_identity)
+    await _mute_track_for_participant(room_name, identity, api.TrackSource.CAMERA)
 
 
 @async_to_sync
