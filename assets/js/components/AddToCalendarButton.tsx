@@ -37,4 +37,30 @@ function AddToCalendarButton(props: {
   )
 }
 
+// Web-component adapter: lowercase attribute names, string-typed values.
+// Usage in templates: <t-add-to-calendar name="..." callink="..." start="..." duration="60">
+export function AddToCalendarElement(props: {
+  name: string
+  callink: string
+  start: string
+  duration: number | string
+}) {
+  return (
+    <AddToCalendarButton
+      name={props.name}
+      calLink={props.callink}
+      start={props.start}
+      durationMinutes={Number(props.duration) || 60}
+    />
+  )
+}
+
+AddToCalendarElement.tagName = "t-add-to-calendar"
+AddToCalendarElement.propsDefault = {
+  name: "",
+  callink: "",
+  start: "",
+  duration: 60,
+}
+
 export default AddToCalendarButton

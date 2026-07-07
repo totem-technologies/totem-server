@@ -17,6 +17,48 @@
             </div>
           </div>
         </a>
+        <div class="flex items-center justify-between gap-2 p-4">
+          <t-add-to-calendar
+            name="{{ session_item.session_title_or_title }} - {{ session_item.space.title }}"
+            callink="{{ session_item.cal_link }}"
+            start="{{ session_item.start|date:'c' }}"
+            duration="{{ session_item.duration_minutes }}"></t-add-to-calendar>
+          <button
+            type="button"
+            class="a shrink-0 text-gray-400"
+            onclick="give_up_modal_{{ forloop.counter }}.showModal()">
+            Give up spot
+          </button>
+        </div>
+        <dialog id="give_up_modal_{{ forloop.counter }}" class="modal">
+          <div class="modal-box">
+            <h3 class="text-lg font-bold">Give up your spot?</h3>
+            <p class="py-4">
+              Your spot in
+              <strong>{{ session_item.session_title_or_title }}</strong> will be
+              opened up for someone else. You can always attend again if a spot
+              is still open.
+            </p>
+            <div class="modal-action">
+              <form method="dialog">
+                <button class="btn">Keep my spot</button>
+              </form>
+              <form
+                action="{% url 'spaces:rsvp' session_slug=session_item.slug %}"
+                method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="remove" />
+                <input type="hidden" name="next" value="{% url 'users:dashboard' %}" />
+                <button type="submit" class="btn btn-error">
+                  Give up my spot
+                </button>
+              </form>
+            </div>
+          </div>
+          <form method="dialog" class="modal-backdrop">
+            <button>close</button>
+          </form>
+        </dialog>
       </li>
     {% endfor %}
   </ul>

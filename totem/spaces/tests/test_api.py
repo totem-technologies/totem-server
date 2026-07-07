@@ -149,6 +149,55 @@ class TestSessionDetail:
         assert response.json()["attending"] is True
 
 
+class TestSpacesSummary:
+    def test_summary_requires_login(self, client, db):
+        response = client.get(reverse("api-1:spaces_summary"))
+        assert response.status_code == 401
+
+    def test_summary_sections(self, client, db):
+        user = UserFactory()
+        client.force_login(user)
+        attending = SessionFactory()
+        attending.attendees.add(user)
+        other = SessionFactory()
+        response = client.get(reverse("api-1:spaces_summary"))
+        assert response.status_code == 200
+        data = response.json()
+        assert [s["slug"] for s in data["upcoming"]] == [attending.slug]
+        assert data["upcoming"][0]["attending"] is True
+        explore_slugs = [s["slug"] for s in data["explore"]]
+        assert other.space.slug in explore_slugs
+        # spaces the user already has a session in are not re-suggested
+        assert attending.space.slug not in explore_slugs
+        assert attending.space.slug not in [s["slug"] for s in data["for_you"]]
+
+    def test_summary_excludes_ended_sessions(self, client, db):
+        user = UserFactory()
+        client.force_login(user)
+        ended = SessionFactory(start=timezone.now() - timedelta(days=1))
+        ended.attendees.add(user)
+        response = client.get(reverse("api-1:spaces_summary"))
+        assert response.status_code == 200
+        assert response.json()["upcoming"] == []
+
+    def test_summary_for_you_matches_subscribed_categories(self, client, db):
+        user = UserFactory()
+        client.force_login(user)
+        category = SpaceCategoryFactory()
+        subscribed_space = SpaceFactory(categories=[category])
+        SessionFactory(space=subscribed_space)
+        subscribed_space.subscribed.add(user)
+        recommended_space = SpaceFactory(categories=[category])
+        SessionFactory(space=recommended_space)
+        unrelated_space = SpaceFactory()
+        SessionFactory(space=unrelated_space)
+        response = client.get(reverse("api-1:spaces_summary"))
+        assert response.status_code == 200
+        for_you_slugs = [s["slug"] for s in response.json()["for_you"]]
+        assert recommended_space.slug in for_you_slugs
+        assert unrelated_space.slug not in for_you_slugs
+
+
 class TestSessionCalendar:
     def test_session_calendar_future(self, client, db):
         now_plus_week = timezone.now() + timedelta(days=7)

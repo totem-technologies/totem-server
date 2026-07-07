@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/solid-query"
 import { customElement, noShadowDOM } from "solid-element"
 import type { JSXElement, ValidComponent } from "solid-js"
 import { Dynamic } from "solid-js/web"
+import { AddToCalendarElement } from "./AddToCalendarButton"
 import Avatar from "./avatar"
 import Circles from "./circles"
 import DetailSidebar from "./detailSidebar"
@@ -28,6 +29,7 @@ const components: WCComponent[] = [
   Time,
   EditAvatar,
   SpacesList,
+  AddToCalendarElement,
 ]
 
 type CustomElementProps = (typeof components)[number]["propsDefault"] & {

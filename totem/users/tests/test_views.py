@@ -217,6 +217,18 @@ class TestDashboard:
         response = client.get(reverse("users:dashboard"))
         assert response.status_code == 200
 
+    def test_dashboard_attending_session_has_actions(self, client):
+        user = UserFactory()
+        client.force_login(user)
+        session = SessionFactory()
+        session.add_attendee(user)
+        response = client.get(reverse("users:dashboard"))
+        assert response.status_code == 200
+        content = response.content.decode()
+        assert "t-add-to-calendar" in content
+        assert "Give up spot" in content
+        assert reverse("spaces:rsvp", kwargs={"session_slug": session.slug}) in content
+
 
 class TestDeleteUser:
     def test_delete_user(self, client):

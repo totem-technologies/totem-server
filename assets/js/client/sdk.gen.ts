@@ -2,7 +2,7 @@
 
 import { type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { TotemApiApiCurrentUserData, TotemApiApiCurrentUserErrors, TotemApiApiCurrentUserResponses, TotemApiApiDevVersionData, TotemApiApiDevVersionResponses, TotemApiApiUserAvatarUpdateData, TotemApiApiUserAvatarUpdateErrors, TotemApiApiUserAvatarUpdateResponses, TotemApiApiUserUploadProfileImageData, TotemApiApiUserUploadProfileImageErrors, TotemApiApiUserUploadProfileImageResponses, TotemSpacesApiEventDetailData, TotemSpacesApiEventDetailResponses, TotemSpacesApiFilterOptionsData, TotemSpacesApiFilterOptionsResponses, TotemSpacesApiListEventsData, TotemSpacesApiListEventsResponses, TotemSpacesApiListSpacesData, TotemSpacesApiListSpacesResponses, TotemSpacesApiUpcomingEventsData, TotemSpacesApiUpcomingEventsResponses } from './types.gen';
+import type { TotemApiApiCurrentUserData, TotemApiApiCurrentUserErrors, TotemApiApiCurrentUserResponses, TotemApiApiDevVersionData, TotemApiApiDevVersionResponses, TotemApiApiUserAvatarUpdateData, TotemApiApiUserAvatarUpdateErrors, TotemApiApiUserAvatarUpdateResponses, TotemApiApiUserUploadProfileImageData, TotemApiApiUserUploadProfileImageErrors, TotemApiApiUserUploadProfileImageResponses, TotemSpacesApiEventDetailData, TotemSpacesApiEventDetailResponses, TotemSpacesApiFilterOptionsData, TotemSpacesApiFilterOptionsResponses, TotemSpacesApiListEventsData, TotemSpacesApiListEventsResponses, TotemSpacesApiListSpacesData, TotemSpacesApiListSpacesResponses, TotemSpacesApiSpacesSummaryData, TotemSpacesApiSpacesSummaryResponses, TotemSpacesApiUpcomingEventsData, TotemSpacesApiUpcomingEventsResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -72,6 +72,19 @@ export const totemSpacesApiEventDetail = <ThrowOnError extends boolean = false>(
  * Upcoming Events
  */
 export const totemSpacesApiUpcomingEvents = <ThrowOnError extends boolean = false>(options?: Options<TotemSpacesApiUpcomingEventsData, ThrowOnError>): RequestResult<TotemSpacesApiUpcomingEventsResponses, unknown, ThrowOnError> => (options?.client ?? client).get<TotemSpacesApiUpcomingEventsResponses, unknown, ThrowOnError>({ url: '/api/v1/spaces/calendar', ...options });
+
+/**
+ * Spaces Summary
+ */
+export const totemSpacesApiSpacesSummary = <ThrowOnError extends boolean = false>(options?: Options<TotemSpacesApiSpacesSummaryData, ThrowOnError>): RequestResult<TotemSpacesApiSpacesSummaryResponses, unknown, ThrowOnError> => (options?.client ?? client).get<TotemSpacesApiSpacesSummaryResponses, unknown, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/spaces/summary',
+    ...options
+});
 
 /**
  * List Spaces

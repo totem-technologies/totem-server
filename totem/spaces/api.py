@@ -5,6 +5,7 @@ from django.shortcuts import get_object_or_404
 from ninja import Field, FilterSchema, Router, Schema
 from ninja.pagination import paginate
 from ninja.params.functions import Query
+from ninja.security import django_auth
 
 from totem.spaces.schemas import (
     FilterOptionsSchema,
@@ -12,6 +13,7 @@ from totem.spaces.schemas import (
     SessionListSchema,
     SessionsFilterSchema,
     SpaceDetailSchema,
+    SummarySpacesSchema,
 )
 from totem.users.models import User
 
@@ -21,6 +23,7 @@ from .filters import (
     session_detail_schema,
     sessions_by_month,
     space_detail_schema,
+    spaces_summary_data,
 )
 from .models import Session, Space
 
@@ -85,6 +88,23 @@ def upcoming_events(request, filters: EventCalendarFilterSchema = Query()):
         )
         for event in events
     ]
+
+
+@router.get(
+    "/summary",
+    response={200: SummarySpacesSchema},
+    tags=["spaces"],
+    url_name="spaces_summary",
+    auth=django_auth,
+)
+def spaces_summary(request: HttpRequest):
+    user: User = request.user  # type: ignore
+    data = spaces_summary_data(user)
+    return SummarySpacesSchema(
+        upcoming=[session_detail_schema(session, user) for session in data.upcoming],
+        for_you=[space_detail_schema(space, user) for space in data.for_you],
+        explore=[space_detail_schema(space, user) for space in data.explore],
+    )
 
 
 @router.get("/list", response={200: list[SpaceDetailSchema]}, tags=["spaces"], url_name="spaces_list")

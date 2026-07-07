@@ -1,9 +1,12 @@
 import datetime
+from dataclasses import dataclass
 
-from django.db.models import Count, F, OuterRef, Q, Subquery
+from django.db.models import Count, DateTimeField, ExpressionWrapper, F, OuterRef, Q, Subquery
 from django.urls import reverse
 from django.utils import timezone
 
+from totem.onboard.models import OnboardModel
+from totem.spaces.mobile_api.mobile_filters import get_upcoming_spaces_list, upcoming_recommended_spaces
 from totem.spaces.schemas import NextSessionSchema, SessionDetailSchema, SessionSpaceSchema, SpaceDetailSchema
 from totem.users.models import User
 
@@ -145,6 +148,66 @@ def upcoming_sessions_by_author(user: User, author: User, exclude_event: Session
     upcoming_sessions = exclude_banned_sessions(upcoming_sessions, user)
     upcoming_sessions = upcoming_sessions.select_related("space__author")
     return upcoming_sessions
+
+
+@dataclass
+class SpacesSummary:
+    upcoming: list[Session]
+    for_you: list[Space]
+    explore: list[Space]
+
+
+def spaces_summary_data(user: User) -> SpacesSummary:
+    """The user's summary: registered sessions plus personalized and general recommendations.
+
+    Shared by the web and mobile summary endpoints, which map it to their own schemas.
+    """
+    spaces_qs = get_upcoming_spaces_list(user)
+
+    # Sessions the user has registered for that haven't ended yet.
+    end_time_expression = ExpressionWrapper(
+        F("start") + F("duration_minutes") * datetime.timedelta(minutes=1),
+        output_field=DateTimeField(),
+    )
+    upcoming_sessions = (
+        exclude_banned_sessions(
+            Session.objects.annotate(end_time=end_time_expression).filter(
+                attendees=user, cancelled=False, end_time__gt=timezone.now()
+            ),
+            user,
+        )
+        .select_related("space")
+        .prefetch_related("space__author", "space__categories", "attendees", "space__subscribed")
+        .annotate(
+            attendee_count=Count("attendees", distinct=True),
+            subscriber_count=Count("space__subscribed", distinct=True),
+        )
+        .order_by("start")
+    )
+    upcoming = list(upcoming_sessions)
+    upcoming_space_slugs = {session.space.slug for session in upcoming}
+
+    # Personalization signal: onboarding hopes plus categories of subscribed spaces.
+    categories_set: set[str] = set()
+    try:
+        onboard_model = OnboardModel.objects.get(user=user)
+        if onboard_model.hopes:
+            for hope in onboard_model.hopes.split(","):
+                name = hope.strip()
+                if name:
+                    categories_set.add(name)
+    except OnboardModel.DoesNotExist:
+        pass
+    previous_category_names = spaces_qs.filter(subscribed=user).values_list("categories__name", flat=True).distinct()
+    categories_set.update(name for name in previous_category_names if name)
+
+    for_you = [
+        space
+        for space in upcoming_recommended_spaces(user, categories=list(categories_set))
+        if space.slug not in upcoming_space_slugs
+    ]
+    explore = [space for space in spaces_qs if space.slug not in upcoming_space_slugs]
+    return SpacesSummary(upcoming=upcoming, for_you=for_you, explore=explore)
 
 
 def session_detail_schema(session: Session, user: User):

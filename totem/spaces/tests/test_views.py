@@ -327,6 +327,34 @@ class TestRSVPView:
         assert user not in event.joined.all()
         assert user not in event.attendees.all()
 
+    def test_rsvp_remove_redirects_to_next(self, client, db):
+        event = SessionFactory()
+        user = UserFactory()
+        user.save()
+        event.add_attendee(user)
+        client.force_login(user)
+        response = client.post(
+            reverse("spaces:rsvp", kwargs={"session_slug": event.slug}),
+            data={"action": "remove", "next": reverse("users:dashboard")},
+        )
+        assert response.status_code == 302
+        assert response.url == reverse("users:dashboard")
+        assert user not in event.attendees.all()
+
+    def test_rsvp_unsafe_next_ignored(self, client, db):
+        event = SessionFactory()
+        user = UserFactory()
+        user.save()
+        event.add_attendee(user)
+        client.force_login(user)
+        response = client.post(
+            reverse("spaces:rsvp", kwargs={"session_slug": event.slug}),
+            data={"action": "remove", "next": "https://evil.example.com/"},
+        )
+        assert response.status_code == 302
+        assert event.slug in response.url
+        assert user not in event.attendees.all()
+
     # def test_rsvp_auto_rsvp(self, client, db):
     #     """Test auto rsvp when user is not logged in, but then makes an account and goes back to the event page."""
     #     event = SessionFactory()
