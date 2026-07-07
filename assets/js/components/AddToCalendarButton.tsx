@@ -1,5 +1,7 @@
+import type { ATCBActionEventConfig } from "add-to-calendar-button"
 import { convertISOToHHMM, getDateFromISOString } from "@/libs/time"
 import { getTimeZone } from "@/libs/timezone"
+import Icon from "./icons"
 
 function AddToCalendarButton(props: {
   name: string
@@ -7,44 +9,32 @@ function AddToCalendarButton(props: {
   start: string
   durationMinutes: number
 }) {
-  // let debug = "true"
-  const startDate = () => getDateFromISOString(props.start)
-  const startTime = () => convertISOToHHMM(props.start)
-
-  // Add duration to end date
-  const endDateObj = () => {
-    const endDate = new Date(props.start)
-    endDate.setMinutes(endDate.getMinutes() + props.durationMinutes)
-    return endDate
+  const config = (): ATCBActionEventConfig => {
+    const end = new Date(props.start)
+    end.setMinutes(end.getMinutes() + props.durationMinutes)
+    return {
+      name: `[Totem] ${props.name}`,
+      options: ["Apple", "Google", "Outlook.com"],
+      location: `${props.calLink}?r=cal_link`,
+      startDate: getDateFromISOString(props.start),
+      endDate: getDateFromISOString(end.toISOString()),
+      startTime: convertISOToHHMM(props.start),
+      endTime: convertISOToHHMM(end.toISOString()),
+      timeZone: getTimeZone(),
+      listStyle: "overlay",
+      hideBranding: true,
+      debug: globalThis.TOTEM_DATA.debug,
+    }
   }
-  const endDate = () => getDateFromISOString(endDateObj().toISOString())
-  const endTime = () => convertISOToHHMM(endDateObj().toISOString())
-
-  // Sanitize strings
-  const name = () => `${props.name}`.replaceAll('"', "")
-  const calLink = () => `${props.calLink}?r=cal_link`.replaceAll('"', "")
-
-  // console.log(props)
-  const debug = globalThis.TOTEM_DATA.debug ? "true" : "false"
-  // Built in a tracked scope (called from JSX below) so the accessors above stay
-  // reactive and the button re-renders if props change.
-  const el = () => `<add-to-calendar-button
-      styleLight="--btn-shadow:none; --btn-shadow-hover:none"
-      inline
-      hideBranding
-      buttonStyle="round"
-      debug="${debug}"
-      listStyle="overlay"
-      name="[Totem] ${name()}"
-      options="'Apple','Google','Outlook.com'"
-      location="${calLink()}"
-      startDate="${startDate()}"
-      endDate="${endDate()}"
-      startTime="${startTime()}"
-      endTime="${endTime()}"
-      timeZone="${getTimeZone()}"></add-to-calendar-button>`
-  // eslint-disable-next-line solid/no-innerhtml
-  return <div innerHTML={el()} />
+  return (
+    <button
+      type="button"
+      class="btn btn-outline w-full"
+      onClick={(e) => void globalThis.atcb_action(config(), e.currentTarget)}>
+      <Icon name="calendar" />
+      Add to Calendar
+    </button>
+  )
 }
 
 export default AddToCalendarButton

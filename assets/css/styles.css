@@ -59,6 +59,19 @@
   @apply shadow-2xl ring-1 ring-gray-900/10;
 }
 
+@utility btn {
+  border-radius: calc(infinity* 1px);
+}
+
+/* Buttons are pill-shaped site-wide (rule above), but segments of a joined
+   group (e.g. pagination) must keep daisyUI's --join-* corner radii. */
+.join .btn.join-item {
+  border-start-start-radius: var(--join-ss, 0);
+  border-start-end-radius: var(--join-se, 0);
+  border-end-end-radius: var(--join-ee, 0);
+  border-end-start-radius: var(--join-es, 0);
+}
+
 @utility btn-primary {
   @apply text-white;
 }

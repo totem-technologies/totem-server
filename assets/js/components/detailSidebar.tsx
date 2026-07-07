@@ -187,7 +187,7 @@ function plural(number: number) {
   return number > 1 ? "s" : ""
 }
 
-function EventInfo(props: {
+export function EventInfo(props: {
   eventStore: SessionDetailSchema
   refetchEvent: () => void
 }) {
@@ -319,6 +319,10 @@ function EventInfo(props: {
               class="btn btn-primary w-full p-2 px-6">
               Attend this session
             </button>
+            <div class="pt-4">{createCalendarButton(props.eventStore)}</div>
+            <div class="pt-1 text-sm text-gray-400">
+              Adding to your calendar doesn't reserve a spot.
+            </div>
           </Match>
         </Switch>
       </div>

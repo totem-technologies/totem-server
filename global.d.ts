@@ -10,6 +10,12 @@ declare namespace JSX {
 }
 
 declare global {
+  // Exposed by the self-hosted add-to-calendar-button bundle (js/atcb.min.js)
+  function atcb_action(
+    config: import("add-to-calendar-button").ATCBActionEventConfig,
+    triggerElement?: HTMLElement,
+    keyboardTrigger?: boolean
+  ): Promise<string>
   function dismiss_alert(e: HTMLElement): void
   function _AutofillCallbackHandler(): void
   function copyTextToClipboard(element: HTMLElement): void
