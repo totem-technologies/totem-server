@@ -173,6 +173,26 @@ class TestSpacesSummary:
         assert attending.space.slug not in explore_slugs
         assert attending.space.slug not in [s["slug"] for s in data["for_you"]]
 
+    def test_summary_upcoming_space_image_link(self, client, db):
+        user = UserFactory()
+        client.force_login(user)
+        no_image = SessionFactory()
+        no_image.attendees.add(user)
+        space = SpaceFactory()
+        space.image = "space-images/test.jpg"
+        space.save()
+        with_image = SessionFactory(space=space)
+        with_image.attendees.add(user)
+        response = client.get(reverse("api-1:spaces_summary"))
+        assert response.status_code == 200
+        by_slug = {s["slug"]: s for s in response.json()["upcoming"]}
+        # ninja's DjangoGetter serializes FieldFile as its url (or None when unset)
+        assert by_slug[no_image.slug]["space"]["image"] is None
+        link = by_slug[with_image.slug]["space"]["image"]
+        assert link is not None
+        assert link.endswith("space-images/test.jpg")
+        assert link.startswith("/")
+
     def test_summary_excludes_ended_sessions(self, client, db):
         user = UserFactory()
         client.force_login(user)
