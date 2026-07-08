@@ -22,8 +22,9 @@
     </div>
     <ul role="list" class="flex flex-col gap-3">
       {% for session_item in group.sessions %}
+        {# no hover transform here: it would become the containing block for the add-to-calendar overlay's fixed backdrop #}
         <li
-          class="border-tslate/10 rounded-2xl border bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
+          class="border-tslate/10 rounded-2xl border bg-white shadow-sm transition-shadow duration-300 hover:shadow-md">
           <div class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
             <a
               class="flex min-w-0 flex-1 items-center gap-4"

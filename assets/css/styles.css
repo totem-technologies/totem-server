@@ -72,10 +72,15 @@
   @apply text-tmauve font-sans text-xs font-bold tracking-[0.18em] uppercase;
 }
 
-/* One-shot entrance for page sections; stagger with animation-delay. */
+/* One-shot entrance for page sections; stagger with animation-delay.
+   fill-mode must be backwards (not both/forwards): a retained animated
+   transform — even the identity — makes the section a containing block and
+   stacking context, trapping position:fixed overlays like add-to-calendar's
+   backdrop. backwards only fills during the delay; afterwards the section
+   returns to its natural, transform-free style. */
 @utility rise {
   @media (prefers-reduced-motion: no-preference) {
-    animation: rise-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: rise-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
   }
 }
 
@@ -86,7 +91,7 @@
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: none;
   }
 }
 
