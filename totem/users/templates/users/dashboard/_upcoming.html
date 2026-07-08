@@ -20,7 +20,7 @@
             </div>
           </a>
           <div class="p-4">
-            {% include "users/dashboard/_session_actions.html" with session=session_item only %}
+            {% include "users/dashboard/_session_actions.html" with session=session_item csrf_token=csrf_token only %}
           </div>
         </li>
       {% endfor %}

@@ -58,7 +58,7 @@
           joinurl="{% url 'spaces:join' session_slug=next_session.slug %}"
           joinable="{{ next_session_joinable|yesno:'true,false' }}"></t-session-countdown>
       </div>
-      {% include "users/dashboard/_session_actions.html" with session=next_session only %}
+      {% include "users/dashboard/_session_actions.html" with session=next_session csrf_token=csrf_token only %}
     </div>
   </div>
 </div>

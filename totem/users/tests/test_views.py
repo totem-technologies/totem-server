@@ -1,3 +1,4 @@
+import re
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -227,7 +228,16 @@ class TestDashboard:
         content = response.content.decode()
         assert "t-add-to-calendar" in content
         assert "Give up spot" in content
-        assert reverse("spaces:rsvp", kwargs={"session_slug": session.slug}) in content
+        rsvp_url = reverse("spaces:rsvp", kwargs={"session_slug": session.slug})
+        assert rsvp_url in content
+        # the give-up form must carry a CSRF token ({% include ... only %} strips it)
+        form = re.search(
+            r'<form[^>]+action="' + re.escape(rsvp_url) + r'"[^>]*>(.*?)</form>',
+            content,
+            re.DOTALL,
+        )
+        assert form is not None
+        assert "csrfmiddlewaretoken" in form.group(1)
 
     def test_dashboard_hero_shows_next_session(self, client):
         user = UserFactory()
