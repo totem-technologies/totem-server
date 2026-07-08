@@ -1,0 +1,40 @@
+{% comment %}Calendar + give-up-spot actions for a registered session. Requires: session.{% endcomment %}
+<div class="flex items-center justify-between gap-2">
+  <t-add-to-calendar
+    name="{{ session.session_title_or_title }} - {{ session.space.title }}"
+    callink="{{ session.cal_link }}"
+    start="{{ session.start|date:'c' }}"
+    duration="{{ session.duration_minutes }}"></t-add-to-calendar>
+  <button
+    type="button"
+    class="a shrink-0 text-gray-400"
+    onclick="document.getElementById('give_up_modal_{{ session.slug }}').showModal()">
+    Give up spot
+  </button>
+  <dialog id="give_up_modal_{{ session.slug }}" class="modal">
+    <div class="modal-box">
+      <h3 class="text-lg font-bold">Give up your spot?</h3>
+      <p class="py-4">
+        Your spot in
+        <strong>{{ session.session_title_or_title }}</strong> will be opened up
+        for someone else. You can always attend again if a spot is still open.
+      </p>
+      <div class="modal-action">
+        <form method="dialog">
+          <button class="btn">Keep my spot</button>
+        </form>
+        <form
+          action="{% url 'spaces:rsvp' session_slug=session.slug %}"
+          method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="remove" />
+          <input type="hidden" name="next" value="{% url 'users:dashboard' %}" />
+          <button type="submit" class="btn btn-error">Give up my spot</button>
+        </form>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button>close</button>
+    </form>
+  </dialog>
+</div>

@@ -445,6 +445,10 @@ export type NextSessionSchema = {
      */
     cal_link: string;
     /**
+     * Rsvp Url
+     */
+    rsvp_url: string;
+    /**
      * Attending
      */
     attending: boolean;

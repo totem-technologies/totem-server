@@ -263,6 +263,7 @@ def space_detail_schema(space: Space, user: User, session: Session | None = None
             duration=next_session.duration_minutes,
             meeting_provider=next_session.space.meeting_provider,
             cal_link=next_session.cal_link(),
+            rsvp_url=reverse("spaces:rsvp", kwargs={"session_slug": next_session.slug}),
             attending=next_session.attendees.filter(pk=user.pk).exists(),
             cancelled=next_session.cancelled,
             open=next_session.open,

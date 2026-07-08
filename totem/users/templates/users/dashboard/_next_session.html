@@ -1,0 +1,64 @@
+{% load avatar %}
+<div class="pb-10">
+  <strong>
+    <h3 class="pb-3" id="next-session">Your Next Session</h3>
+  </strong>
+  <div
+    class="relative overflow-clip rounded-3xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-xl">
+    <!-- prettier-ignore-start -->
+    {% if next_session.space.image %}
+      <style>
+        .next-session-bg-image {
+          background-image: linear-gradient(
+              355deg,
+              rgba(1, 1, 1, 0),
+              rgba(0, 0, 0, 0.6)
+            ),
+            url({{ next_session.space.image.url }});
+          background-size: cover;
+          background-position: center;
+          background-repeat: no-repeat;
+        }
+      </style>
+    {% endif %}
+    <!-- prettier-ignore-end -->
+    <a
+      href="{% url 'spaces:session_detail' session_slug=next_session.slug %}">
+      <div
+        class="{% if next_session.space.image %}next-session-bg-image{% else %}no-image{% endif %} relative flex flex-col p-6 md:p-8">
+        <div class="flex min-h-[140px] justify-between">
+          <div class="self-end">
+            <div class="pb-1 text-sm text-white/80">
+              {{ next_session.space.title }}
+            </div>
+            <h1 class="h3 pb-2 text-white">
+              {{ next_session.session_title_or_title }}
+            </h1>
+            <div class="text-white">
+              with {{ next_session.space.author.name }}
+            </div>
+          </div>
+          <div class="min-w-[50px] self-end">
+            {% avatar next_session.space.author size=100 classes="m-auto" %}
+          </div>
+        </div>
+      </div>
+    </a>
+    <div
+      class="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
+      <div>
+        <strong>
+          <t-time time="{{ next_session.start|date:'c' }}" format="at">
+            {{ next_session.start|date:"M d, Y gA T" }}</t-time
+          >
+        </strong>
+        <t-session-countdown
+          start="{{ next_session.start|date:'c' }}"
+          duration="{{ next_session.duration_minutes }}"
+          joinurl="{% url 'spaces:join' session_slug=next_session.slug %}"
+          joinable="{{ next_session_joinable|yesno:'true,false' }}"></t-session-countdown>
+      </div>
+      {% include "users/dashboard/_session_actions.html" with session=next_session only %}
+    </div>
+  </div>
+</div>

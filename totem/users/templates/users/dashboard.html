@@ -6,15 +6,18 @@
 {% block content %}
   <div class="px-5">
     <div class="h-10"></div>
-    <div class="m-auto max-w-5xl md:flex">
-      <div class="flex-1">
-        <h2 class="h2 pb-10">My Home</h2>
-        {% if attending_sessions %}
+    <div class="m-auto max-w-5xl">
+      <h2 class="h2 pb-10">My Home</h2>
+      {% if next_session %}
+        {% include "users/dashboard/_next_session.html" %}
+        {% if session_groups %}
           {% include "users/dashboard/_upcoming.html" %}
         {% endif %}
-        {% include "users/dashboard/_recommended.html" %}
-        {% comment %}{% include "users/dashboard/_athome.html" %}{% endcomment %}
-        {% comment %}{% include "users/dashboard/_resources.html" %}{% endcomment %}
+      {% else %}
+        {% include "users/dashboard/_welcome.html" %}
+      {% endif %}
+      <div class="pt-10">
+        <t-for-you></t-for-you>
       </div>
     </div>
   </div>

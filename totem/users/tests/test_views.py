@@ -229,6 +229,57 @@ class TestDashboard:
         assert "Give up spot" in content
         assert reverse("spaces:rsvp", kwargs={"session_slug": session.slug}) in content
 
+    def test_dashboard_hero_shows_next_session(self, client):
+        user = UserFactory()
+        client.force_login(user)
+        soon = SessionFactory(start=timezone.now() + timedelta(hours=2), title="Soonest Session")
+        soon.add_attendee(user)
+        later = SessionFactory(start=timezone.now() + timedelta(days=3), title="Later Session")
+        later.add_attendee(user)
+        response = client.get(reverse("users:dashboard"))
+        content = response.content.decode()
+        assert response.context["next_session"] == soon
+        assert "Your Next Session" in content
+        assert "t-session-countdown" in content
+        # the hero session is not repeated in the day-grouped list
+        groups = response.context["session_groups"]
+        grouped_sessions = [s for g in groups for s in g.sessions]
+        assert soon not in grouped_sessions
+        assert later in grouped_sessions
+
+    def test_dashboard_groups_sessions_by_day(self, client):
+        user = UserFactory()
+        client.force_login(user)
+        # Fix "now" to midday UTC so offsets never cross a day boundary.
+        fixed_now = timezone.now().replace(hour=12, minute=0, second=0, microsecond=0)
+        with patch("django.utils.timezone.now", return_value=fixed_now):
+            hero = SessionFactory(start=fixed_now + timedelta(hours=1))
+            hero.add_attendee(user)
+            today = SessionFactory(start=fixed_now + timedelta(hours=3))
+            today.add_attendee(user)
+            tomorrow = SessionFactory(start=fixed_now + timedelta(days=1))
+            tomorrow.add_attendee(user)
+            later = SessionFactory(start=fixed_now + timedelta(days=10))
+            later.add_attendee(user)
+            response = client.get(reverse("users:dashboard"))
+        groups = response.context["session_groups"]
+        labels = [g.label for g in groups]
+        assert labels[0] == "Today"
+        assert labels[1] == "Tomorrow"
+        assert len(labels) == 3
+        assert groups[0].sessions == [today]
+        assert groups[1].sessions == [tomorrow]
+        assert groups[2].sessions == [later]
+
+    def test_dashboard_empty_state(self, client):
+        user = UserFactory()
+        client.force_login(user)
+        response = client.get(reverse("users:dashboard"))
+        content = response.content.decode()
+        assert response.context["next_session"] is None
+        assert "Find your people" in content
+        assert reverse("spaces:list") in content
+
 
 class TestDeleteUser:
     def test_delete_user(self, client):

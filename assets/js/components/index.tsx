@@ -9,7 +9,9 @@ import DetailSidebar from "./detailSidebar"
 import { EditAvatar } from "./editAvatar"
 import ErrorBoundary from "./errors"
 import EventCalendar from "./eventCalendar"
+import ForYou from "./forYou"
 import PromptSearch from "./promptSearch"
+import SessionCountdown from "./sessionCountdown"
 import SpacesList from "./spaces"
 import Time from "./time"
 import Tooltip from "./tooltip"
@@ -30,6 +32,8 @@ const components: WCComponent[] = [
   EditAvatar,
   SpacesList,
   AddToCalendarElement,
+  SessionCountdown,
+  ForYou,
 ]
 
 type CustomElementProps = (typeof components)[number]["propsDefault"] & {

@@ -2,64 +2,28 @@
   <strong>
     <h3 class="pb-3" id="upcoming">My Sessions</h3>
   </strong>
-  <p class="pb-5">Upcoming sessions you have signed up for.</p>
-  <ul role="list" class="grid grid-cols-1 gap-6 pb-5 sm:grid-cols-2">
-    {% for session_item in attending_sessions %}
-      <li
-        class="col-span-1 divide-y divide-gray-200 rounded-3xl bg-white shadow-sm transition-all duration-500 hover:shadow-xl">
-        <a href="{% url 'spaces:session_detail' session_slug=session_item.slug %}">
-          <div class="flex w-full items-start justify-between space-x-6 p-4">
-            <div class="flex-1">
-              <h2 class="h2 text-lg text-gray-900">
-                {{ session_item.session_title_or_title }}
-              </h2>
-              <p>{{ session_item.start|date:"g:i a T, D, M j" }}</p>
+  {% for group in session_groups %}
+    <div class="pt-3 pb-2 font-semibold text-gray-500">{{ group.label }}</div>
+    <ul role="list" class="grid grid-cols-1 gap-6 pb-3 sm:grid-cols-2">
+      {% for session_item in group.sessions %}
+        <li
+          class="col-span-1 divide-y divide-gray-200 rounded-3xl bg-white shadow-sm transition-all duration-500 hover:shadow-xl">
+          <a
+            href="{% url 'spaces:session_detail' session_slug=session_item.slug %}">
+            <div class="flex w-full items-start justify-between space-x-6 p-4">
+              <div class="flex-1">
+                <h2 class="h2 text-lg text-gray-900">
+                  {{ session_item.session_title_or_title }}
+                </h2>
+                <p>{{ session_item.start|date:"g:i a T" }}</p>
+              </div>
             </div>
+          </a>
+          <div class="p-4">
+            {% include "users/dashboard/_session_actions.html" with session=session_item only %}
           </div>
-        </a>
-        <div class="flex items-center justify-between gap-2 p-4">
-          <t-add-to-calendar
-            name="{{ session_item.session_title_or_title }} - {{ session_item.space.title }}"
-            callink="{{ session_item.cal_link }}"
-            start="{{ session_item.start|date:'c' }}"
-            duration="{{ session_item.duration_minutes }}"></t-add-to-calendar>
-          <button
-            type="button"
-            class="a shrink-0 text-gray-400"
-            onclick="give_up_modal_{{ forloop.counter }}.showModal()">
-            Give up spot
-          </button>
-        </div>
-        <dialog id="give_up_modal_{{ forloop.counter }}" class="modal">
-          <div class="modal-box">
-            <h3 class="text-lg font-bold">Give up your spot?</h3>
-            <p class="py-4">
-              Your spot in
-              <strong>{{ session_item.session_title_or_title }}</strong> will be
-              opened up for someone else. You can always attend again if a spot
-              is still open.
-            </p>
-            <div class="modal-action">
-              <form method="dialog">
-                <button class="btn">Keep my spot</button>
-              </form>
-              <form
-                action="{% url 'spaces:rsvp' session_slug=session_item.slug %}"
-                method="post">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="remove" />
-                <input type="hidden" name="next" value="{% url 'users:dashboard' %}" />
-                <button type="submit" class="btn btn-error">
-                  Give up my spot
-                </button>
-              </form>
-            </div>
-          </div>
-          <form method="dialog" class="modal-backdrop">
-            <button>close</button>
-          </form>
-        </dialog>
-      </li>
-    {% endfor %}
-  </ul>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endfor %}
 </div>

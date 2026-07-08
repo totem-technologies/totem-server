@@ -167,6 +167,8 @@ class TestSpacesSummary:
         assert data["upcoming"][0]["attending"] is True
         explore_slugs = [s["slug"] for s in data["explore"]]
         assert other.space.slug in explore_slugs
+        explore_space = next(s for s in data["explore"] if s["slug"] == other.space.slug)
+        assert explore_space["next_event"]["rsvp_url"] == reverse("spaces:rsvp", kwargs={"session_slug": other.slug})
         # spaces the user already has a session in are not re-suggested
         assert attending.space.slug not in explore_slugs
         assert attending.space.slug not in [s["slug"] for s in data["for_you"]]

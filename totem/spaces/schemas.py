@@ -115,6 +115,7 @@ class NextSessionSchema(Schema):
     duration: int
     meeting_provider: MeetingProviderEnum
     cal_link: str
+    rsvp_url: str
     attending: bool
     cancelled: bool
     open: bool
