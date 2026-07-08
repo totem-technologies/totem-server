@@ -100,10 +100,13 @@ def upcoming_events(request, filters: EventCalendarFilterSchema = Query()):
 def spaces_summary(request: HttpRequest):
     user: User = request.user  # type: ignore
     data = spaces_summary_data(user)
+    # The dashboard renders at most 4 recommendation cards; cap serialization
+    # with a little headroom rather than paying for the whole catalog.
+    limit = 8
     return SummarySpacesSchema(
         upcoming=[session_detail_schema(session, user) for session in data.upcoming],
-        for_you=[space_detail_schema(space, user) for space in data.for_you],
-        explore=[space_detail_schema(space, user) for space in data.explore],
+        for_you=[space_detail_schema(space, user) for space in data.for_you[:limit]],
+        explore=[space_detail_schema(space, user) for space in data.explore[:limit]],
     )
 
 

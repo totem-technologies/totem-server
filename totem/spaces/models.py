@@ -200,7 +200,8 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         return reverse("spaces:session_detail", kwargs={"session_slug": self.slug})
 
     def seats_left(self):
-        return max(0, self.seats - self.attendees.count())
+        # len() over count() so a prefetched attendees cache is used
+        return max(0, self.seats - len(self.attendees.all()))
 
     def attendee_list(self):
         return ", ".join([str(attendee) for attendee in self.attendees.all()])

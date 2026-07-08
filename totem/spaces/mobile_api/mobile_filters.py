@@ -1,4 +1,4 @@
-from django.db.models import Count, F, Prefetch, Q, QuerySet
+from django.db.models import Count, F, Min, Prefetch, Q, QuerySet
 from django.urls import reverse
 from django.utils import timezone
 
@@ -17,8 +17,9 @@ def upcoming_sessions_queryset(user: User | None = None) -> QuerySet[Session]:
 
 
 def get_upcoming_spaces_list(user: User | None = None) -> QuerySet[Space]:
+    now = timezone.now()
     return (
-        Space.objects.filter(published=True, sessions__start__gte=timezone.now())
+        Space.objects.filter(published=True, sessions__start__gte=now)
         .distinct()
         .select_related("author")
         .prefetch_related(
@@ -31,12 +32,15 @@ def get_upcoming_spaces_list(user: User | None = None) -> QuerySet[Space]:
             ),
         )
         .annotate(subscriber_count=Count("subscribed", distinct=True))
+        .annotate(next_session_start=Min("sessions__start", filter=Q(sessions__start__gte=now)))
+        .order_by("next_session_start")
     )
 
 
 def upcoming_recommended_spaces(user: User | None, categories: list[str] | None = None, author: str | None = None):
+    now = timezone.now()
     spaces = (
-        Space.objects.filter(sessions__start__gte=timezone.now())
+        Space.objects.filter(sessions__start__gte=now)
         .distinct()
         .select_related("author")
         .prefetch_related(
@@ -49,6 +53,8 @@ def upcoming_recommended_spaces(user: User | None, categories: list[str] | None 
             ),
         )
         .annotate(subscriber_count=Count("subscribed", distinct=True))
+        .annotate(next_session_start=Min("sessions__start", filter=Q(sessions__start__gte=now)))
+        .order_by("next_session_start")
     )
     if not user or not user.is_staff:
         spaces = spaces.filter(published=True)

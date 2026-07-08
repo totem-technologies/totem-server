@@ -202,6 +202,36 @@ class TestSpacesSummary:
         assert response.status_code == 200
         assert response.json()["upcoming"] == []
 
+    def test_summary_explore_ordered_by_soonest_session(self, client, db):
+        user = UserFactory()
+        client.force_login(user)
+        later = SessionFactory(start=timezone.now() + timedelta(days=5))
+        soon = SessionFactory(start=timezone.now() + timedelta(days=1))
+        response = client.get(reverse("api-1:spaces_summary"))
+        assert response.status_code == 200
+        explore_slugs = [s["slug"] for s in response.json()["explore"]]
+        assert explore_slugs == [soon.space.slug, later.space.slug]
+
+    def test_summary_recommendations_are_capped(self, client, db):
+        user = UserFactory()
+        client.force_login(user)
+        for _ in range(10):
+            SessionFactory()
+        response = client.get(reverse("api-1:spaces_summary"))
+        assert response.status_code == 200
+        assert len(response.json()["explore"]) == 8
+
+    def test_summary_query_count_is_bounded(self, client, db, django_assert_max_num_queries):
+        """Serializing recommendation spaces must use the queryset's prefetches,
+        not per-space queries."""
+        user = UserFactory()
+        client.force_login(user)
+        for _ in range(8):
+            SessionFactory()
+        with django_assert_max_num_queries(20):
+            response = client.get(reverse("api-1:spaces_summary"))
+        assert response.status_code == 200
+
     def test_summary_for_you_matches_subscribed_categories(self, client, db):
         user = UserFactory()
         client.force_login(user)

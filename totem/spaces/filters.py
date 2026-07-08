@@ -247,28 +247,41 @@ def session_detail_schema(session: Session, user: User):
 
 
 def space_detail_schema(space: Space, user: User, session: Session | None = None):
-    category = space.categories.first()
-    category_name = category.name if category else None
+    # These use the caches on querysets like get_upcoming_spaces_list (prefetched
+    # categories/subscribed/upcoming_sessions, annotated subscriber_count) and
+    # fall back to per-space queries for callers without them.
+    categories = list(space.categories.all())
+    category_name = categories[0].name if categories else None
 
-    next_session = session or space.next_session(user)
+    next_session = session
+    if next_session is None:
+        if hasattr(space, "upcoming_sessions"):
+            upcoming: list[Session] = space.upcoming_sessions  # type: ignore[attr-defined]
+            next_session = upcoming[0] if upcoming else None
+        else:
+            next_session = space.next_session(user)
     next_session_schema: NextSessionSchema | None = None
     if next_session:
-        seats_left = next_session.seats_left()
         next_session_schema = NextSessionSchema(
             slug=next_session.slug,
             start=next_session.start,
             title=next_session.title,
             link=next_session.get_absolute_url(),
-            seats_left=seats_left,
+            seats_left=next_session.seats_left(),
             duration=next_session.duration_minutes,
             meeting_provider=next_session.space.meeting_provider,
             cal_link=next_session.cal_link(),
             rsvp_url=reverse("spaces:rsvp", kwargs={"session_slug": next_session.slug}),
-            attending=next_session.attendees.filter(pk=user.pk).exists(),
+            attending=user in next_session.attendees.all(),
             cancelled=next_session.cancelled,
             open=next_session.open,
             joinable=next_session.can_join(user),
         )
+
+    if hasattr(space, "subscriber_count"):
+        subscribers = space.subscriber_count  # type: ignore[attr-defined]
+    else:
+        subscribers = space.subscribed.count()
 
     return SpaceDetailSchema(
         slug=space.slug,
@@ -279,7 +292,7 @@ def space_detail_schema(space: Space, user: User, session: Session | None = None
         author=space.author,
         category=category_name,
         next_event=next_session_schema,
-        subscribers=space.subscribed.count(),
+        subscribers=subscribers,
         price=space.price,
         recurring=space.recurring,
     )
