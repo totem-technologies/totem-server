@@ -23,7 +23,6 @@
   --color-tblue-tint: #55778f;
   --color-tpink: #d999aa;
   --color-tpink-tint: #8b5363;
-  --font-serif: Erode, serif;
   --font-sans: Montserrat, sans-serif;
 }
 
@@ -109,11 +108,6 @@
 }
 
 @layer utilities {
-  @font-face {
-    font-family: "Erode";
-    src: url("/static/fonts/Erode-Bold.woff2");
-  }
-
   @font-face {
     font-family: "Montserrat";
     src: url("/static/fonts/Montserrat-VariableFont_wght.ttf")

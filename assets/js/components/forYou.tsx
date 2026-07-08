@@ -55,7 +55,7 @@ export function SpaceCard(props: { space: SpaceDetailSchema }) {
           </Show>
           <div class="flex min-h-[120px] justify-between gap-3">
             <div class="self-end">
-              <h3 class="pb-2 font-serif text-2xl leading-snug font-bold text-white">
+              <h3 class="pb-2 text-2xl leading-snug font-semibold text-white">
                 {props.space.title}
               </h3>
               <div class="text-white/90">with {props.space.author.name}</div>
