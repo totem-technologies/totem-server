@@ -4,10 +4,20 @@
 {% block title %}My Home{% endblock title %}
 {# djlint:on #}
 {% block content %}
-  <div class="px-5">
-    <div class="h-10"></div>
+  <div class="overflow-x-clip px-5 pb-16">
     <div class="m-auto max-w-5xl">
-      <h2 class="h2 pb-10">My Home</h2>
+      <header class="rise pt-14 pb-12">
+        <p class="eyebrow pb-3">My Home</p>
+        <h1 class="font-serif text-4xl leading-tight font-bold text-tslate md:text-5xl">
+          {{ greeting }}, {% firstof user.name.split.0 "friend" %}.
+        </h1>
+        {% if attending_count %}
+          <p class="pt-4 text-gray-500">
+            You're signed up for {{ attending_count }} upcoming
+            session{{ attending_count|pluralize }}.
+          </p>
+        {% endif %}
+      </header>
       {% if next_session %}
         {% include "users/dashboard/_next_session.html" %}
         {% if session_groups %}
@@ -16,7 +26,7 @@
       {% else %}
         {% include "users/dashboard/_welcome.html" %}
       {% endif %}
-      <div class="pt-10">
+      <div class="rise pt-14" style="animation-delay: 180ms">
         <t-for-you></t-for-you>
       </div>
     </div>

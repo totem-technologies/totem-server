@@ -1,29 +1,60 @@
-<div class="pb-5">
-  <strong>
-    <h3 class="pb-3" id="upcoming">My Sessions</h3>
-  </strong>
+{% load avatar %}
+<section class="rise pt-14" style="animation-delay: 120ms">
+  <h2 class="eyebrow pb-1" id="upcoming">My sessions</h2>
   {% for group in session_groups %}
-    <div class="pt-3 pb-2 font-semibold text-gray-500">{{ group.label }}</div>
-    <ul role="list" class="grid grid-cols-1 gap-6 pb-3 sm:grid-cols-2">
+    <div class="flex items-center gap-4 pt-6 pb-4">
+      {% if group.label == "Today" %}
+        <span
+          class="rounded-full bg-tyellow px-4 py-1 text-sm font-bold text-tslate"
+          >Today</span
+        >
+      {% elif group.label == "Tomorrow" %}
+        <span
+          class="bg-tmauve/15 rounded-full px-4 py-1 text-sm font-bold text-tmauve"
+          >Tomorrow</span
+        >
+      {% else %}
+        <span class="font-serif text-lg font-bold text-tslate"
+          >{{ group.label }}</span
+        >
+      {% endif %}
+      <div class="bg-tslate/10 h-px flex-1"></div>
+    </div>
+    <ul role="list" class="flex flex-col gap-3">
       {% for session_item in group.sessions %}
         <li
-          class="col-span-1 divide-y divide-gray-200 rounded-3xl bg-white shadow-sm transition-all duration-500 hover:shadow-xl">
-          <a
-            href="{% url 'spaces:session_detail' session_slug=session_item.slug %}">
-            <div class="flex w-full items-start justify-between space-x-6 p-4">
-              <div class="flex-1">
-                <h2 class="h2 text-lg text-gray-900">
-                  {{ session_item.session_title_or_title }}
-                </h2>
-                <p>{{ session_item.start|date:"g:i a T" }}</p>
+          class="border-tslate/10 rounded-2xl border bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md">
+          <div class="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
+            <a
+              class="flex min-w-0 flex-1 items-center gap-4"
+              href="{% url 'spaces:session_detail' session_slug=session_item.slug %}">
+              <div class="shrink-0">
+                {% avatar session_item.space.author size=48 %}
               </div>
+              <div class="min-w-0">
+                {% if session_item.session_title_or_title != session_item.space.title %}
+                  <div
+                    class="truncate text-xs font-bold tracking-[0.14em] text-tmauve uppercase">
+                    {{ session_item.space.title }}
+                  </div>
+                {% endif %}
+                <h3
+                  class="truncate font-serif text-lg leading-snug font-bold text-tslate">
+                  {{ session_item.session_title_or_title }}
+                </h3>
+                <p class="pt-0.5 text-sm text-gray-500">
+                  {{ session_item.start|date:"g:i a T" }}
+                  &middot; {{ session_item.duration_minutes }} min &middot;
+                  with {{ session_item.space.author.name }}
+                </p>
+              </div>
+            </a>
+            <div class="pl-16 sm:pl-0">
+              {% include "users/dashboard/_session_actions.html" with session=session_item csrf_token=csrf_token compact=True only %}
             </div>
-          </a>
-          <div class="p-4">
-            {% include "users/dashboard/_session_actions.html" with session=session_item csrf_token=csrf_token only %}
           </div>
         </li>
       {% endfor %}
     </ul>
   {% endfor %}
-</div>
+</section>

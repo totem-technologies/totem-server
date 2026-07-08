@@ -1,10 +1,12 @@
 {% load avatar %}
-<div class="pb-10">
-  <strong>
-    <h3 class="pb-3" id="next-session">Your Next Session</h3>
-  </strong>
+<section class="rise relative" style="animation-delay: 60ms">
   <div
-    class="relative overflow-clip rounded-3xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-xl">
+    class="absolute -top-20 -left-32 -z-10 h-80 w-80 rounded-full bg-tyellow/40 blur-3xl"></div>
+  <div
+    class="absolute top-16 -right-24 -z-10 h-64 w-64 rounded-full bg-tpink/25 blur-3xl"></div>
+  <h2 class="eyebrow pb-3" id="next-session">Your next session</h2>
+  <div
+    class="overflow-clip rounded-[2rem] border border-tslate/10 bg-white shadow-[0_24px_60px_-28px_rgba(38,47,55,0.45)] transition-shadow hover:shadow-[0_28px_70px_-28px_rgba(38,47,55,0.6)]">
     <!-- prettier-ignore-start -->
     {% if next_session.space.image %}
       <style>
@@ -25,29 +27,33 @@
     <a
       href="{% url 'spaces:session_detail' session_slug=next_session.slug %}">
       <div
-        class="{% if next_session.space.image %}next-session-bg-image{% else %}no-image{% endif %} relative flex flex-col p-6 md:p-8">
-        <div class="flex min-h-[140px] justify-between">
-          <div class="self-end">
-            <div class="pb-1 text-sm text-white/80">
-              {{ next_session.space.title }}
-            </div>
-            <h1 class="h3 pb-2 text-white">
+        class="{% if next_session.space.image %}next-session-bg-image{% else %}no-image{% endif %} relative flex flex-col p-6 md:p-10">
+        <div class="flex min-h-[170px] items-end justify-between gap-4">
+          <div>
+            {% if next_session.session_title_or_title != next_session.space.title %}
+              <div
+                class="pb-2 text-xs font-bold tracking-[0.18em] text-white/75 uppercase">
+                {{ next_session.space.title }}
+              </div>
+            {% endif %}
+            <h3
+              class="font-serif text-3xl leading-tight font-bold text-white md:text-4xl">
               {{ next_session.session_title_or_title }}
-            </h1>
-            <div class="text-white">
+            </h3>
+            <div class="pt-3 text-white/90">
               with {{ next_session.space.author.name }}
             </div>
           </div>
-          <div class="min-w-[50px] self-end">
+          <div class="min-w-[50px] shrink-0">
             {% avatar next_session.space.author size=100 classes="m-auto" %}
           </div>
         </div>
       </div>
     </a>
     <div
-      class="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
-      <div>
-        <strong>
+      class="flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between md:px-8 md:py-6">
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <strong class="text-tslate">
           <t-time time="{{ next_session.start|date:'c' }}" format="at">
             {{ next_session.start|date:"M d, Y gA T" }}</t-time
           >
@@ -61,4 +67,4 @@
       {% include "users/dashboard/_session_actions.html" with session=next_session csrf_token=csrf_token only %}
     </div>
   </div>
-</div>
+</section>

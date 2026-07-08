@@ -1,16 +1,18 @@
-{% comment %}Calendar + give-up-spot actions for a registered session. Requires: session, csrf_token.{% endcomment %}
-<div class="flex items-center justify-between gap-2">
+{% comment %}Calendar + give-up-spot actions for a registered session. Requires: session, csrf_token. Optional: compact.{% endcomment %}
+<div
+  class="flex shrink-0 items-center gap-3 {% if not compact %}justify-between gap-2{% endif %}">
   <t-add-to-calendar
     name="{{ session.session_title_or_title }} - {{ session.space.title }}"
     callink="{{ session.cal_link }}"
     start="{{ session.start|date:'c' }}"
-    duration="{{ session.duration_minutes }}"></t-add-to-calendar>
+    duration="{{ session.duration_minutes }}"
+    {% if compact %}compact="true"{% endif %}></t-add-to-calendar>
   {% if session.started %}
-    <span class="shrink-0 text-gray-400">Started</span>
+    <span class="shrink-0 text-sm text-gray-400">Started</span>
   {% else %}
     <button
       type="button"
-      class="a shrink-0 text-gray-400"
+      class="a shrink-0 text-sm text-gray-400"
       onclick="document.getElementById('give_up_modal_{{ session.slug }}').showModal()">
       Give up spot
     </button>

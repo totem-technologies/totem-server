@@ -8,6 +8,7 @@ function AddToCalendarButton(props: {
   calLink: string
   start: string
   durationMinutes: number
+  compact?: boolean
 }) {
   const config = (): ATCBActionEventConfig => {
     const end = new Date(props.start)
@@ -29,21 +30,27 @@ function AddToCalendarButton(props: {
   return (
     <button
       type="button"
-      class="btn btn-outline w-full"
+      class={
+        props.compact
+          ? "btn btn-outline btn-sm shrink-0"
+          : "btn btn-outline w-full"
+      }
       onClick={(e) => void globalThis.atcb_action(config(), e.currentTarget)}>
-      <Icon name="calendar" />
+      <Icon name="calendar" size={props.compact ? 16 : 20} />
       Add to Calendar
     </button>
   )
 }
 
 // Web-component adapter: lowercase attribute names, string-typed values.
-// Usage in templates: <t-add-to-calendar name="..." callink="..." start="..." duration="60">
+// Usage in templates:
+// <t-add-to-calendar name="..." callink="..." start="..." duration="60" compact="true">
 export function AddToCalendarElement(props: {
   name: string
   callink: string
   start: string
   duration: number | string
+  compact: string | boolean
 }) {
   return (
     <AddToCalendarButton
@@ -51,6 +58,7 @@ export function AddToCalendarElement(props: {
       calLink={props.callink}
       start={props.start}
       durationMinutes={Number(props.duration) || 60}
+      compact={props.compact === true || props.compact === "true"}
     />
   )
 }
@@ -61,6 +69,7 @@ AddToCalendarElement.propsDefault = {
   callink: "",
   start: "",
   duration: 60,
+  compact: "false",
 }
 
 export default AddToCalendarButton

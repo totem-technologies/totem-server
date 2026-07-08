@@ -284,6 +284,15 @@ def _group_sessions_by_day(sessions: list[Session]) -> list[SessionDayGroup]:
     return groups
 
 
+def _greeting() -> str:
+    hour = timezone.localtime().hour
+    if hour < 12:
+        return "Good morning"
+    if hour < 17:
+        return "Good afternoon"
+    return "Good evening"
+
+
 @login_required
 def user_dashboard_view(request):
     user: User = request.user
@@ -295,6 +304,8 @@ def user_dashboard_view(request):
         "users/dashboard.html",
         context={
             "user": user,
+            "greeting": _greeting(),
+            "attending_count": len(attending_sessions),
             "next_session": next_session,
             "next_session_joinable": next_session.can_join(user) if next_session else False,
             "session_groups": _group_sessions_by_day(attending_sessions[1:]),

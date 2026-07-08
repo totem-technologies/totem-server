@@ -50,7 +50,13 @@ function SessionCountdown(props: {
           <span class="text-gray-500">This session has ended.</span>
         </Match>
         <Match when={started()}>
-          <span class="text-tpink-tint font-semibold">Happening now</span>
+          <span class="bg-tyellow text-tslate inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-bold">
+            <span class="relative flex h-2 w-2">
+              <span class="bg-tslate absolute inline-flex h-full w-full animate-ping rounded-full opacity-40" />
+              <span class="bg-tslate relative inline-flex h-2 w-2 rounded-full" />
+            </span>
+            Happening now
+          </span>
         </Match>
         <Match when={true}>
           <span class="text-gray-500">Starts {relative(start() - now())}</span>

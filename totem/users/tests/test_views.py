@@ -249,7 +249,7 @@ class TestDashboard:
         response = client.get(reverse("users:dashboard"))
         content = response.content.decode()
         assert response.context["next_session"] == soon
-        assert "Your Next Session" in content
+        assert "Your next session" in content
         assert "t-session-countdown" in content
         # the hero session is not repeated in the day-grouped list
         groups = response.context["session_groups"]

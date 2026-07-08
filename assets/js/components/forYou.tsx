@@ -34,7 +34,7 @@ export function SpaceCard(props: { space: SpaceDetailSchema }) {
   }
 
   return (
-    <li class="col-span-1 list-none overflow-clip rounded-3xl border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-xl">
+    <li class="border-tslate/10 col-span-1 list-none overflow-clip rounded-3xl border bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
       <a href={next()?.link ?? `/spaces/${props.space.slug}/`}>
         <div
           class="relative flex flex-col p-5"
@@ -48,10 +48,17 @@ export function SpaceCard(props: { space: SpaceDetailSchema }) {
                 }
               : {}
           }>
-          <div class="flex min-h-[100px] justify-between">
+          <Show when={props.space.category}>
+            <span class="text-tslate absolute top-4 left-4 rounded-full bg-white/85 px-3 py-1 text-xs font-bold backdrop-blur-sm">
+              {props.space.category}
+            </span>
+          </Show>
+          <div class="flex min-h-[120px] justify-between gap-3">
             <div class="self-end">
-              <h1 class="h3 pb-2 text-white">{props.space.title}</h1>
-              <div class="text-white">with {props.space.author.name}</div>
+              <h3 class="pb-2 font-serif text-2xl leading-snug font-bold text-white">
+                {props.space.title}
+              </h3>
+              <div class="text-white/90">with {props.space.author.name}</div>
             </div>
             <div class="min-w-[50px] self-end">
               <Avatar
@@ -68,11 +75,19 @@ export function SpaceCard(props: { space: SpaceDetailSchema }) {
       <div class="p-5">
         <Show when={next()}>
           <div class="flex items-center justify-between gap-2">
-            <p class="font-normal text-gray-700">
-              {timestampToDateString(next()!.start)}
-              <br />
-              {timestampToTimeString(next()!.start)}
-            </p>
+            <div>
+              <p class="text-tslate font-medium">
+                {timestampToDateString(next()!.start)}
+              </p>
+              <p class="pt-0.5 text-sm text-gray-500">
+                {timestampToTimeString(next()!.start)}
+                <Show when={next()!.seats_left > 0}>
+                  {" "}
+                  &middot; {next()!.seats_left} seat
+                  {next()!.seats_left === 1 ? "" : "s"} left
+                </Show>
+              </p>
+            </div>
             <Show
               when={!attending()}
               fallback={
@@ -118,13 +133,13 @@ function ForYou() {
   }
   return (
     <div class="pb-5">
-      <div class="flex items-baseline justify-between pb-3">
-        <strong>
-          <h3 id="recommended">
-            {personalized() ? "Recommended for You" : "Explore Spaces"}
-          </h3>
-        </strong>
-        <a class="link" href="/spaces/">
+      <div class="flex items-baseline justify-between pb-4">
+        <h2 class="eyebrow" id="recommended">
+          {personalized() ? "Recommended for you" : "Explore Spaces"}
+        </h2>
+        <a
+          class="text-tmauve text-sm underline decoration-dotted underline-offset-4 hover:decoration-solid"
+          href="/spaces/">
           See all Spaces
         </a>
       </div>
