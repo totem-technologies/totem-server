@@ -4,31 +4,13 @@
 {% block title %}My Home{% endblock title %}
 {# djlint:on #}
 {% block content %}
+  {% comment %}
+    The dashboard is the t-dashboard mini app (assets/js/components/dashboard.tsx),
+    driven by /api/v1/spaces/summary.
+  {% endcomment %}
   <div class="overflow-x-clip px-5 pb-16">
     <div class="m-auto max-w-5xl">
-      <header class="rise pt-14 pb-12">
-        <p class="eyebrow pb-3">My Home</p>
-        <h1 class="text-4xl leading-tight font-semibold text-tslate md:text-5xl">
-          {{ greeting }}, {% firstof user.name.split.0 "friend" %}.
-        </h1>
-        {% if attending_count %}
-          <p class="pt-4 text-gray-500">
-            You're signed up for {{ attending_count }} upcoming
-            session{{ attending_count|pluralize }}.
-          </p>
-        {% endif %}
-      </header>
-      {% if next_session %}
-        {% include "users/dashboard/_next_session.html" %}
-        {% if session_groups %}
-          {% include "users/dashboard/_upcoming.html" %}
-        {% endif %}
-      {% else %}
-        {% include "users/dashboard/_welcome.html" %}
-      {% endif %}
-      <div class="rise pt-14" style="animation-delay: 180ms">
-        <t-for-you></t-for-you>
-      </div>
+      <t-dashboard name="{% firstof user.name 'friend' %}"></t-dashboard>
     </div>
   </div>
 {% endblock content %}

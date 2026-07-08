@@ -3,12 +3,20 @@ import { convertISOToHHMM, getDateFromISOString } from "@/libs/time"
 import { getTimeZone } from "@/libs/timezone"
 import Icon from "./icons"
 
+// block: fills a stacked layout (event sidebar); inline: sits in a row of
+// actions (dashboard hero); compact: small inline (dashboard session rows)
+const variantClasses = {
+  block: "btn btn-outline w-full",
+  inline: "btn btn-outline shrink-0",
+  compact: "btn btn-outline btn-sm shrink-0",
+}
+
 function AddToCalendarButton(props: {
   name: string
   calLink: string
   start: string
   durationMinutes: number
-  compact?: boolean
+  variant?: keyof typeof variantClasses
 }) {
   const config = (): ATCBActionEventConfig => {
     const end = new Date(props.start)
@@ -30,46 +38,12 @@ function AddToCalendarButton(props: {
   return (
     <button
       type="button"
-      class={
-        props.compact
-          ? "btn btn-outline btn-sm shrink-0"
-          : "btn btn-outline w-full"
-      }
+      class={variantClasses[props.variant ?? "block"]}
       onClick={(e) => void globalThis.atcb_action(config(), e.currentTarget)}>
-      <Icon name="calendar" size={props.compact ? 16 : 20} />
+      <Icon name="calendar" size={props.variant === "compact" ? 16 : 20} />
       Add to Calendar
     </button>
   )
-}
-
-// Web-component adapter: lowercase attribute names, string-typed values.
-// Usage in templates:
-// <t-add-to-calendar name="..." callink="..." start="..." duration="60" compact="true">
-export function AddToCalendarElement(props: {
-  name: string
-  callink: string
-  start: string
-  duration: number | string
-  compact: string | boolean
-}) {
-  return (
-    <AddToCalendarButton
-      name={props.name}
-      calLink={props.callink}
-      start={props.start}
-      durationMinutes={Number(props.duration) || 60}
-      compact={props.compact === true || props.compact === "true"}
-    />
-  )
-}
-
-AddToCalendarElement.tagName = "t-add-to-calendar"
-AddToCalendarElement.propsDefault = {
-  name: "",
-  callink: "",
-  start: "",
-  duration: 60,
-  compact: "false",
 }
 
 export default AddToCalendarButton

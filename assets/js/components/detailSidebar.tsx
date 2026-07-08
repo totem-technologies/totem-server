@@ -10,7 +10,7 @@ import {
   Suspense,
   Switch,
 } from "solid-js"
-import { postData } from "@/libs/postData"
+import { postData, postErrorMessage } from "@/libs/postData"
 import { timestampToDateString, timestampToTimeString } from "@/libs/time"
 import { type SessionDetailSchema, totemSpacesApiEventDetail } from "../client"
 import AddToCalendarButton from "./AddToCalendarButton"
@@ -209,7 +209,12 @@ export function EventInfo(props: {
       setError("")
     }
     if (response.status >= 400) {
-      setError((await response.json()).error)
+      setError(
+        await postErrorMessage(
+          response,
+          "Could not save your spot. Please try again."
+        )
+      )
     }
   }
   async function handleGiveUp(e: Event) {
@@ -306,7 +311,7 @@ export function EventInfo(props: {
             {createCalendarButton(props.eventStore)}
             <button
               type="button"
-              class="a pt-2 text-gray-400"
+              class="btn-quiet pt-2"
               onClick={(e) => void handleGiveUp(e)}>
               Give up spot
             </button>
@@ -358,7 +363,7 @@ function Subscribe(props: {
             <div>You are currently subscribed to this Space.</div>
             <button
               type="button"
-              class="a pt-2 text-gray-400"
+              class="btn-quiet pt-2"
               onClick={(e) => void handleUnsubscribe(e)}>
               Unsubscribe from updates
             </button>

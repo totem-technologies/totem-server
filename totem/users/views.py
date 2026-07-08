@@ -1,6 +1,4 @@
-import datetime
 import logging
-from dataclasses import dataclass
 from urllib.parse import quote
 
 from auditlog.context import disable_auditlog
@@ -15,16 +13,12 @@ from django.db import transaction
 from django.http import Http404, HttpRequest, HttpResponseForbidden
 from django.shortcuts import redirect, render
 from django.urls import reverse
-from django.utils import timezone
-from django.utils.formats import date_format
 from django.utils.http import url_has_allowed_host_and_scheme
 
 from totem.email import emails
 from totem.spaces.filters import (
-    upcoming_attending_sessions,
     upcoming_sessions_by_author,
 )
-from totem.spaces.models import Session
 from totem.utils.slack import notify_slack
 
 from . import analytics
@@ -259,58 +253,11 @@ def user_index_view(request):
     return user_redirect_view(request)
 
 
-@dataclass
-class SessionDayGroup:
-    label: str
-    sessions: list[Session]
-
-
-def _group_sessions_by_day(sessions: list[Session]) -> list[SessionDayGroup]:
-    """Group sessions (assumed sorted by start) by the user's local day."""
-    groups: list[SessionDayGroup] = []
-    today = timezone.localdate()
-    for session in sessions:
-        day = timezone.localdate(session.start)
-        if day == today:
-            label = "Today"
-        elif day == today + datetime.timedelta(days=1):
-            label = "Tomorrow"
-        else:
-            label = date_format(day, "D, N j")
-        if groups and groups[-1].label == label:
-            groups[-1].sessions.append(session)
-        else:
-            groups.append(SessionDayGroup(label=label, sessions=[session]))
-    return groups
-
-
-def _greeting() -> str:
-    hour = timezone.localtime().hour
-    if hour < 12:
-        return "Good morning"
-    if hour < 17:
-        return "Good afternoon"
-    return "Good evening"
-
-
 @login_required
 def user_dashboard_view(request):
-    user: User = request.user
-    attending_sessions = list(upcoming_attending_sessions(user, limit=20))
-    next_session = attending_sessions[0] if attending_sessions else None
-
-    return render(
-        request,
-        "users/dashboard.html",
-        context={
-            "user": user,
-            "greeting": _greeting(),
-            "attending_count": len(attending_sessions),
-            "next_session": next_session,
-            "next_session_joinable": next_session.can_join(user) if next_session else False,
-            "session_groups": _group_sessions_by_day(attending_sessions[1:]),
-        },
-    )
+    # The dashboard itself is the <t-dashboard> mini app driven by the
+    # spaces summary API.
+    return render(request, "users/dashboard.html")
 
 
 @login_required

@@ -2,16 +2,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/solid-query"
 import { customElement, noShadowDOM } from "solid-element"
 import type { JSXElement, ValidComponent } from "solid-js"
 import { Dynamic } from "solid-js/web"
-import { AddToCalendarElement } from "./AddToCalendarButton"
 import Avatar from "./avatar"
 import Circles from "./circles"
+import Dashboard from "./dashboard"
 import DetailSidebar from "./detailSidebar"
 import { EditAvatar } from "./editAvatar"
 import ErrorBoundary from "./errors"
 import EventCalendar from "./eventCalendar"
-import ForYou from "./forYou"
 import PromptSearch from "./promptSearch"
-import SessionCountdown from "./sessionCountdown"
 import SpacesList from "./spaces"
 import Time from "./time"
 import Tooltip from "./tooltip"
@@ -31,9 +29,7 @@ const components: WCComponent[] = [
   Time,
   EditAvatar,
   SpacesList,
-  AddToCalendarElement,
-  SessionCountdown,
-  ForYou,
+  Dashboard,
 ]
 
 type CustomElementProps = (typeof components)[number]["propsDefault"] & {
@@ -58,7 +54,6 @@ function customElementWC(
     propDefaults,
     (props: CustomElementProps, { element }) => {
       noShadowDOM()
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       const slots = element.querySelectorAll(
         "[slot]"
       ) as NodeListOf<HTMLSlotElement>

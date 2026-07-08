@@ -14,13 +14,13 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-function renderCountdown(startOffsetMs: number, joinable = "false") {
+function renderCountdown(startOffsetMs: number, joinable = false) {
   const start = new Date(NOW.getTime() + startOffsetMs).toISOString()
   return render(() => (
     <SessionCountdown
       start={start}
       duration={60}
-      joinurl="/spaces/join/test-session/"
+      joinUrl="/spaces/join/test-session/"
       joinable={joinable}
     />
   ))
@@ -59,12 +59,12 @@ test("started session shows happening now and join", () => {
 test("started beyond grace hides join unless server says joinable", () => {
   const noJoin = renderCountdown(-30 * MINUTE)
   expect(joinButton(noJoin)).toBeNull()
-  const rejoin = renderCountdown(-30 * MINUTE, "true")
+  const rejoin = renderCountdown(-30 * MINUTE, true)
   expect(joinButton(rejoin)).toBeTruthy()
 })
 
 test("ended session shows ended, no join even if joinable", () => {
-  const result = renderCountdown(-2 * 60 * MINUTE, "true")
+  const result = renderCountdown(-2 * 60 * MINUTE, true)
   expect(result.container.textContent?.toLowerCase()).toContain("ended")
   expect(joinButton(result)).toBeNull()
 })

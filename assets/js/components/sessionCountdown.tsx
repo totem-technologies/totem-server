@@ -1,4 +1,11 @@
-import { createSignal, Match, onCleanup, Show, Switch } from "solid-js"
+import {
+  createMemo,
+  createSignal,
+  Match,
+  onCleanup,
+  Show,
+  Switch,
+} from "solid-js"
 
 const MINUTE = 60_000
 // Mirrors Session.can_join server rules for regular attendees; the join view
@@ -6,8 +13,9 @@ const MINUTE = 60_000
 const GRACE_BEFORE = 15 * MINUTE
 const GRACE_AFTER = 10 * MINUTE
 
+const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "always" })
+
 function relative(ms: number): string {
-  const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "always" })
   const minutes = Math.round(ms / MINUTE)
   if (Math.abs(minutes) >= 48 * 60) {
     return rtf.format(Math.round(minutes / (24 * 60)), "day")
@@ -23,23 +31,21 @@ function relative(ms: number): string {
 
 function SessionCountdown(props: {
   start: string
-  duration: number | string
-  joinurl: string
-  joinable: string | boolean
+  duration: number
+  joinUrl: string
+  joinable: boolean
 }) {
   const [now, setNow] = createSignal(Date.now())
   const timer = setInterval(() => setNow(Date.now()), 1000)
   onCleanup(() => clearInterval(timer))
 
-  const start = () => new Date(props.start).getTime()
-  const end = () => start() + (Number(props.duration) || 60) * MINUTE
+  const start = createMemo(() => new Date(props.start).getTime())
+  const end = createMemo(() => start() + props.duration * MINUTE)
   const started = () => now() >= start()
   const ended = () => now() >= end()
-  const serverJoinable = () =>
-    props.joinable === true || props.joinable === "true"
   const canJoin = () => {
     if (ended()) return false
-    if (serverJoinable()) return true
+    if (props.joinable) return true
     return now() >= start() - GRACE_BEFORE && now() <= start() + GRACE_AFTER
   }
 
@@ -63,20 +69,12 @@ function SessionCountdown(props: {
         </Match>
       </Switch>
       <Show when={canJoin()}>
-        <a class="btn btn-primary btn-sm" href={props.joinurl}>
+        <a class="btn btn-primary btn-sm" href={props.joinUrl}>
           Join Now
         </a>
       </Show>
     </div>
   )
-}
-
-SessionCountdown.tagName = "t-session-countdown"
-SessionCountdown.propsDefault = {
-  start: "",
-  duration: 60,
-  joinurl: "",
-  joinable: "false",
 }
 
 export default SessionCountdown

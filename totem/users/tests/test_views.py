@@ -1,4 +1,3 @@
-import re
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -212,83 +211,32 @@ class UserFeedbackViewTest(TestCase):
 
 
 class TestDashboard:
+    """The dashboard body is the <t-dashboard> mini app (see
+    assets/js/components/dashboard.test.tsx for its behavior); the view
+    only supplies the shell and greeting."""
+
     def test_dashboard_200(self, client):
         user = UserFactory()
         client.force_login(user)
         response = client.get(reverse("users:dashboard"))
         assert response.status_code == 200
 
-    def test_dashboard_attending_session_has_actions(self, client):
-        user = UserFactory()
-        client.force_login(user)
-        session = SessionFactory()
-        session.add_attendee(user)
-        response = client.get(reverse("users:dashboard"))
-        assert response.status_code == 200
-        content = response.content.decode()
-        assert "t-add-to-calendar" in content
-        assert "Give up spot" in content
-        rsvp_url = reverse("spaces:rsvp", kwargs={"session_slug": session.slug})
-        assert rsvp_url in content
-        # the give-up form must carry a CSRF token ({% include ... only %} strips it)
-        form = re.search(
-            r'<form[^>]+action="' + re.escape(rsvp_url) + r'"[^>]*>(.*?)</form>',
-            content,
-            re.DOTALL,
-        )
-        assert form is not None
-        assert "csrfmiddlewaretoken" in form.group(1)
-
-    def test_dashboard_hero_shows_next_session(self, client):
-        user = UserFactory()
-        client.force_login(user)
-        soon = SessionFactory(start=timezone.now() + timedelta(hours=2), title="Soonest Session")
-        soon.add_attendee(user)
-        later = SessionFactory(start=timezone.now() + timedelta(days=3), title="Later Session")
-        later.add_attendee(user)
-        response = client.get(reverse("users:dashboard"))
-        content = response.content.decode()
-        assert response.context["next_session"] == soon
-        assert "Your next session" in content
-        assert "t-session-countdown" in content
-        # the hero session is not repeated in the day-grouped list
-        groups = response.context["session_groups"]
-        grouped_sessions = [s for g in groups for s in g.sessions]
-        assert soon not in grouped_sessions
-        assert later in grouped_sessions
-
-    def test_dashboard_groups_sessions_by_day(self, client):
-        user = UserFactory()
-        client.force_login(user)
-        # Fix "now" to midday UTC so offsets never cross a day boundary.
-        fixed_now = timezone.now().replace(hour=12, minute=0, second=0, microsecond=0)
-        with patch("django.utils.timezone.now", return_value=fixed_now):
-            hero = SessionFactory(start=fixed_now + timedelta(hours=1))
-            hero.add_attendee(user)
-            today = SessionFactory(start=fixed_now + timedelta(hours=3))
-            today.add_attendee(user)
-            tomorrow = SessionFactory(start=fixed_now + timedelta(days=1))
-            tomorrow.add_attendee(user)
-            later = SessionFactory(start=fixed_now + timedelta(days=10))
-            later.add_attendee(user)
-            response = client.get(reverse("users:dashboard"))
-        groups = response.context["session_groups"]
-        labels = [g.label for g in groups]
-        assert labels[0] == "Today"
-        assert labels[1] == "Tomorrow"
-        assert len(labels) == 3
-        assert groups[0].sessions == [today]
-        assert groups[1].sessions == [tomorrow]
-        assert groups[2].sessions == [later]
-
-    def test_dashboard_empty_state(self, client):
-        user = UserFactory()
+    def test_dashboard_renders_mini_app(self, client):
+        user = UserFactory(name="Chidi Anagonye Jr.")
         client.force_login(user)
         response = client.get(reverse("users:dashboard"))
         content = response.content.decode()
-        assert response.context["next_session"] is None
-        assert "Find your people" in content
-        assert reverse("spaces:list") in content
+        assert "<t-dashboard" in content
+        # the full name as entered, never split into first/last
+        assert 'name="Chidi Anagonye Jr."' in content
+        # the calendar library must be loaded for the add-to-calendar buttons
+        assert "atcb.min.js" in content
+
+    def test_dashboard_name_fallback(self, client):
+        user = UserFactory(name="")
+        client.force_login(user)
+        response = client.get(reverse("users:dashboard"))
+        assert 'name="friend"' in response.content.decode()
 
 
 class TestDeleteUser:
