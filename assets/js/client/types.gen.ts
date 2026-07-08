@@ -445,6 +445,10 @@ export type NextSessionSchema = {
      */
     cal_link: string;
     /**
+     * Rsvp Url
+     */
+    rsvp_url: string;
+    /**
      * Attending
      */
     attending: boolean;
@@ -504,6 +508,24 @@ export type SpaceDetailSchema = {
      * Price
      */
     price: number;
+};
+
+/**
+ * SummarySpacesSchema
+ */
+export type SummarySpacesSchema = {
+    /**
+     * Upcoming
+     */
+    upcoming: Array<SessionDetailSchema>;
+    /**
+     * For You
+     */
+    for_you: Array<SpaceDetailSchema>;
+    /**
+     * Explore
+     */
+    explore: Array<SpaceDetailSchema>;
 };
 
 export type TotemApiApiCurrentUserData = {
@@ -709,6 +731,22 @@ export type TotemSpacesApiUpcomingEventsResponses = {
 };
 
 export type TotemSpacesApiUpcomingEventsResponse = TotemSpacesApiUpcomingEventsResponses[keyof TotemSpacesApiUpcomingEventsResponses];
+
+export type TotemSpacesApiSpacesSummaryData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/api/v1/spaces/summary';
+};
+
+export type TotemSpacesApiSpacesSummaryResponses = {
+    /**
+     * OK
+     */
+    200: SummarySpacesSchema;
+};
+
+export type TotemSpacesApiSpacesSummaryResponse = TotemSpacesApiSpacesSummaryResponses[keyof TotemSpacesApiSpacesSummaryResponses];
 
 export type TotemSpacesApiListSpacesData = {
     body?: never;

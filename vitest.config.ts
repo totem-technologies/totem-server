@@ -10,6 +10,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "jsdom",
+    setupFiles: ["./assets/js/testSetup.ts"],
     alias: {
       "tippy.js/headless": "tippy.js/headless/dist/tippy-headless.cjs.js",
     },

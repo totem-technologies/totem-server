@@ -16,3 +16,16 @@ export async function postData(
     },
   })
 }
+
+/** The `{error}` message from a failed postData response, or the fallback. */
+export async function postErrorMessage(
+  response: Response,
+  fallback: string
+): Promise<string> {
+  try {
+    const { error } = (await response.json()) as { error?: string }
+    return error || fallback
+  } catch {
+    return fallback
+  }
+}

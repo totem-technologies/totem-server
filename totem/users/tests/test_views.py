@@ -211,11 +211,32 @@ class UserFeedbackViewTest(TestCase):
 
 
 class TestDashboard:
+    """The dashboard body is the <t-dashboard> mini app (see
+    assets/js/components/dashboard.test.tsx for its behavior); the view
+    only supplies the shell and greeting."""
+
     def test_dashboard_200(self, client):
         user = UserFactory()
         client.force_login(user)
         response = client.get(reverse("users:dashboard"))
         assert response.status_code == 200
+
+    def test_dashboard_renders_mini_app(self, client):
+        user = UserFactory(name="Chidi Anagonye Jr.")
+        client.force_login(user)
+        response = client.get(reverse("users:dashboard"))
+        content = response.content.decode()
+        assert "<t-dashboard" in content
+        # the full name as entered, never split into first/last
+        assert 'name="Chidi Anagonye Jr."' in content
+        # the calendar library must be loaded for the add-to-calendar buttons
+        assert "atcb.min.js" in content
+
+    def test_dashboard_name_fallback(self, client):
+        user = UserFactory(name="")
+        client.force_login(user)
+        response = client.get(reverse("users:dashboard"))
+        assert 'name="friend"' in response.content.decode()
 
 
 class TestDeleteUser:

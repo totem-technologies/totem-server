@@ -149,6 +149,107 @@ class TestSessionDetail:
         assert response.json()["attending"] is True
 
 
+class TestSpacesSummary:
+    def test_summary_requires_login(self, client, db):
+        response = client.get(reverse("api-1:spaces_summary"))
+        assert response.status_code == 401
+
+    def test_summary_sections(self, client, db):
+        user = UserFactory()
+        client.force_login(user)
+        attending = SessionFactory()
+        attending.attendees.add(user)
+        other = SessionFactory()
+        response = client.get(reverse("api-1:spaces_summary"))
+        assert response.status_code == 200
+        data = response.json()
+        assert [s["slug"] for s in data["upcoming"]] == [attending.slug]
+        assert data["upcoming"][0]["attending"] is True
+        explore_slugs = [s["slug"] for s in data["explore"]]
+        assert other.space.slug in explore_slugs
+        explore_space = next(s for s in data["explore"] if s["slug"] == other.space.slug)
+        assert explore_space["next_event"]["rsvp_url"] == reverse("spaces:rsvp", kwargs={"session_slug": other.slug})
+        # spaces the user already has a session in are not re-suggested
+        assert attending.space.slug not in explore_slugs
+        assert attending.space.slug not in [s["slug"] for s in data["for_you"]]
+
+    def test_summary_upcoming_space_image_link(self, client, db):
+        user = UserFactory()
+        client.force_login(user)
+        no_image = SessionFactory()
+        no_image.attendees.add(user)
+        space = SpaceFactory()
+        space.image = "space-images/test.jpg"
+        space.save()
+        with_image = SessionFactory(space=space)
+        with_image.attendees.add(user)
+        response = client.get(reverse("api-1:spaces_summary"))
+        assert response.status_code == 200
+        by_slug = {s["slug"]: s for s in response.json()["upcoming"]}
+        # ninja's DjangoGetter serializes FieldFile as its url (or None when unset)
+        assert by_slug[no_image.slug]["space"]["image"] is None
+        link = by_slug[with_image.slug]["space"]["image"]
+        assert link is not None
+        assert link.endswith("space-images/test.jpg")
+        assert link.startswith("/")
+
+    def test_summary_excludes_ended_sessions(self, client, db):
+        user = UserFactory()
+        client.force_login(user)
+        ended = SessionFactory(start=timezone.now() - timedelta(days=1))
+        ended.attendees.add(user)
+        response = client.get(reverse("api-1:spaces_summary"))
+        assert response.status_code == 200
+        assert response.json()["upcoming"] == []
+
+    def test_summary_explore_ordered_by_soonest_session(self, client, db):
+        user = UserFactory()
+        client.force_login(user)
+        later = SessionFactory(start=timezone.now() + timedelta(days=5))
+        soon = SessionFactory(start=timezone.now() + timedelta(days=1))
+        response = client.get(reverse("api-1:spaces_summary"))
+        assert response.status_code == 200
+        explore_slugs = [s["slug"] for s in response.json()["explore"]]
+        assert explore_slugs == [soon.space.slug, later.space.slug]
+
+    def test_summary_recommendations_are_capped(self, client, db):
+        user = UserFactory()
+        client.force_login(user)
+        for _ in range(10):
+            SessionFactory()
+        response = client.get(reverse("api-1:spaces_summary"))
+        assert response.status_code == 200
+        assert len(response.json()["explore"]) == 8
+
+    def test_summary_query_count_is_bounded(self, client, db, django_assert_max_num_queries):
+        """Serializing recommendation spaces must use the queryset's prefetches,
+        not per-space queries."""
+        user = UserFactory()
+        client.force_login(user)
+        for _ in range(8):
+            SessionFactory()
+        with django_assert_max_num_queries(20):
+            response = client.get(reverse("api-1:spaces_summary"))
+        assert response.status_code == 200
+
+    def test_summary_for_you_matches_subscribed_categories(self, client, db):
+        user = UserFactory()
+        client.force_login(user)
+        category = SpaceCategoryFactory()
+        subscribed_space = SpaceFactory(categories=[category])
+        SessionFactory(space=subscribed_space)
+        subscribed_space.subscribed.add(user)
+        recommended_space = SpaceFactory(categories=[category])
+        SessionFactory(space=recommended_space)
+        unrelated_space = SpaceFactory()
+        SessionFactory(space=unrelated_space)
+        response = client.get(reverse("api-1:spaces_summary"))
+        assert response.status_code == 200
+        for_you_slugs = [s["slug"] for s in response.json()["for_you"]]
+        assert recommended_space.slug in for_you_slugs
+        assert unrelated_space.slug not in for_you_slugs
+
+
 class TestSessionCalendar:
     def test_session_calendar_future(self, client, db):
         now_plus_week = timezone.now() + timedelta(days=7)

@@ -23,7 +23,6 @@
   --color-tblue-tint: #55778f;
   --color-tpink: #d999aa;
   --color-tpink-tint: #8b5363;
-  --font-serif: Erode, serif;
   --font-sans: Montserrat, sans-serif;
 }
 
@@ -55,8 +54,45 @@
   @apply text-blue-500 underline;
 }
 
+/* Tailwind v4 preflight leaves buttons with cursor:default; restore the
+   pointer for anything clickable (daisyUI only covers its own .btn). */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
 @utility tshadow {
   @apply shadow-2xl ring-1 ring-gray-900/10;
+}
+
+/* Small tracked-caps section label, the dashboard's wayfinding voice. */
+@utility eyebrow {
+  @apply text-tmauve font-sans text-xs font-bold tracking-[0.18em] uppercase;
+}
+
+/* One-shot entrance for page sections; stagger with animation-delay.
+   fill-mode must be backwards (not both/forwards): a retained animated
+   transform — even the identity — makes the section a containing block and
+   stacking context, trapping position:fixed overlays like add-to-calendar's
+   backdrop. backwards only fills during the delay; afterwards the section
+   returns to its natural, transform-free style. */
+@utility rise {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: rise-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @utility btn {
@@ -76,12 +112,16 @@
   @apply text-white;
 }
 
-@layer utilities {
-  @font-face {
-    font-family: "Erode";
-    src: url("/static/fonts/Erode-Bold.woff2");
-  }
+/* Quiet text button for low-emphasis actions ("Give up spot", "Unsubscribe"). */
+@utility btn-quiet {
+  @apply text-gray-400 underline transition-colors;
 
+  &:hover {
+    @apply text-tpink-tint;
+  }
+}
+
+@layer utilities {
   @font-face {
     font-family: "Montserrat";
     src: url("/static/fonts/Montserrat-VariableFont_wght.ttf")

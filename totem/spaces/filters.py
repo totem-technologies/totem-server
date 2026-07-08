@@ -1,9 +1,12 @@
 import datetime
+from dataclasses import dataclass
 
-from django.db.models import Count, F, OuterRef, Q, Subquery
+from django.db.models import Count, DateTimeField, ExpressionWrapper, F, OuterRef, Q, Subquery
 from django.urls import reverse
 from django.utils import timezone
 
+from totem.onboard.models import OnboardModel
+from totem.spaces.mobile_api.mobile_filters import get_upcoming_spaces_list, upcoming_recommended_spaces
 from totem.spaces.schemas import NextSessionSchema, SessionDetailSchema, SessionSpaceSchema, SpaceDetailSchema
 from totem.users.models import User
 
@@ -147,6 +150,66 @@ def upcoming_sessions_by_author(user: User, author: User, exclude_event: Session
     return upcoming_sessions
 
 
+@dataclass
+class SpacesSummary:
+    upcoming: list[Session]
+    for_you: list[Space]
+    explore: list[Space]
+
+
+def spaces_summary_data(user: User) -> SpacesSummary:
+    """The user's summary: registered sessions plus personalized and general recommendations.
+
+    Shared by the web and mobile summary endpoints, which map it to their own schemas.
+    """
+    spaces_qs = get_upcoming_spaces_list(user)
+
+    # Sessions the user has registered for that haven't ended yet.
+    end_time_expression = ExpressionWrapper(
+        F("start") + F("duration_minutes") * datetime.timedelta(minutes=1),
+        output_field=DateTimeField(),
+    )
+    upcoming_sessions = (
+        exclude_banned_sessions(
+            Session.objects.annotate(end_time=end_time_expression).filter(
+                attendees=user, cancelled=False, end_time__gt=timezone.now()
+            ),
+            user,
+        )
+        .select_related("space")
+        .prefetch_related("space__author", "space__categories", "attendees", "space__subscribed")
+        .annotate(
+            attendee_count=Count("attendees", distinct=True),
+            subscriber_count=Count("space__subscribed", distinct=True),
+        )
+        .order_by("start")
+    )
+    upcoming = list(upcoming_sessions)
+    upcoming_space_slugs = {session.space.slug for session in upcoming}
+
+    # Personalization signal: onboarding hopes plus categories of subscribed spaces.
+    categories_set: set[str] = set()
+    try:
+        onboard_model = OnboardModel.objects.get(user=user)
+        if onboard_model.hopes:
+            for hope in onboard_model.hopes.split(","):
+                name = hope.strip()
+                if name:
+                    categories_set.add(name)
+    except OnboardModel.DoesNotExist:
+        pass
+    previous_category_names = spaces_qs.filter(subscribed=user).values_list("categories__name", flat=True).distinct()
+    categories_set.update(name for name in previous_category_names if name)
+
+    for_you = [
+        space
+        for space in upcoming_recommended_spaces(user, categories=list(categories_set))
+        if space.slug not in upcoming_space_slugs
+    ]
+    explore = [space for space in spaces_qs if space.slug not in upcoming_space_slugs]
+    return SpacesSummary(upcoming=upcoming, for_you=for_you, explore=explore)
+
+
 def session_detail_schema(session: Session, user: User):
     space: Space = session.space
     start = session.start
@@ -184,27 +247,41 @@ def session_detail_schema(session: Session, user: User):
 
 
 def space_detail_schema(space: Space, user: User, session: Session | None = None):
-    category = space.categories.first()
-    category_name = category.name if category else None
+    # These use the caches on querysets like get_upcoming_spaces_list (prefetched
+    # categories/subscribed/upcoming_sessions, annotated subscriber_count) and
+    # fall back to per-space queries for callers without them.
+    categories = list(space.categories.all())
+    category_name = categories[0].name if categories else None
 
-    next_session = session or space.next_session(user)
+    next_session = session
+    if next_session is None:
+        if hasattr(space, "upcoming_sessions"):
+            upcoming: list[Session] = space.upcoming_sessions  # type: ignore[attr-defined]
+            next_session = upcoming[0] if upcoming else None
+        else:
+            next_session = space.next_session(user)
     next_session_schema: NextSessionSchema | None = None
     if next_session:
-        seats_left = next_session.seats_left()
         next_session_schema = NextSessionSchema(
             slug=next_session.slug,
             start=next_session.start,
             title=next_session.title,
             link=next_session.get_absolute_url(),
-            seats_left=seats_left,
+            seats_left=next_session.seats_left(),
             duration=next_session.duration_minutes,
             meeting_provider=next_session.space.meeting_provider,
             cal_link=next_session.cal_link(),
-            attending=next_session.attendees.filter(pk=user.pk).exists(),
+            rsvp_url=reverse("spaces:rsvp", kwargs={"session_slug": next_session.slug}),
+            attending=user in next_session.attendees.all(),
             cancelled=next_session.cancelled,
             open=next_session.open,
             joinable=next_session.can_join(user),
         )
+
+    if hasattr(space, "subscriber_count"):
+        subscribers = space.subscriber_count  # type: ignore[attr-defined]
+    else:
+        subscribers = space.subscribed.count()
 
     return SpaceDetailSchema(
         slug=space.slug,
@@ -215,7 +292,7 @@ def space_detail_schema(space: Space, user: User, session: Session | None = None
         author=space.author,
         category=category_name,
         next_event=next_session_schema,
-        subscribers=space.subscribed.count(),
+        subscribers=subscribers,
         price=space.price,
         recurring=space.recurring,
     )

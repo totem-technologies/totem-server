@@ -4,6 +4,7 @@ import type { JSXElement, ValidComponent } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import Avatar from "./avatar"
 import Circles from "./circles"
+import Dashboard from "./dashboard"
 import DetailSidebar from "./detailSidebar"
 import { EditAvatar } from "./editAvatar"
 import ErrorBoundary from "./errors"
@@ -28,6 +29,7 @@ const components: WCComponent[] = [
   Time,
   EditAvatar,
   SpacesList,
+  Dashboard,
 ]
 
 type CustomElementProps = (typeof components)[number]["propsDefault"] & {
@@ -52,7 +54,6 @@ function customElementWC(
     propDefaults,
     (props: CustomElementProps, { element }) => {
       noShadowDOM()
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
       const slots = element.querySelectorAll(
         "[slot]"
       ) as NodeListOf<HTMLSlotElement>

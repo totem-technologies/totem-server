@@ -38,6 +38,11 @@
     </div>
     <div class="drawer-content flex items-center">
       {% if request.user.is_authenticated %}
+        <a
+          class="hover:text-tblue hidden pr-5 text-sm sm:inline"
+          href="{% url "users:redirect" %}"
+          >My Home</a
+        >
         <a class="hover:text-tblue pr-5 text-sm" href="{% url "spaces:list" %}"
           >Spaces</a
         >

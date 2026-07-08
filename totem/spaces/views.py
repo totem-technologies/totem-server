@@ -9,6 +9,7 @@ from django.core.exceptions import PermissionDenied
 from django.db import transaction
 from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 from sentry_sdk import capture_exception
 
 from totem.users import analytics
@@ -121,6 +122,13 @@ def rsvp(request: HttpRequest, session_slug):
     else:
         if error:
             messages.error(request, error)
+        elif request.POST.get("action") == "remove":
+            messages.success(request, "You gave up your spot. You can always attend again if a spot is still open.")
+        next_url = request.POST.get("next", "")
+        if next_url and url_has_allowed_host_and_scheme(
+            next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+        ):
+            return redirect(next_url)
         return redirect("spaces:session_detail", session_slug=session.slug)
 
 

@@ -17,8 +17,6 @@ from django.utils.http import url_has_allowed_host_and_scheme
 
 from totem.email import emails
 from totem.spaces.filters import (
-    all_upcoming_recommended_sessions,
-    upcoming_attending_sessions,
     upcoming_sessions_by_author,
 )
 from totem.utils.slack import notify_slack
@@ -257,19 +255,9 @@ def user_index_view(request):
 
 @login_required
 def user_dashboard_view(request):
-    user: User = request.user
-    attending_sessions = upcoming_attending_sessions(user, limit=10)
-    recommended_sessions = all_upcoming_recommended_sessions(user)[:4]
-
-    return render(
-        request,
-        "users/dashboard.html",
-        context={
-            "user": user,
-            "attending_sessions": attending_sessions,
-            "recommended_sessions": recommended_sessions,
-        },
-    )
+    # The dashboard itself is the <t-dashboard> mini app driven by the
+    # spaces summary API.
+    return render(request, "users/dashboard.html")
 
 
 @login_required
