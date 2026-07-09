@@ -311,7 +311,7 @@ test("attending a recommendation updates my sessions and flips the card to give 
   const [summary, setSummary] = createSignal(before)
   // simulate the query refetch: attend -> session appears in upcoming,
   // space drops out of recommendations; give up -> back to the start
-  const refetch = vi.fn(() => setSummary(summary() === before ? after : before))
+  const refetch = vi.fn(() => setSummary((s) => (s === before ? after : before)))
   const result = render(() => (
     <DashboardView name="Sam" summary={summary()} refetch={refetch} now={NOW} />
   ))
