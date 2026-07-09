@@ -5,8 +5,10 @@ RUN_DJANGO = docker compose -f local.yml run --rm --remove-orphans django
 
 run: up assets-watch livereload
 
+# COMPOSE_MENU=0: compose's interactive menu puts the tty in raw mode and
+# swallows Ctrl-C, so the other `make run` jobs never get the SIGINT.
 up:
-	docker compose -f local.yml up --remove-orphans
+	COMPOSE_MENU=0 docker compose -f local.yml up --remove-orphans
 
 build:
 	docker compose -f local.yml build
