@@ -30,7 +30,9 @@ function AddToCalendarButton(props: {
       startTime: convertISOToHHMM(props.start),
       endTime: convertISOToHHMM(end.toISOString()),
       timeZone: getTimeZone(),
-      listStyle: "overlay",
+      // "overlay" positions off the trigger's flow position, which breaks
+      // inside our centered full-width layout (off-screen on mobile).
+      listStyle: "modal",
       hideBranding: true,
       debug: globalThis.TOTEM_DATA.debug,
     }

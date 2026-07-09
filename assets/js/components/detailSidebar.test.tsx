@@ -107,4 +107,8 @@ test("clicking add-to-calendar opens the provider list with the session details"
   )
   expect(config.startDate).toBe("2030-01-01")
   expect(config.options).toEqual(["Apple", "Google", "Outlook.com"])
+  // "modal" positions in a dedicated viewport-centered host; "overlay"
+  // positions off the trigger's flow position, which breaks inside our
+  // centered full-width layout and rendered off-screen on mobile.
+  expect(config.listStyle).toBe("modal")
 })
