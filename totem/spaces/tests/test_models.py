@@ -110,6 +110,15 @@ class SpaceModelTest(TestCase):
 
 
 class TestSessionModel:
+    def test_attendee_email_list(self, db):
+        session = SessionFactory()
+        assert session.attendee_email_list() == ""
+        user1 = UserFactory()
+        user2 = UserFactory()
+        session.attendees.add(user1, user2)
+        emails = session.attendee_email_list().split(", ")
+        assert sorted(emails) == sorted([user1.email, user2.email])
+
     def test_seats_cannot_be_zero(self, db):
         session = SessionFactory(seats=0)
         with pytest.raises(ValidationError):

@@ -161,7 +161,7 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
     list_display = ("start", "title", "space", "slug")
     list_filter = [AuthorDropdownFilter, SpaceDropdownFilter, "start", "listed", "open", "cancelled"]
     autocomplete_fields = ["attendees", "joined"]
-    readonly_fields = ("date_created", "date_modified", "room_link")
+    readonly_fields = ("attendee_email_list", "date_created", "date_modified", "room_link")
     actions = [copy_session]
     inlines = [SessionFeedbackInline]
 
@@ -183,6 +183,7 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
                     "seats",
                     "content",
                     "attendees",
+                    "attendee_email_list",
                     "joined",
                     "meeting_url",
                 )

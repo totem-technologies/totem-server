@@ -206,6 +206,9 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
     def attendee_list(self):
         return ", ".join([str(attendee) for attendee in self.attendees.all()])
 
+    def attendee_email_list(self):
+        return ", ".join([str(attendee.email) for attendee in self.attendees.all()])
+
     def _banned_slugs(self) -> list[str]:
         room = getattr(self, "room", None)  # reverse OneToOne from rooms.Room
         return room.banned_participants if room else []
