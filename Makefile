@@ -3,7 +3,7 @@ MAKEFLAGS += -j4
 
 RUN_DJANGO = docker compose -f local.yml run --rm --remove-orphans django
 
-run: up assets-watch livereload
+run: up assets-watch tailwind-watch livereload
 
 up:
 	docker compose -f local.yml up --remove-orphans
@@ -49,8 +49,14 @@ deploy:
 deploy-prod:
 	git push dokku-prod
 
+# atcb builds once up front: it only changes when the dependency does.
+# Watch only source dirs so build outputs can never retrigger the watcher.
 assets-watch:
-	watchexec -e js,jsx,ts,tsx,css,html bun run dev
+	bun run build:atcb
+	watchexec -w assets -w build.ts bun run dev:js
+
+tailwind-watch:
+	bun run dev:tailwind
 
 livereload:
 	bun run livereload
