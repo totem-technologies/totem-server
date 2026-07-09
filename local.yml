@@ -21,6 +21,13 @@ services:
       - "8000:8000"
       # - "5678:5678" Debug port
     command: /start
+    # During /start's collectstatic/migrate phase PID 1 is bash, which
+    # ignores SIGTERM — Ctrl-C would hang for the grace period, then SIGKILL.
+    # init (tini as PID 1) forwards the signal so the container stops
+    # promptly; the shorter grace period is a backstop. Local only:
+    # production (dokku) execs granian directly as PID 1.
+    init: true
+    stop_grace_period: 5s
     labels:
       - dev.orbstack.domains=totem.local
 
