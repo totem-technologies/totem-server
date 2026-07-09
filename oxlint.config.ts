@@ -36,7 +36,7 @@ export default defineConfig({
   },
   overrides: [
     {
-      files: ["scripts/**/*.mjs", "*.config.*", "build.ts"],
+      files: ["scripts/**/*.mjs", "*.config.*"],
       env: {
         node: true,
       },

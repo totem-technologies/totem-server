@@ -20,12 +20,11 @@ Requirements:
 - Docker Compose
 - [uv](https://docs.astral.sh/uv/)
 - [Bun](https://bun.sh/)
-- [watchexec](https://github.com/watchexec/watchexec)
 
 For macOS
 
 ```bash
-brew install bun uv watchexec
+brew install bun uv
 ```
 
 Steps:
