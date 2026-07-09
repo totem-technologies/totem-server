@@ -191,13 +191,13 @@ function HeroCard(props: {
       </h2>
       {/* no overflow-clip here: the calendar dropdown must overflow the card;
           the header rounds its own top corners instead */}
-      <div class="border-tslate/10 rounded-[2rem] border bg-white shadow-[0_24px_60px_-28px_rgba(38,47,55,0.45)] transition-shadow hover:shadow-[0_28px_70px_-28px_rgba(38,47,55,0.6)]">
+      <div class="border-tslate/10 rounded-4xl border bg-white shadow-[0_24px_60px_-28px_rgba(38,47,55,0.45)] transition-shadow hover:shadow-[0_28px_70px_-28px_rgba(38,47,55,0.6)]">
         <a href={`/spaces/session/${props.session.slug}/`}>
           <div
-            class="relative flex flex-col rounded-t-[2rem] p-6 md:p-10"
+            class="relative flex flex-col rounded-t-4xl p-6 md:p-10"
             classList={{ "no-image": !style() }}
             style={style()}>
-            <div class="flex min-h-[170px] items-end justify-between gap-4">
+            <div class="flex min-h-42.5 items-end justify-between gap-4">
               <div>
                 <Show
                   when={
@@ -212,7 +212,7 @@ function HeroCard(props: {
                 </h3>
                 <div class="pt-3 text-white/90">with {keeper().name}</div>
               </div>
-              <div class="min-w-[50px] shrink-0">
+              <div class="min-w-12.5 shrink-0">
                 <Avatar
                   size={100}
                   name={keeper().name ?? ""}
@@ -307,14 +307,14 @@ function SpaceCard(props: { space: SpaceDetailSchema; actions: JSXElement }) {
               {props.space.category}
             </span>
           </Show>
-          <div class="flex min-h-[120px] justify-between gap-3">
+          <div class="flex min-h-30 justify-between gap-3">
             <div class="self-end">
               <h3 class="pb-2 text-2xl leading-snug font-semibold text-white">
                 {props.space.title}
               </h3>
               <div class="text-white/90">with {props.space.author.name}</div>
             </div>
-            <div class="min-w-[50px] self-end">
+            <div class="min-w-12.5 self-end">
               <Avatar
                 size={80}
                 name={props.space.author.name ?? ""}
@@ -408,22 +408,24 @@ function RecommendationActions(props: {
 function Welcome() {
   return (
     <section
-      class="rise border-tslate/10 relative overflow-clip rounded-[2rem] border bg-white p-10 text-center shadow-sm md:p-16"
+      class="rise border-tslate/10 relative overflow-clip rounded-4xl border bg-white p-10 text-center shadow-sm md:p-16"
       style={{ "animation-delay": "60ms" }}>
-      <div class="from-tmauve to-tpink absolute -top-12 -right-12 h-44 w-44 rounded-full bg-gradient-to-br opacity-20" />
-      <div class="from-tblue to-tyellow absolute -bottom-16 -left-12 h-52 w-52 rounded-full bg-gradient-to-tr opacity-25" />
-      <p class="eyebrow pb-4">Welcome to Totem</p>
-      <h2 class="text-tslate text-3xl font-semibold md:text-5xl">
-        Find your people.
-      </h2>
-      <p class="m-auto max-w-xl pt-5 pb-9 leading-relaxed text-gray-600">
-        You haven't signed up for any sessions yet. Explore our Spaces to find a
-        supportive group that fits what you're going through &mdash; every
-        session is guided by a trained Keeper.
-      </p>
-      <a class="btn btn-primary btn-lg px-8" href="/spaces/">
-        Explore Spaces
-      </a>
+      <div class="from-tmauve to-tpink absolute -top-12 -right-12 h-44 w-44 rounded-full bg-linear-to-br opacity-20" />
+      <div class="from-tblue to-tyellow absolute -bottom-16 -left-12 h-52 w-52 rounded-full bg-linear-to-tr opacity-25" />
+      <div class="relative z-10">
+        <p class="eyebrow pb-4">Welcome to Totem</p>
+        <h2 class="text-tslate text-3xl font-semibold md:text-5xl">
+          Find your people.
+        </h2>
+        <p class="m-auto max-w-xl pt-5 pb-9 leading-relaxed text-gray-600">
+          You haven't signed up for any sessions yet. Explore our Spaces to find a
+          supportive group that fits what you're going through &mdash; every
+          session is guided by a trained Keeper.
+        </p>
+        <a class="btn btn-primary btn-lg px-8" href="/spaces/">
+          Explore Spaces
+        </a>
+      </div>
     </section>
   )
 }
@@ -557,7 +559,7 @@ function LoadingSkeleton() {
     <div class="pt-14">
       <div class="skeleton mb-4 h-4 w-24 rounded-full" />
       <div class="skeleton mb-12 h-12 w-80 rounded-full" />
-      <div class="skeleton h-72 w-full rounded-[2rem]" />
+      <div class="skeleton h-72 w-full rounded-4xl" />
     </div>
   )
 }
