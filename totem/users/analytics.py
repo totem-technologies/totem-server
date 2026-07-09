@@ -7,10 +7,17 @@ if TYPE_CHECKING:
     from totem.spaces.models import Session
     from totem.users.models import User
 
-_posthog = Posthog(project_api_key=settings.POSTHOG_API_KEY, host="https://us.i.posthog.com")
-if settings.DEBUG or settings.TEST or "test" in settings.POSTHOG_API_KEY:
+_local = settings.DEBUG or settings.TEST or "test" in settings.POSTHOG_API_KEY
+# sync_mode skips the consumer threads, whose atexit join blocks every
+# process exit (manage.py commands, test runs) for ~5s even when disabled.
+_posthog = Posthog(
+    project_api_key=settings.POSTHOG_API_KEY,
+    host="https://us.i.posthog.com",
+    disabled=_local,
+    sync_mode=_local,
+)
+if _local:
     _posthog.debug = True
-    _posthog.disabled = True
 
 
 def identify_user(user: "User"):

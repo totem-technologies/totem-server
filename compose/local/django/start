@@ -19,7 +19,13 @@ echo "----------------------------------------"
 # - --backpressure 1024: each *connection* (incl. keep-alives) takes a slot.
 #   The Granian default of 30 throttled Flutter dev mode under OrbStack's
 #   HTTP/2 fan-out, batching requests at ~20 per ~5s.
+# - --reload-ignore-paths: tests write media files and bun writes JS/CSS
+#   bundles through the bind mount; without these ignores every such write
+#   restarts the server (whitenoise serves static via finders in DEBUG, no
+#   restart needed).
 exec granian --interface wsgi config.wsgi:application --reload --reload-paths 'totem' \
+--reload-ignore-paths '/app/totem/media' \
+--reload-ignore-paths '/app/totem/static' \
 --host 0.0.0.0 --port 8000 \
 --workers 1 \
 --runtime-mode mt \
