@@ -42,6 +42,8 @@ from .actions import JoinSessionAction, SubscribeSpaceAction
 from .calendar import calendar
 
 if TYPE_CHECKING:
+    from django.contrib.auth.models import AnonymousUser
+
     from totem.users.models import User
 
 _default_grace_period = datetime.timedelta(minutes=10)
@@ -319,7 +321,7 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
     def end(self):
         return self.start + datetime.timedelta(minutes=self.duration_minutes)
 
-    def join_window(self, user: "User") -> tuple[datetime.datetime, datetime.datetime | None]:
+    def join_window(self, user: "User | AnonymousUser") -> tuple[datetime.datetime, datetime.datetime | None]:
         """Absolute times between which `user` may join, the single source of
         truth for join timing. A None close means the room stays open for
         rejoining until explicitly ended."""
@@ -331,7 +333,7 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         grace_after = datetime.timedelta(minutes=self.duration_minutes) if wide else _default_grace_period
         return opens, self.start + grace_after
 
-    def can_join(self, user: "User"):
+    def can_join(self, user: "User | AnonymousUser"):
         if self.cancelled or user not in self.attendees.all():
             return False
         opens, closes = self.join_window(user)

@@ -26,6 +26,7 @@ export interface SessionTiming {
   join_closes_at?: string | null
   ends_at: string
   joinable: boolean
+  ended: boolean
 }
 
 // A ticking clock over the server-provided lifecycle times. The join window
@@ -43,8 +44,9 @@ export function createSessionClock(session: () => SessionTiming) {
   const canJoin = () => {
     const s = session()
     if (s.join_closes_at == null) {
-      // Open-ended (LiveKit rejoin): only the server knows the real end, so
-      // the scheduled end must not hide the button.
+      // Open-ended (LiveKit rejoin): the scheduled end must not hide the
+      // button, but the server's ended flag must — it's the only end signal.
+      if (s.ended) return false
       return s.joinable || now() >= new Date(s.join_opens_at).getTime()
     }
     if (ended()) return false
@@ -57,22 +59,19 @@ export function createSessionClock(session: () => SessionTiming) {
   return { now, start, started, ended, canJoin }
 }
 
+// Presentational only — the caller decides when joining is possible (one
+// createSessionClock per card, not one per child).
 export function EnterSessionButton(props: {
-  session: SessionTiming & { join_url?: string | null }
+  joinUrl?: string | null
   small?: boolean
 }) {
-  const clock = createSessionClock(() => props.session)
   return (
-    <Switch>
-      <Match when={clock.canJoin()}>
-        <a
-          class="btn btn-primary shrink-0"
-          classList={{ "btn-sm": props.small }}
-          href={props.session.join_url ?? ""}>
-          Enter Session
-        </a>
-      </Match>
-    </Switch>
+    <a
+      class="btn btn-primary shrink-0"
+      classList={{ "btn-sm": props.small }}
+      href={props.joinUrl ?? ""}>
+      Enter Session
+    </a>
   )
 }
 

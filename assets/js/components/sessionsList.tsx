@@ -452,7 +452,7 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
         active.getBoundingClientRect().left +
         active.getBoundingClientRect().width / 2
       const containerCenter =
-        containerRef?.getBoundingClientRect().width ?? 2 / 2
+        (containerRef?.getBoundingClientRect().width ?? 2) / 2
       scrollableRef?.scrollTo({
         left:
           Math.abs(containerRef?.getBoundingClientRect().left ?? 0) +

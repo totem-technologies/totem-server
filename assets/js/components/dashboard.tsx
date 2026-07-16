@@ -78,6 +78,7 @@ function sessionName(session: SessionDetailSchema) {
 
 function GiveUpSpot(props: {
   session: SessionDetailSchema
+  started: boolean
   onDone: () => void
 }) {
   let dialogRef: HTMLDialogElement | undefined // eslint-disable-line no-unassigned-vars
@@ -106,9 +107,8 @@ function GiveUpSpot(props: {
 
   // Giving up a spot is blocked server-side once the session starts, and the
   // card's status line already says the session is live — show nothing.
-  const clock = createSessionClock(() => props.session)
   return (
-    <Show when={!clock.started()}>
+    <Show when={!props.started}>
       <button
         type="button"
         class="btn-quiet shrink-0 text-sm"
@@ -159,7 +159,10 @@ function SessionActions(props: {
     <Show
       when={!clock.canJoin()}
       fallback={
-        <EnterSessionButton session={props.session} small={props.compact} />
+        <EnterSessionButton
+          joinUrl={props.session.join_url}
+          small={props.compact}
+        />
       }>
       <div class="flex shrink-0 items-center gap-3">
         <Show when={!clock.started()}>
@@ -171,7 +174,11 @@ function SessionActions(props: {
             variant={props.compact ? "compact" : "inline"}
           />
         </Show>
-        <GiveUpSpot session={props.session} onDone={props.onChange} />
+        <GiveUpSpot
+          session={props.session}
+          started={clock.started()}
+          onDone={props.onChange}
+        />
       </div>
     </Show>
   )
@@ -397,6 +404,7 @@ function RecommendationActions(props: {
         fallback={
           <GiveUpSpot
             session={props.attendingSession!}
+            started={props.attendingSession!.started}
             onDone={props.onChange}
           />
         }>
