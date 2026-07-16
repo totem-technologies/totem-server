@@ -11,6 +11,7 @@ from PIL import Image, ImageOps
 from totem.rooms.models import Room
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
+from totem.utils.testing import decoded_email_text
 
 from ..models import Session
 from ..views import ics_hash
@@ -163,7 +164,7 @@ class TestSessionModel:
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
-        message = str(email.message())
+        message = decoded_email_text(email)
         assert "http://testserver/spaces/join/" in message
         session.refresh_from_db()
         assert session.notified
@@ -179,7 +180,7 @@ class TestSessionModel:
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
-        message = str(email.message())
+        message = decoded_email_text(email)
         assert "http://testserver/spaces/session" in message
         assert "http://testserver/spaces/subscribe" in message
         session.refresh_from_db()
@@ -196,7 +197,7 @@ class TestSessionModel:
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
-        message = str(email.message())
+        message = decoded_email_text(email)
         assert "http://testserver/spaces/session" in message
         session.refresh_from_db()
         assert session.notified_tomorrow
