@@ -11,7 +11,8 @@
     <p>
       We sent a 6-digit code to {{ form.email.value }}. Please enter it below.
     </p>
-    <form class="mt-5" method="post">
+    {# data-bot adds the double-click guard; csrf_token stays for the no-JS fallback. #}
+    <form class="mt-5" method="post" data-bot="true">
       {% csrf_token %}
       {% if form.non_field_errors %}
         <div class="alert alert-error mb-4" role="alert">
@@ -26,6 +27,8 @@
           type="text"
           name="pin"
           maxlength="6"
+          inputmode="numeric"
+          autocomplete="one-time-code"
           placeholder="Enter 6-digit code"
           class="input input-bordered w-full"
           value="{{ form.pin.value|default:'' }}"

@@ -171,17 +171,18 @@ class TestPinValidationEndpoint:
         user = setup_user
         pin = LoginPin.objects.generate_pin(user)
 
+        wrong = "000000" if pin.pin != "000000" else "000001"
         response = client.post(
             reverse("mobile-api:auth_validate_pin"),
             data={
                 "email": user.email,
-                "pin": "000000",  # Wrong PIN
+                "pin": wrong,
             },
             content_type="application/json",
         )
 
         assert response.status_code == 401
-        assert response.json() == {"error": "PIN_EXPIRED"}
+        assert response.json() == {"error": "INCORRECT_PIN"}
 
         # Check failed attempts counter
         pin.refresh_from_db()
@@ -206,7 +207,7 @@ class TestPinValidationEndpoint:
         )
 
         assert response.status_code == 401
-        assert response.json() == {"error": "PIN_EXPIRED"}
+        assert response.json() == {"error": "INCORRECT_PIN"}
 
     def test_validate_pin_too_many_attempts(self, client: Client, db, setup_user):
         """Test PIN validation with too many attempts."""
@@ -227,7 +228,28 @@ class TestPinValidationEndpoint:
         )
 
         assert response.status_code == 401
-        assert response.json() == {"error": "PIN_EXPIRED"}
+        assert response.json() == {"error": "INCORRECT_PIN"}
+
+        # Hitting the attempt cap invalidates every outstanding pin.
+        assert not LoginPin.objects.filter(user=user).exists()
+
+    def test_validate_pin_works_after_resend(self, client: Client, db, setup_user):
+        """A code from an earlier request-pin call still works after a resend."""
+        user = setup_user
+        first = LoginPin.objects.generate_pin(user)
+        LoginPin.objects.generate_pin(user)
+
+        response = client.post(
+            reverse("mobile-api:auth_validate_pin"),
+            data={
+                "email": user.email,
+                "pin": first.pin,
+            },
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        assert "access_token" in response.json()
 
     def test_validate_pin_deactivated_account(self, client: Client, db, setup_user):
         """Test PIN validation with deactivated account."""
@@ -249,6 +271,36 @@ class TestPinValidationEndpoint:
 
         assert response.status_code == 401
         assert response.json() == {"error": "ACCOUNT_DEACTIVATED"}
+
+        # The code is not consumed, matching the web flow: if the account is
+        # reactivated, the emailed code still works.
+        assert LoginPin.objects.filter(user=user).exists()
+
+    def test_validate_pin_error_after_validation_preserves_pins(self, client: Client, db, setup_user, monkeypatch):
+        """A failure after successful validation must not burn the code."""
+        user = setup_user
+        pin = LoginPin.objects.generate_pin(user)
+
+        def boom(user):
+            raise RuntimeError("token generation failed")
+
+        monkeypatch.setattr(RefreshToken.objects, "generate_token", boom)
+
+        try:
+            response = client.post(
+                reverse("mobile-api:auth_validate_pin"),
+                data={
+                    "email": user.email,
+                    "pin": pin.pin,
+                },
+                content_type="application/json",
+            )
+            assert response.status_code >= 500
+        except RuntimeError:
+            pass  # the exception may also propagate, depending on handler config
+
+        # The consumed pins must be rolled back so the same code works on retry.
+        assert LoginPin.objects.filter(user=user, pin=pin.pin).exists()
 
 
 class TestRefreshTokenEndpoint:
@@ -395,7 +447,7 @@ class TestFixedPinEndpoint:
         )
 
         assert response.status_code == 401
-        assert response.json() == {"error": "PIN_EXPIRED"}
+        assert response.json() == {"error": "INCORRECT_PIN"}
 
     def test_fixed_pin_incorrect(self, client: Client, db, setup_user):
         """Test fixed PIN validation with incorrect PIN."""
@@ -414,7 +466,7 @@ class TestFixedPinEndpoint:
         )
 
         assert response.status_code == 401
-        assert response.json() == {"error": "PIN_EXPIRED"}
+        assert response.json() == {"error": "INCORRECT_PIN"}
 
     def test_fixed_pin_fallback_after_regular_pin(self, client: Client, db, setup_user):
         """Test that fixed PIN works as fallback when regular PIN exists but is wrong."""
@@ -468,4 +520,4 @@ class TestFixedPinEndpoint:
         )
 
         assert response.status_code == 401
-        assert response.json() == {"error": "PIN_EXPIRED"}
+        assert response.json() == {"error": "INCORRECT_PIN"}
