@@ -1,6 +1,6 @@
 import { render } from "@solidjs/testing-library"
 import { afterEach, beforeEach, expect, test, vi } from "vitest"
-import SessionCountdown from "./sessionCountdown"
+import SessionCountdown, { EnterSessionButton } from "./sessionCountdown"
 import { MINUTE, sessionTimes } from "./testHelpers"
 
 const NOW = new Date("2030-01-01T12:00:00.000Z")
@@ -20,22 +20,23 @@ function renderCountdown(
   joinClosesAt: string | null | undefined = undefined
 ) {
   const times = sessionTimes(NOW.getTime() + startOffsetMs)
+  const session = {
+    ...times,
+    join_closes_at:
+      joinClosesAt === undefined ? times.join_closes_at : joinClosesAt,
+    joinable,
+    join_url: "/spaces/join/test-session/",
+  }
   return render(() => (
-    <SessionCountdown
-      start={times.start}
-      joinOpensAt={times.join_opens_at}
-      joinClosesAt={
-        joinClosesAt === undefined ? times.join_closes_at : joinClosesAt
-      }
-      endsAt={times.ends_at}
-      joinUrl="/spaces/join/test-session/"
-      joinable={joinable}
-    />
+    <>
+      <SessionCountdown session={session} />
+      <EnterSessionButton session={session} />
+    </>
   ))
 }
 
 function joinButton(result: ReturnType<typeof renderCountdown>) {
-  return result.queryByRole("link", { name: /join now/i })
+  return result.queryByRole("link", { name: /enter session/i })
 }
 
 test("far future session shows relative time, no join button", () => {

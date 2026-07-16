@@ -17,7 +17,10 @@ import {
 } from "../client"
 import AddToCalendarButton from "./AddToCalendarButton"
 import Avatar from "./avatar"
-import SessionCountdown from "./sessionCountdown"
+import SessionCountdown, {
+  createSessionClock,
+  EnterSessionButton,
+} from "./sessionCountdown"
 import Time from "./time"
 
 export interface SessionDayGroup {
@@ -101,10 +104,11 @@ function GiveUpSpot(props: {
     props.onDone()
   }
 
+  // Giving up a spot is blocked server-side once the session starts, and the
+  // card's status line already says the session is live — show nothing.
+  const clock = createSessionClock(() => props.session)
   return (
-    <Show
-      when={!props.session.started}
-      fallback={<span class="shrink-0 text-sm text-gray-400">Started</span>}>
+    <Show when={!clock.started()}>
       <button
         type="button"
         class="btn-quiet shrink-0 text-sm"
@@ -143,22 +147,33 @@ function GiveUpSpot(props: {
   )
 }
 
+// While the session can be joined, the whole cluster gives way to a single
+// Enter Session button; a calendar entry is useless once the session started.
 function SessionActions(props: {
   session: SessionDetailSchema
   compact?: boolean
   onChange: () => void
 }) {
+  const clock = createSessionClock(() => props.session)
   return (
-    <div class="flex shrink-0 items-center gap-3">
-      <AddToCalendarButton
-        name={`${sessionName(props.session)} - ${props.session.space_title}`}
-        calLink={props.session.cal_link}
-        start={props.session.start}
-        durationMinutes={props.session.duration}
-        variant={props.compact ? "compact" : "inline"}
-      />
-      <GiveUpSpot session={props.session} onDone={props.onChange} />
-    </div>
+    <Show
+      when={!clock.canJoin()}
+      fallback={
+        <EnterSessionButton session={props.session} small={props.compact} />
+      }>
+      <div class="flex shrink-0 items-center gap-3">
+        <Show when={!clock.started()}>
+          <AddToCalendarButton
+            name={`${sessionName(props.session)} - ${props.session.space_title}`}
+            calLink={props.session.cal_link}
+            start={props.session.start}
+            durationMinutes={props.session.duration}
+            variant={props.compact ? "compact" : "inline"}
+          />
+        </Show>
+        <GiveUpSpot session={props.session} onDone={props.onChange} />
+      </div>
+    </Show>
   )
 }
 
@@ -229,14 +244,7 @@ function HeroCard(props: {
             <strong class="text-tslate">
               <Time time={props.session.start} format="at" />
             </strong>
-            <SessionCountdown
-              start={props.session.start}
-              joinOpensAt={props.session.join_opens_at}
-              joinClosesAt={props.session.join_closes_at ?? null}
-              endsAt={props.session.ends_at}
-              joinUrl={props.session.join_url ?? ""}
-              joinable={props.session.joinable}
-            />
+            <SessionCountdown session={props.session} />
           </div>
           <SessionActions session={props.session} onChange={props.onChange} />
         </div>

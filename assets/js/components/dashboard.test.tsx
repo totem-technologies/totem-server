@@ -205,6 +205,24 @@ test("renders greeting, hero, day groups, and recommendations", () => {
   expect(result.getByText("Anxiety Space")).toBeTruthy()
 })
 
+test("joinable session swaps the actions cluster for Enter Session", () => {
+  const live = makeSession({
+    slug: "live",
+    title: "Live Session",
+    joinable: true,
+    join_url: "/spaces/join/live/",
+  })
+  const { result } = renderDashboard(makeSummary({ upcoming: [live] }))
+  const hero = result.getByText("Your next session").closest("section")!
+  const enter = within(hero).getByRole("link", { name: "Enter Session" })
+  expect(enter.getAttribute("href")).toBe("/spaces/join/live/")
+  expect(
+    within(hero).queryByRole("button", { name: /add to calendar/i })
+  ).toBeNull()
+  expect(within(hero).queryByText("Give up spot")).toBeNull()
+  expect(within(hero).queryByText("Started")).toBeNull()
+})
+
 test("welcome empty state when there are no upcoming sessions", () => {
   const { result } = renderDashboard(makeSummary({ explore: [makeSpace()] }))
   expect(result.getByText("Find your people.")).toBeTruthy()
@@ -340,12 +358,21 @@ test("attending a recommendation updates my sessions and flips the card to give 
   expect(within(card).getByRole("button", { name: "Attend" })).toBeTruthy()
 })
 
-test("started session shows Started instead of give up", () => {
-  const { result } = renderDashboard(
-    makeSummary({
-      upcoming: [makeSession({ started: true, start: isoAt(-1 * HOUR) })],
-    })
-  )
-  expect(result.queryByText("Give up spot")).toBeNull()
-  expect(result.getByText("Started")).toBeTruthy()
+test("started session hides give up, calendar, and the Started label", () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(NOW)
+  try {
+    const { result } = renderDashboard(
+      makeSummary({
+        upcoming: [makeSession({ started: true, start: isoAt(-1 * HOUR) })],
+      })
+    )
+    expect(result.queryByText("Give up spot")).toBeNull()
+    expect(result.queryByText("Started")).toBeNull()
+    expect(
+      result.queryByRole("button", { name: /add to calendar/i })
+    ).toBeNull()
+  } finally {
+    vi.useRealTimers()
+  }
 })
