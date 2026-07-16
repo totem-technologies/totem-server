@@ -3,13 +3,13 @@ import { customElement, noShadowDOM } from "solid-element"
 import type { JSXElement, ValidComponent } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import Avatar from "./avatar"
-import Circles from "./circles"
 import Dashboard from "./dashboard"
 import DetailSidebar from "./detailSidebar"
 import { EditAvatar } from "./editAvatar"
 import ErrorBoundary from "./errors"
 import EventCalendar from "./eventCalendar"
 import PromptSearch from "./promptSearch"
+import SessionsList from "./sessionsList"
 import SpacesList from "./spaces"
 import Time from "./time"
 import Tooltip from "./tooltip"
@@ -21,7 +21,7 @@ type WCComponent = ValidComponent & {
 
 const components: WCComponent[] = [
   PromptSearch,
-  Circles,
+  SessionsList,
   Avatar,
   Tooltip,
   DetailSidebar,

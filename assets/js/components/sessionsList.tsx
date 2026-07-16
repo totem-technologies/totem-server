@@ -15,7 +15,11 @@ import {
   Switch,
   useContext,
 } from "solid-js"
-import { timestampToDateString, timestampToTimeString } from "@/libs/time"
+import {
+  createInProgress,
+  timestampToDateString,
+  timestampToTimeString,
+} from "@/libs/time"
 import {
   type CategoryFilterSchema,
   type FilterOptionsSchema,
@@ -26,6 +30,7 @@ import {
 } from "../client/index"
 import Avatar from "./avatar"
 import ErrorBoundary from "./errors"
+import LiveBadge from "./liveBadge"
 
 interface QueryParams extends Record<string, string | number> {
   limit: number
@@ -42,7 +47,7 @@ interface DateChunk {
   dateId: string
 }
 
-interface CircleListContextType {
+interface SessionsListContextType {
   params: Accessor<QueryParams>
   setParams: (params: QueryParams) => void
   reset: () => void
@@ -64,9 +69,9 @@ const defaultParams: QueryParams = {
   author: "",
 }
 
-const CircleListContext = createContext<CircleListContextType>()
+const SessionsListContext = createContext<SessionsListContextType>()
 
-function CircleListProvider(props: { children: JSXElement }) {
+function SessionsListProvider(props: { children: JSXElement }) {
   const [params, setParams] = createSignal<QueryParams>(getQueryParams())
   const [scrolling, setScrolling] = createSignal<boolean>(false)
   const [activeID, setActiveID] = createSignal<string>("")
@@ -114,7 +119,7 @@ function CircleListProvider(props: { children: JSXElement }) {
     })
   }
   return (
-    <CircleListContext.Provider
+    <SessionsListContext.Provider
       value={{
         params,
         setParams,
@@ -131,7 +136,7 @@ function CircleListProvider(props: { children: JSXElement }) {
         filters,
       }}>
       {props.children}
-    </CircleListContext.Provider>
+    </SessionsListContext.Provider>
   )
 }
 
@@ -185,18 +190,18 @@ function getQueryParams(): QueryParams {
   }
 }
 
-function Circles(_: { children?: JSXElement }) {
+function SessionsList(_: { children?: JSXElement }) {
   return (
     <ErrorBoundary>
-      <CircleListProvider>
-        <CirclesInner />
-      </CircleListProvider>
+      <SessionsListProvider>
+        <SessionsListInner />
+      </SessionsListProvider>
     </ErrorBoundary>
   )
 }
 
-function CirclesInner() {
-  const context = useContext(CircleListContext)
+function SessionsListInner() {
+  const context = useContext(SessionsListContext)
   const count = () => {
     return context?.events()?.count ?? 0
   }
@@ -246,7 +251,7 @@ function CirclesInner() {
 }
 
 function EventsChunkedByDate() {
-  const context = useContext(CircleListContext)
+  const context = useContext(SessionsListContext)
   function handleIntersection() {
     // go through elements with chunk.dateIDs and find the one that is closest to the top, absolute value of boundingClientRect.top
     const chunks = context?.chunkedEvents()
@@ -327,6 +332,10 @@ export function MobileEvent(props: { event: SessionListSchema }) {
           with {getFirstName(props.event.space.author.name ?? "Keeper")} @{" "}
           {start()}
         </p>
+        <InProgressBadge
+          start={props.event.start}
+          endsAt={props.event.ends_at}
+        />
       </div>
       <div class="text-2xl">→</div>
     </a>
@@ -342,6 +351,10 @@ function DesktopEvent(props: { event: SessionListSchema }) {
         <div class="text-lg font-bold whitespace-nowrap">
           {timestampToTimeString(props.event.start ?? "")}
         </div>
+        <InProgressBadge
+          start={props.event.start}
+          endsAt={props.event.ends_at}
+        />
       </div>
       <div class="divider divider-horizontal self-stretch" />
       <div class="flex shrink-0 items-center justify-center gap-5">
@@ -371,6 +384,18 @@ function DesktopEvent(props: { event: SessionListSchema }) {
   )
 }
 
+function InProgressBadge(props: { start?: string | null; endsAt: string }) {
+  const inProgress = createInProgress(
+    () => props.start,
+    () => props.endsAt
+  )
+  return (
+    <Show when={inProgress()}>
+      <LiveBadge small />
+    </Show>
+  )
+}
+
 function getAvatar(event: SessionListSchema) {
   return (
     <Avatar
@@ -384,7 +409,7 @@ function getAvatar(event: SessionListSchema) {
 }
 
 function FilterBar() {
-  const context = useContext(CircleListContext)
+  const context = useContext(SessionsListContext)
   return (
     <Show when={context}>
       <div class="bg-tcreme sticky top-0 w-full border-b-2 border-gray-300 px-5 pt-2">
@@ -413,7 +438,7 @@ function FilterBar() {
 }
 
 function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
-  const context = useContext(CircleListContext)
+  const context = useContext(SessionsListContext)
   const [refs, setRefs] = createSignal<HTMLAnchorElement[]>([])
   let scrollableRef: HTMLDivElement | undefined // eslint-disable-line no-unassigned-vars
   let containerRef: HTMLDivElement | undefined // eslint-disable-line no-unassigned-vars
@@ -427,7 +452,7 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
         active.getBoundingClientRect().left +
         active.getBoundingClientRect().width / 2
       const containerCenter =
-        containerRef?.getBoundingClientRect().width ?? 2 / 2
+        (containerRef?.getBoundingClientRect().width ?? 2) / 2
       scrollableRef?.scrollTo({
         left:
           Math.abs(containerRef?.getBoundingClientRect().left ?? 0) +
@@ -484,7 +509,7 @@ function DateRibbon(props: { chunks: DateChunk[]; activeID: string }) {
 }
 
 function FilterModal() {
-  const context = useContext(CircleListContext)
+  const context = useContext(SessionsListContext)
   const drawerID = "filter-drawer"
   const selectedCategory = () => context?.params().category
   const selectedAuthor = () => context?.params().author
@@ -574,7 +599,7 @@ function FilterModal() {
 }
 
 function QuickFilters() {
-  const context = useContext(CircleListContext)
+  const context = useContext(SessionsListContext)
   const isActive = (category: string) => context?.params().category === category
   const QuickFilterButton = (props: { category: CategoryFilterSchema }) => (
     <button
@@ -598,6 +623,6 @@ function QuickFilters() {
   )
 }
 
-Circles.tagName = "t-events-list"
-Circles.propsDefault = {}
-export default Circles
+SessionsList.tagName = "t-sessions-list"
+SessionsList.propsDefault = {}
+export default SessionsList

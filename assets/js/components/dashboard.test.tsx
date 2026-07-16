@@ -8,6 +8,7 @@ import type {
   SummarySpacesSchema,
 } from "../client"
 import { DashboardView, greeting, groupSessionsByDay } from "./dashboard"
+import { HOUR, makeSessionDetail } from "./testHelpers"
 
 const postData = vi.fn(() =>
   Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }))
@@ -26,7 +27,6 @@ beforeEach(() => {
 
 // A fixed reference time, noon local so day-offsets never cross midnight.
 const NOW = new Date(2030, 0, 15, 12, 0, 0)
-const HOUR = 3_600_000
 
 function isoAt(offsetMs: number) {
   return new Date(NOW.getTime() + offsetMs).toISOString()
@@ -38,7 +38,9 @@ function makeSession(
   overrides: Partial<SessionDetailSchema> = {}
 ): SessionDetailSchema {
   const slug = overrides.slug ?? `session-${++slugCounter}`
-  return {
+  // Lifecycle times follow the (possibly overridden) start.
+  const startMs = new Date(overrides.start ?? isoAt(2 * HOUR)).getTime()
+  return makeSessionDetail(startMs, {
     slug,
     title: "Weekly Check-in",
     space: {
@@ -57,27 +59,16 @@ function makeSession(
     },
     space_title: "Grief Space",
     description: "desc",
-    price: 0,
     seats_left: 3,
-    duration: 60,
-    recurring: "Once a week",
     subscribers: 2,
-    start: isoAt(2 * HOUR),
     attending: true,
-    open: true,
-    started: false,
-    cancelled: false,
-    joinable: false,
-    ended: false,
     rsvp_url: `/spaces/rsvp/${slug}/`,
     join_url: `/spaces/join/${slug}/`,
     subscribe_url: "/spaces/subscribe/grief-space/",
     cal_link: `https://totem.org/spaces/session/${slug}/`,
     subscribed: true,
-    user_timezone: null,
-    meeting_provider: "livekit",
     ...overrides,
-  }
+  })
 }
 
 function makeSpace(
@@ -97,6 +88,7 @@ function makeSpace(
     next_event: {
       slug: "rec-session",
       start: isoAt(48 * HOUR),
+      ends_at: isoAt(49 * HOUR),
       link: "/spaces/session/rec-session/",
       title: "Intro Session",
       seats_left: 5,
@@ -213,6 +205,24 @@ test("renders greeting, hero, day groups, and recommendations", () => {
   expect(result.getByText("Anxiety Space")).toBeTruthy()
 })
 
+test("joinable session swaps the actions cluster for Enter Session", () => {
+  const live = makeSession({
+    slug: "live",
+    title: "Live Session",
+    joinable: true,
+    join_url: "/spaces/join/live/",
+  })
+  const { result } = renderDashboard(makeSummary({ upcoming: [live] }))
+  const hero = result.getByText("Your next session").closest("section")!
+  const enter = within(hero).getByRole("link", { name: "Enter Session" })
+  expect(enter.getAttribute("href")).toBe("/spaces/join/live/")
+  expect(
+    within(hero).queryByRole("button", { name: /add to calendar/i })
+  ).toBeNull()
+  expect(within(hero).queryByText("Give up spot")).toBeNull()
+  expect(within(hero).queryByText("Started")).toBeNull()
+})
+
 test("welcome empty state when there are no upcoming sessions", () => {
   const { result } = renderDashboard(makeSummary({ explore: [makeSpace()] }))
   expect(result.getByText("Find your people.")).toBeTruthy()
@@ -311,7 +321,9 @@ test("attending a recommendation updates my sessions and flips the card to give 
   const [summary, setSummary] = createSignal(before)
   // simulate the query refetch: attend -> session appears in upcoming,
   // space drops out of recommendations; give up -> back to the start
-  const refetch = vi.fn(() => setSummary((s) => (s === before ? after : before)))
+  const refetch = vi.fn(() =>
+    setSummary((s) => (s === before ? after : before))
+  )
   const result = render(() => (
     <DashboardView name="Sam" summary={summary()} refetch={refetch} now={NOW} />
   ))
@@ -346,12 +358,21 @@ test("attending a recommendation updates my sessions and flips the card to give 
   expect(within(card).getByRole("button", { name: "Attend" })).toBeTruthy()
 })
 
-test("started session shows Started instead of give up", () => {
-  const { result } = renderDashboard(
-    makeSummary({
-      upcoming: [makeSession({ started: true, start: isoAt(-1 * HOUR) })],
-    })
-  )
-  expect(result.queryByText("Give up spot")).toBeNull()
-  expect(result.getByText("Started")).toBeTruthy()
+test("started session hides give up, calendar, and the Started label", () => {
+  vi.useFakeTimers()
+  vi.setSystemTime(NOW)
+  try {
+    const { result } = renderDashboard(
+      makeSummary({
+        upcoming: [makeSession({ started: true, start: isoAt(-1 * HOUR) })],
+      })
+    )
+    expect(result.queryByText("Give up spot")).toBeNull()
+    expect(result.queryByText("Started")).toBeNull()
+    expect(
+      result.queryByRole("button", { name: /add to calendar/i })
+    ).toBeNull()
+  } finally {
+    vi.useRealTimers()
+  }
 })

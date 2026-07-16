@@ -18,10 +18,15 @@ class SpaceSchema(ModelSchema):
 class SessionListSchema(ModelSchema):
     space: SpaceSchema
     url: str
+    ends_at: datetime
 
     @staticmethod
     def resolve_url(obj: Session):
         return obj.get_absolute_url()
+
+    @staticmethod
+    def resolve_ends_at(obj: Session):
+        return obj.end()
 
     @staticmethod
     def resolve_space(obj: Session):
@@ -79,6 +84,15 @@ class MeetingProviderEnum(str, Enum):
     LIVEKIT = "livekit"
 
 
+class UpcomingSessionSchema(Schema):
+    """Pointer to the space's next joinable session, for pages showing a
+    session that can no longer be attended (started, ended, or full)."""
+
+    slug: str
+    start: datetime
+    link: str
+
+
 class SessionDetailSchema(Schema):
     slug: str
     title: str
@@ -91,12 +105,18 @@ class SessionDetailSchema(Schema):
     recurring: str
     subscribers: int
     start: datetime
+    # Server-computed lifecycle times: the client schedules UI transitions
+    # from these instead of duplicating the join-window rules.
+    join_opens_at: datetime
+    join_closes_at: datetime | None
+    ends_at: datetime
     attending: bool
     open: bool
     started: bool
     cancelled: bool
     joinable: bool
     ended: bool
+    next_session: UpcomingSessionSchema | None = None
     rsvp_url: str
     join_url: str | None
     subscribe_url: str
@@ -109,6 +129,7 @@ class SessionDetailSchema(Schema):
 class NextSessionSchema(Schema):
     slug: str
     start: datetime
+    ends_at: datetime
     link: str
     title: str | None
     seats_left: int

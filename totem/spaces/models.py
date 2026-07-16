@@ -42,6 +42,8 @@ from .actions import JoinSessionAction, SubscribeSpaceAction
 from .calendar import calendar
 
 if TYPE_CHECKING:
+    from django.contrib.auth.models import AnonymousUser
+
     from totem.users.models import User
 
 _default_grace_period = datetime.timedelta(minutes=10)
@@ -52,6 +54,37 @@ def exclude_banned_sessions(qs: "QuerySet[Session]", user: "User | None") -> "Qu
     if user and user.is_authenticated:
         qs = qs.exclude(room__banned_participants__contains=[user.slug])
     return qs
+
+
+# Google Meet gives us no end-of-call signal, so a session's scheduled end
+# (start + duration) is the best estimate. LiveKit rooms are ours: they end
+# when ended_at is set (keeper ends the session, or the disconnect watchdog
+# does), so overrunning sessions stay live. The backstop covers watchdog
+# failures so a session can't stay listed forever.
+_livekit_ended_backstop = datetime.timedelta(hours=3)
+
+# The scheduled end of a session, as a SQL expression. Mirrors Session.end().
+SESSION_END_TIME = models.ExpressionWrapper(
+    models.F("start") + models.F("duration_minutes") * datetime.timedelta(minutes=1),
+    output_field=models.DateTimeField(),
+)
+
+
+class SessionQuerySet(models.QuerySet["Session"]):
+    def not_ended(self) -> "SessionQuerySet":
+        """Keep sessions until they end, so in-progress ones stay findable by attendees."""
+        now = timezone.now()
+        return (
+            self.annotate(session_end_time=SESSION_END_TIME)
+            .filter(ended_at__isnull=True)
+            .filter(
+                models.Q(session_end_time__gt=now)
+                | models.Q(
+                    space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+                    session_end_time__gt=now - _livekit_ended_backstop,
+                )
+            )
+        )
 
 
 class SessionState(Enum):
@@ -150,7 +183,7 @@ class Space(AdminURLMixin, MarkdownMixin, SluggedModel):
         return ", ".join([str(attendee.email) for attendee in self.subscribed.all()])
 
     def next_session(self, user: "User | None" = None):
-        sessions = self.sessions.filter(start__gte=timezone.now() - _default_grace_period)
+        sessions = Session.objects.filter(space=self).not_ended()
         return exclude_banned_sessions(sessions, user).order_by("start").first()
 
     def is_free(self):
@@ -191,6 +224,8 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
     open = models.BooleanField(default=True, help_text="Is this session open for more attendees?")
     seats = models.IntegerField(default=8, validators=[MinValueValidator(1)])
     start = models.DateTimeField(default=timezone.now)
+
+    objects: "SessionQuerySet" = SessionQuerySet.as_manager()  # pyright: ignore [reportAssignmentType]
 
     class Meta:  # pyright: ignore [reportIncompatibleVariableOverride]
         ordering = ["start"]
@@ -286,29 +321,38 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
     def end(self):
         return self.start + datetime.timedelta(minutes=self.duration_minutes)
 
-    def can_join(self, user):
+    def join_window(self, user: "User | AnonymousUser") -> tuple[datetime.datetime, datetime.datetime | None]:
+        """Absolute times between which `user` may join, the single source of
+        truth for join timing. A None close means the room stays open for
+        rejoining until explicitly ended."""
+        is_joined = user in self.joined.all()
+        wide = user.is_staff or is_joined
+        opens = self.start - datetime.timedelta(minutes=60 if wide else 15)
+        if self.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT and is_joined:
+            return opens, None
+        grace_after = datetime.timedelta(minutes=self.duration_minutes) if wide else _default_grace_period
+        return opens, self.start + grace_after
+
+    def can_join(self, user: "User | AnonymousUser"):
         if self.cancelled or user not in self.attendees.all():
             return False
-        is_joined = user in self.joined.all()
+        opens, closes = self.join_window(user)
         now = timezone.now()
-        grace_before = datetime.timedelta(minutes=60 if (user.is_staff or is_joined) else 15)
-
-        if self.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT and is_joined:
-            if self.ended_at is not None:
-                return False
-            return self.start - grace_before < now
-
+        if closes is None:
+            return self.ended_at is None and opens < now
         if self.ended():
             return False
-        grace_after = (
-            datetime.timedelta(minutes=self.duration_minutes) if (user.is_staff or is_joined) else _default_grace_period
-        )
-        return self.start - grace_before < now < self.start + grace_after
+        return opens < now < closes
 
     def ended(self):
+        # Mirrors SessionQuerySet.not_ended: LiveKit ends via ended_at (plus
+        # the backstop); Google Meet ends at the scheduled end.
         if self.ended_at is not None:
             return True
-        return self.start + datetime.timedelta(minutes=self.duration_minutes) < timezone.now()
+        end = self.end()
+        if self.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT:
+            return end + _livekit_ended_backstop < timezone.now()
+        return end < timezone.now()
 
     def remove_attendee(self, user):
         if user not in self.attendees.all():

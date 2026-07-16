@@ -69,6 +69,22 @@ class TestFilters(TestCase):
             listed=False,
         )
 
+        self.in_progress_session = SessionFactory(
+            space=self.space,
+            start=timezone.now() - timezone.timedelta(minutes=30),
+            duration_minutes=60,
+            cancelled=False,
+            open=True,
+        )
+        self.ended_early_session = SessionFactory(
+            space=self.space,
+            start=timezone.now() - timezone.timedelta(minutes=30),
+            duration_minutes=60,
+            cancelled=False,
+            open=True,
+            ended_at=timezone.now() - timezone.timedelta(minutes=5),
+        )
+
         # Unpublished space sessions
         self.unpublished_session = SessionFactory(
             space=self.unpublished_space,
@@ -156,12 +172,88 @@ class TestFilters(TestCase):
         self.assertIn(self.unlisted_unpublished_session, sessions)
 
     def test_recommended_full_session(self):
+        # Full sessions stay listed; the detail page shows there are no seats left.
         users = [UserFactory() for _ in range(self.future_session.seats)]
         for user in users:
             self.future_session.add_attendee(user)
         sessions = all_upcoming_recommended_sessions(None)
-        self.assertNotIn(self.future_session, sessions)
+        self.assertIn(self.future_session, sessions)
         self.assertIn(self.future_session2, sessions)
+
+    def test_recommended_sessions_visible_until_ended(self):
+        # In-progress sessions stay listed so attendees can find them; ended ones drop off.
+        sessions = all_upcoming_recommended_sessions(None)
+        self.assertIn(self.in_progress_session, sessions)
+        self.assertNotIn(self.past_session, sessions)
+        self.assertNotIn(self.ended_early_session, sessions)
+
+    def test_spaces_list_sessions_visible_until_ended(self):
+        sessions = get_upcoming_sessions_for_spaces_list(None)
+        self.assertIn(self.in_progress_session, sessions)
+        self.assertNotIn(self.past_session, sessions)
+        self.assertNotIn(self.ended_early_session, sessions)
+
+    def test_livekit_sessions_listed_through_overruns(self):
+        from totem.spaces.models import Space
+
+        livekit_space = SpaceFactory(published=True)
+        livekit_space.meeting_provider = Space.MeetingProviderChoices.LIVEKIT
+        livekit_space.save()
+        overrunning = SessionFactory(
+            space=livekit_space,
+            start=timezone.now() - timezone.timedelta(hours=2),
+            duration_minutes=60,
+            cancelled=False,
+            open=True,
+        )
+        sessions = all_upcoming_recommended_sessions(None)
+        self.assertIn(overrunning, sessions)
+        self.assertEqual(livekit_space.next_session(), overrunning)
+
+        overrunning.ended_at = timezone.now()
+        overrunning.save()
+        sessions = all_upcoming_recommended_sessions(None)
+        self.assertNotIn(overrunning, sessions)
+
+    def test_author_sessions_visible_until_ended(self):
+        sessions = upcoming_sessions_by_author(self.user, self.space.author)
+        self.assertIn(self.in_progress_session, sessions)
+        self.assertNotIn(self.past_session, sessions)
+        self.assertNotIn(self.ended_early_session, sessions)
+
+    def test_session_detail_schema_lifecycle_times(self):
+        from totem.spaces.filters import session_detail_schema
+
+        schema = session_detail_schema(self.future_session, self.user)
+        start = self.future_session.start
+        self.assertEqual(schema.join_opens_at, start - timezone.timedelta(minutes=15))
+        self.assertEqual(schema.join_closes_at, start + timezone.timedelta(minutes=10))
+        self.assertEqual(schema.ends_at, start + timezone.timedelta(minutes=self.future_session.duration_minutes))
+
+    def test_session_detail_schema_next_session(self):
+        from totem.spaces.filters import session_detail_schema
+
+        # An in-progress session points people to the space's next session.
+        schema = session_detail_schema(self.in_progress_session, self.user)
+        assert schema.next_session is not None
+        self.assertEqual(schema.next_session.slug, self.future_session.slug)
+        self.assertEqual(schema.next_session.link, self.future_session.get_absolute_url())
+
+        # Same for an ended one.
+        schema = session_detail_schema(self.past_session, self.user)
+        assert schema.next_session is not None
+        self.assertEqual(schema.next_session.slug, self.future_session.slug)
+
+        # And a full one.
+        users = [UserFactory() for _ in range(self.future_session.seats)]
+        self.future_session.attendees.add(*users)
+        schema = session_detail_schema(self.future_session, self.user)
+        assert schema.next_session is not None
+        self.assertEqual(schema.next_session.slug, self.future_session2.slug)
+
+        # An upcoming session with open seats doesn't need one.
+        schema = session_detail_schema(self.future_session2, self.user)
+        self.assertIsNone(schema.next_session)
 
     def test_sessions_by_month(self):
         sessions = sessions_by_month(
