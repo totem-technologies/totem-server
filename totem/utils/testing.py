@@ -1,18 +1,14 @@
-from django.core.mail import EmailMessage
+from django.core.mail import EmailMessage, EmailMultiAlternatives
 
 
-def decoded_email_text(email: EmailMessage) -> str:
-    """Every text part of an email, decoded.
+def email_text(email: EmailMessage) -> str:
+    """The email's authored text: plain body plus alternatives (e.g. HTML).
 
-    Asserting substrings against the raw MIME message (str(email.message()))
-    is flaky: quoted-printable encoding soft-wraps lines at 76 chars, so a
-    URL can be split mid-word depending on the surrounding content length.
+    Assert against this rather than str(email.message()): the serialized
+    MIME form is quoted-printable encoded, which soft-wraps lines at 76
+    chars and can split a URL mid-word depending on surrounding content.
     """
-    parts: list[str] = []
-    for part in email.message().walk():
-        if part.get_content_maintype() != "text":
-            continue
-        payload = part.get_payload(decode=True)
-        if payload:
-            parts.append(payload.decode(part.get_content_charset() or "utf-8"))
+    parts = [email.body]
+    if isinstance(email, EmailMultiAlternatives):
+        parts += [str(alternative.content) for alternative in email.alternatives]
     return "\n".join(parts)

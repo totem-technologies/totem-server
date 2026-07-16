@@ -8,7 +8,7 @@ from totem.email.exceptions import EmailBounced
 from totem.spaces.tasks import notify_missed_session
 from totem.spaces.tests.factories import SessionFactory, SpaceFactory
 from totem.users.tests.factories import UserFactory
-from totem.utils.testing import decoded_email_text
+from totem.utils.testing import email_text
 
 
 class TestMissedSessionTask:
@@ -44,7 +44,7 @@ class TestMissedSessionTask:
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
-        message = decoded_email_text(email)
+        message = email_text(email)
         assert "missed you" in message
         assert "forms.gle" in message
         assert notify_missed_session() == 0
