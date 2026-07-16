@@ -1,11 +1,13 @@
 import io
+from datetime import timedelta
 
 import pytest
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.utils import timezone
 from PIL import Image, ImageOps
 
-from totem.users.models import LoginPin, User
+from totem.users.models import LoginPin, PinFailureReason, User
 from totem.users.tests.factories import UserFactory
 
 
@@ -111,14 +113,14 @@ class TestUserFixedPin:
         user.save()
 
         # Should validate fixed PIN when no regular PIN exists
-        is_valid, pin_obj = LoginPin.objects.validate_pin(user, "123456")
+        is_valid, reason = LoginPin.objects.validate_pin(user, "123456")
         assert is_valid is True
-        assert pin_obj is None
+        assert reason is None
 
         # Should not validate wrong fixed PIN
-        is_valid, pin_obj = LoginPin.objects.validate_pin(user, "000000")
+        is_valid, reason = LoginPin.objects.validate_pin(user, "000000")
         assert is_valid is False
-        assert pin_obj is None
+        assert reason == PinFailureReason.NO_PIN
 
     def test_fixed_pin_validation_when_disabled(self):
         """Test that fixed PIN validation fails when disabled."""
@@ -128,9 +130,9 @@ class TestUserFixedPin:
         user.save()
 
         # Should not validate fixed PIN when disabled
-        is_valid, pin_obj = LoginPin.objects.validate_pin(user, "123456")
+        is_valid, reason = LoginPin.objects.validate_pin(user, "123456")
         assert is_valid is False
-        assert pin_obj is None
+        assert reason == PinFailureReason.NO_PIN
 
     def test_fixed_pin_validation_with_empty_pin(self):
         """Test that fixed PIN validation fails with empty PIN."""
@@ -140,9 +142,9 @@ class TestUserFixedPin:
         user.save()
 
         # Should not validate when PIN is empty
-        is_valid, pin_obj = LoginPin.objects.validate_pin(user, "123456")
+        is_valid, reason = LoginPin.objects.validate_pin(user, "123456")
         assert is_valid is False
-        assert pin_obj is None
+        assert reason == PinFailureReason.NO_PIN
 
     def test_fixed_pin_as_fallback_with_regular_pin(self):
         """Test that fixed PIN works as fallback when regular PIN exists."""
@@ -155,14 +157,132 @@ class TestUserFixedPin:
         regular_pin = LoginPin.objects.generate_pin(user)
 
         # Regular PIN should work
-        is_valid, pin_obj = LoginPin.objects.validate_pin(user, regular_pin.pin)
+        is_valid, reason = LoginPin.objects.validate_pin(user, regular_pin.pin)
         assert is_valid is True
-        assert pin_obj is not None
+        assert reason is None
 
         # Generate new regular PIN for next test
         regular_pin = LoginPin.objects.generate_pin(user)
 
         # Fixed PIN should work as fallback with wrong regular PIN
-        is_valid, pin_obj = LoginPin.objects.validate_pin(user, "123456")
+        is_valid, reason = LoginPin.objects.validate_pin(user, "123456")
         assert is_valid is True
-        assert pin_obj is None
+        assert reason is None
+
+    def test_fixed_pin_works_even_after_attempt_wipe(self):
+        """The app-store-review fixed PIN keeps working after regular pins are locked out."""
+        user = UserFactory()
+        user.fixed_pin = "123456"
+        user.fixed_pin_enabled = True
+        user.save()
+
+        pin = LoginPin.objects.generate_pin(user)
+        LoginPin.objects.filter(pk=pin.pk).update(failed_attempts=LoginPin.MAX_ATTEMPTS)
+
+        is_valid, reason = LoginPin.objects.validate_pin(user, "123456")
+        assert is_valid is True
+        assert reason is None
+
+
+def _wrong_pin(*pins: LoginPin) -> str:
+    """A 6-digit code that matches none of the given pins."""
+    taken = {p.pin for p in pins}
+    return next(c for c in ("000000", "000001", "000002", "000003") if c not in taken)
+
+
+@pytest.mark.django_db
+class TestLoginPinMultiPin:
+    """Up to MAX_ACTIVE_PINS codes are valid at once; attempts are summed across them."""
+
+    def test_resent_code_keeps_older_codes_working(self):
+        # Regression: a user who requests a code twice (double click, resend) must
+        # be able to log in with the code from the *first* email.
+        user = UserFactory()
+        first = LoginPin.objects.generate_pin(user)
+        LoginPin.objects.generate_pin(user)
+
+        is_valid, reason = LoginPin.objects.validate_pin(user, first.pin)
+        assert is_valid is True
+        assert reason is None
+
+    def test_at_most_three_active_pins(self):
+        user = UserFactory()
+        pins = [LoginPin.objects.generate_pin(user) for _ in range(4)]
+
+        remaining = set(LoginPin.objects.filter(user=user).values_list("pk", flat=True))
+        assert remaining == {p.pk for p in pins[1:]}
+
+    def test_generate_pin_purges_expired_pins(self):
+        user = UserFactory()
+        old = LoginPin.objects.generate_pin(user)
+        LoginPin.objects.filter(pk=old.pk).update(expires_at=timezone.now() - timedelta(minutes=1))
+
+        new = LoginPin.objects.generate_pin(user)
+        assert list(LoginPin.objects.filter(user=user).values_list("pk", flat=True)) == [new.pk]
+
+    def test_success_consumes_all_pins(self):
+        user = UserFactory()
+        LoginPin.objects.generate_pin(user)
+        pin = LoginPin.objects.generate_pin(user)
+
+        is_valid, reason = LoginPin.objects.validate_pin(user, pin.pin)
+        assert is_valid is True
+        assert reason is None
+        assert not LoginPin.objects.filter(user=user).exists()
+
+        # Replaying the consumed code fails
+        is_valid, reason = LoginPin.objects.validate_pin(user, pin.pin)
+        assert is_valid is False
+        assert reason == PinFailureReason.NO_PIN
+
+    def test_mismatch_increments_newest_pin_only(self):
+        user = UserFactory()
+        older = LoginPin.objects.generate_pin(user)
+        newest = LoginPin.objects.generate_pin(user)
+
+        is_valid, reason = LoginPin.objects.validate_pin(user, _wrong_pin(older, newest))
+        assert is_valid is False
+        assert reason == PinFailureReason.MISMATCH
+
+        older.refresh_from_db()
+        newest.refresh_from_db()
+        assert older.failed_attempts == 0
+        assert newest.failed_attempts == 1
+
+    def test_attempts_summed_across_pins_wipe_all(self):
+        user = UserFactory()
+        p1 = LoginPin.objects.generate_pin(user)
+        p2 = LoginPin.objects.generate_pin(user)
+        LoginPin.objects.filter(pk=p1.pk).update(failed_attempts=6)
+        LoginPin.objects.filter(pk=p2.pk).update(failed_attempts=4)
+
+        # Even the correct code is rejected once the summed attempts hit the cap,
+        # and every pin is invalidated.
+        is_valid, reason = LoginPin.objects.validate_pin(user, p2.pin)
+        assert is_valid is False
+        assert reason == PinFailureReason.TOO_MANY_ATTEMPTS
+        assert not LoginPin.objects.filter(user=user).exists()
+
+    def test_expired_pin_reason(self):
+        user = UserFactory()
+        pin = LoginPin.objects.generate_pin(user)
+        LoginPin.objects.filter(pk=pin.pk).update(expires_at=timezone.now() - timedelta(minutes=1))
+
+        is_valid, reason = LoginPin.objects.validate_pin(user, pin.pin)
+        assert is_valid is False
+        assert reason == PinFailureReason.EXPIRED
+
+    def test_no_pin_reason(self):
+        user = UserFactory()
+        is_valid, reason = LoginPin.objects.validate_pin(user, "123456")
+        assert is_valid is False
+        assert reason == PinFailureReason.NO_PIN
+
+    def test_cleanup_removes_only_expired_pins(self):
+        user = UserFactory()
+        keep = LoginPin.objects.generate_pin(user)
+        gone = LoginPin.objects.generate_pin(user)
+        LoginPin.objects.filter(pk=gone.pk).update(expires_at=timezone.now() - timedelta(minutes=1))
+
+        LoginPin.cleanup()
+        assert list(LoginPin.objects.filter(user=user).values_list("pk", flat=True)) == [keep.pk]

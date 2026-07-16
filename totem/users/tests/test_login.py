@@ -185,6 +185,20 @@ class TestLogInView:
         assert response.status_code == 302
         assert response.url == reverse("users:redirect")
 
+    def test_resend_keeps_first_code_valid(self, client):
+        # Regression: submitting the login form again (double click, "Send again")
+        # must not invalidate the code from the first email.
+        user = UserFactory()
+
+        client.post(reverse("users:login"), {"email": user.email})
+        first_pin = LoginPin.objects.get(user=user).pin
+        client.post(reverse("users:login"), {"email": user.email})
+        assert len(mail.outbox) == 2
+
+        response = client.post(reverse("users:verify-pin"), {"email": user.email, "pin": first_pin})
+        assert response.status_code == 302
+        assert response.url == reverse("users:redirect")
+
     def test_deactivated_account(self, client):
         user = User.objects.create_user(email="test@example.com")
         user.is_active = False

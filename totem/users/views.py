@@ -20,12 +20,17 @@ from totem.spaces.filters import (
     upcoming_sessions_by_author,
 )
 from totem.utils.slack import notify_slack
+from totem.utils.utils import request_log_context
 
 from . import analytics
 from .forms import SignupForm
 from .models import Feedback, KeeperProfile, LoginPin, User
 
 logger = logging.getLogger(__name__)
+
+# Deliberately generic to avoid revealing whether an email has an account or
+# why exactly a code was rejected; the real reason is logged server side.
+PIN_ERROR_MESSAGE = "Invalid or expired verification code. Please try again or request a new code."
 
 
 def user_detail_view(request, slug):
@@ -106,11 +111,19 @@ class PinVerifyForm(forms.Form):
 
 @transaction.atomic
 def verify_pin_view(request: HttpRequest):
+    # The whole view is deliberately one transaction: if anything throws after
+    # a PIN validates (login, session, signals), the rollback un-consumes the
+    # PIN so the same code still works on retry instead of dying with the 500.
+    if request.user.is_authenticated:
+        # Already logged in (e.g. by a parallel attempt in another tab); don't
+        # show a spurious "invalid code" error.
+        return redirect("users:redirect")
     if request.method == "POST":
         form = PinVerifyForm(request.POST)
         if form.is_valid():
             email = User.objects.normalize_email(form.cleaned_data["email"])
             pin = form.cleaned_data["pin"]
+            log_context = request_log_context(request, email)
             try:
                 user = User.objects.get(email=email)
 
@@ -118,9 +131,10 @@ def verify_pin_view(request: HttpRequest):
                 if not user.is_active:
                     return redirect("users:deactivated")
 
-                is_valid, pin_obj = LoginPin.objects.validate_pin(user, pin)
+                is_valid, failure_reason = LoginPin.objects.validate_pin(user, pin)
 
                 if is_valid:
+                    logger.info("PIN login succeeded", extra=log_context)
                     auth_login(request, user)
 
                     if not user.verified:
@@ -138,11 +152,11 @@ def verify_pin_view(request: HttpRequest):
 
                     return redirect(next_url)
 
-                # Use generic error message to avoid revealing if email exists
-                form.add_error(None, "Invalid or expired verification code. Please try again or request a new code.")
+                logger.warning("PIN login failed", extra=log_context | {"reason": str(failure_reason)})
+                form.add_error(None, PIN_ERROR_MESSAGE)
             except User.DoesNotExist:
-                # Use same generic error to avoid revealing if email exists
-                form.add_error(None, "Invalid or expired verification code. Please try again or request a new code.")
+                logger.warning("PIN login failed", extra=log_context | {"reason": "unknown_email"})
+                form.add_error(None, PIN_ERROR_MESSAGE)
     else:
         form = PinVerifyForm()
         if "email" in request.GET:
@@ -178,24 +192,20 @@ def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name
         form = form_class(request.POST)
         if form.is_valid():
             data = form.cleaned_data
-            ip_address = request.META.get("REMOTE_ADDR", "")
-            user_agent = request.META.get("HTTP_USER_AGENT", "")
             form_type = form_class.__name__
             # Honeypot validation - check if bot filled the hidden field
             honeypot_value = data.get("website", "")
-            headless = "HeadlessChrome" in user_agent
+            headless = "HeadlessChrome" in request.META.get("HTTP_USER_AGENT", "")
             if honeypot_value or headless:
                 # Bot detected! Log it.
                 email = data.get("email", "")
 
                 logger.warning(
                     "Bot detection triggered: Bot detected attempting to submit form",
-                    extra={
-                        "email": email,
+                    extra=request_log_context(request, email)
+                    | {
                         "honeypot_field": "website",
                         "honeypot_value": honeypot_value[:100],
-                        "ip_address": ip_address,
-                        "user_agent": user_agent,
                         "form_type": form_type,
                     },
                 )
@@ -206,12 +216,7 @@ def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name
             email: str = data["email"]
             logger.info(
                 "User login attempt",
-                extra={
-                    "email": email,
-                    "ip_address": ip_address,
-                    "user_agent": user_agent,
-                    "form_type": form_type,
-                },
+                extra=request_log_context(request, email) | {"form_type": form_type},
             )
             # Only use 'next' as the post-auth redirect parameter
             create_params = {"newsletter_consent": data.get("newsletter_consent", False)}

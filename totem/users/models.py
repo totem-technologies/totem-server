@@ -3,13 +3,14 @@ import secrets
 import time
 import uuid
 from datetime import datetime, timedelta
+from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import BooleanField, CharField, EmailField, TextChoices, URLField, UUIDField
+from django.db.models import BooleanField, CharField, EmailField, F, Sum, TextChoices, URLField, UUIDField
 from django.urls import Resolver404, resolve, reverse
 from django.utils import timezone
 from django.utils.html import strip_tags
@@ -212,41 +213,67 @@ def default_pin_expires_at() -> datetime:
     return timezone.now() + timedelta(minutes=15)
 
 
+class PinFailureReason(StrEnum):
+    NO_PIN = "no_pin"
+    EXPIRED = "expired"
+    MISMATCH = "mismatch"
+    TOO_MANY_ATTEMPTS = "too_many_attempts"
+
+
 class LoginPinManager(models.Manager):
     def generate_pin(self, user: User) -> "LoginPin":
-        """Generate a new PIN for a user, invalidating any existing PINs."""
+        """Generate a new PIN for a user.
+
+        A user can have up to MAX_ACTIVE_PINS live at once so that resending a
+        code (double click, "Send again", a second device) does not invalidate
+        codes already sitting in their inbox.
+        """
         # Generate a secure 6-digit PIN using the secrets module
         pin = "".join(secrets.choice("0123456789") for _ in range(6))
 
-        # Delete any existing PINs for this user and create new one
-        self.filter(user=user).delete()
-        return self.create(user=user, pin=pin)
+        login_pin = self.create(user=user, pin=pin)
+        keep = list(
+            self.filter(user=user, expires_at__gt=timezone.now())
+            .order_by("-id")
+            .values_list("pk", flat=True)[: LoginPin.MAX_ACTIVE_PINS]
+        )
+        self.filter(user=user).exclude(pk__in=keep).delete()
+        return login_pin
 
-    def validate_pin(self, user: User, pin: str) -> tuple[bool, "LoginPin | None"]:
+    def validate_pin(self, user: User, pin: str) -> tuple[bool, PinFailureReason | None]:
         """
-        Validate a PIN for a user. Returns (is_valid, pin_obj).
-        PIN object is returned even if invalid to allow for attempt counting.
+        Validate a PIN for a user against all their active PINs.
+        Returns (is_valid, failure_reason); the reason is None on success and is
+        for server-side logging only, never for client-facing messages.
         Supports fixed PIN as fallback for app store reviews.
         """
-        try:
-            pin_obj = self.get(user=user, expires_at__gt=timezone.now())
-            is_valid = pin_obj.is_valid() and pin_obj.pin == pin
-            if is_valid:
-                # Valid PIN - mark as used
-                pin_obj.used = True
-                pin_obj.save()
-                return True, pin_obj
-            else:
-                # Regular PIN didn't match - check fixed PIN as fallback
-                if self._validate_fixed_pin(user, pin):
-                    return True, None
-                # Neither regular nor fixed PIN matched - increment failed attempts
-                pin_obj.increment_failed_attempts()
-                return False, pin_obj
-        except self.model.DoesNotExist:
-            if self._validate_fixed_pin(user, pin):
-                return True, None
-            return False, None
+        # Fixed PIN works regardless of regular PIN state, including after an
+        # attempt-limit wipe, since reviewers may retry many times.
+        if self._validate_fixed_pin(user, pin):
+            return True, None
+
+        pins = self.filter(user=user)
+        active = pins.filter(expires_at__gt=timezone.now())
+
+        attempts = active.aggregate(total=Sum("failed_attempts"))["total"] or 0
+        if attempts >= LoginPin.MAX_ATTEMPTS:
+            # Too many failures across this batch of codes: invalidate them all.
+            pins.delete()
+            return False, PinFailureReason.TOO_MANY_ATTEMPTS
+
+        if active.filter(pin=pin).exists():
+            # Success consumes every outstanding code so none can be replayed.
+            pins.delete()
+            return True, None
+
+        newest = active.order_by("-id").first()
+        if newest is not None:
+            # F() keeps concurrent failures from losing increments.
+            self.filter(pk=newest.pk).update(failed_attempts=F("failed_attempts") + 1)
+            return False, PinFailureReason.MISMATCH
+        if pins.exists():
+            return False, PinFailureReason.EXPIRED
+        return False, PinFailureReason.NO_PIN
 
     def _validate_fixed_pin(self, user: User, pin: str) -> bool:
         return not user.is_staff and user.fixed_pin_enabled and user.fixed_pin and user.fixed_pin == pin
@@ -254,26 +281,19 @@ class LoginPinManager(models.Manager):
 
 class LoginPin(models.Model):
     MAX_ATTEMPTS = 10
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    MAX_ACTIVE_PINS = 3
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="login_pins")
     pin = models.CharField(max_length=6)
     expires_at = models.DateTimeField(default=default_pin_expires_at)
-    used = models.BooleanField(default=False)
     failed_attempts = models.IntegerField(default=0)
 
     objects: LoginPinManager = LoginPinManager()  # type: ignore
 
     def is_valid(self) -> bool:
-        return not self.used and not self.is_expired() and not self.has_too_many_attempts()
+        return not self.is_expired()
 
     def is_expired(self) -> bool:
         return timezone.now() > self.expires_at
-
-    def has_too_many_attempts(self) -> bool:
-        return self.failed_attempts >= self.MAX_ATTEMPTS
-
-    def increment_failed_attempts(self):
-        self.failed_attempts += 1
-        self.save()
 
     @classmethod
     def cleanup(cls):

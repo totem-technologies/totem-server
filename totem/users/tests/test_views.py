@@ -148,6 +148,52 @@ class TestPinVerification:
         assert response.status_code == 200
         assert b"Invalid or expired verification code" in response.content
 
+    def test_verify_pin_works_after_resend(self, client):
+        # Regression: requesting a second code must not kill the first one.
+        user = UserFactory(verified=False)
+        first = LoginPin.objects.generate_pin(user)
+        LoginPin.objects.generate_pin(user)
+
+        response = client.post(reverse("users:verify-pin"), {"email": user.email, "pin": first.pin})
+        assert response.status_code == 302
+        assert response.url == reverse("users:redirect")
+
+    def test_verify_pin_redirects_authenticated_user(self, client):
+        # A user already logged in (e.g. by a parallel attempt) should not be
+        # shown the code form or a spurious "invalid code" error.
+        user = UserFactory()
+        client.force_login(user)
+
+        response = client.get(reverse("users:verify-pin"))
+        assert response.status_code == 302
+        assert response.url == reverse("users:redirect")
+
+        response = client.post(reverse("users:verify-pin"), {"email": user.email, "pin": "000000"})
+        assert response.status_code == 302
+        assert response.url == reverse("users:redirect")
+
+    def test_verify_pin_failure_is_logged_with_reason(self, client, caplog):
+        user = UserFactory(verified=False)
+        pin = LoginPin.objects.generate_pin(user)
+        wrong = "999999" if pin.pin != "999999" else "999998"
+
+        with caplog.at_level("INFO", logger="totem.users.views"):
+            client.post(reverse("users:verify-pin"), {"email": user.email, "pin": wrong})
+
+        records = [r for r in caplog.records if getattr(r, "reason", None) is not None]
+        assert len(records) == 1
+        assert records[0].reason == "mismatch"
+        assert records[0].email == user.email
+
+    def test_verify_pin_success_is_logged(self, client, caplog):
+        user = UserFactory(verified=False)
+        pin = LoginPin.objects.generate_pin(user)
+
+        with caplog.at_level("INFO", logger="totem.users.views"):
+            client.post(reverse("users:verify-pin"), {"email": user.email, "pin": pin.pin})
+
+        assert any("PIN login succeeded" in r.message for r in caplog.records)
+
 
 class UserProfileViewTest(TestCase):
     def setUp(self):

@@ -1,9 +1,11 @@
+import logging
 from datetime import datetime, timedelta
 from enum import Enum
 
 import jwt
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
 from django.utils import timezone
 from ninja import Router, Schema, Status
 
@@ -12,15 +14,18 @@ from totem.email.emails import login_pin_email
 from totem.email.exceptions import EmailBounced
 from totem.users import analytics
 from totem.users.models import LoginPin, RefreshToken, User
+from totem.utils.utils import request_log_context
 
 # Create router
 router = Router()
 
+logger = logging.getLogger(__name__)
 
-# Enum for error messages
+
+# Enum for error messages. Clients get the generic INCORRECT_PIN for every
+# validation failure; the real reason is only logged server side.
 class AuthErrors(Enum):
     INVALID_EMAIL = "INVALID_EMAIL"
-    PIN_EXPIRED = "PIN_EXPIRED"
     INCORRECT_PIN = "INCORRECT_PIN"
     REAUTH_REQUIRED = "REAUTH_REQUIRED"
     ACCOUNT_DEACTIVATED = "ACCOUNT_DEACTIVATED"
@@ -118,26 +123,36 @@ def request_pin(request, data: PinRequestSchema):
 
 
 @router.post("/validate-pin", response={200: TokenResponse, 401: ErrorResponse}, url_name="auth_validate_pin")
+@transaction.atomic
 def validate_pin(request, data: ValidatePinSchema):
     """
     Validate PIN and issue token pair.
+
+    Atomic like the web verify view: if anything throws after the PIN
+    validates, the rollback un-consumes it so the same code works on retry.
     """
+    normalized_email = User.objects.normalize_email(data.email)
+    log_context = request_log_context(request, normalized_email)
     # Find user by email
     try:
-        normalized_email = User.objects.normalize_email(data.email)
         user = User.objects.get(email=normalized_email)
     except User.DoesNotExist:
+        logger.warning("PIN login failed", extra=log_context | {"reason": "unknown_email"})
         return Status(401, ErrorResponse(error=AuthErrors.INCORRECT_PIN.value))
 
-    # Validate PIN
-    is_valid, _ = LoginPin.objects.validate_pin(user, data.pin)
-
-    if not is_valid:
-        return Status(401, ErrorResponse(error=AuthErrors.PIN_EXPIRED.value))
-
-    # Check if account is deactivated
+    # Check deactivation before validating so the code isn't consumed, same
+    # as the web flow.
     if check_account_deactivated(user):
         return Status(401, ErrorResponse(error=AuthErrors.ACCOUNT_DEACTIVATED.value))
+
+    # Validate PIN
+    is_valid, failure_reason = LoginPin.objects.validate_pin(user, data.pin)
+
+    if not is_valid:
+        logger.warning("PIN login failed", extra=log_context | {"reason": str(failure_reason)})
+        return Status(401, ErrorResponse(error=AuthErrors.INCORRECT_PIN.value))
+
+    logger.info("PIN login succeeded", extra=log_context)
 
     # Generate tokens
     refresh_token_string, _ = RefreshToken.objects.generate_token(user)
