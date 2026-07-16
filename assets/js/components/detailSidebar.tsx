@@ -12,7 +12,11 @@ import {
 } from "solid-js"
 import { postData, postErrorMessage } from "@/libs/postData"
 import { timestampToDateString, timestampToTimeString } from "@/libs/time"
-import { type SessionDetailSchema, totemSpacesApiEventDetail } from "../client"
+import {
+  type SessionDetailSchema,
+  totemSpacesApiEventDetail,
+  type UpcomingSessionSchema,
+} from "../client"
 import AddToCalendarButton from "./AddToCalendarButton"
 import ErrorBoundary from "./errors"
 import Icon, { type IconName } from "./icons"
@@ -20,6 +24,31 @@ import { useTotemTip } from "./tooltip"
 
 function capitalize(str: string) {
   return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
+const MINUTE = 60_000
+// Fire a bit after the boundary so the server's clock has crossed it too,
+// even if the local clock runs a few seconds fast.
+const REFRESH_BUFFER = 15_000
+const MAX_REFRESH_DELAY = 24 * 60 * MINUTE
+// A just-passed boundary gets one follow-up refetch after this window, in
+// case the local clock ran ahead and the first refetch beat the server.
+const RECENT_BOUNDARY_GRACE = 60_000
+
+// Milliseconds until the next of the server-provided lifecycle times, or
+// null when they have all passed.
+export function nextTransitionDelay(
+  boundaries: (string | null | undefined)[],
+  nowMs: number
+): number | null {
+  const upcoming = boundaries
+    .filter((b): b is string => !!b)
+    .map((b) => new Date(b).getTime())
+    .filter((t) => t > nowMs - RECENT_BOUNDARY_GRACE)
+  if (upcoming.length === 0) return null
+  const next = Math.min(...upcoming)
+  const target = next > nowMs ? next : next + RECENT_BOUNDARY_GRACE
+  return Math.min(target - nowMs + REFRESH_BUFFER, MAX_REFRESH_DELAY)
 }
 
 const spacesListLink = "/spaces/"
@@ -187,6 +216,26 @@ function plural(number: number) {
   return number > 1 ? "s" : ""
 }
 
+// When the shown session can't be attended anymore, point people at the
+// space's next one instead of dead-ending them.
+function NextSessionLink(props: { next?: UpcomingSessionSchema | null }) {
+  return (
+    <Show
+      when={props.next}
+      fallback={
+        <a class="link" href={spacesListLink}>
+          See upcoming Spaces.
+        </a>
+      }>
+      {(next) => (
+        <a class="btn btn-primary mt-4 w-full" href={next().link}>
+          Next session: {timestampToDateString(next().start)}
+        </a>
+      )}
+    </Show>
+  )
+}
+
 export function EventInfo(props: {
   eventStore: SessionDetailSchema
   refetchEvent: () => void
@@ -273,30 +322,22 @@ export function EventInfo(props: {
             </div>
           </Match>
           <Match when={props.eventStore.joinable}>
-            <p class="pb-4">The session is starting soon.</p>
+            <p class="pb-4">You can enter this session now.</p>
             <a
               class="btn btn-primary w-full"
               target="_blank"
               href={props.eventStore.join_url ?? ""}
               rel="noreferrer">
-              Enter Space
+              Enter Session
             </a>
           </Match>
           <Match when={props.eventStore.ended}>
-            <div>
-              This session has ended.{" "}
-              <a class="link" href={spacesListLink}>
-                See upcoming Spaces.
-              </a>
-            </div>
+            <div>This session has ended.</div>
+            <NextSessionLink next={props.eventStore.next_session} />
           </Match>
           <Match when={props.eventStore.started}>
-            <div>
-              This session has already started.{" "}
-              <a class="link" href={spacesListLink}>
-                See upcoming Spaces.
-              </a>
-            </div>
+            <div>This session has already started.</div>
+            <NextSessionLink next={props.eventStore.next_session} />
           </Match>
           <Match when={!props.eventStore.open && !props.eventStore.attending}>
             <div>
@@ -315,6 +356,11 @@ export function EventInfo(props: {
               onClick={(e) => void handleGiveUp(e)}>
               Give up spot
             </button>
+          </Match>
+
+          <Match when={props.eventStore.seats_left <= 0}>
+            <div>This session is full.</div>
+            <NextSessionLink next={props.eventStore.next_session} />
           </Match>
 
           <Match when={!props.eventStore.attending}>
@@ -432,7 +478,21 @@ function DetailSidebar(props: DetailSidebarProps) {
       }
       return response.data
     },
-    throwOnError: true,
+    // Keep showing (stale) data when a background refetch fails; only
+    // surface the error boundary when there is nothing to render.
+    throwOnError: (_error, q) => q.state.data === undefined,
+    // Refetch at the server-provided lifecycle times so the join button
+    // appears and disappears while the page sits open.
+    refetchInterval: (q) => {
+      const data = q.state.data
+      if (!data) return false
+      return (
+        nextTransitionDelay(
+          [data.join_opens_at, data.start, data.join_closes_at, data.ends_at],
+          Date.now()
+        ) ?? false
+      )
+    },
   }))
   const refetch = () => void query.refetch()
   return (
@@ -441,7 +501,7 @@ function DetailSidebar(props: DetailSidebarProps) {
         <AttendingPopup eventStore={query.data} />
         <LoginPopup />
         <Switch fallback={<Loading />}>
-          <Match when={query.isFetching}>
+          <Match when={query.isLoading}>
             <Loading />
           </Match>
           <Match when={query.data}>

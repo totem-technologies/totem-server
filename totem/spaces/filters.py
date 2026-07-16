@@ -1,13 +1,19 @@
 import datetime
 from dataclasses import dataclass
 
-from django.db.models import Count, DateTimeField, ExpressionWrapper, F, OuterRef, Q, Subquery
+from django.db.models import Count, F, OuterRef, Q, Subquery
 from django.urls import reverse
 from django.utils import timezone
 
 from totem.onboard.models import OnboardModel
 from totem.spaces.mobile_api.mobile_filters import get_upcoming_spaces_list, upcoming_recommended_spaces
-from totem.spaces.schemas import NextSessionSchema, SessionDetailSchema, SessionSpaceSchema, SpaceDetailSchema
+from totem.spaces.schemas import (
+    NextSessionSchema,
+    SessionDetailSchema,
+    SessionSpaceSchema,
+    SpaceDetailSchema,
+    UpcomingSessionSchema,
+)
 from totem.users.models import User
 
 from .models import Session, Space, SpaceCategory, exclude_banned_sessions
@@ -45,13 +51,12 @@ def sessions_by_month(user: User | None, space_slug: str, month: int, year: int)
 
 
 def all_upcoming_recommended_sessions(user: User | None, category: str | None = None, author: str | None = None):
-    sessions = Session.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True)
+    # Sessions stay listed until they end (even when full) so attendees can find them.
+    sessions = Session.objects.filter(cancelled=False, listed=True).not_ended()
     sessions = exclude_banned_sessions(sessions, user)
     sessions = sessions.order_by("start")
     if not user or not user.is_staff:
         sessions = sessions.filter(space__published=True)
-    # are there any seats?
-    sessions = sessions.annotate(attendee_count=Count("attendees")).filter(attendee_count__lt=F("seats"))
     # filter category
     if category:
         sessions = sessions.filter(space__categories__slug=category) | sessions.filter(space__categories__name=category)
@@ -62,32 +67,6 @@ def all_upcoming_recommended_sessions(user: User | None, category: str | None = 
     return sessions
 
 
-def upcoming_recommended_sessions(user: User | None, categories: list[str] | None = None, author: str | None = None):
-    sessions = (
-        Session.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True)
-        .select_related("space")
-        .prefetch_related("space__author", "space__categories", "space__subscribed")
-        .annotate(
-            attendee_count=Count("attendees", distinct=True),
-            subscriber_count=Count("space__subscribed", distinct=True),
-        )
-        .order_by("start")
-    )
-    if not user or not user.is_staff:
-        sessions = sessions.filter(space__published=True)
-    # are there any seats?
-    sessions = sessions.filter(attendee_count__lt=F("seats"))
-    # filter category
-    if categories:
-        sessions = sessions.filter(
-            Q(space__categories__slug__in=categories) | Q(space__categories__name__in=categories)
-        )
-    # filter author
-    if author:
-        sessions = sessions.filter(space__author__slug=author)
-    return exclude_banned_sessions(sessions, user)
-
-
 def get_upcoming_sessions_for_spaces_list(user: User | None = None):
     """Get all upcoming events for spaces listing, including spaces with full events.
 
@@ -95,7 +74,7 @@ def get_upcoming_sessions_for_spaces_list(user: User | None = None):
     Does NOT filter by seat availability, ensuring all spaces with upcoming events are shown.
     """
     first_category_subquery = SpaceCategory.objects.filter(space=OuterRef("space_id")).values("name")[:1]
-    sessions = Session.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True, space__published=True)
+    sessions = Session.objects.filter(cancelled=False, listed=True, space__published=True).not_ended()
     return (
         exclude_banned_sessions(sessions, user)
         .select_related("space")
@@ -132,12 +111,15 @@ def upcoming_attending_sessions(user: User, limit: int = 10):
 
 
 def upcoming_sessions_by_author(user: User, author: User, exclude_event: Session | None = None):
-    upcoming_sessions = Session.objects.filter(
-        space__author=author,
-        start__gt=timezone.now(),
-        cancelled=False,
-        listed=True,
-    ).order_by("start")
+    upcoming_sessions = (
+        Session.objects.filter(
+            space__author=author,
+            cancelled=False,
+            listed=True,
+        )
+        .not_ended()
+        .order_by("start")
+    )
 
     if not user or not user.is_staff:
         upcoming_sessions = upcoming_sessions.filter(space__published=True)
@@ -165,19 +147,13 @@ def spaces_summary_data(user: User) -> SpacesSummary:
     spaces_qs = get_upcoming_spaces_list(user)
 
     # Sessions the user has registered for that haven't ended yet.
-    end_time_expression = ExpressionWrapper(
-        F("start") + F("duration_minutes") * datetime.timedelta(minutes=1),
-        output_field=DateTimeField(),
-    )
     upcoming_sessions = (
         exclude_banned_sessions(
-            Session.objects.annotate(end_time=end_time_expression).filter(
-                attendees=user, cancelled=False, end_time__gt=timezone.now()
-            ),
+            Session.objects.filter(attendees=user, cancelled=False).not_ended(),
             user,
         )
         .select_related("space")
-        .prefetch_related("space__author", "space__categories", "attendees", "space__subscribed")
+        .prefetch_related("space__author", "space__categories", "attendees", "joined", "space__subscribed")
         .annotate(
             attendee_count=Count("attendees", distinct=True),
             subscriber_count=Count("space__subscribed", distinct=True),
@@ -210,13 +186,32 @@ def spaces_summary_data(user: User) -> SpacesSummary:
     return SpacesSummary(upcoming=upcoming, for_you=for_you, explore=explore)
 
 
+def _next_session_schema(user: User, session: Session) -> UpcomingSessionSchema | None:
+    upcoming = list(other_sessions_in_space(user, session, limit=1))
+    if not upcoming:
+        return None
+    return UpcomingSessionSchema(
+        slug=upcoming[0].slug,
+        start=upcoming[0].start,
+        link=upcoming[0].get_absolute_url(),
+    )
+
+
 def session_detail_schema(session: Session, user: User):
     space: Space = session.space
     start = session.start
     subscribed = space.subscribed.contains(user) if user.is_authenticated else None
+    started = session.started()
     ended = session.ended()
 
     attending = session.attendees.filter(pk=user.pk).exists()
+    join_opens_at, join_closes_at = session.join_window(user)
+
+    # When this session can no longer be attended, point people at the
+    # space's next one.
+    next_session = None
+    if started or ended or session.seats_left() <= 0:
+        next_session = _next_session_schema(user, session)
 
     return SessionDetailSchema(
         slug=session.slug,
@@ -230,12 +225,16 @@ def session_detail_schema(session: Session, user: User):
         recurring=space.recurring,
         subscribers=space.subscribed.count(),
         start=start,
+        join_opens_at=join_opens_at,
+        join_closes_at=join_closes_at,
+        ends_at=session.end(),
         attending=attending,
         open=session.open,
-        started=session.started(),
+        started=started,
         cancelled=session.cancelled,
         joinable=session.can_join(user),
         ended=ended,
+        next_session=next_session,
         rsvp_url=reverse("spaces:rsvp", kwargs={"session_slug": session.slug}),
         join_url=reverse("spaces:join", kwargs={"session_slug": session.slug}),
         cal_link=session.cal_link(),
@@ -265,6 +264,7 @@ def space_detail_schema(space: Space, user: User, session: Session | None = None
         next_session_schema = NextSessionSchema(
             slug=next_session.slug,
             start=next_session.start,
+            ends_at=next_session.end(),
             title=next_session.title,
             link=next_session.get_absolute_url(),
             seats_left=next_session.seats_left(),

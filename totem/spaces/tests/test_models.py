@@ -108,6 +108,25 @@ class SpaceModelTest(TestCase):
         self.assertEqual(space.next_session(), first)
         self.assertEqual(space.next_session(user), second)
 
+    def test_next_session_in_progress_until_ended(self):
+        # An in-progress session is still the next session so attendees can find it.
+        space = SpaceFactory()
+        in_progress = SessionFactory(
+            space=space, start=timezone.now() - timezone.timedelta(minutes=30), duration_minutes=60
+        )
+        future = SessionFactory(space=space, start=timezone.now() + timezone.timedelta(days=1))
+        self.assertEqual(space.next_session(), in_progress)
+
+        in_progress.ended_at = timezone.now()
+        in_progress.save()
+        self.assertEqual(space.next_session(), future)
+
+    def test_next_session_skips_ended(self):
+        space = SpaceFactory()
+        SessionFactory(space=space, start=timezone.now() - timezone.timedelta(hours=2), duration_minutes=60)
+        future = SessionFactory(space=space, start=timezone.now() + timezone.timedelta(days=1))
+        self.assertEqual(space.next_session(), future)
+
 
 class TestSessionModel:
     def test_attendee_email_list(self, db):
@@ -224,6 +243,79 @@ class TestSessionModel:
         with pytest.raises(SessionException):
             session.add_attendee(user)
         assert user not in session.attendees.all()
+
+    def test_join_window(self, db):
+        from ..models import Space
+
+        user = UserFactory()
+        staff = UserFactory(is_staff=True)
+        session = SessionFactory(start=timezone.now() + timezone.timedelta(days=1), duration_minutes=60)
+        session.attendees.add(user, staff)
+
+        opens, closes = session.join_window(user)
+        assert opens == session.start - timezone.timedelta(minutes=15)
+        assert closes == session.start + timezone.timedelta(minutes=10)
+
+        opens, closes = session.join_window(staff)
+        assert opens == session.start - timezone.timedelta(minutes=60)
+        assert closes == session.start + timezone.timedelta(minutes=60)
+
+        # Once someone has joined, they get the wide window so they can rejoin.
+        session.joined.add(user)
+        opens, closes = session.join_window(user)
+        assert opens == session.start - timezone.timedelta(minutes=60)
+        assert closes == session.start + timezone.timedelta(minutes=60)
+
+        # LiveKit rooms stay open for rejoiners until explicitly ended.
+        session.space.meeting_provider = Space.MeetingProviderChoices.LIVEKIT
+        session.space.save()
+        opens, closes = session.join_window(user)
+        assert closes is None
+
+    def test_can_join_matches_join_window(self, db):
+        user = UserFactory()
+        session = SessionFactory(start=timezone.now() + timezone.timedelta(minutes=5), duration_minutes=60)
+        session.attendees.add(user)
+        assert session.can_join(user) is True
+
+        early = SessionFactory(start=timezone.now() + timezone.timedelta(minutes=20), duration_minutes=60)
+        early.attendees.add(user)
+        assert early.can_join(user) is False
+
+        late = SessionFactory(start=timezone.now() - timezone.timedelta(minutes=11), duration_minutes=60)
+        late.attendees.add(user)
+        assert late.can_join(user) is False
+
+    def test_ended_is_provider_aware(self, db):
+        from ..models import Space
+
+        # Google Meet gives no end signal; the scheduled end is the best guess.
+        meet = SessionFactory(start=timezone.now() - timezone.timedelta(hours=2), duration_minutes=60)
+        assert meet.ended() is True
+
+        # LiveKit rooms end when the keeper ends them (ended_at), so an
+        # overrunning session is still live.
+        livekit = SessionFactory(start=timezone.now() - timezone.timedelta(hours=2), duration_minutes=60)
+        livekit.space.meeting_provider = Space.MeetingProviderChoices.LIVEKIT
+        livekit.space.save()
+        assert livekit.ended() is False
+        livekit.ended_at = timezone.now()
+        assert livekit.ended() is True
+
+        # Backstop: if the disconnect watchdog never fired, don't stay live forever.
+        stale = SessionFactory(start=timezone.now() - timezone.timedelta(hours=5), duration_minutes=60)
+        stale.space.meeting_provider = Space.MeetingProviderChoices.LIVEKIT
+        stale.space.save()
+        assert stale.ended() is True
+
+    def test_can_attend_after_start(self, db):
+        from ..models import SessionException
+
+        user = UserFactory()
+        session = SessionFactory(start=timezone.now() - timezone.timedelta(minutes=1))
+        assert session.can_attend(user=user, silent=True) is False
+        with pytest.raises(SessionException, match="already started"):
+            session.can_attend(user=user)
 
     def test_advertise_skips_banned(self, db):
         user = UserFactory()

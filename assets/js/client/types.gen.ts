@@ -121,6 +121,10 @@ export type SessionListSchema = {
      */
     url: string;
     /**
+     * Ends At
+     */
+    ends_at: string;
+    /**
      * Start
      */
     start?: string;
@@ -262,6 +266,18 @@ export type SessionDetailSchema = {
      */
     start: string;
     /**
+     * Join Opens At
+     */
+    join_opens_at: string;
+    /**
+     * Join Closes At
+     */
+    join_closes_at: string | null;
+    /**
+     * Ends At
+     */
+    ends_at: string;
+    /**
      * Attending
      */
     attending: boolean;
@@ -285,6 +301,7 @@ export type SessionDetailSchema = {
      * Ended
      */
     ended: boolean;
+    next_session?: UpcomingSessionSchema | null;
     /**
      * Rsvp Url
      */
@@ -366,6 +383,27 @@ export type SessionSpaceSchema = {
 };
 
 /**
+ * UpcomingSessionSchema
+ *
+ * Pointer to the space's next joinable session, for pages showing a
+ * session that can no longer be attended (started, ended, or full).
+ */
+export type UpcomingSessionSchema = {
+    /**
+     * Slug
+     */
+    slug: string;
+    /**
+     * Start
+     */
+    start: string;
+    /**
+     * Link
+     */
+    link: string;
+};
+
+/**
  * EventCalendarFilterSchema
  */
 export type EventCalendarFilterSchema = {
@@ -423,6 +461,10 @@ export type NextSessionSchema = {
      * Start
      */
     start: string;
+    /**
+     * Ends At
+     */
+    ends_at: string;
     /**
      * Link
      */

@@ -17,7 +17,11 @@ import {
   useContext,
 } from "solid-js"
 import { type SpaceDetailSchema, totemSpacesApiListSpaces } from "@/client"
-import { timestampToDateStringShort, timestampToTimeString } from "@/libs/time"
+import {
+  createInProgress,
+  timestampToDateStringShort,
+  timestampToTimeString,
+} from "@/libs/time"
 import { eventCalendarURL } from "@/libs/urls"
 import Avatar from "./avatar"
 import ErrorBoundary from "./errors"
@@ -235,40 +239,53 @@ function SpacesListInner() {
                           <div class="mt-auto flex flex-col justify-between md:flex-row md:items-center">
                             <div>
                               <Show when={space.next_event}>
-                                {(nextEvent) => (
-                                  <>
-                                    <p class="text-sm font-medium">
-                                      Next session: {nextEvent().title}
-                                    </p>
-                                    <div class="mt-2 flex gap-4">
-                                      <div class="text-muted-foreground flex items-center text-xs">
-                                        <Calendar class="mr-1 h-3.5 w-3.5" />
-                                        {timestampToDateStringShort(
-                                          nextEvent().start
-                                        )}
+                                {(nextEvent) => {
+                                  const started = createInProgress(
+                                    () => nextEvent().start,
+                                    () => nextEvent().ends_at
+                                  )
+                                  return (
+                                    <>
+                                      <p class="text-sm font-medium">
+                                        {started()
+                                          ? "In progress"
+                                          : "Next session"}
+                                        : {nextEvent().title}
+                                      </p>
+                                      <div class="mt-2 flex gap-4">
+                                        <div class="text-muted-foreground flex items-center text-xs">
+                                          <Calendar class="mr-1 h-3.5 w-3.5" />
+                                          {timestampToDateStringShort(
+                                            nextEvent().start
+                                          )}
+                                        </div>
+                                        <div class="text-muted-foreground flex items-center text-xs">
+                                          <Clock class="mr-1 h-3.5 w-3.5" />
+                                          {timestampToTimeString(
+                                            nextEvent().start
+                                          )}
+                                        </div>
+                                        {/* Add seats left info with armchair icon */}
+                                        <div class="text-muted-foreground flex items-center text-xs">
+                                          <TbOutlineChairDirector class="mr-1 h-3.5 w-3.5" />
+                                          <Show
+                                            when={!started()}
+                                            fallback="Signups closed">
+                                            <Show
+                                              when={nextEvent().seats_left > 0}
+                                              fallback="Full">
+                                              {nextEvent().seats_left}{" "}
+                                              {nextEvent().seats_left === 1
+                                                ? "seat"
+                                                : "seats"}{" "}
+                                              left
+                                            </Show>
+                                          </Show>
+                                        </div>
                                       </div>
-                                      <div class="text-muted-foreground flex items-center text-xs">
-                                        <Clock class="mr-1 h-3.5 w-3.5" />
-                                        {timestampToTimeString(
-                                          nextEvent().start
-                                        )}
-                                      </div>
-                                      {/* Add seats left info with armchair icon */}
-                                      <div class="text-muted-foreground flex items-center text-xs">
-                                        <TbOutlineChairDirector class="mr-1 h-3.5 w-3.5" />
-                                        <Show
-                                          when={nextEvent().seats_left > 0}
-                                          fallback="Full">
-                                          {nextEvent().seats_left}{" "}
-                                          {nextEvent().seats_left === 1
-                                            ? "seat"
-                                            : "seats"}{" "}
-                                          left
-                                        </Show>
-                                      </div>
-                                    </div>
-                                  </>
-                                )}
+                                    </>
+                                  )
+                                }}
                               </Show>
                             </div>
 

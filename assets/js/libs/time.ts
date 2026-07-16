@@ -1,3 +1,25 @@
+import { createSignal, onCleanup } from "solid-js"
+
+// Reactive "is this happening right now?", re-checked periodically so
+// long-lived list pages flip in and out of the in-progress state without
+// a refetch.
+export function createInProgress(
+  start: () => string | null | undefined,
+  end: () => string | null | undefined
+) {
+  const [now, setNow] = createSignal(Date.now())
+  const timer = setInterval(() => setNow(Date.now()), 30_000)
+  onCleanup(() => clearInterval(timer))
+  // eslint-disable-next-line solid/reactivity -- returns an accessor for callers to invoke in their own tracked scopes
+  return () => {
+    const s = start()
+    const e = end()
+    if (!s) return false
+    if (new Date(s).getTime() > now()) return false
+    return e ? new Date(e).getTime() > now() : true
+  }
+}
+
 export const nthNumber = (number: number) => {
   if (number > 3 && number < 21) return "th"
   switch (number % 10) {

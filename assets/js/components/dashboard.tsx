@@ -231,7 +231,9 @@ function HeroCard(props: {
             </strong>
             <SessionCountdown
               start={props.session.start}
-              duration={props.session.duration}
+              joinOpensAt={props.session.join_opens_at}
+              joinClosesAt={props.session.join_closes_at ?? null}
+              endsAt={props.session.ends_at}
               joinUrl={props.session.join_url ?? ""}
               joinable={props.session.joinable}
             />
@@ -418,8 +420,8 @@ function Welcome() {
           Find your people.
         </h2>
         <p class="m-auto max-w-xl pt-5 pb-9 leading-relaxed text-gray-600">
-          You haven't signed up for any sessions yet. Explore our Spaces to find a
-          supportive group that fits what you're going through &mdash; every
+          You haven't signed up for any sessions yet. Explore our Spaces to find
+          a supportive group that fits what you're going through &mdash; every
           session is guided by a trained Keeper.
         </p>
         <a class="btn btn-primary btn-lg px-8" href="/spaces/">

@@ -4,6 +4,7 @@ import type { ATCBActionEventConfig } from "add-to-calendar-button"
 import { beforeAll, beforeEach, expect, test, vi } from "vitest"
 import type { SessionDetailSchema } from "../client"
 import { EventInfo } from "./detailSidebar"
+import { makeSessionDetail } from "./testHelpers"
 
 const user = userEvent.setup()
 const atcbAction = vi.fn<typeof atcb_action>(() => Promise.resolve(""))
@@ -21,49 +22,12 @@ beforeEach(() => {
   atcbAction.mockClear()
 })
 
+const START = new Date("2030-01-01T18:00:00.000Z").getTime()
+
 function makeEvent(
   overrides: Partial<SessionDetailSchema> = {}
 ): SessionDetailSchema {
-  return {
-    slug: "test-session",
-    title: "Test Session",
-    space: {
-      author: {
-        name: "Test Keeper",
-        profile_avatar_type: "TD",
-        date_created: "2023-01-01T00:00:00.000Z",
-      },
-      title: "Test Space",
-      slug: "test-space",
-      date_created: "2023-01-01T00:00:00.000Z",
-      date_modified: "2023-01-01T00:00:00.000Z",
-      subtitle: "Test Subtitle",
-      categories: [],
-      recurring: "Once a week",
-    },
-    space_title: "Test Space",
-    description: "A test session",
-    price: 0,
-    seats_left: 5,
-    duration: 60,
-    recurring: "Once a week",
-    subscribers: 3,
-    start: "2030-01-01T18:00:00.000Z",
-    attending: false,
-    open: true,
-    started: false,
-    cancelled: false,
-    joinable: false,
-    ended: false,
-    rsvp_url: "/spaces/rsvp/test-session/",
-    join_url: null,
-    subscribe_url: "/spaces/subscribe/test-space/",
-    cal_link: "https://totem.org/spaces/session/test-session/",
-    subscribed: null,
-    user_timezone: null,
-    meeting_provider: "livekit",
-    ...overrides,
-  }
+  return makeSessionDetail(START, overrides)
 }
 
 function renderEventInfo(event: SessionDetailSchema) {
@@ -94,6 +58,44 @@ test("does not show add-to-calendar button for an ended session", () => {
 test("does not show add-to-calendar button for a cancelled session", () => {
   const result = renderEventInfo(makeEvent({ cancelled: true }))
   expect(calendarButton(result)).toBeNull()
+})
+
+test("joinable session invites you in", () => {
+  const result = renderEventInfo(
+    makeEvent({ joinable: true, join_url: "/spaces/join/test-session/" })
+  )
+  expect(result.getByText("You can enter this session now.")).toBeTruthy()
+})
+
+test("started session links to the space's next session", () => {
+  const result = renderEventInfo(
+    makeEvent({
+      started: true,
+      next_session: {
+        slug: "next-session",
+        start: "2030-01-08T18:00:00.000Z",
+        link: "/spaces/session/next-session/",
+      },
+    })
+  )
+  const link = result.getByText(/Next session:/)
+  expect(link.getAttribute("href")).toBe("/spaces/session/next-session/")
+})
+
+test("started session without a next session falls back to the spaces list", () => {
+  const result = renderEventInfo(makeEvent({ started: true }))
+  expect(result.getByText("See upcoming Spaces.")).toBeTruthy()
+})
+
+test("full session shows a full notice instead of the attend button", () => {
+  const result = renderEventInfo(makeEvent({ seats_left: 0, attending: false }))
+  expect(result.queryByText("Attend this session")).toBeNull()
+  expect(result.container.textContent).toContain("This session is full")
+})
+
+test("attendee of a full session still sees give up spot", () => {
+  const result = renderEventInfo(makeEvent({ seats_left: 0, attending: true }))
+  expect(result.getByText("Give up spot")).toBeTruthy()
 })
 
 test("clicking add-to-calendar opens the provider list with the session details", async () => {

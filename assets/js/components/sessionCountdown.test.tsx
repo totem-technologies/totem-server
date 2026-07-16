@@ -1,9 +1,9 @@
 import { render } from "@solidjs/testing-library"
 import { afterEach, beforeEach, expect, test, vi } from "vitest"
 import SessionCountdown from "./sessionCountdown"
+import { MINUTE, sessionTimes } from "./testHelpers"
 
 const NOW = new Date("2030-01-01T12:00:00.000Z")
-const MINUTE = 60_000
 
 beforeEach(() => {
   vi.useFakeTimers()
@@ -14,12 +14,20 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-function renderCountdown(startOffsetMs: number, joinable = false) {
-  const start = new Date(NOW.getTime() + startOffsetMs).toISOString()
+function renderCountdown(
+  startOffsetMs: number,
+  joinable = false,
+  joinClosesAt: string | null | undefined = undefined
+) {
+  const times = sessionTimes(NOW.getTime() + startOffsetMs)
   return render(() => (
     <SessionCountdown
-      start={start}
-      duration={60}
+      start={times.start}
+      joinOpensAt={times.join_opens_at}
+      joinClosesAt={
+        joinClosesAt === undefined ? times.join_closes_at : joinClosesAt
+      }
+      endsAt={times.ends_at}
       joinUrl="/spaces/join/test-session/"
       joinable={joinable}
     />
@@ -61,6 +69,19 @@ test("started beyond grace hides join unless server says joinable", () => {
   expect(joinButton(noJoin)).toBeNull()
   const rejoin = renderCountdown(-30 * MINUTE, true)
   expect(joinButton(rejoin)).toBeTruthy()
+})
+
+test("a null close keeps the join open until the session ends", () => {
+  const result = renderCountdown(-30 * MINUTE, false, null)
+  expect(joinButton(result)).toBeTruthy()
+})
+
+test("open-ended session (null close) keeps join available through overruns", () => {
+  // LiveKit rejoin: the server is the only end signal, so the scheduled
+  // end must not hide the button.
+  const result = renderCountdown(-70 * MINUTE, true, null)
+  expect(joinButton(result)).toBeTruthy()
+  expect(result.container.textContent?.toLowerCase()).not.toContain("ended")
 })
 
 test("ended session shows ended, no join even if joinable", () => {
