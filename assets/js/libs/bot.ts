@@ -40,7 +40,9 @@ export default function () {
         form.appendChild(csrfInput)
       }
       // Sending the PIN email is slow, so keep double clicks and repeat Enter
-      // presses from submitting the form twice.
+      // presses from submitting the form twice. Disabling before submit()
+      // drops the control's own name/value from the POST, so data-bot forms
+      // must not rely on which submit button was clicked (none do today).
       for (const control of submitControls(form)) {
         control.disabled = true
       }
