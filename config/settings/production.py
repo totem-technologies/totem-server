@@ -91,7 +91,9 @@ _ROOM_APP = f"https://{ROOM_APP_PROXY_BROWSER_HOST}"  # noqa: F405
 # is always included because the Flutter room app hardcodes the production
 # CDN for shared assets.
 _STATIC_ORIGINS = sorted({f"https://{h}" for h in (STATIC_HOST, "cdn.totem.org") if h})
-_REPORT_URI = "https://o1324443.ingest.sentry.io/api/4505270983065600/security/?sentry_key=fc28dfc40b014a8fa120aa1d9c279112"
+_REPORT_URI = (
+    "https://o1324443.ingest.sentry.io/api/4505270983065600/security/?sentry_key=fc28dfc40b014a8fa120aa1d9c279112"
+)
 
 # LiveKit signaling — the room app opens the WebSocket straight from the
 # browser (media flows over WebRTC, which CSP doesn't govern).
