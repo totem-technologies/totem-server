@@ -1,4 +1,5 @@
 import socket
+from urllib.parse import urlsplit
 
 from django.utils.csp import CSP
 
@@ -73,67 +74,81 @@ SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 # Once reports are clean, move this to SECURE_CSP to enforce.
 _DO_CDN = f"*.{env('DO_STORAGE_BUCKET_REGION', default='nyc3')}.cdn.digitaloceanspaces.com"
 _PROXIED_SITE = PROXIED_SITE_BASE_URL.rstrip("/")  # noqa: F405
+# Flutter room app upstream — served same-origin via the /room/ proxy, but
+# its HTML/assets reference absolute URLs on the upstream's public host
+# (e.g. a workers.dev URL in staging).
+_ROOM_APP = f"https://{ROOM_APP_PROXY_BROWSER_HOST}"  # noqa: F405
 _CSP_SCRIPT_SRC = [
     CSP.SELF,
     CSP.UNSAFE_INLINE,
+    CSP.WASM_UNSAFE_EVAL,  # Flutter web (room app) is a CanvasKit/skwasm WebAssembly module
+    "https://www.gstatic.com",  # Flutter loads CanvasKit from Google's CDN
     "https://js.sentry-cdn.com",
     "https://browser.sentry-cdn.com",
-    "https://www.googletagmanager.com",
-    "https://googleads.g.doubleclick.net",
     "https://static.cloudflareinsights.com",
     "https://us-assets.i.posthog.com",
     "https://app.posthog.com",
     "https://e.totem.org",
     _PROXIED_SITE,
+    _ROOM_APP,
 ]
 _CSP_STYLE_SRC = [
     CSP.SELF,
     CSP.UNSAFE_INLINE,
     _PROXIED_SITE,
+    _ROOM_APP,
 ]
 _CSP_IMG_SRC = [
     CSP.SELF,
     _DO_CDN,
     "data:",
-    "https://googleads.g.doubleclick.net",
-    "https://www.googleadservices.com",
-    "https://www.google.com",
-    "https://www.google.ca",
-    "https://www.google.co.uk",
-    "https://www.google.com.au",
-    "https://www.google.com.do",
+    "blob:",  # Flutter web (room app) renders images via blob: object URLs
     _PROXIED_SITE,
+    _ROOM_APP,
 ]
 _CSP_CONNECT_SRC = [
     CSP.SELF,
     "https://o1324443.ingest.sentry.io",
     "https://o1324443.ingest.us.sentry.io",
     "https://e.totem.org",
-    "https://www.google-analytics.com",
-    "https://www.googletagmanager.com",
-    "https://analytics.google.com",
-    "https://www.google.com",
     "https://static.cloudflareinsights.com",
     "https://us.i.posthog.com",
     "https://us-assets.i.posthog.com",
-    "https://*.google-analytics.com",
+    "https://www.gstatic.com",  # Flutter fetches CanvasKit wasm
+    "https://fonts.gstatic.com",  # Flutter fetches fallback fonts (e.g. emoji) at runtime
     _DO_CDN,
+    _ROOM_APP,
 ]
-if STATIC_HOST:
-    _CSP_SCRIPT_SRC.append(f"https://{STATIC_HOST}")
-    _CSP_STYLE_SRC.append(f"https://{STATIC_HOST}")
-    _CSP_IMG_SRC.append(f"https://{STATIC_HOST}")
-    _CSP_CONNECT_SRC.append(f"https://{STATIC_HOST}")
+# LiveKit signaling — the room app opens the WebSocket straight from the
+# browser (media flows over WebRTC, which CSP doesn't govern).
+if LIVEKIT_URL:  # noqa: F405
+    _LIVEKIT_HOST = urlsplit(LIVEKIT_URL).netloc  # noqa: F405
+    if _LIVEKIT_HOST.endswith(".livekit.cloud"):
+        # LiveKit Cloud redirects clients to regional endpoints
+        # (e.g. <project>.oashburn1b.production.livekit.cloud), so the
+        # project host alone isn't enough.
+        _CSP_CONNECT_SRC += ["wss://*.livekit.cloud", "https://*.livekit.cloud"]
+    else:
+        _CSP_CONNECT_SRC += [f"wss://{_LIVEKIT_HOST}", f"https://{_LIVEKIT_HOST}"]
+# Static CDN origins. STATIC_HOST is this env's active host; cdn.totem.org
+# is always included because the Flutter room app (proxied at /room/)
+# hardcodes the production CDN for shared assets.
+_STATIC_ORIGINS = sorted({f"https://{h}" for h in (STATIC_HOST, "cdn.totem.org") if h})
+_CSP_SCRIPT_SRC += _STATIC_ORIGINS
+_CSP_STYLE_SRC += _STATIC_ORIGINS
+_CSP_IMG_SRC += _STATIC_ORIGINS
+_CSP_CONNECT_SRC += _STATIC_ORIGINS
 
 SECURE_CSP_REPORT_ONLY = {
     "default-src": [CSP.SELF],
     "script-src": _CSP_SCRIPT_SRC,
     "style-src": _CSP_STYLE_SRC,
     "img-src": _CSP_IMG_SRC,
-    "font-src": [CSP.SELF, _PROXIED_SITE] + ([f"https://{STATIC_HOST}"] if STATIC_HOST else []),
+    "font-src": [CSP.SELF, _PROXIED_SITE, _ROOM_APP, "https://fonts.gstatic.com"] + _STATIC_ORIGINS,
     "connect-src": _CSP_CONNECT_SRC,
-    "frame-src": ["https://e.totem.org", "https://www.googletagmanager.com"],
-    "worker-src": [CSP.SELF, "blob:"],  # blob: needed for GTM web workers
+    # youtube-nocookie/npr: video and audio embeds in marketing/blog content.
+    "frame-src": ["https://e.totem.org", "https://www.youtube-nocookie.com", "https://www.npr.org"],
+    "worker-src": [CSP.SELF, "blob:"],  # blob: workers are spawned by Sentry/PostHog tooling
     "object-src": [CSP.NONE],
     "base-uri": [CSP.SELF],
     "form-action": [CSP.SELF],
