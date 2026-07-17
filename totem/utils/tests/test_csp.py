@@ -8,6 +8,7 @@ view-specific one via csp_override_from_settings.
 
 from unittest.mock import patch
 
+import pytest
 import requests
 from django.http import HttpResponse
 from django.test import Client, RequestFactory, override_settings
@@ -114,28 +115,61 @@ def test_marketing_proxy_gets_override_policy(client: Client, db):
 
 
 # ---------------------------------------------------------------------------
-# JSON responses: scripts can't run in a JSON document, so the full site
-# policy (nonce and all) is dead weight there. The json_csp middleware swaps
+# Inert content (JSON, images, CSS, …): scripts can't run there, so the full
+# site policy (nonce and all) is dead weight. The inert_csp middleware swaps
 # in a minimal enforced policy and drops report-only.
 # ---------------------------------------------------------------------------
 
 
-def test_json_response_gets_minimal_enforced_policy():
-    from django.http import JsonResponse
+def _response_for(content_type: str) -> HttpResponse:
+    from totem.utils.middleware import inert_csp
 
-    from totem.utils.middleware import json_csp
+    middleware = inert_csp(lambda request: HttpResponse(b"", content_type=content_type))
+    return middleware(RequestFactory().get("/thing"))
 
-    middleware = json_csp(lambda request: JsonResponse({"ok": True}))
-    response = middleware(RequestFactory().get("/api/v1/thing"))
+
+@pytest.mark.parametrize(
+    "content_type",
+    [
+        "application/json",
+        "application/json; charset=utf-8",
+        "application/problem+json",
+        "text/plain",
+        "text/csv",
+        "text/css",
+        "application/wasm",
+        "font/woff2",
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+    ],
+)
+def test_inert_content_gets_minimal_enforced_policy(content_type: str):
+    response = _response_for(content_type)
     assert response._csp_config == {"default-src": [CSP.NONE], "frame-ancestors": [CSP.NONE]}
     assert response._csp_ro_config == {}
 
 
-def test_html_response_keeps_site_policy():
-    from totem.utils.middleware import json_csp
-
-    middleware = json_csp(lambda request: HttpResponse("<html></html>"))
-    response = middleware(RequestFactory().get("/page"))
+@pytest.mark.parametrize(
+    "content_type",
+    [
+        "text/html",
+        "text/html; charset=utf-8",
+        # Documents that can run scripts must keep the site policy. SVG is
+        # the classic trap: it's an "image" that executes <script>.
+        "image/svg+xml",
+        "application/xhtml+xml",
+        "application/xml",
+        "application/pdf",
+        # Worker scripts are governed by the CSP served with the script
+        # response itself, not the document's — a minimal policy here would
+        # cut off any same-origin worker's network access.
+        "text/javascript",
+        "application/javascript",
+    ],
+)
+def test_scriptable_content_keeps_site_policy(content_type: str):
+    response = _response_for(content_type)
     assert not hasattr(response, "_csp_config")
     assert not hasattr(response, "_csp_ro_config")
 

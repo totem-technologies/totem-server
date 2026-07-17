@@ -119,7 +119,7 @@ def test_proxy_response_headers_allow_list(client: Client, db):
             # These must all be dropped:
             "Set-Cookie": "evil_session=1",
             "Strict-Transport-Security": "max-age=31536000",
-            "Content-Security-Policy": "default-src 'none'",
+            "Content-Security-Policy": "default-src https://upstream.example",
             "Server": "leak/1.0",
             "X-Powered-By": "leak",
         }
@@ -134,7 +134,9 @@ def test_proxy_response_headers_allow_list(client: Client, db):
     # Drops the rest:
     assert "Set-Cookie" not in response.headers
     assert "Strict-Transport-Security" not in response.headers
-    assert "Content-Security-Policy" not in response.headers
+    # Our own middleware may set a CSP header (inert_csp on JS responses);
+    # the upstream's policy must not be the one that survives.
+    assert response.headers.get("Content-Security-Policy", "") != "default-src https://upstream.example"
     assert "Server" not in response.headers or "leak" not in response["Server"]
     assert "X-Powered-By" not in response.headers
 

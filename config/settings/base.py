@@ -150,8 +150,9 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.csp.ContentSecurityPolicyMiddleware",
     # Below the CSP middleware so it runs first on the response and can
-    # swap the policy for JSON before the header is built.
-    "totem.utils.middleware.json_csp",
+    # swap the policy for inert content (JSON, images, …) before the
+    # header is built.
+    "totem.utils.middleware.inert_csp",
     "corsheaders.middleware.CorsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",

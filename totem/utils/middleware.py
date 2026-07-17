@@ -27,19 +27,42 @@ class EnsureCsrfCookie:
         return self.get_response(request)
 
 
-# Scripts can't run in a JSON document, so serve the OWASP-recommended
-# minimal policy instead of the site one (which is ~1KB per response and
-# mints a nonce nothing will use). Enforced directly — there's nothing a
-# report-only trial run could break in JSON.
-_JSON_CSP = {"default-src": [CSP.NONE], "frame-ancestors": [CSP.NONE]}
+# Content types that can never execute scripts, even when navigated to
+# directly as a document. These get the OWASP-recommended minimal policy
+# instead of the site one (which is ~1KB per response and mints a nonce
+# nothing will use). Enforced directly — there's nothing a report-only
+# trial run could break in inert content.
+#
+# This is a deny-list of provably inert types, not "everything but HTML":
+# SVG, XML, XHTML, and PDF all render as documents that can run script, so
+# they keep the site policy. image/svg+xml must never be added here.
+# JavaScript must never be added either: workers take their CSP from the
+# worker script's own response headers (not the document's), so a minimal
+# policy on a same-origin worker script would block its network access.
+_INERT_CONTENT_TYPES = (
+    "application/json",  # includes structured suffixes via the +json check below
+    "text/plain",
+    "text/csv",
+    "text/css",
+    "application/wasm",
+    "font/",
+    "image/png",
+    "image/jpeg",
+    "image/gif",
+    "image/webp",
+    "image/avif",
+    "image/x-icon",
+)
+_MINIMAL_CSP = {"default-src": [CSP.NONE], "frame-ancestors": [CSP.NONE]}
 
 
-def json_csp(get_response):
+def inert_csp(get_response):
     def middleware(request: HttpRequest):
         response = get_response(request)
 
-        if response.get("Content-Type", "").startswith("application/json"):
-            response._csp_config = _JSON_CSP
+        content_type = response.get("Content-Type", "").split(";")[0].strip()
+        if content_type.startswith(_INERT_CONTENT_TYPES) or content_type.endswith("+json"):
+            response._csp_config = _MINIMAL_CSP
             response._csp_ro_config = {}
 
         return response
