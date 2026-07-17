@@ -1,16 +1,12 @@
 import components from "./components"
 import bot from "./libs/bot"
-import copyToClipboard from "./libs/copyToClipboard"
+import clickActions from "./libs/clickActions"
 import emailSpellChecker from "./libs/emailSpellCheck"
 import loginChannel from "./libs/loginChannel"
 import shadowfill from "./libs/shadowfill"
 import { setTimeZoneCookie } from "./libs/timezone"
 
 import logger from "./libs/logger"
-
-globalThis.dismiss_alert = (e) => {
-  e.closest(".alert-dismissible")?.remove()
-}
 
 // Fix for instagram browser errors in sentry
 globalThis._AutofillCallbackHandler =
@@ -20,7 +16,7 @@ globalThis._AutofillCallbackHandler =
 components()
 setTimeZoneCookie()
 loginChannel()
-copyToClipboard()
+clickActions()
 
 globalThis.addEventListener("DOMContentLoaded", () => {
   emailSpellChecker()

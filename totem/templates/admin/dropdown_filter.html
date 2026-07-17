@@ -3,7 +3,7 @@
   <summary>
     {% blocktranslate with filter_title=title %}By {{ filter_title }}{% endblocktranslate %}
   </summary>
-  <script>
+  <script nonce="{{ csp_nonce }}">
     function safeDropdownRedirect(url) {
       // Create an anchor element to parse the URL
       var a = document.createElement("a")

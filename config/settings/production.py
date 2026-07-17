@@ -72,80 +72,69 @@ SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 # https://docs.djangoproject.com/en/6.0/ref/csp/
 # Starting in report-only mode to collect violations without breaking the site.
 # Once reports are clean, move this to SECURE_CSP to enforce.
+#
+# Three policies:
+# - SECURE_CSP_REPORT_ONLY: the site policy. Inline scripts require nonces
+#   ({{ csp_nonce }} in templates); external scripts still go by host list.
+# - CSP_PROXIED_SITE_OVERRIDE: marketing pages proxied from Webflow — HTML
+#   we don't render, so inline scripts stay allowed there.
+# - CSP_ROOM_OVERRIDE: the Flutter room app at /room/ — same inline
+#   constraint, plus its wasm/CanvasKit/LiveKit needs, which the rest of
+#   the site shouldn't grant.
 _DO_CDN = f"*.{env('DO_STORAGE_BUCKET_REGION', default='nyc3')}.cdn.digitaloceanspaces.com"
 _PROXIED_SITE = PROXIED_SITE_BASE_URL.rstrip("/")  # noqa: F405
 # Flutter room app upstream — served same-origin via the /room/ proxy, but
 # its HTML/assets reference absolute URLs on the upstream's public host
 # (e.g. a workers.dev URL in staging).
 _ROOM_APP = f"https://{ROOM_APP_PROXY_BROWSER_HOST}"  # noqa: F405
-_CSP_SCRIPT_SRC = [
-    CSP.SELF,
-    CSP.UNSAFE_INLINE,
-    CSP.WASM_UNSAFE_EVAL,  # Flutter web (room app) is a CanvasKit/skwasm WebAssembly module
-    "https://www.gstatic.com",  # Flutter loads CanvasKit from Google's CDN
-    "https://js.sentry-cdn.com",
-    "https://browser.sentry-cdn.com",
-    "https://static.cloudflareinsights.com",
-    "https://us-assets.i.posthog.com",
-    "https://app.posthog.com",
-    "https://e.totem.org",
-    _PROXIED_SITE,
-    _ROOM_APP,
-]
-_CSP_STYLE_SRC = [
-    CSP.SELF,
-    CSP.UNSAFE_INLINE,
-    _PROXIED_SITE,
-    _ROOM_APP,
-]
-_CSP_IMG_SRC = [
-    CSP.SELF,
-    _DO_CDN,
-    "data:",
-    "blob:",  # Flutter web (room app) renders images via blob: object URLs
-    _PROXIED_SITE,
-    _ROOM_APP,
-]
-_CSP_CONNECT_SRC = [
-    CSP.SELF,
-    "https://o1324443.ingest.sentry.io",
-    "https://o1324443.ingest.us.sentry.io",
-    "https://e.totem.org",
-    "https://static.cloudflareinsights.com",
-    "https://us.i.posthog.com",
-    "https://us-assets.i.posthog.com",
-    "https://www.gstatic.com",  # Flutter fetches CanvasKit wasm
-    "https://fonts.gstatic.com",  # Flutter fetches fallback fonts (e.g. emoji) at runtime
-    _DO_CDN,
-    _ROOM_APP,
-]
+# Static CDN origins. STATIC_HOST is this env's active host; cdn.totem.org
+# is always included because the Flutter room app hardcodes the production
+# CDN for shared assets.
+_STATIC_ORIGINS = sorted({f"https://{h}" for h in (STATIC_HOST, "cdn.totem.org") if h})
+_REPORT_URI = "https://o1324443.ingest.sentry.io/api/4505270983065600/security/?sentry_key=fc28dfc40b014a8fa120aa1d9c279112"
+
 # LiveKit signaling — the room app opens the WebSocket straight from the
 # browser (media flows over WebRTC, which CSP doesn't govern).
+_LIVEKIT_ORIGINS: list[str] = []
 if LIVEKIT_URL:  # noqa: F405
     _LIVEKIT_HOST = urlsplit(LIVEKIT_URL).netloc  # noqa: F405
     if _LIVEKIT_HOST.endswith(".livekit.cloud"):
         # LiveKit Cloud redirects clients to regional endpoints
         # (e.g. <project>.oashburn1b.production.livekit.cloud), so the
         # project host alone isn't enough.
-        _CSP_CONNECT_SRC += ["wss://*.livekit.cloud", "https://*.livekit.cloud"]
+        _LIVEKIT_ORIGINS = ["wss://*.livekit.cloud", "https://*.livekit.cloud"]
     else:
-        _CSP_CONNECT_SRC += [f"wss://{_LIVEKIT_HOST}", f"https://{_LIVEKIT_HOST}"]
-# Static CDN origins. STATIC_HOST is this env's active host; cdn.totem.org
-# is always included because the Flutter room app (proxied at /room/)
-# hardcodes the production CDN for shared assets.
-_STATIC_ORIGINS = sorted({f"https://{h}" for h in (STATIC_HOST, "cdn.totem.org") if h})
-_CSP_SCRIPT_SRC += _STATIC_ORIGINS
-_CSP_STYLE_SRC += _STATIC_ORIGINS
-_CSP_IMG_SRC += _STATIC_ORIGINS
-_CSP_CONNECT_SRC += _STATIC_ORIGINS
+        _LIVEKIT_ORIGINS = [f"wss://{_LIVEKIT_HOST}", f"https://{_LIVEKIT_HOST}"]
 
-SECURE_CSP_REPORT_ONLY = {
+# External script hosts. These stay valid alongside nonces: a nonce gates
+# inline scripts only, external <script src> is still matched by host.
+_CSP_SCRIPT_HOSTS = [
+    "https://js.sentry-cdn.com",
+    "https://browser.sentry-cdn.com",
+    "https://static.cloudflareinsights.com",  # beacon is edge-injected by Cloudflare
+    "https://us-assets.i.posthog.com",
+    "https://app.posthog.com",
+    "https://e.totem.org",
+    _PROXIED_SITE,
+] + _STATIC_ORIGINS
+
+# Directives shared by the site policy and the marketing override.
+_CSP_BASE = {
     "default-src": [CSP.SELF],
-    "script-src": _CSP_SCRIPT_SRC,
-    "style-src": _CSP_STYLE_SRC,
-    "img-src": _CSP_IMG_SRC,
-    "font-src": [CSP.SELF, _PROXIED_SITE, _ROOM_APP, "https://fonts.gstatic.com"] + _STATIC_ORIGINS,
-    "connect-src": _CSP_CONNECT_SRC,
+    "style-src": [CSP.SELF, CSP.UNSAFE_INLINE, _PROXIED_SITE] + _STATIC_ORIGINS,
+    "img-src": [CSP.SELF, _DO_CDN, "data:", _PROXIED_SITE] + _STATIC_ORIGINS,
+    "font-src": [CSP.SELF, _PROXIED_SITE] + _STATIC_ORIGINS,
+    "connect-src": [
+        CSP.SELF,
+        "https://o1324443.ingest.sentry.io",
+        "https://o1324443.ingest.us.sentry.io",
+        "https://e.totem.org",
+        "https://static.cloudflareinsights.com",
+        "https://us.i.posthog.com",
+        "https://us-assets.i.posthog.com",
+        _DO_CDN,
+    ]
+    + _STATIC_ORIGINS,
     # youtube-nocookie/npr: video and audio embeds in marketing/blog content.
     "frame-src": ["https://e.totem.org", "https://www.youtube-nocookie.com", "https://www.npr.org"],
     "worker-src": [CSP.SELF, "blob:"],  # blob: workers are spawned by Sentry/PostHog tooling
@@ -153,9 +142,52 @@ SECURE_CSP_REPORT_ONLY = {
     "base-uri": [CSP.SELF],
     "form-action": [CSP.SELF],
     "frame-ancestors": [CSP.NONE],
-    "report-uri": [
-        "https://o1324443.ingest.sentry.io/api/4505270983065600/security/?sentry_key=fc28dfc40b014a8fa120aa1d9c279112"
-    ],
+    "report-uri": [_REPORT_URI],
+}
+
+SECURE_CSP_REPORT_ONLY = {
+    **_CSP_BASE,
+    "script-src": [CSP.SELF, CSP.NONCE] + _CSP_SCRIPT_HOSTS,
+}
+
+# Marketing pages: Webflow HTML we can't nonce, so inline stays allowed.
+CSP_PROXIED_SITE_OVERRIDE = {
+    **_CSP_BASE,
+    "script-src": [CSP.SELF, CSP.UNSAFE_INLINE] + _CSP_SCRIPT_HOSTS,
+}
+
+# Flutter room app at /room/: its index.html bootstrap script is inline,
+# the renderer is a WebAssembly module fetched from gstatic, images render
+# via blob: object URLs, and fallback fonts (e.g. emoji) come from Google
+# Fonts at runtime.
+CSP_ROOM_OVERRIDE = {
+    "default-src": [CSP.SELF],
+    "script-src": [
+        CSP.SELF,
+        CSP.UNSAFE_INLINE,
+        CSP.WASM_UNSAFE_EVAL,
+        "https://www.gstatic.com",
+        _ROOM_APP,
+    ]
+    + _STATIC_ORIGINS,
+    "style-src": [CSP.SELF, CSP.UNSAFE_INLINE, _ROOM_APP] + _STATIC_ORIGINS,
+    "img-src": [CSP.SELF, "data:", "blob:", _DO_CDN, _ROOM_APP] + _STATIC_ORIGINS,
+    "font-src": [CSP.SELF, "https://fonts.gstatic.com", _ROOM_APP] + _STATIC_ORIGINS,
+    "connect-src": [
+        CSP.SELF,
+        "https://www.gstatic.com",
+        "https://fonts.gstatic.com",
+        _DO_CDN,
+        _ROOM_APP,
+    ]
+    + _STATIC_ORIGINS
+    + _LIVEKIT_ORIGINS,
+    "worker-src": [CSP.SELF, "blob:"],
+    "object-src": [CSP.NONE],
+    "base-uri": [CSP.SELF],
+    "form-action": [CSP.SELF],
+    "frame-ancestors": [CSP.NONE],
+    "report-uri": [_REPORT_URI],
 }
 
 # MEDIA

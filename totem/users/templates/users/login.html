@@ -5,7 +5,7 @@
 {% block head_title %}{% translate "Log In or Sign Up" %}{% endblock head_title %}
 {# djlint:on #}
 {% block javascript %}
-  <script>
+  <script nonce="{{ csp_nonce }}">
     window.TOTEM_DATA.reload_on_login = true
   </script>
 {% endblock javascript %}

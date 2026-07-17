@@ -62,7 +62,7 @@
       </script>
     {% endblock jsonld %}
     <!-- prettier-ignore-start -->
-    <script>
+    <script nonce="{{ csp_nonce }}">
         window.TOTEM_DATA = {
             debug: {{ debug | yesno:"true,false" }},
             is_authenticated: {{ request.user.is_authenticated | yesno:"true,false" }},
@@ -109,7 +109,7 @@
               aria-label="Close">
               <svg
                 class="h-6 w-6 fill-current text-blue-500"
-                onClick="dismiss_alert(this)"
+                data-dismiss-alert
                 role="button"
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 20 20">
@@ -130,7 +130,7 @@
     {% block inline_javascript %}
     {% endblock inline_javascript %}
     {% if debug %}
-      <script>
+      <script nonce="{{ csp_nonce }}">
         document.write(
           "<" +
             'script src="http://localhost:35729/livereload.js?snipver=1"></' +

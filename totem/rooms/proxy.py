@@ -28,6 +28,8 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
 
+from totem.utils.csp import csp_override_from_settings
+
 # Single shared session so HTTP keep-alive to the upstream is reused
 # across requests.
 _session = requests.Session()
@@ -121,6 +123,7 @@ def _rewrite_dev_base_href(body: bytes) -> bytes:
 _ALLOWED_METHODS = ("GET", "HEAD")
 
 
+@csp_override_from_settings("CSP_ROOM_OVERRIDE")
 @csrf_exempt
 @login_required
 def room_app_proxy(request: HttpRequest, path: str = "") -> HttpResponse | StreamingHttpResponse:

@@ -81,7 +81,7 @@
 
 {% block inline_javascript %}
   {{ block.super }}
-  <script type="text/javascript">
+  <script type="text/javascript" nonce="{{ csp_nonce }}">
     window.addEventListener("DOMContentLoaded", function () {
       const message =
         "{% translate 'Do you really want to remove the selected e-mail address?' %}"
