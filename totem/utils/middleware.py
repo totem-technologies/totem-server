@@ -5,6 +5,7 @@ from django.conf import settings
 from django.http import Http404, HttpRequest
 from django.middleware.csrf import get_token
 from django.utils import timezone
+from django.utils.csp import CSP
 
 if TYPE_CHECKING:
     from totem.users.models import User
@@ -24,6 +25,26 @@ class EnsureCsrfCookie:
     def __call__(self, request: HttpRequest):
         get_token(request)
         return self.get_response(request)
+
+
+# Scripts can't run in a JSON document, so serve the OWASP-recommended
+# minimal policy instead of the site one (which is ~1KB per response and
+# mints a nonce nothing will use). Enforced directly — there's nothing a
+# report-only trial run could break in JSON.
+_JSON_CSP = {"default-src": [CSP.NONE], "frame-ancestors": [CSP.NONE]}
+
+
+def json_csp(get_response):
+    def middleware(request: HttpRequest):
+        response = get_response(request)
+
+        if response.get("Content-Type", "").startswith("application/json"):
+            response._csp_config = _JSON_CSP
+            response._csp_ro_config = {}
+
+        return response
+
+    return middleware
 
 
 def robotnoindex(get_response):

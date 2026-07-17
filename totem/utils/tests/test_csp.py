@@ -113,6 +113,43 @@ def test_marketing_proxy_gets_override_policy(client: Client, db):
     assert "nonce-" not in response.headers[RO_HEADER]
 
 
+# ---------------------------------------------------------------------------
+# JSON responses: scripts can't run in a JSON document, so the full site
+# policy (nonce and all) is dead weight there. The json_csp middleware swaps
+# in a minimal enforced policy and drops report-only.
+# ---------------------------------------------------------------------------
+
+
+def test_json_response_gets_minimal_enforced_policy():
+    from django.http import JsonResponse
+
+    from totem.utils.middleware import json_csp
+
+    middleware = json_csp(lambda request: JsonResponse({"ok": True}))
+    response = middleware(RequestFactory().get("/api/v1/thing"))
+    assert response._csp_config == {"default-src": [CSP.NONE], "frame-ancestors": [CSP.NONE]}
+    assert response._csp_ro_config == {}
+
+
+def test_html_response_keeps_site_policy():
+    from totem.utils.middleware import json_csp
+
+    middleware = json_csp(lambda request: HttpResponse("<html></html>"))
+    response = middleware(RequestFactory().get("/page"))
+    assert not hasattr(response, "_csp_config")
+    assert not hasattr(response, "_csp_ro_config")
+
+
+@override_settings(SECURE_CSP_REPORT_ONLY=_SITE_POLICY)
+def test_api_route_headers_end_to_end(client: Client, db):
+    """Through the full middleware stack: JSON gets the tiny enforced
+    policy, no report-only header, and no nonce."""
+    response = client.get("/api/v1/openapi.json")
+    assert response.status_code == 200
+    assert response.headers["Content-Security-Policy"] == "default-src 'none'; frame-ancestors 'none'"
+    assert "Content-Security-Policy-Report-Only" not in response.headers
+
+
 @override_settings(SECURE_CSP_REPORT_ONLY=_SITE_POLICY)
 def test_regular_page_gets_site_policy_with_nonce(client: Client, db):
     response = client.get("/users/login/")
