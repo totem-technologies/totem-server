@@ -1,11 +1,22 @@
 from unittest.mock import patch
 
 import pytest
+import requests
 from django.test import Client
 
 from totem.api.auth import generate_jwt_token
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
+
+
+def fake_upstream(status: int, body: bytes = b"", content_type: str = "text/plain") -> requests.Response:
+    """A canned requests.Response for tests that mock a proxied upstream."""
+    r = requests.Response()
+    r.status_code = status
+    r._content = body
+    r.headers["Content-Type"] = content_type
+    r.raw = type("R", (), {"stream": lambda self, *a, **kw: iter([body])})()
+    return r
 
 
 @pytest.fixture(autouse=True)

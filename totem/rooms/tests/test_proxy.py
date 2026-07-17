@@ -14,6 +14,7 @@ import requests
 from django.test import Client, override_settings
 from django.urls import reverse
 
+from totem.conftest import fake_upstream as _fake_upstream
 from totem.users.tests.factories import UserFactory
 
 
@@ -69,15 +70,6 @@ def test_proxy_rejects_non_get(client: Client, db):
         assert response.status_code == 405, f"{method} should 405"
         allow = response.headers["Allow"]
         assert "GET" in allow and method.upper() not in allow
-
-
-def _fake_upstream(status: int, body: bytes = b"", content_type: str = "text/plain") -> requests.Response:
-    r = requests.Response()
-    r.status_code = status
-    r._content = body
-    r.headers["Content-Type"] = content_type
-    r.raw = type("R", (), {"stream": lambda self, *a, **kw: iter([body])})()
-    return r
 
 
 @override_settings(DEBUG=True)

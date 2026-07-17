@@ -93,6 +93,9 @@
       const selectField = document.getElementById("id_referral_source")
       if (selectField) {
         showOtherField(selectField.value)
+        selectField.addEventListener("change", function () {
+          showOtherField(selectField.value)
+        })
       }
     })
   </script>

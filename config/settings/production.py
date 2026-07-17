@@ -158,10 +158,12 @@ CSP_PROXIED_SITE_OVERRIDE = {
 
 # Flutter room app at /room/: its index.html bootstrap script is inline,
 # the renderer is a WebAssembly module fetched from gstatic, images render
-# via blob: object URLs, and fallback fonts (e.g. emoji) come from Google
-# Fonts at runtime.
+# via blob: object URLs, fallback fonts (e.g. emoji) come from Google Fonts
+# at runtime, and the app reports its own crashes to Sentry from the
+# browser. Built on _CSP_BASE so hardening/report-uri changes propagate;
+# only the fetch directives differ.
 CSP_ROOM_OVERRIDE = {
-    "default-src": [CSP.SELF],
+    **_CSP_BASE,
     "script-src": [
         CSP.SELF,
         CSP.UNSAFE_INLINE,
@@ -175,6 +177,8 @@ CSP_ROOM_OVERRIDE = {
     "font-src": [CSP.SELF, "https://fonts.gstatic.com", _ROOM_APP] + _STATIC_ORIGINS,
     "connect-src": [
         CSP.SELF,
+        "https://o1324443.ingest.sentry.io",  # the room app's browser-side Sentry
+        "https://o1324443.ingest.us.sentry.io",
         "https://www.gstatic.com",
         "https://fonts.gstatic.com",
         _DO_CDN,
@@ -182,12 +186,9 @@ CSP_ROOM_OVERRIDE = {
     ]
     + _STATIC_ORIGINS
     + _LIVEKIT_ORIGINS,
-    "worker-src": [CSP.SELF, "blob:"],
-    "object-src": [CSP.NONE],
-    "base-uri": [CSP.SELF],
-    "form-action": [CSP.SELF],
-    "frame-ancestors": [CSP.NONE],
-    "report-uri": [_REPORT_URI],
+    # No third-party embeds inside the room app (don't inherit the
+    # youtube/npr content-embed hosts from _CSP_BASE).
+    "frame-src": [CSP.SELF],
 }
 
 # MEDIA

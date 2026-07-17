@@ -24,16 +24,18 @@ def csp_override_from_settings[**P](
     """Replace the CSP policy for a view with the one in the named setting.
 
     The setting is read per-request, so it works with override_settings and
-    picks up the deployed environment's values. An empty/missing setting is
-    a no-op, and the override only applies to the header(s) the site has
-    configured — it never forces a CSP header onto an unconfigured mode.
+    picks up the deployed environment's values. The setting must exist (all
+    overrides have empty-dict defaults in base.py — a missing name is a typo
+    and raises); an empty dict is a no-op, and the override only applies to
+    the header(s) the site has configured — it never forces a CSP header
+    onto an unconfigured mode.
     """
 
     def decorator(view_func: Callable[P, HttpResponseBase]) -> Callable[P, HttpResponseBase]:
         @wraps(view_func)
         def wrapped(*args: P.args, **kwargs: P.kwargs) -> HttpResponseBase:
             response = view_func(*args, **kwargs)
-            config = getattr(settings, setting_name, None)
+            config = getattr(settings, setting_name)
             if config:
                 if settings.SECURE_CSP:
                     response._csp_config = config  # type: ignore[attr-defined]

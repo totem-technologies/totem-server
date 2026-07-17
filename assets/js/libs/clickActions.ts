@@ -6,12 +6,7 @@
 //   <button data-show-modal="share_modal">Share</button>
 //   <button data-dismiss-alert>x</button>
 
-let initialized = false
-
 function init(): void {
-  if (initialized) return
-  initialized = true
-
   document.addEventListener("click", (event) => {
     const target = event.target as HTMLElement | null
     if (!target) return

@@ -29,7 +29,7 @@ class OnboardForm(Form):
     referral_source = ChoiceField(
         choices=ReferralChoices.choices,
         required=False,
-        widget=Select(attrs={"class": "form-select", "onchange": "showOtherField(this.value)"}),
+        widget=Select(attrs={"class": "form-select"}),
     )
     referral_other = CharField(
         max_length=100,

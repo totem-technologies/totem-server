@@ -9,11 +9,11 @@ view-specific one via csp_override_from_settings.
 from unittest.mock import patch
 
 import pytest
-import requests
 from django.http import HttpResponse
 from django.test import Client, RequestFactory, override_settings
 from django.utils.csp import CSP
 
+from totem.conftest import fake_upstream as _fake_upstream
 from totem.users.tests.factories import UserFactory
 from totem.utils.csp import csp_override_from_settings
 
@@ -78,15 +78,6 @@ def test_no_site_policy_means_no_override():
 # ---------------------------------------------------------------------------
 
 
-def _fake_upstream(status: int, body: bytes = b"", content_type: str = "text/plain") -> requests.Response:
-    r = requests.Response()
-    r.status_code = status
-    r._content = body
-    r.headers["Content-Type"] = content_type
-    r.raw = type("R", (), {"stream": lambda self, *a, **kw: iter([body])})()
-    return r
-
-
 @override_settings(
     SECURE_CSP_REPORT_ONLY=_SITE_POLICY,
     CSP_ROOM_OVERRIDE=_OVERRIDE_POLICY,
@@ -107,7 +98,7 @@ def test_room_proxy_gets_override_policy(client: Client, db):
     SECURE_CSP_REPORT_ONLY=_SITE_POLICY,
     CSP_PROXIED_SITE_OVERRIDE={"script-src": [CSP.SELF, CSP.UNSAFE_INLINE]},
 )
-def test_marketing_proxy_gets_override_policy(client: Client, db):
+def test_marketing_proxy_gets_override_policy(client: Client):
     with patch("totem.pages.views.get_proxied_site_page", return_value="<html>marketing</html>"):
         response = client.get("/")
     assert "'unsafe-inline'" in response.headers[RO_HEADER]
@@ -175,7 +166,7 @@ def test_scriptable_content_keeps_site_policy(content_type: str):
 
 
 @override_settings(SECURE_CSP_REPORT_ONLY=_SITE_POLICY)
-def test_api_route_headers_end_to_end(client: Client, db):
+def test_api_route_headers_end_to_end(client: Client):
     """Through the full middleware stack: JSON gets the tiny enforced
     policy, no report-only header, and no nonce."""
     response = client.get("/api/v1/openapi.json")
@@ -185,7 +176,7 @@ def test_api_route_headers_end_to_end(client: Client, db):
 
 
 @override_settings(SECURE_CSP_REPORT_ONLY=_SITE_POLICY)
-def test_regular_page_gets_site_policy_with_nonce(client: Client, db):
+def test_regular_page_gets_site_policy_with_nonce(client: Client):
     response = client.get("/users/login/")
     assert response.status_code == 200
     header = response.headers[RO_HEADER]
