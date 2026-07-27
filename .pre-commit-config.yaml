@@ -30,7 +30,10 @@ repos:
       - id: build-assets
         name: build-assets
         entry: bun run build
-        language: node
+        # `system` uses the bun already on PATH (and the repo's node_modules).
+        # `node` would need pre-commit to build an isolated env, which it
+        # refuses to do for local hooks without additional_dependencies.
+        language: system
         pass_filenames: false
 
 # sets up .pre-commit-ci.yaml to ensure pre-commit dependencies stay up to date
