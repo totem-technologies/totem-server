@@ -78,8 +78,25 @@ test("started session links to the space's next session", () => {
       },
     })
   )
-  const link = result.getByText(/Next session:/)
+  const link = result.getByRole("link", { name: /next session/i })
   expect(link.getAttribute("href")).toBe("/spaces/session/next-session/")
+})
+
+test("next session button uses the short date so it fits on one line", () => {
+  const result = renderEventInfo(
+    makeEvent({
+      ended: true,
+      next_session: {
+        slug: "next-session",
+        // A Tuesday, so the long format would read "Tuesday, January 8th".
+        start: "2030-01-08T18:00:00.000Z",
+        link: "/spaces/session/next-session/",
+      },
+    })
+  )
+  const link = result.getByRole("link", { name: /next session/i })
+  expect(link.textContent).toContain("Tue, Jan 8")
+  expect(link.textContent).not.toContain("Tuesday")
 })
 
 test("started session without a next session falls back to the spaces list", () => {
