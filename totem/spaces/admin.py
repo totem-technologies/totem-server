@@ -4,16 +4,18 @@ from typing import Any, final, override
 from django.contrib import admin, messages
 from django.db.models.query import QuerySet
 from django.forms import ModelForm
-from django.http import HttpRequest
-from django.shortcuts import redirect
-from django.urls import reverse
+from django.http import Http404, HttpRequest, HttpResponse
+from django.shortcuts import redirect, render
+from django.urls import URLPattern, URLResolver, path, reverse
 from django.utils import timezone
+from django.utils.html import format_html
 
 from totem.rooms.models import Room
 from totem.users.models import User
 from totem.utils.admin import StaleDataCheckAdminMixin
 
 from .models import Session, SessionFeedback, Space, SpaceCategory
+from .participants import participant_insights
 
 
 @final
@@ -161,9 +163,41 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
     list_display = ("start", "title", "space", "slug")
     list_filter = [AuthorDropdownFilter, SpaceDropdownFilter, "start", "listed", "open", "cancelled"]
     autocomplete_fields = ["attendees", "joined"]
-    readonly_fields = ("attendee_email_list", "date_created", "date_modified", "room_link")
+    readonly_fields = ("attendee_email_list", "participants_link", "date_created", "date_modified", "room_link")
     actions = [copy_session]
     inlines = [SessionFeedbackInline]
+
+    @override
+    def get_urls(self) -> list[URLPattern | URLResolver]:
+        custom_urls = [
+            path(
+                "<int:object_id>/participants/",
+                self.admin_site.admin_view(self.participants_view),
+                name="spaces_session_participants",
+            ),
+        ]
+        return custom_urls + super().get_urls()
+
+    def participants_view(self, request: HttpRequest, object_id: int) -> HttpResponse:
+        session = self.get_object(request, str(object_id))
+        if session is None or not self.has_view_permission(request, session):
+            raise Http404("Session not found")
+        context = {
+            **self.admin_site.each_context(request),
+            "title": f"Participants: {session.session_title_or_title()}",
+            "opts": self.model._meta,
+            "session": session,
+            "participants": participant_insights(session),
+            "session_change_url": reverse("admin:spaces_session_change", args=[session.pk]),
+        }
+        return render(request, "admin/spaces/session_participants.html", context)
+
+    @admin.display(description="Participants")
+    def participants_link(self, obj: Session) -> str:
+        if not obj.pk:
+            return "Save the session first"
+        url = reverse("admin:spaces_session_participants", args=[obj.pk])
+        return format_html('<a href="{}">View participant insights</a>', url)
 
     @override
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
@@ -184,6 +218,7 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
                     "content",
                     "attendees",
                     "attendee_email_list",
+                    "participants_link",
                     "joined",
                     "meeting_url",
                 )

@@ -1,0 +1,82 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Home</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+    &rsaquo; <a href="{% url 'admin:spaces_session_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+    &rsaquo; <a href="{{ session_change_url }}">{{ session }}</a>
+    &rsaquo; Participants
+  </div>
+{% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <style>
+    .participant-badge {
+      display: inline-block;
+      padding: 1px 8px;
+      margin-right: 4px;
+      border-radius: 10px;
+      font-size: 11px;
+      white-space: nowrap;
+      border: 1px solid var(--border-color);
+      color: var(--body-fg);
+    }
+    .participant-badge.first-time { border-color: var(--primary); }
+    .participant-badge.banned { border-color: var(--error-fg); color: var(--error-fg); }
+    .participant-ratio { color: var(--body-quiet-color); }
+    .participant-meta { margin-bottom: 12px; color: var(--body-quiet-color); }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <p class="participant-meta">
+    {{ session.space.title }} &middot; {{ session.start|date:"D M j, Y, P e" }} &middot;
+    {{ participants|length }} signed up, {{ session.seats_left }} seat{{ session.seats_left|pluralize }} left
+  </p>
+
+  <div class="results">
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Email</th>
+          <th scope="col">Attendance</th>
+          <th scope="col">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for participant in participants %}
+          <tr>
+            <th scope="row">
+              {% if perms.users.change_user %}
+                <a href="{% url 'admin:users_user_change' participant.pk %}">{{ participant.name|default:participant.email }}</a>
+              {% else %}
+                {{ participant.name|default:participant.email }}
+              {% endif %}
+            </th>
+            <td>{{ participant.email }}</td>
+            <td>
+              {% if participant.rsvps %}
+                {{ participant.attendance_percent }}%
+                <span class="participant-ratio">&middot; {{ participant.attended }}/{{ participant.rsvps }}</span>
+              {% else %}
+                <span class="participant-ratio">No history</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if participant.first_time %}<span class="participant-badge first-time">First time</span>{% endif %}
+              {% if participant.banned %}<span class="participant-badge banned">Banned from a session</span>{% endif %}
+              {% if participant.joined_this_session %}<span class="participant-badge">Joined</span>{% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4">Nobody has signed up yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <p><a href="{{ session_change_url }}">&larr; Back to session</a></p>
+{% endblock %}
