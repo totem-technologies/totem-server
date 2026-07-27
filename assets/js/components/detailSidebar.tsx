@@ -11,7 +11,11 @@ import {
   Switch,
 } from "solid-js"
 import { postData, postErrorMessage } from "@/libs/postData"
-import { timestampToDateString, timestampToTimeString } from "@/libs/time"
+import {
+  timestampToDateString,
+  timestampToDateStringShort,
+  timestampToTimeString,
+} from "@/libs/time"
 import {
   type SessionDetailSchema,
   totemSpacesApiEventDetail,
@@ -228,8 +232,14 @@ function NextSessionLink(props: { next?: UpcomingSessionSchema | null }) {
         </a>
       }>
       {(next) => (
-        <a class="btn btn-primary mt-4 w-full" href={next().link}>
-          Next session: {timestampToDateString(next().start)}
+        <a
+          class="btn btn-primary mt-4 h-auto w-full flex-col gap-0.5 py-2 leading-tight"
+          href={next().link}>
+          <span class="text-xs font-normal opacity-80">Next session</span>
+          <span class="flex items-center gap-1.5">
+            <Icon name="calendar" size={16} />
+            {timestampToDateStringShort(next().start)}
+          </span>
         </a>
       )}
     </Show>
