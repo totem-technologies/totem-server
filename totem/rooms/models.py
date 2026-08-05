@@ -75,6 +75,7 @@ class Room(BaseModel):
     banned_participants = ArrayField(models.CharField(max_length=50), default=list)  # user slugs
     round_number = models.PositiveIntegerField(default=0)
     round_message = models.TextField(null=True, blank=True, default=None)
+    turn_started_at = models.DateTimeField(null=True, default=None)
     state_version = models.PositiveIntegerField(default=0)
     end_reason = models.CharField(
         max_length=20,
@@ -106,6 +107,7 @@ class Room(BaseModel):
             banned_participants=self.banned_participants,
             round_number=self.round_number,
             round_message=self.round_message,
+            turn_started_at=self.turn_started_at.isoformat() if self.turn_started_at else None,
         )
 
 

@@ -257,6 +257,7 @@ def _handle_start(room: Room, actor: str, connected: set[str], prompt: str | Non
     room.next_speaker = next_slug or room.keeper
     room.round_number = 1
     room.round_message = _normalize_prompt(prompt)
+    room.turn_started_at = timezone.now()
 
 
 def _handle_pass(room: Room, actor: str, connected: set[str], prompt: str | None) -> None:
@@ -326,6 +327,7 @@ def _handle_accept(room: Room, actor: str, connected: set[str]) -> None:
     room.current_speaker = actor
     room.next_speaker = next_slug or actor
     room.turn_state = TurnState.SPEAKING
+    room.turn_started_at = timezone.now()
 
 
 def _handle_force_pass(room: Room, actor: str, connected: set[str]) -> None:
@@ -393,6 +395,7 @@ def _handle_end(room: Room, actor: str, reason: EndReason) -> None:
     room.turn_state = TurnState.IDLE
     room.current_speaker = None
     room.next_speaker = None
+    room.turn_started_at = None
     room.end_reason = reason
 
     room.session.ended_at = timezone.now()

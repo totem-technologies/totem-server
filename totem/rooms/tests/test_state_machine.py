@@ -211,6 +211,7 @@ class TestStartRoom:
         assert state.current_speaker == keeper.slug
         assert state.next_speaker == user1.slug
         assert state.version == 1
+        assert state.turn_started_at is not None
 
     def test_non_keeper_cannot_start(self):
         keeper = UserFactory()
@@ -241,8 +242,7 @@ class TestStartRoom:
 
         assert state.current_speaker == keeper.slug
         assert state.next_speaker == keeper.slug
-
-    def test_start_with_prompt(self):
+        assert state.turn_started_at is not None
         keeper = UserFactory()
         user1 = UserFactory()
         _, slug = _setup_room(keeper, [keeper, user1])
@@ -253,6 +253,7 @@ class TestStartRoom:
         assert state.status == RoomStatus.ACTIVE
         assert state.round_number == 1
         assert state.round_message == "Opening prompt"
+        assert state.turn_started_at is not None
 
     def test_start_with_empty_prompt_normalizes_to_none(self):
         keeper = UserFactory()
@@ -428,13 +429,15 @@ class TestAcceptStick:
         _, slug = _setup_room(keeper, [keeper, user1])
         connected = {keeper.slug, user1.slug}
 
-        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        start = apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
         apply_event(slug, keeper.slug, PassStickEvent(), 1, connected)
         state = apply_event(slug, user1.slug, AcceptStickEvent(), 2, connected)
 
         assert state.current_speaker == user1.slug
         assert state.next_speaker == keeper.slug
         assert state.turn_state == TurnState.SPEAKING
+        assert state.turn_started_at is not None
+        assert state.turn_started_at > start.turn_started_at
 
     def test_wrong_person_cannot_accept(self):
         keeper = UserFactory()
@@ -768,6 +771,7 @@ class TestEndRoom:
         assert state.turn_state == TurnState.IDLE
         assert state.current_speaker is None
         assert state.next_speaker is None
+        assert state.turn_started_at is None
 
     def test_non_keeper_cannot_end(self):
         keeper = UserFactory()
@@ -1120,6 +1124,8 @@ class TestFullTurnCycle:
         # Start
         s = apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
         assert s.current_speaker == keeper.slug
+        assert s.turn_started_at is not None
+        first_turn = s.turn_started_at
         v = s.version
 
         # Keeper passes
@@ -1133,6 +1139,7 @@ class TestFullTurnCycle:
         s = apply_event(slug, next_slug, AcceptStickEvent(), v, connected)
         assert s.current_speaker == next_slug
         assert s.turn_state == TurnState.SPEAKING
+        assert s.turn_started_at > first_turn
         v = s.version
 
         # That speaker passes
@@ -1149,6 +1156,7 @@ class TestFullTurnCycle:
         # End
         s = apply_event(slug, keeper.slug, EndRoomEvent(reason=EndReason.KEEPER_ENDED), v, connected)
         assert s.status == RoomStatus.ENDED
+        assert s.turn_started_at is None
 
 
 # ---------------------------------------------------------------------------
