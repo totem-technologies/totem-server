@@ -250,6 +250,68 @@ class TestPostEvent:
         assert data["round_number"] == 2
         assert data["round_message"] == "What are you carrying today?"
 
+    def test_set_prompt(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        user1 = UserFactory()
+        session = SessionFactory(space__author=keeper)
+        session.attendees.add(keeper, user1)
+        Room.objects.get_or_create_for_session(session)
+
+        connected = {keeper.slug, user1.slug}
+
+        with (
+            patch("totem.rooms.api.get_connected_participants", return_value=connected),
+            patch("totem.rooms.api.publish_state"),
+            patch("totem.rooms.api.mute_all_participants"),
+        ):
+            start = _post_event(client, session.slug, {"type": "start_room"}, 0)
+            assert start.status_code == 200
+
+            resp = _post_event(
+                client,
+                session.slug,
+                {"type": "set_prompt", "prompt": "Updated mid-round"},
+                1,
+            )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["round_message"] == "Updated mid-round"
+        assert data["round_number"] == 1  # round doesn't change
+
+    def test_set_prompt_non_keeper_rejected(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        user1 = UserFactory()
+        session = SessionFactory(space__author=keeper)
+        session.attendees.add(keeper, user1)
+        Room.objects.get_or_create_for_session(session)
+
+        connected = {keeper.slug, user1.slug}
+
+        with (
+            patch("totem.rooms.api.get_connected_participants", return_value=connected),
+            patch("totem.rooms.api.publish_state"),
+            patch("totem.rooms.api.mute_all_participants"),
+        ):
+            _post_event(client, session.slug, {"type": "start_room"}, 0)
+
+        user1_client = Client()
+        user1_client.force_login(user1)
+
+        with (
+            patch("totem.rooms.api.get_connected_participants", return_value=connected),
+            patch("totem.rooms.api.publish_state"),
+        ):
+            resp = _post_event(
+                user1_client,
+                session.slug,
+                {"type": "set_prompt", "prompt": "Hijacked"},
+                1,
+            )
+
+        assert resp.status_code == 403
+        assert resp.json()["code"] == "not_keeper"
+
 
 @pytest.mark.django_db
 class TestGetState:

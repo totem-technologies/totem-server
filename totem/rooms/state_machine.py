@@ -23,6 +23,7 @@ from .schemas import (
     RoomEvent,
     RoomState,
     RoomStatus,
+    SetPromptEvent,
     StartRoomEvent,
     TransitionError,
     TurnState,
@@ -76,6 +77,8 @@ def apply_event(
                 _handle_force_pass(room, actor, connected)
             case ReorderEvent(talking_order=new_order):
                 _handle_reorder(room, actor, new_order, connected)
+            case SetPromptEvent(prompt=prompt):
+                _handle_set_prompt(room, actor, prompt)
             case EndRoomEvent(reason=reason):
                 _handle_end(room, actor, reason)
             case BanParticipantEvent(participant_slug=slug):
@@ -336,6 +339,14 @@ def _handle_force_pass(room: Room, actor: str, connected: set[str]) -> None:
 
     room.next_speaker = pass_to
     room.turn_state = TurnState.PASSING
+
+
+def _handle_set_prompt(room: Room, actor: str, prompt: str) -> None:
+    _require_active(room)
+    _require_keeper_in_room(room)
+    _require_keeper(room, actor)
+
+    room.round_message = prompt
 
 
 def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set[str]) -> None:

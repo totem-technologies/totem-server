@@ -11,6 +11,7 @@ from totem.rooms.schemas import (
     PassStickEvent,
     ReorderEvent,
     RoomStatus,
+    SetPromptEvent,
     StartRoomEvent,
     TransitionError,
     TurnState,
@@ -466,6 +467,83 @@ class TestKeeperPassWhilePassing:
         with pytest.raises(TransitionError) as exc_info:
             apply_event(slug, user1.slug, PassStickEvent(), 2, connected)
         assert exc_info.value.code == ErrorCode.NOT_CURRENT_SPEAKER
+
+
+@pytest.mark.django_db
+class TestSetPrompt:
+    def test_keeper_sets_prompt_during_session(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        state = apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        assert state.round_message is None
+
+        state = apply_event(slug, keeper.slug, SetPromptEvent(prompt="What are you carrying?"), 1, connected)
+        assert state.round_message == "What are you carrying?"
+        assert state.round_number == 1  # prompt change doesn't increment round
+
+    def test_keeper_replaces_prompt(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        apply_event(slug, keeper.slug, PassStickEvent(prompt="Original prompt"), 1, connected)
+        state = apply_event(slug, keeper.slug, SetPromptEvent(prompt="Revised prompt"), 2, connected)
+
+        assert state.round_message == "Revised prompt"
+        assert state.round_number == 2
+
+    def test_non_keeper_cannot_set_prompt(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(slug, user1.slug, SetPromptEvent(prompt="Hijacked!"), 1, connected)
+        assert exc_info.value.code == ErrorCode.NOT_KEEPER
+
+    def test_cannot_set_prompt_in_inactive_room(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(slug, keeper.slug, SetPromptEvent(prompt="Too early"), 0, connected)
+        assert exc_info.value.code == ErrorCode.ROOM_NOT_ACTIVE
+
+    def test_set_prompt_when_keeper_not_in_room(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        user2 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1, user2])
+        connected = {keeper.slug, user1.slug, user2.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+
+        # Keeper is not connected
+        disconnected = {user1.slug, user2.slug}
+        state = apply_event(slug, keeper.slug, SetPromptEvent(prompt="Remote prompt"), 1, disconnected)
+        assert state.round_message == "Remote prompt"
+
+    def test_set_prompt_clears_message(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        apply_event(slug, keeper.slug, PassStickEvent(prompt="Some prompt"), 1, connected)
+        state = apply_event(slug, keeper.slug, SetPromptEvent(prompt=""), 2, connected)
+
+        assert state.round_message == ""
 
 
 @pytest.mark.django_db

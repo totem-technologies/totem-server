@@ -176,6 +176,13 @@ class ReorderEvent(Schema):
     talking_order: list[str]  # user slugs
 
 
+class SetPromptEvent(Schema):
+    """Keeper sets or replaces the active round prompt during a live session."""
+
+    type: Literal["set_prompt"] = "set_prompt"
+    prompt: str
+
+
 class EndRoomEvent(Schema):
     type: Literal["end_room"] = "end_room"
     reason: EndReason
@@ -206,6 +213,7 @@ RoomEvent = Annotated[
         AcceptStickEvent,
         ForcePassStickEvent,
         ReorderEvent,
+        SetPromptEvent,
         EndRoomEvent,
         BanParticipantEvent,
         UnbanParticipantEvent,
