@@ -142,7 +142,6 @@ class RoomState(Schema):
     banned_participants: list[str] = []  # user slugs
     round_number: int
     round_message: Optional[str] = None
-    turn_started_at: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
