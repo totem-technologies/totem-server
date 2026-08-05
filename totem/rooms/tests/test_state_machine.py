@@ -1,4 +1,5 @@
 import pytest
+from django.utils import timezone
 
 from totem.rooms.models import Room
 from totem.rooms.schemas import (
@@ -114,8 +115,10 @@ class TestReconcileTalkingOrder:
             turn_state=TurnState.SPEAKING,
             status=RoomStatus.ACTIVE,
         )
+        room.turn_started_at = timezone.now() - timezone.timedelta(seconds=30)
         _reconcile_talking_order(room, {"a", "c"})
         assert room.current_speaker == "a"
+        assert room.turn_started_at >= timezone.now() - timezone.timedelta(seconds=1)
 
     def test_fixes_next_speaker_on_disconnect(self):
         room = self._make_room(
@@ -138,9 +141,11 @@ class TestReconcileTalkingOrder:
             turn_state=TurnState.PASSING,
             status=RoomStatus.ACTIVE,
         )
+        room.turn_started_at = timezone.now() - timezone.timedelta(seconds=30)
         _reconcile_talking_order(room, {"a", "c"})
         assert room.current_speaker == "a"
         assert room.turn_state == TurnState.SPEAKING
+        assert room.turn_started_at >= timezone.now() - timezone.timedelta(seconds=1)
 
 
 # ---------------------------------------------------------------------------
@@ -243,6 +248,8 @@ class TestStartRoom:
         assert state.current_speaker == keeper.slug
         assert state.next_speaker == keeper.slug
         assert state.turn_started_at is not None
+
+    def test_start_with_prompt(self):
         keeper = UserFactory()
         user1 = UserFactory()
         _, slug = _setup_room(keeper, [keeper, user1])
@@ -379,6 +386,34 @@ class TestPassStick:
         with pytest.raises(TransitionError) as exc_info:
             apply_event(slug, user1.slug, PassStickEvent(prompt="Prompt from participant"), 3, connected)
         assert exc_info.value.code == ErrorCode.NOT_KEEPER
+
+    def test_speaker_pass_empty_prompt_treated_as_no_prompt(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        apply_event(slug, keeper.slug, PassStickEvent(), 1, connected)
+        apply_event(slug, user1.slug, AcceptStickEvent(), 2, connected)
+
+        # Empty prompt normalizes to None, should not trigger the prompt guard
+        state = apply_event(slug, user1.slug, PassStickEvent(prompt=""), 3, connected)
+        assert state.turn_state == TurnState.PASSING
+
+    def test_keeper_pass_whitespace_prompt_treated_as_no_prompt(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        apply_event(slug, keeper.slug, PassStickEvent(), 1, connected)
+        apply_event(slug, user1.slug, AcceptStickEvent(), 2, connected)
+
+        # Keeper passes during someone else's turn, whitespace normalizes away
+        state = apply_event(slug, keeper.slug, PassStickEvent(prompt="   "), 3, connected)
+        assert state.turn_state == TurnState.PASSING
 
     def test_keeper_can_skip_prompt_and_clear_round_message(self):
         keeper = UserFactory()
