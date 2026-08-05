@@ -161,6 +161,10 @@ def _require_attendee(room: Room, actor: str) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _normalize_prompt(prompt: str | None) -> str | None:
+    return (prompt or "").strip() or None
+
+
 def _next_in_order(
     talking_order: list[str],
     after: str,
@@ -252,7 +256,7 @@ def _handle_start(room: Room, actor: str, connected: set[str], prompt: str | Non
     room.current_speaker = room.keeper
     room.next_speaker = next_slug or room.keeper
     room.round_number = 1
-    room.round_message = (prompt or "").strip() or None
+    room.round_message = _normalize_prompt(prompt)
 
 
 def _handle_pass(room: Room, actor: str, connected: set[str], prompt: str | None) -> None:
@@ -297,7 +301,7 @@ def _handle_pass(room: Room, actor: str, connected: set[str], prompt: str | None
     else:
         if keeper_starts_round:
             room.round_number += 1
-            room.round_message = prompt
+            room.round_message = _normalize_prompt(prompt)
         room.turn_state = TurnState.PASSING
 
 
@@ -345,7 +349,7 @@ def _handle_set_prompt(room: Room, actor: str, prompt: str) -> None:
     _require_keeper(room, actor)
     _require_active(room)
 
-    room.round_message = prompt.strip() or None
+    room.round_message = _normalize_prompt(prompt)
 
 
 def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set[str]) -> None:

@@ -399,6 +399,26 @@ class TestPassStick:
         assert state.round_number == 3
         assert state.round_message is None
 
+    def test_keeper_pass_empty_string_clears_round_message(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        user2 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1, user2])
+        connected = {keeper.slug, user1.slug, user2.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        apply_event(slug, keeper.slug, PassStickEvent(prompt="Round 2 prompt"), 1, connected)
+        apply_event(slug, user1.slug, AcceptStickEvent(), 2, connected)
+        apply_event(slug, user1.slug, PassStickEvent(), 3, connected)
+        apply_event(slug, user2.slug, AcceptStickEvent(), 4, connected)
+        apply_event(slug, user2.slug, PassStickEvent(), 5, connected)
+        apply_event(slug, keeper.slug, AcceptStickEvent(), 6, connected)
+
+        state = apply_event(slug, keeper.slug, PassStickEvent(prompt=""), 7, connected)
+
+        assert state.round_number == 3
+        assert state.round_message is None
+
 
 @pytest.mark.django_db
 class TestAcceptStick:
@@ -571,6 +591,19 @@ class TestSetPrompt:
 
         state = apply_event(slug, keeper.slug, SetPromptEvent(prompt="   "), 4, connected)
         assert state.round_message is None
+
+    def test_set_prompt_on_ended_room(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        apply_event(slug, keeper.slug, EndRoomEvent(reason=EndReason.KEEPER_ENDED), 1, connected)
+
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(slug, keeper.slug, SetPromptEvent(prompt="Too late"), 2, connected)
+        assert exc_info.value.code == ErrorCode.ROOM_NOT_ACTIVE
 
 
 @pytest.mark.django_db
