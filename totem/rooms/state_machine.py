@@ -342,11 +342,10 @@ def _handle_force_pass(room: Room, actor: str, connected: set[str]) -> None:
 
 
 def _handle_set_prompt(room: Room, actor: str, prompt: str) -> None:
-    _require_active(room)
-    _require_keeper_in_room(room)
     _require_keeper(room, actor)
+    _require_active(room)
 
-    room.round_message = prompt
+    room.round_message = prompt.strip() or None
 
 
 def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set[str]) -> None:

@@ -312,6 +312,31 @@ class TestPostEvent:
         assert resp.status_code == 403
         assert resp.json()["code"] == "not_keeper"
 
+    def test_set_prompt_exceeds_max_length(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        user1 = UserFactory()
+        session = SessionFactory(space__author=keeper)
+        session.attendees.add(keeper, user1)
+        Room.objects.get_or_create_for_session(session)
+
+        connected = {keeper.slug, user1.slug}
+
+        with (
+            patch("totem.rooms.api.get_connected_participants", return_value=connected),
+            patch("totem.rooms.api.publish_state"),
+            patch("totem.rooms.api.mute_all_participants"),
+        ):
+            _post_event(client, session.slug, {"type": "start_room"}, 0)
+
+            resp = _post_event(
+                client,
+                session.slug,
+                {"type": "set_prompt", "prompt": "x" * 2001},
+                1,
+            )
+
+        assert resp.status_code == 422
+
 
 @pytest.mark.django_db
 class TestGetState:

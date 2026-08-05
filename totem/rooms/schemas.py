@@ -153,7 +153,6 @@ class StartRoomEvent(Schema):
 
 class PassStickEvent(Schema):
     type: Literal["pass_stick"] = "pass_stick"
-    prompt: Optional[str] = None
 
 
 class AcceptStickEvent(Schema):
@@ -180,7 +179,6 @@ class SetPromptEvent(Schema):
     """Keeper sets or replaces the active round prompt during a live session."""
 
     type: Literal["set_prompt"] = "set_prompt"
-    prompt: str
 
 
 class EndRoomEvent(Schema):

@@ -519,7 +519,7 @@ class TestSetPrompt:
             apply_event(slug, keeper.slug, SetPromptEvent(prompt="Too early"), 0, connected)
         assert exc_info.value.code == ErrorCode.ROOM_NOT_ACTIVE
 
-    def test_set_prompt_when_keeper_not_in_room(self):
+    def test_set_prompt_while_keeper_disconnected(self):
         keeper = UserFactory()
         user1 = UserFactory()
         user2 = UserFactory()
@@ -528,7 +528,6 @@ class TestSetPrompt:
 
         apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
 
-        # Keeper is not connected
         disconnected = {user1.slug, user2.slug}
         state = apply_event(slug, keeper.slug, SetPromptEvent(prompt="Remote prompt"), 1, disconnected)
         assert state.round_message == "Remote prompt"
@@ -541,9 +540,15 @@ class TestSetPrompt:
 
         apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
         apply_event(slug, keeper.slug, PassStickEvent(prompt="Some prompt"), 1, connected)
-        state = apply_event(slug, keeper.slug, SetPromptEvent(prompt=""), 2, connected)
 
-        assert state.round_message == ""
+        state = apply_event(slug, keeper.slug, SetPromptEvent(prompt=""), 2, connected)
+        assert state.round_message is None
+
+        state = apply_event(slug, keeper.slug, SetPromptEvent(prompt="New prompt"), 3, connected)
+        assert state.round_message == "New prompt"
+
+        state = apply_event(slug, keeper.slug, SetPromptEvent(prompt="   "), 4, connected)
+        assert state.round_message is None
 
 
 @pytest.mark.django_db
