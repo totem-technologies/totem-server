@@ -50,6 +50,51 @@ class TestPostEvent:
         assert data["current_speaker"] == user.slug
         assert data["version"] == 1
 
+    def test_start_room_with_prompt(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        session = SessionFactory(space__author=user)
+        session.attendees.add(user)
+        Room.objects.get_or_create_for_session(session)
+
+        with (
+            patch(
+                "totem.rooms.api.get_connected_participants",
+                return_value={user.slug},
+            ),
+            patch("totem.rooms.api.publish_state"),
+            patch("totem.rooms.api.mute_all_participants"),
+        ):
+            resp = _post_event(
+                client,
+                session.slug,
+                {"type": "start_room", "prompt": "Welcome everyone"},
+                0,
+            )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["round_number"] == 1
+        assert data["round_message"] == "Welcome everyone"
+
+    def test_start_room_prompt_exceeds_max_length(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        session = SessionFactory(space__author=user)
+        session.attendees.add(user)
+        Room.objects.get_or_create_for_session(session)
+
+        with (
+            patch("totem.rooms.api.get_connected_participants", return_value={user.slug}),
+            patch("totem.rooms.api.publish_state"),
+        ):
+            resp = _post_event(
+                client,
+                session.slug,
+                {"type": "start_room", "prompt": "x" * 2001},
+                0,
+            )
+
+        assert resp.status_code == 422
+
     def test_full_pass_accept_cycle(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         user1 = UserFactory()

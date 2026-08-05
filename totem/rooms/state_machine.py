@@ -67,8 +67,8 @@ def apply_event(
         _reconcile_talking_order(room, connected)
 
         match event:
-            case StartRoomEvent():
-                _handle_start(room, actor, connected)
+            case StartRoomEvent(prompt=prompt):
+                _handle_start(room, actor, connected, prompt)
             case PassStickEvent(prompt=prompt):
                 _handle_pass(room, actor, connected, prompt)
             case AcceptStickEvent():
@@ -236,7 +236,7 @@ def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _handle_start(room: Room, actor: str, connected: set[str]) -> None:
+def _handle_start(room: Room, actor: str, connected: set[str], prompt: str | None) -> None:
     _require_keeper(room, actor)
 
     if room.status != RoomStatus.WAITING_ROOM:
@@ -252,7 +252,7 @@ def _handle_start(room: Room, actor: str, connected: set[str]) -> None:
     room.current_speaker = room.keeper
     room.next_speaker = next_slug or room.keeper
     room.round_number = 1
-    room.round_message = None
+    room.round_message = (prompt or "").strip() or None
 
 
 def _handle_pass(room: Room, actor: str, connected: set[str], prompt: str | None) -> None:

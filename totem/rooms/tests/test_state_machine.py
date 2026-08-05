@@ -242,6 +242,28 @@ class TestStartRoom:
         assert state.current_speaker == keeper.slug
         assert state.next_speaker == keeper.slug
 
+    def test_start_with_prompt(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        state = apply_event(slug, keeper.slug, StartRoomEvent(prompt="Opening prompt"), 0, connected)
+
+        assert state.status == RoomStatus.ACTIVE
+        assert state.round_number == 1
+        assert state.round_message == "Opening prompt"
+
+    def test_start_with_empty_prompt_normalizes_to_none(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        state = apply_event(slug, keeper.slug, StartRoomEvent(prompt="   "), 0, connected)
+
+        assert state.round_message is None
+
 
 @pytest.mark.django_db
 class TestPassStick:

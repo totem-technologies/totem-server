@@ -149,10 +149,12 @@ class RoomState(Schema):
 
 class StartRoomEvent(Schema):
     type: Literal["start_room"] = "start_room"
+    prompt: Optional[str] = Field(None, max_length=2000)
 
 
 class PassStickEvent(Schema):
     type: Literal["pass_stick"] = "pass_stick"
+    prompt: Optional[str] = Field(None, max_length=2000)
 
 
 class AcceptStickEvent(Schema):
@@ -179,6 +181,7 @@ class SetPromptEvent(Schema):
     """Keeper sets or replaces the active round prompt during a live session."""
 
     type: Literal["set_prompt"] = "set_prompt"
+    prompt: str = Field(max_length=2000)
 
 
 class EndRoomEvent(Schema):
