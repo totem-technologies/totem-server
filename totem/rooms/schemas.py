@@ -13,6 +13,8 @@ from typing import Annotated, Literal, Optional, Union
 from ninja import Field, Schema, Status
 from pydantic import ConfigDict
 
+MAX_PROMPT_LENGTH = 2000
+
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
@@ -149,11 +151,12 @@ class RoomState(Schema):
 
 class StartRoomEvent(Schema):
     type: Literal["start_room"] = "start_room"
+    prompt: Optional[str] = Field(None, max_length=MAX_PROMPT_LENGTH)
 
 
 class PassStickEvent(Schema):
     type: Literal["pass_stick"] = "pass_stick"
-    prompt: Optional[str] = None
+    prompt: Optional[str] = Field(None, max_length=MAX_PROMPT_LENGTH)
 
 
 class AcceptStickEvent(Schema):
@@ -174,6 +177,13 @@ class ReorderEvent(Schema):
 
     type: Literal["reorder"] = "reorder"
     talking_order: list[str]  # user slugs
+
+
+class SetPromptEvent(Schema):
+    """Keeper sets or replaces the active round prompt during a live session."""
+
+    type: Literal["set_prompt"] = "set_prompt"
+    prompt: str = Field(max_length=MAX_PROMPT_LENGTH)
 
 
 class EndRoomEvent(Schema):
@@ -206,6 +216,7 @@ RoomEvent = Annotated[
         AcceptStickEvent,
         ForcePassStickEvent,
         ReorderEvent,
+        SetPromptEvent,
         EndRoomEvent,
         BanParticipantEvent,
         UnbanParticipantEvent,

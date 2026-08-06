@@ -23,6 +23,7 @@ from .schemas import (
     RoomEvent,
     RoomState,
     RoomStatus,
+    SetPromptEvent,
     StartRoomEvent,
     TransitionError,
     TurnState,
@@ -66,8 +67,8 @@ def apply_event(
         _reconcile_talking_order(room, connected)
 
         match event:
-            case StartRoomEvent():
-                _handle_start(room, actor, connected)
+            case StartRoomEvent(prompt=prompt):
+                _handle_start(room, actor, connected, prompt)
             case PassStickEvent(prompt=prompt):
                 _handle_pass(room, actor, connected, prompt)
             case AcceptStickEvent():
@@ -76,6 +77,8 @@ def apply_event(
                 _handle_force_pass(room, actor, connected)
             case ReorderEvent(talking_order=new_order):
                 _handle_reorder(room, actor, new_order, connected)
+            case SetPromptEvent(prompt=prompt):
+                _handle_set_prompt(room, actor, prompt)
             case EndRoomEvent(reason=reason):
                 _handle_end(room, actor, reason)
             case BanParticipantEvent(participant_slug=slug):
@@ -158,6 +161,10 @@ def _require_attendee(room: Room, actor: str) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _normalize_prompt(prompt: str | None) -> str | None:
+    return (prompt or "").strip() or None
+
+
 def _next_in_order(
     talking_order: list[str],
     after: str,
@@ -233,7 +240,7 @@ def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _handle_start(room: Room, actor: str, connected: set[str]) -> None:
+def _handle_start(room: Room, actor: str, connected: set[str], prompt: str | None) -> None:
     _require_keeper(room, actor)
 
     if room.status != RoomStatus.WAITING_ROOM:
@@ -249,12 +256,14 @@ def _handle_start(room: Room, actor: str, connected: set[str]) -> None:
     room.current_speaker = room.keeper
     room.next_speaker = next_slug or room.keeper
     room.round_number = 1
-    room.round_message = None
+    room.round_message = _normalize_prompt(prompt)
 
 
 def _handle_pass(room: Room, actor: str, connected: set[str], prompt: str | None) -> None:
     _require_active(room)
     _require_keeper_in_room(room)
+
+    prompt = _normalize_prompt(prompt)
 
     if actor != room.current_speaker and actor != room.keeper:
         raise TransitionError(
@@ -336,6 +345,13 @@ def _handle_force_pass(room: Room, actor: str, connected: set[str]) -> None:
 
     room.next_speaker = pass_to
     room.turn_state = TurnState.PASSING
+
+
+def _handle_set_prompt(room: Room, actor: str, prompt: str) -> None:
+    _require_keeper(room, actor)
+    _require_active(room)
+
+    room.round_message = _normalize_prompt(prompt)
 
 
 def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set[str]) -> None:
