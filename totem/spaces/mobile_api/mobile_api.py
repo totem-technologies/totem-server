@@ -1,18 +1,16 @@
 from django.db import transaction
 from django.db.models import Prefetch
-from django.http import HttpRequest
+from django.http import Http404, HttpRequest
 from django.shortcuts import get_object_or_404
 from ninja import Query, Router, Status
 from ninja.errors import AuthorizationError
 from ninja.pagination import paginate
 
-from totem.spaces.filters import spaces_summary_data
+from totem.spaces.filters import get_upcoming_spaces_list, spaces_summary_data, upcoming_sessions_queryset
 from totem.spaces.mobile_api.mobile_filters import (
-    get_upcoming_spaces_list,
     session_detail_schema,
     space_detail_schema,
     upcoming_recommended_sessions,
-    upcoming_sessions_queryset,
 )
 from totem.spaces.mobile_api.mobile_schemas import (
     MobileSpaceDetailSchema,
@@ -69,13 +67,15 @@ def get_space_detail(request: HttpRequest, space_slug: str):
         ),
         slug=space_slug,
     )
+    if not space.can_view(user):
+        raise Http404
     return space_detail_schema(space, user)
 
 
 @spaces_router.get("/keeper/{slug}/", response={200: list[MobileSpaceDetailSchema]}, url_name="keeper_spaces")
 def get_keeper_spaces(request: HttpRequest, slug: str):
     user: User = request.user  # type: ignore
-    spaces = get_upcoming_spaces_list(user).filter(author__slug=slug)
+    spaces = get_upcoming_spaces_list(user, author_slug=slug)
     return [space_detail_schema(space, user) for space in spaces]
 
 
@@ -88,6 +88,8 @@ def get_session_detail(request: HttpRequest, event_slug: str):
         ),
         slug=event_slug,
     )
+    if not session.can_view(user):
+        raise Http404
     return session_detail_schema(session, user)
 
 
@@ -118,12 +120,8 @@ def post_session_feedback(request: HttpRequest, event_slug: str, payload: Sessio
 def get_sessions_history(request: HttpRequest):
     user: User = request.user  # type: ignore
 
-    session_history_query = user.sessions_joined.filter(space__published=True, cancelled=False).order_by("-start")
-    session_history = session_history_query.all()[0:10]
-
-    sessions = [session_detail_schema(session, user) for session in session_history]
-
-    return sessions
+    session_history = Session.objects.history_for(user)[0:10]
+    return [session_detail_schema(session, user) for session in session_history]
 
 
 @spaces_router.get("/sessions/recommended", response={200: list[SessionDetailSchema]}, url_name="recommended_spaces")
@@ -161,6 +159,8 @@ def get_spaces_summary(request: HttpRequest):
 def rsvp_confirm(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
     event = get_object_or_404(Session, slug=event_slug)
+    if not event.can_view(user):
+        raise Http404
     try:
         with transaction.atomic():
             event.add_attendee(user)
@@ -179,6 +179,8 @@ def rsvp_confirm(request: HttpRequest, event_slug: str):
 def rsvp_cancel(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
     event = get_object_or_404(Session, slug=event_slug)
+    if not event.can_view(user):
+        raise Http404
     try:
         event.remove_attendee(user)
     except SessionException as e:

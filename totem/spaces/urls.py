@@ -14,9 +14,7 @@ class SpacesSitemap(Sitemap):
     changefreq = "daily"
 
     def items(self):
-        return Session.objects.filter(
-            start__gte=timezone.now(), cancelled=False, open=True, listed=True, space__published=True
-        )
+        return Session.objects.visible_to(None).filter(start__gte=timezone.now(), open=True)
 
     def lastmod(self, obj: Session):
         return obj.date_modified

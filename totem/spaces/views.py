@@ -61,7 +61,7 @@ def detail(request, slug):
 
 
 def _space_detail(request: HttpRequest, user: User, space: Space, session: Session | None):
-    if not space.published and not user.is_staff:
+    if not space.can_view(user):
         raise PermissionDenied
 
     attending = False
@@ -195,6 +195,10 @@ def subscribe(request: HttpRequest, slug: str):
     else:
         return redirect("spaces:detail", slug=slug)
     space = _get_space(slug)
+    # Unsubscribing must always work, but you can only subscribe to what you
+    # can see.
+    if sub and not space.can_view(user):
+        raise PermissionDenied
     if sub:
         space.subscribe(user)
         message = "You are now subscribed to this Space."

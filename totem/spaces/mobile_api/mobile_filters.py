@@ -1,73 +1,26 @@
-from django.db.models import Count, F, Min, Prefetch, Q, QuerySet
+from django.db.models import Count, F, Prefetch, Q
 from django.urls import reverse
 from django.utils import timezone
 
+from totem.spaces.filters import upcoming_sessions_queryset
 from totem.spaces.mobile_api.mobile_schemas import (
     MobileSpaceDetailSchema,
     NextSessionSchema,
     SessionDetailSchema,
 )
-from totem.spaces.models import Session, Space, exclude_banned_sessions
+from totem.spaces.models import Session, Space
 from totem.users.models import User
 
 
-def upcoming_sessions_queryset(user: User | None = None) -> QuerySet[Session]:
-    qs = Session.objects.filter(start__gte=timezone.now()).order_by("start").prefetch_related("attendees")
-    return exclude_banned_sessions(qs, user)
-
-
-def get_upcoming_spaces_list(user: User | None = None) -> QuerySet[Space]:
-    now = timezone.now()
-    return (
-        Space.objects.filter(published=True, sessions__start__gte=now)
-        .distinct()
-        .select_related("author")
-        .prefetch_related(
-            "categories",
-            "subscribed",
-            Prefetch(
-                "sessions",
-                queryset=upcoming_sessions_queryset(user),
-                to_attr="upcoming_sessions",
-            ),
-        )
-        .annotate(subscriber_count=Count("subscribed", distinct=True))
-        .annotate(next_session_start=Min("sessions__start", filter=Q(sessions__start__gte=now)))
-        .order_by("next_session_start")
-    )
-
-
-def upcoming_recommended_spaces(user: User | None, categories: list[str] | None = None, author: str | None = None):
-    now = timezone.now()
-    spaces = (
-        Space.objects.filter(sessions__start__gte=now)
-        .distinct()
-        .select_related("author")
-        .prefetch_related(
-            "categories",
-            "subscribed",
-            Prefetch(
-                "sessions",
-                queryset=upcoming_sessions_queryset(user),
-                to_attr="upcoming_sessions",
-            ),
-        )
-        .annotate(subscriber_count=Count("subscribed", distinct=True))
-        .annotate(next_session_start=Min("sessions__start", filter=Q(sessions__start__gte=now)))
-        .order_by("next_session_start")
-    )
-    if not user or not user.is_staff:
-        spaces = spaces.filter(published=True)
-    if categories:
-        spaces = spaces.filter(Q(categories__slug__in=categories) | Q(categories__name__in=categories))
-    if author:
-        spaces = spaces.filter(author__slug=author)
-    return spaces
-
-
 def upcoming_recommended_sessions(user: User | None, categories: list[str] | None = None, author: str | None = None):
+    # Annotate before visible_to: filtering on a multi-valued relation
+    # (attendees) before annotating would constrain the Count to the
+    # filtered rows.
     events = (
-        Session.objects.filter(start__gte=timezone.now(), cancelled=False, listed=True)
+        Session.objects.annotate(attendee_count=Count("attendees", distinct=True))
+        .filter(attendee_count__lt=F("seats"))
+        .visible_to(user)
+        .filter(start__gte=timezone.now())
         .select_related("space")
         .prefetch_related(
             "space__author",
@@ -79,24 +32,11 @@ def upcoming_recommended_sessions(user: User | None, categories: list[str] | Non
                 to_attr="upcoming_sessions",
             ),
         )
-        .annotate(
-            attendee_count=Count("attendees", distinct=True),
-            subscriber_count=Count("space__subscribed", distinct=True),
-        )
-        .order_by("start")
     )
-    if not user or not user.is_staff:
-        events = events.filter(space__published=True)
-    # are there any seats?
-    events = events.filter(attendee_count__lt=F("seats"))
-    # filter category
     if categories:
         events = events.filter(Q(space__categories__slug__in=categories) | Q(space__categories__name__in=categories))
-    # filter author
     if author:
         events = events.filter(space__author__slug=author)
-    # filter banned sessions
-    events = exclude_banned_sessions(events, user)
     return events.distinct().order_by("start")
 
 

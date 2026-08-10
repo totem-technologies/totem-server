@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from django.http import HttpRequest
+from django.http import Http404, HttpRequest
 from django.shortcuts import get_object_or_404
 from ninja import Field, FilterSchema, Router, Schema
 from ninja.pagination import paginate
@@ -19,13 +19,13 @@ from totem.users.models import User
 
 from .filters import (
     all_upcoming_recommended_sessions,
-    get_upcoming_sessions_for_spaces_list,
+    get_upcoming_spaces_list,
     session_detail_schema,
     sessions_by_month,
     space_detail_schema,
     spaces_summary_data,
 )
-from .models import Session, Space
+from .models import Session
 
 router = Router()
 
@@ -62,7 +62,8 @@ def filter_options(request):
 def event_detail(request: HttpRequest, event_slug: str):
     event = get_object_or_404(Session, slug=event_slug)
     user: User = request.user  # type: ignore
-
+    if not event.can_view(user):
+        raise Http404
     return session_detail_schema(event, user)
 
 
@@ -112,20 +113,4 @@ def spaces_summary(request: HttpRequest):
 
 @router.get("/list", response={200: list[SpaceDetailSchema]}, tags=["spaces"], url_name="spaces_list")
 def list_spaces(request):
-    # Get events with availability information
-    events = get_upcoming_sessions_for_spaces_list(request.user)
-
-    # Build spaces list
-    spaces_set = set()
-    spaces = []
-
-    for event in events:
-        if event.space.slug in spaces_set:
-            continue
-
-        spaces_set.add(event.space.slug)
-        space: Space = event.space
-
-        spaces.append(space_detail_schema(space, request.user))
-
-    return spaces
+    return [space_detail_schema(space, request.user) for space in get_upcoming_spaces_list(request.user)]

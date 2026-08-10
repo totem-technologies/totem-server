@@ -11,6 +11,9 @@
 {% block description %}{{ object.content_text|truncatechars:140 }}{% endblock description %}
 {% block ogimage %}{% if session %}{% absurl 'spaces:session_social_img' session_slug=session.slug image_format="2to1" %}{% endif %}{% endblock ogimage %}
 {# djlint:on #}
+{% block meta %}
+  {% if session and not session.listed %}<meta name="robots" content="noindex" />{% endif %}
+{% endblock meta %}
 {% block jsonld %}
   {{ session.jsonld|jsonld }}
 {% endblock jsonld %}

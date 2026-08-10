@@ -5,6 +5,7 @@ from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
 
+from totem.api.auth import generate_jwt_token
 from totem.onboard.tests.factories import OnboardModelFactory
 from totem.rooms.models import Room
 from totem.spaces.models import SessionFeedback, SessionFeedbackOptions
@@ -142,6 +143,42 @@ class TestMobileApiSpaces:
             if item["slug"] == session.space.slug:
                 assert item["next_events"] == []
 
+    def test_list_spaces_hides_unlisted_and_cancelled_next_events(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        now = timezone.now()
+        space = SpaceFactory()
+        unlisted = SessionFactory(space=space, start=now + timedelta(hours=1), listed=False)
+        cancelled = SessionFactory(space=space, start=now + timedelta(hours=2), cancelled=True)
+        listed = SessionFactory(space=space, start=now + timedelta(days=1))
+
+        response = client.get(reverse("mobile-api:mobile_spaces_list"))
+        assert response.status_code == 200
+        item = next(i for i in response.json()["items"] if i["slug"] == space.slug)
+        slugs = [e["slug"] for e in item["next_events"]]
+        assert slugs == [listed.slug]
+
+        # An attendee of the unlisted session sees it again.
+        unlisted.attendees.add(user)
+        response = client.get(reverse("mobile-api:mobile_spaces_list"))
+        item = next(i for i in response.json()["items"] if i["slug"] == space.slug)
+        slugs = [e["slug"] for e in item["next_events"]]
+        assert slugs == [unlisted.slug, listed.slug]
+        assert cancelled.slug not in slugs
+
+    def test_list_spaces_ordered_by_next_visible_session(self, client_with_user: tuple[Client, User]):
+        client, _ = client_with_user
+        now = timezone.now()
+        space_a = SpaceFactory()
+        SessionFactory(space=space_a, start=now + timedelta(hours=1), listed=False)
+        SessionFactory(space=space_a, start=now + timedelta(days=3))
+        space_b = SpaceFactory()
+        SessionFactory(space=space_b, start=now + timedelta(days=1))
+
+        response = client.get(reverse("mobile-api:mobile_spaces_list"))
+        assert response.status_code == 200
+        slugs = [i["slug"] for i in response.json()["items"]]
+        assert slugs == [space_b.slug, space_a.slug]
+
     def test_get_session_detail(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
         event = SessionFactory(space__published=True)
@@ -180,17 +217,20 @@ class TestMobileApiSpaces:
         assert other_session.slug not in next_event_slugs
 
     def test_get_session_detail_unpublished_circle(self, client_with_user: tuple[Client, User]):
-        client, _ = client_with_user
+        # Unpublished spaces are staff-only drafts, even for attendees.
+        client, user = client_with_user
         event = SessionFactory(space__published=False)
-        space = event.space
+        event.attendees.add(user)
+        event.joined.add(user)
 
         url = reverse("mobile-api:session_detail", kwargs={"event_slug": event.slug})
         response = client.get(url)
+        assert response.status_code == 404
 
+        staff_client = Client(HTTP_AUTHORIZATION=f"Bearer {generate_jwt_token(UserFactory(is_staff=True))}")
+        response = staff_client.get(url)
         assert response.status_code == 200
-        data = response.json()
-        assert data["slug"] == event.slug
-        assert data["space"]["slug"] == space.slug
+        assert response.json()["slug"] == event.slug
 
     def test_get_space_detail(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
@@ -231,15 +271,18 @@ class TestMobileApiSpaces:
         assert banned_session.slug not in next_event_slugs
 
     def test_get_space_detail_unpublished(self, client_with_user: tuple[Client, User]):
+        # Unpublished spaces are staff-only drafts.
         client, _ = client_with_user
         space = SpaceFactory(published=False)
 
         url = reverse("mobile-api:spaces_detail", kwargs={"space_slug": space.slug})
         response = client.get(url)
+        assert response.status_code == 404
 
+        staff_client = Client(HTTP_AUTHORIZATION=f"Bearer {generate_jwt_token(UserFactory(is_staff=True))}")
+        response = staff_client.get(url)
         assert response.status_code == 200
-        data = response.json()
-        assert data["slug"] == space.slug
+        assert response.json()["slug"] == space.slug
 
     def test_get_keeper_spaces(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
@@ -306,6 +349,18 @@ class TestMobileApiSpaces:
         assert visible_session.slug in next_event_slugs
         assert banned_session.slug not in next_event_slugs
 
+    def test_rsvp_unpublished_draft_rejected(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = SessionFactory(space__published=False)
+        url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
+
+        response = client.post(url)
+        assert response.status_code == 404
+        assert not event.attendees.filter(pk=user.pk).exists()
+
+        response = client.delete(url)
+        assert response.status_code == 404
+
     def test_get_sessions_history(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         for _ in range(5):
@@ -347,27 +402,26 @@ class TestMobileApiSpaces:
         next_event_slugs = {e["slug"] for e in data[0]["space"].get("next_events", [])}
         assert banned_session.slug not in next_event_slugs
 
-    def test_sessions_history_filters_unpublished_and_cancelled(self, client_with_user: tuple[Client, User]):
+    def test_sessions_history_hides_unpublished_keeps_cancelled(self, client_with_user: tuple[Client, User]):
+        # History is the user's own record: cancelled sessions stay (rendered
+        # with their cancelled state), staff-only drafts drop out.
         client, user = client_with_user
 
         event1 = SessionFactory(space__published=True, cancelled=False)
         event1.joined.add(user)
 
-        event2 = SessionFactory(space__published=False, cancelled=False)
-        event2.joined.add(user)
+        draft = SessionFactory(space__published=False, cancelled=False)
+        draft.joined.add(user)
 
-        event3 = SessionFactory(space__published=True, cancelled=False)
-        event3.joined.add(user)
-        event3.cancelled = True
-        event3.save()
+        cancelled = SessionFactory(space__published=True, cancelled=True)
+        cancelled.joined.add(user)
 
         url = reverse("mobile-api:sessions_history")
         response = client.get(url)
 
         assert response.status_code == 200
-        data = response.json()
-        assert len(data) == 1
-        assert data[0]["slug"] == event1.slug
+        slugs = {s["slug"] for s in response.json()}
+        assert slugs == {event1.slug, cancelled.slug}
 
     def test_sessions_history_limit(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user

@@ -4,7 +4,7 @@ from django.utils import timezone
 from totem.rooms.models import Room
 from totem.spaces.filters import (
     all_upcoming_recommended_sessions,
-    get_upcoming_sessions_for_spaces_list,
+    get_upcoming_spaces_list,
     other_sessions_in_space,
     sessions_by_month,
     upcoming_attending_sessions,
@@ -158,6 +158,15 @@ class TestFilters(TestCase):
         self.assertNotIn(self.unpublished_session, sessions)
         self.assertNotIn(self.unlisted_unpublished_session, sessions)
 
+    def test_all_upcoming_recommended_sessions_attendee_sees_unlisted(self):
+        # Unlisted sessions stay hidden from browsers, but people attending
+        # them can still find them anywhere sessions are shown.
+        self.unlisted_session.add_attendee(self.user)
+        sessions = all_upcoming_recommended_sessions(self.user)
+        self.assertIn(self.unlisted_session, sessions)
+        sessions = all_upcoming_recommended_sessions(None)
+        self.assertNotIn(self.unlisted_session, sessions)
+
     def test_all_upcoming_recommended_sessions_staff(self):
         self.future_session.attendees.add(self.staff_user)
         self.future_session2.attendees.add(self.staff_user)
@@ -187,11 +196,40 @@ class TestFilters(TestCase):
         self.assertNotIn(self.past_session, sessions)
         self.assertNotIn(self.ended_early_session, sessions)
 
+    def _upcoming_for_space(self, user, space):
+        match = next((s for s in get_upcoming_spaces_list(user) if s.slug == space.slug), None)
+        return match.upcoming_sessions if match else []  # type: ignore[attr-defined]
+
     def test_spaces_list_sessions_visible_until_ended(self):
-        sessions = get_upcoming_sessions_for_spaces_list(None)
+        sessions = self._upcoming_for_space(None, self.space)
         self.assertIn(self.in_progress_session, sessions)
         self.assertNotIn(self.past_session, sessions)
         self.assertNotIn(self.ended_early_session, sessions)
+
+    def test_spaces_list_ordered_by_next_visible_session(self):
+        # The unlisted session starts first but must not affect ordering.
+        other_space = SpaceFactory(published=True)
+        SessionFactory(space=other_space, start=self.unlisted_session.start + timezone.timedelta(hours=1))
+        slugs = [s.slug for s in get_upcoming_spaces_list(None)]
+        self.assertEqual(slugs.index(self.space.slug), 0)
+        self.assertIn(other_space.slug, slugs)
+
+    def test_spaces_list_includes_max_length_in_progress_session(self):
+        # A max-length (2 hour) session that's mid-flight keeps its space listed.
+        space = SpaceFactory(published=True)
+        in_progress = SessionFactory(
+            space=space,
+            start=timezone.now() - timezone.timedelta(minutes=90),
+            duration_minutes=120,
+        )
+        sessions = self._upcoming_for_space(None, space)
+        self.assertIn(in_progress, sessions)
+
+    def test_spaces_list_staff_sees_unpublished(self):
+        slugs = [s.slug for s in get_upcoming_spaces_list(self.staff_user)]
+        self.assertIn(self.unpublished_space.slug, slugs)
+        slugs = [s.slug for s in get_upcoming_spaces_list(self.user)]
+        self.assertNotIn(self.unpublished_space.slug, slugs)
 
     def test_livekit_sessions_listed_through_overruns(self):
         from totem.spaces.models import Space
@@ -296,9 +334,9 @@ class TestFilters(TestCase):
         self.assertNotIn(self.future_session, sessions)
         self.assertIn(self.future_session2, sessions)
 
-    def test_get_upcoming_sessions_for_spaces_list_excludes_banned(self):
+    def test_get_upcoming_spaces_list_excludes_banned(self):
         _ban_user(self.future_session, self.user)
-        sessions = get_upcoming_sessions_for_spaces_list(self.user)
+        sessions = self._upcoming_for_space(self.user, self.space)
         self.assertNotIn(self.future_session, sessions)
         self.assertIn(self.future_session2, sessions)
 
