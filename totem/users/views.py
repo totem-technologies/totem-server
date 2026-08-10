@@ -19,6 +19,7 @@ from totem.email import emails
 from totem.spaces.filters import (
     upcoming_sessions_by_author,
 )
+from totem.spaces.models import Session
 from totem.utils.slack import notify_slack
 from totem.utils.utils import request_log_context
 
@@ -268,7 +269,7 @@ def user_dashboard_view(request):
 @login_required
 def user_profile_view(request):
     subscribed_spaces = request.user.subscribed_spaces.all()[0:10]
-    session_history_query = request.user.sessions_joined.order_by("-start")
+    session_history_query = Session.objects.history_for(request.user)
     session_history = session_history_query.all()[0:10]
     space_count = session_history_query.count()
     context = {

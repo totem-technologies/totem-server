@@ -13,7 +13,7 @@ from totem.users.models import User
 from totem.users.tests.factories import UserFactory
 from totem.utils.testing import email_text
 
-from ..models import Session
+from ..models import Session, SessionException
 from ..views import ics_hash
 from .factories import SessionFactory, SpaceFactory
 
@@ -128,6 +128,152 @@ class SpaceModelTest(TestCase):
         future = SessionFactory(space=space, start=timezone.now() + timezone.timedelta(days=1))
         self.assertEqual(space.next_session(), future)
 
+    def test_next_session_skips_unlisted_and_cancelled(self):
+        space = SpaceFactory()
+        unlisted = SessionFactory(space=space, start=timezone.now() + timezone.timedelta(days=1), listed=False)
+        SessionFactory(space=space, start=timezone.now() + timezone.timedelta(days=2), cancelled=True)
+        listed = SessionFactory(space=space, start=timezone.now() + timezone.timedelta(days=3))
+        self.assertEqual(space.next_session(), listed)
+        # Attendees keep access to their unlisted sessions.
+        user = UserFactory()
+        unlisted.attendees.add(user)
+        self.assertEqual(space.next_session(user), unlisted)
+        # But not to cancelled ones.
+        self.assertEqual(space.next_session(UserFactory()), listed)
+
+    def test_next_session_unpublished_space(self):
+        space = SpaceFactory(published=False)
+        session = SessionFactory(space=space, start=timezone.now() + timezone.timedelta(days=1))
+        self.assertIsNone(space.next_session())
+        self.assertIsNone(space.next_session(UserFactory()))
+        self.assertEqual(space.next_session(UserFactory(is_staff=True)), session)
+
+
+class TestSessionVisibleTo(TestCase):
+    """SessionQuerySet.visible_to is the single visibility policy: not cancelled,
+    published space (staff exempt), not banned-from, and listed unless attending."""
+
+    def setUp(self):
+        self.space = SpaceFactory(published=True)
+        self.listed = SessionFactory(space=self.space)
+        self.unlisted = SessionFactory(space=self.space, listed=False)
+        self.cancelled = SessionFactory(space=self.space, cancelled=True)
+        self.unpublished = SessionFactory(space=SpaceFactory(published=False))
+
+    def _visible(self, user):
+        return list(Session.objects.visible_to(user))
+
+    def test_anonymous(self):
+        self.assertEqual(self._visible(None), [self.listed])
+
+    def test_authenticated(self):
+        self.assertEqual(self._visible(UserFactory()), [self.listed])
+
+    def test_attendee_sees_unlisted_but_not_cancelled(self):
+        user = UserFactory()
+        self.unlisted.attendees.add(user)
+        self.cancelled.attendees.add(user)
+        visible = self._visible(user)
+        self.assertIn(self.unlisted, visible)
+        self.assertNotIn(self.cancelled, visible)
+
+    def test_staff_sees_unpublished_but_not_unlisted(self):
+        visible = self._visible(UserFactory(is_staff=True))
+        self.assertIn(self.unpublished, visible)
+        self.assertNotIn(self.unlisted, visible)
+
+    def test_banned_hidden(self):
+        user = UserFactory()
+        _ban_user(self.listed, user)
+        self.assertEqual(self._visible(user), [])
+
+    def test_attendee_no_duplicates(self):
+        user = UserFactory()
+        self.listed.attendees.add(user)
+        self.assertEqual(self._visible(user), [self.listed])
+
+    def test_unpublished_is_staff_only_even_for_attendees(self):
+        # Unpublished is a pre-launch draft state, not a retirement state;
+        # there is no attendee exception. Invite-only sessions use unlisted.
+        user = UserFactory()
+        self.unpublished.attendees.add(user)
+        self.assertNotIn(self.unpublished, self._visible(user))
+
+
+class TestSessionHistoryFor(TestCase):
+    """history_for is the user's personal record: sessions they joined, newest
+    first. Cancelled and unlisted sessions stay in it, and a site-wide ban
+    doesn't scrub it. Unpublished spaces are staff-only drafts, so they drop
+    out for everyone else."""
+
+    def setUp(self):
+        self.user = UserFactory()
+        self.space = SpaceFactory(published=True)
+        start = timezone.now() - timezone.timedelta(days=30)
+        step = timezone.timedelta(days=1)
+        self.listed = SessionFactory(space=self.space, start=start + 4 * step)
+        self.unlisted = SessionFactory(space=self.space, start=start + 3 * step, listed=False)
+        self.cancelled = SessionFactory(space=self.space, start=start + 2 * step, cancelled=True)
+        self.banned_from = SessionFactory(space=self.space, start=start + step)
+        for session in (self.listed, self.unlisted, self.cancelled, self.banned_from):
+            session.joined.add(self.user)
+        _ban_user(self.banned_from, self.user)
+        # Attended but never joined: not part of the record.
+        self.not_joined = SessionFactory(space=self.space, start=start)
+        self.not_joined.attendees.add(self.user)
+
+    def test_personal_record_newest_first(self):
+        history = list(Session.objects.history_for(self.user))
+        self.assertEqual(history, [self.listed, self.unlisted, self.cancelled, self.banned_from])
+
+    def test_unpublished_is_staff_only(self):
+        staff = UserFactory(is_staff=True)
+        draft = SessionFactory(space=SpaceFactory(published=False), start=timezone.now() - timezone.timedelta(days=1))
+        draft.joined.add(self.user, staff)
+        self.assertNotIn(draft, Session.objects.history_for(self.user))
+        self.assertIn(draft, Session.objects.history_for(staff))
+
+
+class TestCanView(TestCase):
+    """can_view is the page/detail access rule: published, or staff. Unlisted
+    and cancelled pages stay reachable by direct link."""
+
+    def test_published(self):
+        session = SessionFactory(listed=False, cancelled=True)
+        self.assertTrue(session.can_view(None))
+        self.assertTrue(session.can_view(UserFactory()))
+
+    def test_unpublished(self):
+        session = SessionFactory(space=SpaceFactory(published=False))
+        self.assertFalse(session.can_view(None))
+        user = UserFactory()
+        session.attendees.add(user)
+        session.joined.add(user)
+        self.assertFalse(session.can_view(user))
+        self.assertTrue(session.can_view(UserFactory(is_staff=True)))
+
+    def test_everything_listed_is_viewable(self):
+        # The structural invariant: any session a listing or history policy
+        # returns for a user must be openable by that same user.
+        published = SpaceFactory(published=True)
+        unpublished = SpaceFactory(published=False)
+        attendee = UserFactory()
+        staff = UserFactory(is_staff=True)
+        start = timezone.now() - timezone.timedelta(days=10)
+        for space in (published, unpublished):
+            for listed in (True, False):
+                for cancelled in (True, False):
+                    start += timezone.timedelta(hours=1)
+                    session = SessionFactory(space=space, listed=listed, cancelled=cancelled, start=start)
+                    session.attendees.add(attendee)
+                    session.joined.add(attendee, staff)
+        for viewer in (None, attendee, staff):
+            for session in Session.objects.visible_to(viewer):
+                self.assertTrue(session.can_view(viewer))
+        for viewer in (attendee, staff):
+            for session in Session.objects.history_for(viewer):
+                self.assertTrue(session.can_view(viewer))
+
 
 class TestSessionModel:
     def test_attendee_email_list(self, db):
@@ -152,6 +298,18 @@ class TestSessionModel:
     def test_seats_minimum_is_one(self, db):
         session = SessionFactory(seats=1)
         session.full_clean()  # should not raise
+
+    def test_duration_capped_at_two_hours(self, db):
+        session = SessionFactory(duration_minutes=121)
+        with pytest.raises(ValidationError):
+            session.full_clean()
+        session.duration_minutes = 120
+        session.full_clean()  # should not raise
+
+    def test_duration_cannot_be_zero(self, db):
+        session = SessionFactory(duration_minutes=0)
+        with pytest.raises(ValidationError):
+            session.full_clean()
 
     def test_notify(self, db):
         user = UserFactory()
@@ -231,6 +389,13 @@ class TestSessionModel:
         session.notify_missed()
         assert len(mail.outbox) == 1
         assert mail.outbox[0].to == [user.email]
+
+    def test_can_attend_unpublished_draft(self, db):
+        # Drafts are staff-only; nobody else can sign up, even with the slug.
+        session = SessionFactory(space__published=False)
+        with pytest.raises(SessionException):
+            session.can_attend(user=UserFactory())
+        assert session.can_attend(user=UserFactory(is_staff=True))
 
     def test_can_attend_banned(self, db):
         from ..models import SessionException

@@ -215,6 +215,23 @@ class UserProfileViewTest(TestCase):
         self.assertEqual(len(response.context["session_history"]), 1)
         self.assertEqual(response.context["space_count"], 1)
 
+    def test_profile_history_hides_unpublished_drafts(self):
+        # Unpublished spaces are staff-only drafts; they drop out of a normal
+        # user's history entirely so there's no listing that 403s on click.
+        draft = SessionFactory(space=SpaceFactory(published=False))
+        draft.joined.add(self.user)
+        response = self.client.get(reverse("users:profile"))
+        self.assertNotIn(draft, list(response.context["session_history"]))
+        self.assertEqual(response.context["space_count"], 1)
+
+    def test_profile_history_staff_sees_unpublished(self):
+        staff = UserFactory(is_staff=True)
+        draft = SessionFactory(space=SpaceFactory(published=False))
+        draft.joined.add(staff)
+        self.client.force_login(staff)
+        response = self.client.get(reverse("users:profile"))
+        self.assertIn(draft, list(response.context["session_history"]))
+
 
 class UserFeedbackViewTest(TestCase):
     def test_user_feedback_view_authenticated(self):

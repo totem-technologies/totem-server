@@ -45,6 +45,25 @@ class TestSpaceDetailView:
         assert response.status_code == 302
         assert "This Space has no upcoming" not in response.content.decode()
 
+    def test_detail_space_skips_unlisted_session(self, client, db):
+        # An unlisted session is only reachable by direct link; the space page
+        # redirects everyone else to the next listed session.
+        space = SpaceFactory()
+        unlisted = SessionFactory(space=space, start=timezone.now() + datetime.timedelta(hours=1), listed=False)
+        listed = SessionFactory(space=space, start=timezone.now() + datetime.timedelta(days=2))
+        url = reverse("spaces:detail", kwargs={"slug": space.slug})
+        response = client.get(url)
+        assert response.status_code == 302
+        assert response.url == reverse("spaces:session_detail", kwargs={"session_slug": listed.slug})
+
+        # Attendees of the unlisted session land on it instead.
+        user = UserFactory()
+        unlisted.add_attendee(user)
+        client.force_login(user)
+        response = client.get(url)
+        assert response.status_code == 302
+        assert response.url == reverse("spaces:session_detail", kwargs={"session_slug": unlisted.slug})
+
     def test_detail_space_no_session(self, client, db):
         user = UserFactory()
         user.save()
@@ -83,6 +102,18 @@ class TestSessionView:
         url = reverse("spaces:session_detail", kwargs={"session_slug": event.slug})
         response = client.get(url)
         assert response.status_code == 200
+
+    def test_unlisted_session_page_not_indexable(self, client, db):
+        # Unlisted sessions are reachable by direct link but must not be
+        # search-indexable.
+        listed = SessionFactory()
+        response = client.get(reverse("spaces:session_detail", kwargs={"session_slug": listed.slug}))
+        assert "noindex" not in response.content.decode()
+
+        unlisted = SessionFactory(listed=False)
+        response = client.get(reverse("spaces:session_detail", kwargs={"session_slug": unlisted.slug}))
+        assert response.status_code == 200
+        assert '<meta name="robots" content="noindex" />' in response.content.decode()
 
     # def test_event_with_token(self, client, db):
     #     event = SessionFactory()
@@ -302,6 +333,26 @@ class TestRSVPView:
         assert response.status_code == 302
         assert event.slug in response.url
         assert user not in event.joined.all()
+
+    def test_rsvp_unpublished_draft_rejected(self, client, db):
+        user = UserFactory()
+        client.force_login(user)
+        session = SessionFactory(space__published=False)
+        response = client.post(
+            reverse("spaces:rsvp", kwargs={"session_slug": session.slug}),
+            {"action": "add"},
+            HTTP_ACCEPT="application/json",
+        )
+        assert response.status_code == 400
+        assert not session.attendees.filter(pk=user.pk).exists()
+
+    def test_subscribe_unpublished_draft_rejected(self, client, db):
+        user = UserFactory()
+        client.force_login(user)
+        space = SpaceFactory(published=False)
+        response = client.post(reverse("spaces:subscribe", kwargs={"slug": space.slug}), {"action": "subscribe"})
+        assert response.status_code == 403
+        assert not space.subscribed.filter(pk=user.pk).exists()
 
     def test_rsvp_attending(self, client, db):
         event = SessionFactory(start=timezone.now() + datetime.timedelta(minutes=20))

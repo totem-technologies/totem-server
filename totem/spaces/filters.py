@@ -1,12 +1,11 @@
 import datetime
 from dataclasses import dataclass
 
-from django.db.models import Count, F, OuterRef, Q, Subquery
+from django.db.models import Count, Exists, OuterRef, Prefetch, Q
 from django.urls import reverse
 from django.utils import timezone
 
 from totem.onboard.models import OnboardModel
-from totem.spaces.mobile_api.mobile_filters import get_upcoming_spaces_list, upcoming_recommended_spaces
 from totem.spaces.schemas import (
     NextSessionSchema,
     SessionDetailSchema,
@@ -16,120 +15,103 @@ from totem.spaces.schemas import (
 )
 from totem.users.models import User
 
-from .models import Session, Space, SpaceCategory, exclude_banned_sessions
+from .models import Session, SessionQuerySet, Space
+
+
+def upcoming_sessions_queryset(user: User | None = None) -> SessionQuerySet:
+    """A space's upcoming sessions as shown to this user, soonest first.
+
+    Sessions stay visible until they end (even when full) so attendees can
+    find them.
+    """
+    return Session.objects.visible_to(user).not_ended().order_by("start").prefetch_related("attendees")
+
+
+def get_upcoming_spaces_list(
+    user: User | None = None,
+    categories: list[str] | None = None,
+    author_slug: str | None = None,
+) -> list[Space]:
+    """Spaces with at least one visible upcoming session, soonest first.
+
+    A space's position, its card, and its next sessions all derive from the
+    same prefetched upcoming_sessions list, so ordering and display cannot
+    disagree.
+    """
+    # The Exists filter and the prefetch share one queryset, so a space is
+    # listed exactly when its upcoming_sessions list is non-empty.
+    upcoming_sessions = upcoming_sessions_queryset(user)
+    spaces = (
+        Space.objects.filter(Exists(upcoming_sessions.filter(space=OuterRef("pk"))))
+        .select_related("author")
+        .prefetch_related(
+            "categories",
+            "subscribed",
+            Prefetch("sessions", queryset=upcoming_sessions, to_attr="upcoming_sessions"),
+        )
+        .annotate(subscriber_count=Count("subscribed", distinct=True))
+    )
+    if not (user and user.is_authenticated and user.is_staff):
+        spaces = spaces.filter(published=True)
+    if categories:
+        spaces = spaces.filter(Q(categories__slug__in=categories) | Q(categories__name__in=categories)).distinct()
+    if author_slug:
+        spaces = spaces.filter(author__slug=author_slug)
+    upcoming: list[Space] = [space for space in spaces if space.upcoming_sessions]
+    # Slug tiebreaker: sessions start on the hour, and the paginated mobile
+    # list recomputes per page, so tied starts must order identically on
+    # every request.
+    upcoming.sort(key=lambda space: (space.upcoming_sessions[0].start, space.slug))  # type: ignore[attr-defined]
+    return upcoming
 
 
 def other_sessions_in_space(user: User | None, session: Session, limit: int = 10):
-    sessions = Session.objects.filter(space=session.space, start__gte=timezone.now(), cancelled=False).distinct()
-    if user and user.is_authenticated:
-        # show users events they are already attending
-        sessions = sessions.filter(Q(open=True, listed=True) | Q(attendees=user))
-    else:
-        sessions = sessions.filter(open=True, listed=True)
-    sessions = sessions.exclude(slug=session.slug)
-    sessions = exclude_banned_sessions(sessions, user)
-    sessions = sessions.order_by("start")
-    if not user or not user.is_staff:
-        sessions = sessions.filter(space__published=True)
-    return sessions[:limit]
+    return (
+        Session.objects.visible_to(user)
+        .open_to(user)
+        .filter(space=session.space, start__gte=timezone.now())
+        .exclude(slug=session.slug)
+        .order_by("start")[:limit]
+    )
 
 
 def sessions_by_month(user: User | None, space_slug: str, month: int, year: int):
-    startDate = datetime.datetime(year, month, 1, tzinfo=datetime.timezone.utc)
-    endDate = startDate + datetime.timedelta(days=32)
-    sessions = Session.objects.filter(start__gte=startDate, start__lte=endDate, cancelled=False, space__slug=space_slug)
-    if user and user.is_authenticated:
-        # show users events they are already attending
-        sessions = sessions.filter(Q(open=True, listed=True) | Q(attendees=user))
-    else:
-        sessions = sessions.filter(open=True, listed=True)
-    sessions = exclude_banned_sessions(sessions, user)
-    sessions = sessions.order_by("start")
-    if not user or not user.is_staff:
-        sessions = sessions.filter(space__published=True)
-    return sessions
+    start_date = datetime.datetime(year, month, 1, tzinfo=datetime.timezone.utc)
+    end_date = start_date + datetime.timedelta(days=32)
+    return (
+        Session.objects.visible_to(user)
+        .open_to(user)
+        .filter(space__slug=space_slug, start__gte=start_date, start__lte=end_date)
+        .order_by("start")
+    )
 
 
 def all_upcoming_recommended_sessions(user: User | None, category: str | None = None, author: str | None = None):
-    # Sessions stay listed until they end (even when full) so attendees can find them.
-    sessions = Session.objects.filter(cancelled=False, listed=True).not_ended()
-    sessions = exclude_banned_sessions(sessions, user)
-    sessions = sessions.order_by("start")
-    if not user or not user.is_staff:
-        sessions = sessions.filter(space__published=True)
-    # filter category
+    sessions = Session.objects.visible_to(user).not_ended().order_by("start")
     if category:
-        sessions = sessions.filter(space__categories__slug=category) | sessions.filter(space__categories__name=category)
-    # filter author
+        sessions = sessions.filter(Q(space__categories__slug=category) | Q(space__categories__name=category))
     if author:
         sessions = sessions.filter(space__author__slug=author)
-    sessions = sessions.prefetch_related("space__author")
-    return sessions
-
-
-def get_upcoming_sessions_for_spaces_list(user: User | None = None):
-    """Get all upcoming events for spaces listing, including spaces with full events.
-
-    Specifically designed for the spaces list API endpoint.
-    Does NOT filter by seat availability, ensuring all spaces with upcoming events are shown.
-    """
-    first_category_subquery = SpaceCategory.objects.filter(space=OuterRef("space_id")).values("name")[:1]
-    sessions = Session.objects.filter(cancelled=False, listed=True, space__published=True).not_ended()
-    return (
-        exclude_banned_sessions(sessions, user)
-        .select_related("space")
-        .prefetch_related("space__author", "space__categories", "space__subscribed")
-        .annotate(
-            attendee_count=Count("attendees", distinct=True),
-            subscriber_count=Count("space__subscribed", distinct=True),
-            first_category=Subquery(first_category_subquery),
-        )
-        .order_by("start")
-    )
-
-
-def all_upcoming_recommended_spaces(user: User | None, category: str | None = None):
-    sessions = Session.objects.filter(start__gte=timezone.now(), cancelled=False, open=True, listed=True)
-    sessions = exclude_banned_sessions(sessions, user)
-    sessions = sessions.order_by("start")
-    if not user or not user.is_staff:
-        sessions = sessions.filter(space__published=True)
-    # are there any seats?
-    sessions = sessions.annotate(attendee_count=Count("attendees")).filter(attendee_count__lt=F("seats"))
-    # filter category
-    if category:
-        sessions = sessions.filter(space__categories__slug=category) | sessions.filter(space__categories__name=category)
-    sessions = sessions.prefetch_related("space__author")
-    return sessions
+    return sessions.prefetch_related("space__author")
 
 
 def upcoming_attending_sessions(user: User, limit: int = 10):
-    # 60 minutes in the past
+    # Keep sessions for an hour after start so late joiners can still find them.
     past = timezone.now() - datetime.timedelta(minutes=60)
-    sessions = user.sessions_attending.filter(start__gte=past).filter(cancelled=False)
-    return exclude_banned_sessions(sessions, user).order_by("start")[:limit]
+    return Session.objects.visible_to(user).filter(attendees=user, start__gte=past).order_by("start")[:limit]
 
 
-def upcoming_sessions_by_author(user: User, author: User, exclude_event: Session | None = None):
-    upcoming_sessions = (
-        Session.objects.filter(
-            space__author=author,
-            cancelled=False,
-            listed=True,
-        )
+def upcoming_sessions_by_author(user: User | None, author: User, exclude_event: Session | None = None):
+    sessions = (
+        Session.objects.visible_to(user)
+        .filter(space__author=author)
         .not_ended()
         .order_by("start")
+        .select_related("space__author")
     )
-
-    if not user or not user.is_staff:
-        upcoming_sessions = upcoming_sessions.filter(space__published=True)
-
     if exclude_event:
-        upcoming_sessions = upcoming_sessions.exclude(pk=exclude_event.pk)
-
-    upcoming_sessions = exclude_banned_sessions(upcoming_sessions, user)
-    upcoming_sessions = upcoming_sessions.select_related("space__author")
-    return upcoming_sessions
+        sessions = sessions.exclude(pk=exclude_event.pk)
+    return sessions
 
 
 @dataclass
@@ -144,26 +126,21 @@ def spaces_summary_data(user: User) -> SpacesSummary:
 
     Shared by the web and mobile summary endpoints, which map it to their own schemas.
     """
-    spaces_qs = get_upcoming_spaces_list(user)
+    spaces = get_upcoming_spaces_list(user)
 
     # Sessions the user has registered for that haven't ended yet.
-    upcoming_sessions = (
-        exclude_banned_sessions(
-            Session.objects.filter(attendees=user, cancelled=False).not_ended(),
-            user,
-        )
+    upcoming = list(
+        Session.objects.visible_to(user)
+        .filter(attendees=user)
+        .not_ended()
         .select_related("space")
         .prefetch_related("space__author", "space__categories", "attendees", "joined", "space__subscribed")
-        .annotate(
-            attendee_count=Count("attendees", distinct=True),
-            subscriber_count=Count("space__subscribed", distinct=True),
-        )
         .order_by("start")
     )
-    upcoming = list(upcoming_sessions)
     upcoming_space_slugs = {session.space.slug for session in upcoming}
 
-    # Personalization signal: onboarding hopes plus categories of subscribed spaces.
+    # Personalization signal: onboarding hopes plus categories of subscribed
+    # spaces (both prefetched, so no extra queries).
     categories_set: set[str] = set()
     try:
         onboard_model = OnboardModel.objects.get(user=user)
@@ -174,15 +151,20 @@ def spaces_summary_data(user: User) -> SpacesSummary:
                     categories_set.add(name)
     except OnboardModel.DoesNotExist:
         pass
-    previous_category_names = spaces_qs.filter(subscribed=user).values_list("categories__name", flat=True).distinct()
-    categories_set.update(name for name in previous_category_names if name)
+    for space in spaces:
+        if any(sub.pk == user.pk for sub in space.subscribed.all()):
+            categories_set.update(category.name for category in space.categories.all())
 
-    for_you = [
-        space
-        for space in upcoming_recommended_spaces(user, categories=list(categories_set))
-        if space.slug not in upcoming_space_slugs
-    ]
-    explore = [space for space in spaces_qs if space.slug not in upcoming_space_slugs]
+    # With no personalization signal yet, everything is "for you".
+    def matches_interests(space: Space) -> bool:
+        if not categories_set:
+            return True
+        return any(
+            category.slug in categories_set or category.name in categories_set for category in space.categories.all()
+        )
+
+    for_you = [space for space in spaces if space.slug not in upcoming_space_slugs and matches_interests(space)]
+    explore = [space for space in spaces if space.slug not in upcoming_space_slugs]
     return SpacesSummary(upcoming=upcoming, for_you=for_you, explore=explore)
 
 

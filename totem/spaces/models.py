@@ -49,11 +49,9 @@ if TYPE_CHECKING:
 _default_grace_period = datetime.timedelta(minutes=10)
 
 
-def exclude_banned_sessions(qs: "QuerySet[Session]", user: "User | None") -> "QuerySet[Session]":
-    """Hide sessions the user has been banned from."""
-    if user and user.is_authenticated:
-        qs = qs.exclude(room__banned_participants__contains=[user.slug])
-    return qs
+# Session visibility is decided in exactly one place: SessionQuerySet.visible_to.
+# Every surface that shows sessions (or derives a space's "next session") must
+# start from it, so ordering and display can never disagree.
 
 
 # Google Meet gives us no end-of-call signal, so a session's scheduled end
@@ -71,6 +69,42 @@ SESSION_END_TIME = models.ExpressionWrapper(
 
 
 class SessionQuerySet(models.QuerySet["Session"]):
+    def visible_to(self, user: "User | None") -> "SessionQuerySet":
+        """Sessions this user may see in listings anywhere on the site.
+
+        Not cancelled, not banned-from, and: listed unless the user is
+        attending (unlisted = invite-only, reachable by direct link or by
+        attendees), in a published space. Unpublished spaces are pre-launch
+        drafts and strictly staff-only — no attendee exception. Nobody,
+        including staff, is shown someone else's unlisted session.
+        """
+        qs = self.filter(cancelled=False)
+        if not (user and user.is_authenticated):
+            return qs.filter(listed=True, space__published=True)
+        qs = qs.exclude(room__banned_participants__contains=[user.slug])
+        qs = qs.filter(models.Q(listed=True) | models.Q(attendees=user))
+        if not user.is_staff:
+            qs = qs.filter(space__published=True)
+        return qs.distinct()
+
+    def history_for(self, user: "User") -> "SessionQuerySet":
+        """The user's personal record: sessions they joined, newest first.
+
+        Cancelled and unlisted sessions stay in it (they happened to this
+        user), and a site-wide ban doesn't scrub it. Unpublished spaces are
+        staff-only drafts, so they drop out for everyone else.
+        """
+        qs = self.filter(joined=user)
+        if not user.is_staff:
+            qs = qs.filter(space__published=True)
+        return qs.order_by("-start")
+
+    def open_to(self, user: "User | None") -> "SessionQuerySet":
+        """Sessions open for signup, plus ones the user is already attending."""
+        if user and user.is_authenticated:
+            return self.filter(models.Q(open=True) | models.Q(attendees=user)).distinct()
+        return self.filter(open=True)
+
     def not_ended(self) -> "SessionQuerySet":
         """Keep sessions until they end, so in-progress ones stay findable by attendees."""
         now = timezone.now()
@@ -183,8 +217,13 @@ class Space(AdminURLMixin, MarkdownMixin, SluggedModel):
         return ", ".join([str(attendee.email) for attendee in self.subscribed.all()])
 
     def next_session(self, user: "User | None" = None):
-        sessions = Session.objects.filter(space=self).not_ended()
-        return exclude_banned_sessions(sessions, user).order_by("start").first()
+        return Session.objects.visible_to(user).filter(space=self).not_ended().order_by("start").first()
+
+    def can_view(self, user: "User | None") -> bool:
+        """Page/detail access: published, or staff. Unpublished spaces are
+        pre-launch drafts — invite-only sessions use unlisted instead, so
+        there is no attendee exception here."""
+        return self.published or bool(user and user.is_authenticated and user.is_staff)
 
     def is_free(self):
         return self.price == 0
@@ -214,7 +253,13 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         null=True,
         blank=True,
     )
-    duration_minutes = models.IntegerField(_("Minutes"), default=60)
+    duration_minutes = models.IntegerField(
+        _("Minutes"),
+        default=60,
+        # Sessions run for about an hour; two is the ceiling. Overruns past the
+        # scheduled end are handled at runtime by SessionQuerySet.not_ended.
+        validators=[MinValueValidator(1), MaxValueValidator(120)],
+    )
     ended_at = models.DateTimeField(null=True, blank=True, help_text="When the session was explicitly ended")
     joined = models.ManyToManyField(settings.AUTH_USER_MODEL, blank=True, related_name="sessions_joined")
     meeting_url = models.CharField(max_length=255, blank=True)
@@ -233,6 +278,11 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
 
     def get_absolute_url(self) -> str:
         return reverse("spaces:session_detail", kwargs={"session_slug": self.slug})
+
+    def can_view(self, user: "User | None") -> bool:
+        """Anything visible_to or history_for returns must pass this; unlisted
+        and cancelled pages additionally stay reachable by direct link."""
+        return self.space.can_view(user)
 
     def seats_left(self):
         # len() over count() so a prefetched attendees cache is used
@@ -267,6 +317,8 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
                 raise SessionException("You cannot attend this session")
             if user and user.is_staff:
                 return True
+            if not self.space.published:
+                raise SessionException("Session is not available for signup")
             if not self.open:
                 raise SessionException("Session is not available for signup")
             if self.cancelled:

@@ -112,6 +112,16 @@ class TestSessionDetail:
         response = client.get(url)
         assert response.status_code == 404
 
+    def test_session_detail_unpublished_staff_only(self, client, db):
+        # The JSON API must match the HTML page: drafts are staff-only.
+        session = SessionFactory(space__published=False)
+        url = reverse("api-1:event_detail", kwargs={"event_slug": session.slug})
+        assert client.get(url).status_code == 404
+        client.force_login(UserFactory())
+        assert client.get(url).status_code == 404
+        client.force_login(UserFactory(is_staff=True))
+        assert client.get(url).status_code == 200
+
     def test_session_detail_authenticated(self, client, db):
         user = UserFactory()
         user.save()
@@ -338,6 +348,42 @@ class TestListSpaces:
         assert space.slug in slugs, "Spaces with full sessions should still appear in listings"
         assert space2.slug in slugs
         assert len(slugs) == 2  # Both spaces should be in the response
+
+    def test_list_spaces_hides_unlisted_and_orders_consistently(self, client, db):
+        # TOT-1238: a space's card must be positioned by the same session it
+        # displays, and unlisted sessions must not surface publicly.
+        now = timezone.now()
+        space_a = SpaceFactory(title="Space A")
+        SessionFactory(space=space_a, start=now + timedelta(hours=1), listed=False)
+        SessionFactory(space=space_a, start=now + timedelta(hours=2), cancelled=True)
+        a_listed = SessionFactory(space=space_a, start=now + timedelta(days=3))
+        space_b = SpaceFactory(title="Space B")
+        b_listed = SessionFactory(space=space_b, start=now + timedelta(days=1))
+
+        response = client.get(reverse("api-1:spaces_list"))
+        assert response.status_code == 200
+        data = response.json()
+        assert [s["slug"] for s in data] == [space_b.slug, space_a.slug]
+        by_slug = {s["slug"]: s for s in data}
+        assert by_slug[space_a.slug]["next_event"]["slug"] == a_listed.slug
+        assert by_slug[space_b.slug]["next_event"]["slug"] == b_listed.slug
+
+    def test_list_spaces_only_unlisted_sessions_hides_space(self, client, db):
+        space = SpaceFactory()
+        SessionFactory(space=space, listed=False)
+        response = client.get(reverse("api-1:spaces_list"))
+        assert response.status_code == 200
+        assert response.json() == []
+
+    def test_list_spaces_unpublished_visible_to_staff_only(self, client, db):
+        space = SpaceFactory(published=False)
+        SessionFactory(space=space)
+        response = client.get(reverse("api-1:spaces_list"))
+        assert [s["slug"] for s in response.json()] == []
+
+        client.force_login(UserFactory(is_staff=True))
+        response = client.get(reverse("api-1:spaces_list"))
+        assert [s["slug"] for s in response.json()] == [space.slug]
 
     def test_list_spaces_with_seats_left(self, client, db):
         """Test that spaces in the list API show correct seats_left values."""
