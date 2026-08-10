@@ -225,6 +225,17 @@ class TestFilters(TestCase):
         sessions = self._upcoming_for_space(None, space)
         self.assertIn(in_progress, sessions)
 
+    def test_spaces_list_ties_break_deterministically(self):
+        # Sessions start on the hour, so same-instant next sessions are
+        # common. The paginated list must order ties the same way on every
+        # request, or a space can be duplicated or skipped across pages.
+        start = timezone.now() + timezone.timedelta(days=20)
+        tied = [SpaceFactory(published=True) for _ in range(5)]
+        for space in tied:
+            SessionFactory(space=space, start=start)
+        result = [s.slug for s in get_upcoming_spaces_list(None) if s.slug in {t.slug for t in tied}]
+        self.assertEqual(result, sorted(t.slug for t in tied))
+
     def test_spaces_list_staff_sees_unpublished(self):
         slugs = [s.slug for s in get_upcoming_spaces_list(self.staff_user)]
         self.assertIn(self.unpublished_space.slug, slugs)

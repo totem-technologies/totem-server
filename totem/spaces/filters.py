@@ -58,7 +58,10 @@ def get_upcoming_spaces_list(
     if author_slug:
         spaces = spaces.filter(author__slug=author_slug)
     upcoming: list[Space] = [space for space in spaces if space.upcoming_sessions]
-    upcoming.sort(key=lambda space: space.upcoming_sessions[0].start)  # type: ignore[attr-defined]
+    # Slug tiebreaker: sessions start on the hour, and the paginated mobile
+    # list recomputes per page, so tied starts must order identically on
+    # every request.
+    upcoming.sort(key=lambda space: (space.upcoming_sessions[0].start, space.slug))  # type: ignore[attr-defined]
     return upcoming
 
 
