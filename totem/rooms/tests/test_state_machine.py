@@ -407,7 +407,7 @@ class TestPassStick:
         state = apply_event(slug, keeper.slug, PassStickEvent(prompt="   "), 3, connected)
         assert state.turn_state == TurnState.PASSING
 
-    def test_keeper_can_skip_prompt_and_clear_round_message(self):
+    def test_prompt_clears_at_round_boundary(self):
         keeper = UserFactory()
         user1 = UserFactory()
         user2 = UserFactory()
@@ -420,32 +420,39 @@ class TestPassStick:
         apply_event(slug, user1.slug, PassStickEvent(), 3, connected)
         apply_event(slug, user2.slug, AcceptStickEvent(), 4, connected)
         apply_event(slug, user2.slug, PassStickEvent(), 5, connected)
-        apply_event(slug, keeper.slug, AcceptStickEvent(), 6, connected)
 
-        state = apply_event(slug, keeper.slug, PassStickEvent(), 7, connected)
+        # The stick returns to the keeper, so the prompt clears at the boundary.
+        state = apply_event(slug, keeper.slug, AcceptStickEvent(), 6, connected)
 
         assert state.round_number == 2
         assert state.round_message is None
 
-    def test_keeper_pass_empty_string_clears_round_message(self):
+    def test_keeper_pass_empty_prompt_leaves_start_prompt_intact(self):
         keeper = UserFactory()
         user1 = UserFactory()
-        user2 = UserFactory()
-        _, slug = _setup_room(keeper, [keeper, user1, user2])
-        connected = {keeper.slug, user1.slug, user2.slug}
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(prompt="Opening prompt"), 0, connected)
+
+        state = apply_event(slug, keeper.slug, PassStickEvent(prompt=""), 1, connected)
+
+        assert state.round_number == 1
+        assert state.round_message == "Opening prompt"
+
+    def test_keeper_pass_empty_prompt_leaves_midround_prompt_intact(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
 
         apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
-        apply_event(slug, keeper.slug, PassStickEvent(prompt="Round 2 prompt"), 1, connected)
-        apply_event(slug, user1.slug, AcceptStickEvent(), 2, connected)
-        apply_event(slug, user1.slug, PassStickEvent(), 3, connected)
-        apply_event(slug, user2.slug, AcceptStickEvent(), 4, connected)
-        apply_event(slug, user2.slug, PassStickEvent(), 5, connected)
-        apply_event(slug, keeper.slug, AcceptStickEvent(), 6, connected)
+        apply_event(slug, keeper.slug, SetPromptEvent(prompt="Mid-round prompt"), 1, connected)
 
-        state = apply_event(slug, keeper.slug, PassStickEvent(prompt=""), 7, connected)
+        state = apply_event(slug, keeper.slug, PassStickEvent(prompt=""), 2, connected)
 
-        assert state.round_number == 2
-        assert state.round_message is None
+        assert state.round_number == 1
+        assert state.round_message == "Mid-round prompt"
 
     def test_start_prompt_survives_first_pass(self):
         keeper = UserFactory()
@@ -514,6 +521,41 @@ class TestPassStick:
         state = apply_event(slug, keeper.slug, AcceptStickEvent(), 6, connected)
 
         assert state.round_number == 2
+
+    def test_solo_keeper_does_not_lose_prompt_or_overcount(self):
+        keeper = UserFactory()
+        _, slug = _setup_room(keeper, [keeper])
+        connected = {keeper.slug}
+
+        started = apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        assert started.round_number == 1
+
+        passed = apply_event(slug, keeper.slug, PassStickEvent(prompt="Solo prompt"), 1, connected)
+        assert passed.round_number == 1
+        assert passed.round_message == "Solo prompt"
+
+        state = apply_event(slug, keeper.slug, AcceptStickEvent(), 2, connected)
+
+        assert state.round_number == 1
+        assert state.round_message == "Solo prompt"
+
+    def test_keeper_does_not_overcount_when_participant_disconnects(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        all_connected = {keeper.slug, user1.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, all_connected)
+
+        # user1 disconnects while the keeper holds the stick, so the stick
+        # points back at the keeper.
+        passed = apply_event(slug, keeper.slug, PassStickEvent(prompt="Prompt"), 1, {keeper.slug})
+        assert passed.round_message == "Prompt"
+
+        state = apply_event(slug, keeper.slug, AcceptStickEvent(), 2, {keeper.slug})
+
+        assert state.round_number == 1
+        assert state.round_message == "Prompt"
 
 
 @pytest.mark.django_db
