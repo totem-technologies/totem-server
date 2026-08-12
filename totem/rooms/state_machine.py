@@ -277,11 +277,11 @@ def _handle_pass(room: Room, actor: str, connected: set[str], prompt: str | None
             message="Only the keeper can set a round prompt",
         )
 
-    keeper_starts_round = (
+    keeper_passes_from_turn = (
         actor == room.keeper and room.current_speaker == room.keeper and room.turn_state == TurnState.SPEAKING
     )
 
-    if prompt is not None and not keeper_starts_round:
+    if prompt is not None and not keeper_passes_from_turn:
         raise TransitionError(
             code=ErrorCode.INVALID_TRANSITION,
             message="Round prompt can only be set when keeper passes from their own turn",
@@ -301,8 +301,7 @@ def _handle_pass(room: Room, actor: str, connected: set[str], prompt: str | None
 
         room.next_speaker = next_slug
     else:
-        if keeper_starts_round:
-            room.round_number += 1
+        if keeper_passes_from_turn and prompt is not None:
             room.round_message = prompt
         room.turn_state = TurnState.PASSING
 
@@ -322,6 +321,11 @@ def _handle_accept(room: Room, actor: str, connected: set[str]) -> None:
             code=ErrorCode.NOT_NEXT_SPEAKER,
             message="You are not the next speaker",
         )
+
+    if actor == room.keeper:
+        # The stick has returned to the keeper, so a new round begins.
+        room.round_number += 1
+        room.round_message = None
 
     next_slug = _next_in_order(room.talking_order, actor, connected)
 

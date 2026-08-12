@@ -292,7 +292,7 @@ class TestPostEvent:
 
         assert resp.status_code == 200
         data = resp.json()
-        assert data["round_number"] == 2
+        assert data["round_number"] == 1
         assert data["round_message"] == "What are you carrying today?"
 
     def test_set_prompt(self, client_with_user: tuple[Client, User]):

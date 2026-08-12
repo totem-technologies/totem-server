@@ -345,7 +345,7 @@ class TestPassStick:
         state = apply_event(slug, keeper.slug, PassStickEvent(prompt="What did you learn this week?"), 1, connected)
 
         assert state.turn_state == TurnState.PASSING
-        assert state.round_number == 2
+        assert state.round_number == 1
         assert state.round_message == "What did you learn this week?"
 
     def test_non_keeper_pass_does_not_increment_round(self):
@@ -361,7 +361,7 @@ class TestPassStick:
 
         state = apply_event(slug, user1.slug, PassStickEvent(), 3, connected)
 
-        assert state.round_number == 2
+        assert state.round_number == 1
         assert state.round_message == "Round 2 prompt"
 
     def test_non_keeper_cannot_set_prompt_when_passing(self):
@@ -424,7 +424,7 @@ class TestPassStick:
 
         state = apply_event(slug, keeper.slug, PassStickEvent(), 7, connected)
 
-        assert state.round_number == 3
+        assert state.round_number == 2
         assert state.round_message is None
 
     def test_keeper_pass_empty_string_clears_round_message(self):
@@ -444,8 +444,76 @@ class TestPassStick:
 
         state = apply_event(slug, keeper.slug, PassStickEvent(prompt=""), 7, connected)
 
-        assert state.round_number == 3
+        assert state.round_number == 2
         assert state.round_message is None
+
+    def test_start_prompt_survives_first_pass(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        user2 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1, user2])
+        connected = {keeper.slug, user1.slug, user2.slug}
+
+        started = apply_event(slug, keeper.slug, StartRoomEvent(prompt="Opening prompt"), 0, connected)
+        assert started.round_number == 1
+        assert started.round_message == "Opening prompt"
+
+        state = apply_event(slug, keeper.slug, PassStickEvent(), 1, connected)
+
+        assert state.round_number == 1
+        assert state.round_message == "Opening prompt"
+
+        state = apply_event(slug, user1.slug, AcceptStickEvent(), 2, connected)
+        state = apply_event(slug, user1.slug, PassStickEvent(), 3, connected)
+
+        assert state.round_number == 1
+        assert state.round_message == "Opening prompt"
+
+    def test_start_prompt_replaced_by_first_pass_prompt(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        user2 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1, user2])
+        connected = {keeper.slug, user1.slug, user2.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(prompt="Opening prompt"), 0, connected)
+
+        state = apply_event(slug, keeper.slug, PassStickEvent(prompt="New prompt"), 1, connected)
+
+        assert state.round_number == 1
+        assert state.round_message == "New prompt"
+
+    def test_start_prompt_visible_to_next_speaker(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(prompt="Opening prompt"), 0, connected)
+        apply_event(slug, keeper.slug, PassStickEvent(), 1, connected)
+
+        state = apply_event(slug, user1.slug, AcceptStickEvent(), 2, connected)
+
+        assert state.round_message == "Opening prompt"
+
+    def test_round_increments_after_full_cycle(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        user2 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1, user2])
+        connected = {keeper.slug, user1.slug, user2.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        apply_event(slug, keeper.slug, PassStickEvent(), 1, connected)
+        apply_event(slug, user1.slug, AcceptStickEvent(), 2, connected)
+        apply_event(slug, user1.slug, PassStickEvent(), 3, connected)
+        apply_event(slug, user2.slug, AcceptStickEvent(), 4, connected)
+        apply_event(slug, user2.slug, PassStickEvent(), 5, connected)
+
+        # The stick returns to the keeper. Round 1 completes.
+        state = apply_event(slug, keeper.slug, AcceptStickEvent(), 6, connected)
+
+        assert state.round_number == 2
 
 
 @pytest.mark.django_db
@@ -565,7 +633,7 @@ class TestSetPrompt:
         state = apply_event(slug, keeper.slug, SetPromptEvent(prompt="Revised prompt"), 2, connected)
 
         assert state.round_message == "Revised prompt"
-        assert state.round_number == 2
+        assert state.round_number == 1
 
     def test_non_keeper_cannot_set_prompt(self):
         keeper = UserFactory()
