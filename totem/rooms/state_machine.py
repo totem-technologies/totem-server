@@ -322,8 +322,10 @@ def _handle_accept(room: Room, actor: str, connected: set[str]) -> None:
             message="You are not the next speaker",
         )
 
-    if actor == room.keeper:
-        # The stick has returned to the keeper, so a new round begins.
+    if actor == room.keeper and room.current_speaker != room.keeper:
+        # The stick returned to the keeper from another participant, so a
+        # full lap completed and a new round begins. A solo keeper passing
+        # to themselves is not a lap.
         room.round_number += 1
         room.round_message = None
 
