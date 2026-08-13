@@ -346,17 +346,18 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
                 raise SessionException("You are already attending this session")
             if user and self.user_is_banned(user):
                 raise SessionException("You cannot attend this session")
-            if not (user and user.is_staff):
-                if not self.space.published:
-                    raise SessionException("Session is not available for signup")
-                if not self.open:
-                    raise SessionException("Session is not available for signup")
-                if self.cancelled:
-                    raise SessionException("Session was cancelled")
-                if self.started():
-                    raise SessionException("Session has already started")
-                if self.seats_left() <= 0:
-                    raise SessionException("There are no spots left")
+            if user and user.is_staff:
+                return True
+            if not self.space.published:
+                raise SessionException("Session is not available for signup")
+            if not self.open:
+                raise SessionException("Session is not available for signup")
+            if self.cancelled:
+                raise SessionException("Session was cancelled")
+            if self.started():
+                raise SessionException("Session has already started")
+            if self.seats_left() <= 0:
+                raise SessionException("There are no spots left")
             if user:
                 conflicting_session = self.time_conflict_for(user, excluding=excluding_time_conflicts)
                 if conflicting_session is not None:

@@ -495,6 +495,15 @@ class TestSessionModel:
 
         assert exc_info.value.conflicting_session == attending
 
+    def test_can_attend_staff_allows_overlapping_session(self, db):
+        staff = UserFactory(is_staff=True)
+        start = timezone.now() + timezone.timedelta(days=1)
+        attending = SessionFactory(start=start, duration_minutes=60)
+        attending.attendees.add(staff)
+        session = SessionFactory(start=start + timezone.timedelta(minutes=30), duration_minutes=60)
+
+        assert session.can_attend(user=staff) is True
+
     def test_can_attend_allows_back_to_back_session(self, db):
         user = UserFactory()
         start = timezone.now() + timezone.timedelta(days=1)

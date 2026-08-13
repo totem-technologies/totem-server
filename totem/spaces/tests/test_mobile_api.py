@@ -776,6 +776,22 @@ class TestMobileApiSpaces:
         assert response.json()["attending"] is True
         assert not event.attendees.filter(pk=user.pk).exists()
 
+    def test_rsvp_confirm_allows_staff_to_attend_overlapping_sessions(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        user.is_staff = True
+        user.save(update_fields=["is_staff"])
+        start = timezone.now() + timedelta(days=1)
+        attending = SessionFactory(start=start, duration_minutes=60)
+        attending.attendees.add(user)
+        event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
+
+        url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
+        response = client.post(url)
+
+        assert response.status_code == 200
+        assert attending.attendees.filter(pk=user.pk).exists()
+        assert event.attendees.filter(pk=user.pk).exists()
+
     def test_rsvp_switch_replaces_conflicting_session(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         start = timezone.now() + timedelta(days=1)
@@ -816,6 +832,25 @@ class TestMobileApiSpaces:
         assert response.status_code == 403
         assert attending.attendees.filter(pk=user.pk).exists()
         assert not event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_switch_staff_keeps_started_conflicting_session(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        user.is_staff = True
+        user.save(update_fields=["is_staff"])
+        attending = SessionFactory(start=timezone.now() - timedelta(minutes=30), duration_minutes=60)
+        attending.attendees.add(user)
+        event = SessionFactory(start=timezone.now() + timedelta(minutes=15), duration_minutes=60)
+
+        url = reverse("mobile-api:rsvp_switch", kwargs={"event_slug": event.slug})
+        response = client.post(
+            url,
+            {"conflicting_session_slug": attending.slug},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        assert attending.attendees.filter(pk=user.pk).exists()
+        assert event.attendees.filter(pk=user.pk).exists()
 
     def test_rsvp_switch_replaces_all_conflicting_sessions(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
