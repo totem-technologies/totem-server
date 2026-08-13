@@ -313,9 +313,9 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         """Whether this session and another occupy any of the same time."""
         return self.start < other.end() and self.end() > other.start
 
-    def time_conflict_for(self, user: "User", excluding: "Session | None" = None) -> "Session | None":
-        """Return the first session this user is attending that overlaps this one."""
-        sessions = (
+    def time_conflicts_for(self, user: "User") -> "SessionQuerySet":
+        """Return sessions this user is attending that overlap this one."""
+        return (
             Session.objects.filter(
                 attendees=user,
                 cancelled=False,
@@ -327,15 +327,19 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
             .exclude(pk=self.pk)
             .order_by("start", "pk")
         )
-        if excluding is not None:
-            sessions = sessions.exclude(pk=excluding.pk)
+
+    def time_conflict_for(self, user: "User", excluding: "list[Session] | None" = None) -> "Session | None":
+        """Return the first session this user is attending that overlaps this one."""
+        sessions = self.time_conflicts_for(user)
+        if excluding:
+            sessions = sessions.exclude(pk__in=[session.pk for session in excluding])
         return sessions.first()
 
     def can_attend(
         self,
         user: "User | None" = None,
         silent=False,
-        excluding_time_conflict: "Session | None" = None,
+        excluding_time_conflicts: "list[Session] | None" = None,
     ):
         try:
             if user and user in self.attendees.all():
@@ -354,7 +358,7 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
                 if self.seats_left() <= 0:
                     raise SessionException("There are no spots left")
             if user:
-                conflicting_session = self.time_conflict_for(user, excluding=excluding_time_conflict)
+                conflicting_session = self.time_conflict_for(user, excluding=excluding_time_conflicts)
                 if conflicting_session is not None:
                     raise SessionTimeConflict(conflicting_session)
             return True

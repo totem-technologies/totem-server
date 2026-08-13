@@ -817,13 +817,15 @@ class TestMobileApiSpaces:
         assert attending.attendees.filter(pk=user.pk).exists()
         assert not event.attendees.filter(pk=user.pk).exists()
 
-    def test_rsvp_switch_returns_another_remaining_conflict(self, client_with_user: tuple[Client, User]):
+    def test_rsvp_switch_replaces_all_conflicting_sessions(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         start = timezone.now() + timedelta(days=1)
         first = SessionFactory(start=start, duration_minutes=60)
         second = SessionFactory(start=start + timedelta(minutes=45), duration_minutes=60)
+        non_conflicting = SessionFactory(start=start + timedelta(hours=2), duration_minutes=60)
         first.attendees.add(user)
         second.attendees.add(user)
+        non_conflicting.attendees.add(user)
         event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
 
         url = reverse("mobile-api:rsvp_switch", kwargs={"event_slug": event.slug})
@@ -833,11 +835,13 @@ class TestMobileApiSpaces:
             content_type="application/json",
         )
 
-        assert response.status_code == 409
-        assert response.json()["slug"] == second.slug
-        assert first.attendees.filter(pk=user.pk).exists()
-        assert second.attendees.filter(pk=user.pk).exists()
-        assert not event.attendees.filter(pk=user.pk).exists()
+        assert response.status_code == 200
+        assert response.json()["slug"] == event.slug
+        assert response.json()["attending"] is True
+        assert not first.attendees.filter(pk=user.pk).exists()
+        assert not second.attendees.filter(pk=user.pk).exists()
+        assert non_conflicting.attendees.filter(pk=user.pk).exists()
+        assert event.attendees.filter(pk=user.pk).exists()
 
     def test_rsvp_confirm_banned(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user

@@ -204,8 +204,12 @@ def rsvp_switch(request: HttpRequest, event_slug: str, payload: SwitchSessionSch
             if not session.overlaps(conflicting_session):
                 raise AuthorizationError(message="Sessions do not conflict")
 
-            session.can_attend(user=user, excluding_time_conflict=conflicting_session)
-            conflicting_session.remove_attendee(user)
+            conflicting_sessions = list(
+                session.time_conflicts_for(user).select_for_update().select_related("space").order_by("pk")
+            )
+            session.can_attend(user=user, excluding_time_conflicts=conflicting_sessions)
+            for conflicting_session in conflicting_sessions:
+                conflicting_session.remove_attendee(user)
             session.add_attendee(user)
             session.space.subscribe(user)
     except SessionTimeConflict as e:
