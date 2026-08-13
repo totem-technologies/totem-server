@@ -309,24 +309,54 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         """Attendees, excluding users banned from this session's room."""
         return self._exclude_banned_users(self.attendees.all())
 
-    def can_attend(self, user: "User | None" = None, silent=False):
+    def overlaps(self, other: "Session") -> bool:
+        """Whether this session and another occupy any of the same time."""
+        return self.start < other.end() and self.end() > other.start
+
+    def time_conflict_for(self, user: "User", excluding: "Session | None" = None) -> "Session | None":
+        """Return the first session this user is attending that overlaps this one."""
+        sessions = (
+            Session.objects.filter(
+                attendees=user,
+                cancelled=False,
+                ended_at__isnull=True,
+                start__lt=self.end(),
+            )
+            .annotate(session_end_time=SESSION_END_TIME)
+            .filter(session_end_time__gt=self.start)
+            .exclude(pk=self.pk)
+            .order_by("start", "pk")
+        )
+        if excluding is not None:
+            sessions = sessions.exclude(pk=excluding.pk)
+        return sessions.first()
+
+    def can_attend(
+        self,
+        user: "User | None" = None,
+        silent=False,
+        excluding_time_conflict: "Session | None" = None,
+    ):
         try:
             if user and user in self.attendees.all():
                 raise SessionException("You are already attending this session")
             if user and self.user_is_banned(user):
                 raise SessionException("You cannot attend this session")
-            if user and user.is_staff:
-                return True
-            if not self.space.published:
-                raise SessionException("Session is not available for signup")
-            if not self.open:
-                raise SessionException("Session is not available for signup")
-            if self.cancelled:
-                raise SessionException("Session was cancelled")
-            if self.started():
-                raise SessionException("Session has already started")
-            if self.seats_left() <= 0:
-                raise SessionException("There are no spots left")
+            if not (user and user.is_staff):
+                if not self.space.published:
+                    raise SessionException("Session is not available for signup")
+                if not self.open:
+                    raise SessionException("Session is not available for signup")
+                if self.cancelled:
+                    raise SessionException("Session was cancelled")
+                if self.started():
+                    raise SessionException("Session has already started")
+                if self.seats_left() <= 0:
+                    raise SessionException("There are no spots left")
+            if user:
+                conflicting_session = self.time_conflict_for(user, excluding=excluding_time_conflict)
+                if conflicting_session is not None:
+                    raise SessionTimeConflict(conflicting_session)
             return True
         except SessionException as e:
             if silent:
@@ -535,6 +565,12 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
 
 class SessionException(Exception):
     pass
+
+
+class SessionTimeConflict(SessionException):
+    def __init__(self, conflicting_session: Session):
+        self.conflicting_session = conflicting_session
+        super().__init__("This session conflicts with another session you are attending")
 
 
 class SessionFeedbackOptions(models.TextChoices):

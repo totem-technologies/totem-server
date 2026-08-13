@@ -13,7 +13,7 @@ from totem.users.models import User
 from totem.users.tests.factories import UserFactory
 from totem.utils.testing import email_text
 
-from ..models import Session, SessionException
+from ..models import Session, SessionException, SessionTimeConflict
 from ..views import ics_hash
 from .factories import SessionFactory, SpaceFactory
 
@@ -482,6 +482,36 @@ class TestSessionModel:
         assert session.can_attend(user=user, silent=True) is False
         with pytest.raises(SessionException, match="already started"):
             session.can_attend(user=user)
+
+    def test_can_attend_rejects_overlapping_session(self, db):
+        user = UserFactory()
+        start = timezone.now() + timezone.timedelta(days=1)
+        attending = SessionFactory(start=start, duration_minutes=60)
+        attending.attendees.add(user)
+        session = SessionFactory(start=start + timezone.timedelta(minutes=30), duration_minutes=60)
+
+        with pytest.raises(SessionTimeConflict) as exc_info:
+            session.can_attend(user=user)
+
+        assert exc_info.value.conflicting_session == attending
+
+    def test_can_attend_allows_back_to_back_session(self, db):
+        user = UserFactory()
+        start = timezone.now() + timezone.timedelta(days=1)
+        attending = SessionFactory(start=start, duration_minutes=60)
+        attending.attendees.add(user)
+        session = SessionFactory(start=start + timezone.timedelta(minutes=60), duration_minutes=60)
+
+        assert session.can_attend(user=user) is True
+
+    def test_cancelled_session_does_not_conflict(self, db):
+        user = UserFactory()
+        start = timezone.now() + timezone.timedelta(days=1)
+        attending = SessionFactory(start=start, duration_minutes=60, cancelled=True)
+        attending.attendees.add(user)
+        session = SessionFactory(start=start + timezone.timedelta(minutes=30), duration_minutes=60)
+
+        assert session.can_attend(user=user) is True
 
     def test_advertise_skips_banned(self, db):
         user = UserFactory()

@@ -98,3 +98,7 @@ class SummarySpacesSchema(Schema):
 class SessionFeedbackSchema(Schema):
     feedback: SessionFeedbackOptions
     message: str | None = None
+
+
+class SwitchSessionSchema(Schema):
+    conflicting_session_slug: str

@@ -18,12 +18,14 @@ from totem.spaces.mobile_api.mobile_schemas import (
     SessionFeedbackSchema,
     SpaceSchema,
     SummarySpacesSchema,
+    SwitchSessionSchema,
 )
 from totem.spaces.models import (
     Session,
     SessionException,
     SessionFeedback,
     SessionFeedbackOptions,
+    SessionTimeConflict,
     Space,
 )
 from totem.users.models import User
@@ -152,22 +154,65 @@ def get_spaces_summary(request: HttpRequest):
 
 @spaces_router.post(
     "/rsvp/{event_slug}",
-    response={200: SessionDetailSchema},
+    response={200: SessionDetailSchema, 409: SessionDetailSchema},
     tags=["spaces"],
     url_name="rsvp_confirm",
 )
 def rsvp_confirm(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
-    event = get_object_or_404(Session, slug=event_slug)
-    if not event.can_view(user):
+    session = get_object_or_404(Session, slug=event_slug)
+    if not session.can_view(user):
         raise Http404
     try:
         with transaction.atomic():
-            event.add_attendee(user)
-            event.space.subscribe(user)
+            session.add_attendee(user)
+            session.space.subscribe(user)
+    except SessionTimeConflict as e:
+        return Status(409, session_detail_schema(e.conflicting_session, user))
     except SessionException as e:
         raise AuthorizationError(message=str(e))
-    return session_detail_schema(event, user)
+    return session_detail_schema(session, user)
+
+
+@spaces_router.post(
+    "/rsvp/{event_slug}/switch",
+    response={200: SessionDetailSchema, 409: SessionDetailSchema},
+    tags=["spaces"],
+    url_name="rsvp_switch",
+)
+def rsvp_switch(request: HttpRequest, event_slug: str, payload: SwitchSessionSchema):
+    user: User = request.user  # type: ignore
+    session = get_object_or_404(Session, slug=event_slug)
+    if not session.can_view(user):
+        raise Http404
+
+    try:
+        with transaction.atomic():
+            locked_sessions = {
+                item.slug: item
+                for item in Session.objects.select_for_update()
+                .select_related("space")
+                .filter(slug__in=[event_slug, payload.conflicting_session_slug])
+                .order_by("pk")
+            }
+            session = locked_sessions.get(event_slug)
+            conflicting_session = locked_sessions.get(payload.conflicting_session_slug)
+            if session is None or conflicting_session is None:
+                raise Http404
+            if not conflicting_session.attendees.filter(pk=user.pk).exists():
+                raise Http404
+            if not session.overlaps(conflicting_session):
+                raise AuthorizationError(message="Sessions do not conflict")
+
+            session.can_attend(user=user, excluding_time_conflict=conflicting_session)
+            conflicting_session.remove_attendee(user)
+            session.add_attendee(user)
+            session.space.subscribe(user)
+    except SessionTimeConflict as e:
+        return Status(409, session_detail_schema(e.conflicting_session, user))
+    except SessionException as e:
+        raise AuthorizationError(message=str(e))
+    return session_detail_schema(session, user)
 
 
 @spaces_router.delete(
@@ -178,11 +223,11 @@ def rsvp_confirm(request: HttpRequest, event_slug: str):
 )
 def rsvp_cancel(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
-    event = get_object_or_404(Session, slug=event_slug)
-    if not event.can_view(user):
+    session = get_object_or_404(Session, slug=event_slug)
+    if not session.can_view(user):
         raise Http404
     try:
-        event.remove_attendee(user)
+        session.remove_attendee(user)
     except SessionException as e:
         raise AuthorizationError(message=str(e))
-    return session_detail_schema(event, user)
+    return session_detail_schema(session, user)
