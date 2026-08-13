@@ -504,6 +504,15 @@ class TestSessionModel:
 
         assert session.can_attend(user=staff) is True
 
+    def test_can_attend_ignores_session_in_unpublished_space(self, db):
+        user = UserFactory()
+        start = timezone.now() + timezone.timedelta(days=1)
+        draft = SessionFactory(space__published=False, start=start, duration_minutes=60)
+        draft.attendees.add(user)
+        session = SessionFactory(start=start + timezone.timedelta(minutes=30), duration_minutes=60)
+
+        assert session.can_attend(user=user) is True
+
     def test_can_attend_allows_back_to_back_session(self, db):
         user = UserFactory()
         start = timezone.now() + timezone.timedelta(days=1)

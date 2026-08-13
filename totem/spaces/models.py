@@ -314,8 +314,8 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         return self.start < other.end() and self.end() > other.start
 
     def time_conflicts_for(self, user: "User") -> "SessionQuerySet":
-        """Return sessions this user is attending that overlap this one."""
-        return (
+        """Return visible sessions this user is attending that overlap this one."""
+        sessions = (
             Session.objects.filter(
                 attendees=user,
                 cancelled=False,
@@ -325,8 +325,10 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
             .annotate(session_end_time=SESSION_END_TIME)
             .filter(session_end_time__gt=self.start)
             .exclude(pk=self.pk)
-            .order_by("start", "pk")
         )
+        if not user.is_staff:
+            sessions = sessions.filter(space__published=True)
+        return sessions.order_by("start", "pk")
 
     def time_conflict_for(self, user: "User", excluding: "list[Session] | None" = None) -> "Session | None":
         """Return the first session this user is attending that overlaps this one."""
