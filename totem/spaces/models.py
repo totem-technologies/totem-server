@@ -1,12 +1,13 @@
 import datetime
 import time
 from enum import Enum
+from functools import partial
 from typing import TYPE_CHECKING
 
 import pytz
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models.query import QuerySet
 from django.urls import reverse
 from django.utils import timezone
@@ -398,9 +399,12 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
                 self.space.unsubscribe(user)
                 return False
             if not self.space.author == user:
-                notify_slack(
-                    f"✅ New session attendee: {self._get_slack_attendee_message(user)}",
-                    email_to_mention=self.space.author.email,
+                transaction.on_commit(
+                    partial(
+                        notify_slack,
+                        f"✅ New session attendee: {self._get_slack_attendee_message(user)}",
+                        email_to_mention=self.space.author.email,
+                    )
                 )
             return True
         return False
@@ -452,9 +456,12 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         if self.started():
             raise SessionException("Session has already started")
         self.attendees.remove(user)
-        notify_slack(
-            f"🛑 Session attendee left: {self._get_slack_attendee_message(user)}",
-            email_to_mention=self.space.author.email,
+        transaction.on_commit(
+            partial(
+                notify_slack,
+                f"🛑 Session attendee left: {self._get_slack_attendee_message(user)}",
+                email_to_mention=self.space.author.email,
+            )
         )
 
     def _get_slack_attendee_message(self, user):

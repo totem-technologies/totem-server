@@ -224,14 +224,10 @@ def rsvp_resolve_conflicts(request: HttpRequest, event_slug: str, payload: Resol
                 .prefetch_related("attendees")
             }
 
-            current_conflict_slugs = (
-                list(Session.objects.time_conflicts_for(session, user).values_list("slug", flat=True))
-                if not user.is_staff
-                else []
-            )
+            detected_conflicts = list(Session.objects.time_conflicts_for(session, user)) if not user.is_staff else []
+            current_conflict_slugs = [conflict.slug for conflict in detected_conflicts]
             if set(current_conflict_slugs) - submitted_slugs:
-                current_conflicts = list(Session.objects.time_conflicts_for(session, user))
-                return Status(409, _session_conflict_schema(current_conflicts, user))
+                return Status(409, _session_conflict_schema(detected_conflicts, user))
 
             session.can_attend(user=user, check_time_conflicts=False)
             current_conflicts = [submitted_sessions[slug] for slug in current_conflict_slugs]

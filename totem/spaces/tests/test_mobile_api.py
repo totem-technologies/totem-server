@@ -972,7 +972,9 @@ class TestMobileApiSpaces:
         assert not event.attendees.filter(pk=user.pk).exists()
         assert not event.space.subscribed.filter(pk=user.pk).exists()
 
-    def test_rsvp_resolve_conflicts_rolls_back_when_add_attendee_fails(self, client_with_user: tuple[Client, User]):
+    def test_rsvp_resolve_conflicts_rolls_back_when_add_attendee_fails(
+        self, client_with_user: tuple[Client, User], django_capture_on_commit_callbacks
+    ):
         client, user = client_with_user
         start = timezone.now() + timedelta(days=1)
         attending = SessionFactory(start=start, duration_minutes=60)
@@ -987,7 +989,11 @@ class TestMobileApiSpaces:
             raise SessionException("Unable to add attendee")
 
         url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
-        with patch.object(Session, "add_attendee", autospec=True, side_effect=fail_after_conflicts_removed):
+        with (
+            patch("totem.spaces.models.notify_slack") as mock_slack,
+            django_capture_on_commit_callbacks(execute=True) as callbacks,
+            patch.object(Session, "add_attendee", autospec=True, side_effect=fail_after_conflicts_removed),
+        ):
             response = client.post(
                 url,
                 {"conflicting_session_slugs": [attending.slug]},
@@ -997,6 +1003,8 @@ class TestMobileApiSpaces:
         assert response.status_code == 403
         assert attending.attendees.filter(pk=user.pk).exists()
         assert not event.attendees.filter(pk=user.pk).exists()
+        assert callbacks == []
+        mock_slack.assert_not_called()
 
     def test_rsvp_resolve_conflicts_rejects_user_banned_from_target(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
