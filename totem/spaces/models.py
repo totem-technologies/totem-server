@@ -125,14 +125,16 @@ class SessionQuerySet(models.QuerySet["Session"]):
         now = timezone.now()
         return self.visible_to(user).not_ended().filter(attendees=user, start__gte=now)
 
+    def overlapping(self, session: "Session") -> "SessionQuerySet":
+        """Sessions whose half-open time interval overlaps ``session``."""
+        return self.annotate(session_end_time=SESSION_END_TIME).filter(
+            start__lt=session.end(),
+            session_end_time__gt=session.start,
+        )
+
     def time_conflicts_for(self, session: "Session", user: "User") -> "SessionQuerySet":
         """Visible, removable sessions this user attends that overlap ``session``."""
-        return (
-            self.removable_attendance_for(user)
-            .filter(start__lt=session.end(), session_end_time__gt=session.start)
-            .exclude(pk=session.pk)
-            .order_by("start", "pk")
-        )
+        return self.removable_attendance_for(user).overlapping(session).exclude(pk=session.pk).order_by("start", "pk")
 
 
 class SessionState(Enum):
@@ -322,10 +324,6 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
     def active_attendees(self) -> "QuerySet[User]":
         """Attendees, excluding users banned from this session's room."""
         return self._exclude_banned_users(self.attendees.all())
-
-    def overlaps(self, other: "Session") -> bool:
-        """Whether this session and another occupy any of the same time."""
-        return self.start < other.end() and self.end() > other.start
 
     def time_conflict_for(self, user: "User", excluding: "list[Session] | None" = None) -> "Session | None":
         """Return the first session this user is attending that overlaps this one."""

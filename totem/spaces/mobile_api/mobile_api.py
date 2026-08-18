@@ -208,8 +208,12 @@ def rsvp_resolve_conflicts(request: HttpRequest, event_slug: str, payload: Resol
                 submitted_session = submitted_sessions[submitted_slug]
                 if not submitted_session.attendees.filter(pk=user.pk).exists():
                     raise Http404
-                if not session.overlaps(submitted_session):
-                    raise AuthorizationError(message="Sessions do not conflict")
+
+            overlapping_submitted_slugs = set(
+                Session.objects.overlapping(session).filter(slug__in=submitted_slugs).values_list("slug", flat=True)
+            )
+            if overlapping_submitted_slugs != submitted_slugs:
+                raise AuthorizationError(message="Sessions do not conflict")
 
             current_conflicts = list(Session.objects.time_conflicts_for(session, user)) if not user.is_staff else []
             current_conflict_slugs = {conflict.slug for conflict in current_conflicts}
