@@ -855,7 +855,7 @@ class TestMobileApiSpaces:
         url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
         response = client.post(
             url,
-            {"conflicting_session_slug": attending.slug},
+            {"conflicting_session_slugs": [attending.slug]},
             content_type="application/json",
         )
 
@@ -878,7 +878,7 @@ class TestMobileApiSpaces:
         url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
         response = client.post(
             url,
-            {"conflicting_session_slug": attending.slug},
+            {"conflicting_session_slugs": [attending.slug]},
             content_type="application/json",
         )
 
@@ -899,7 +899,7 @@ class TestMobileApiSpaces:
         url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
         response = client.post(
             url,
-            {"conflicting_session_slug": attending.slug},
+            {"conflicting_session_slugs": [attending.slug]},
             content_type="application/json",
         )
 
@@ -918,7 +918,7 @@ class TestMobileApiSpaces:
         url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
         response = client.post(
             url,
-            {"conflicting_session_slug": attending.slug},
+            {"conflicting_session_slugs": [attending.slug]},
             content_type="application/json",
         )
 
@@ -936,7 +936,7 @@ class TestMobileApiSpaces:
         url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
         response = client.post(
             url,
-            {"conflicting_session_slug": not_attending.slug},
+            {"conflicting_session_slugs": [not_attending.slug]},
             content_type="application/json",
         )
 
@@ -952,7 +952,7 @@ class TestMobileApiSpaces:
         url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
         response = client.post(
             url,
-            {"conflicting_session_slug": attending.slug},
+            {"conflicting_session_slugs": [attending.slug]},
             content_type="application/json",
         )
 
@@ -970,7 +970,7 @@ class TestMobileApiSpaces:
         url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
         response = client.post(
             url,
-            {"conflicting_session_slug": hidden.slug},
+            {"conflicting_session_slugs": [hidden.slug]},
             content_type="application/json",
         )
 
@@ -991,7 +991,7 @@ class TestMobileApiSpaces:
         url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
         response = client.post(
             url,
-            {"conflicting_session_slug": attending.slug},
+            {"conflicting_session_slugs": [attending.slug]},
             content_type="application/json",
         )
 
@@ -1013,7 +1013,7 @@ class TestMobileApiSpaces:
         url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
         response = client.post(
             url,
-            {"conflicting_session_slug": first.slug},
+            {"conflicting_session_slugs": [first.slug, second.slug]},
             content_type="application/json",
         )
 
@@ -1024,6 +1024,33 @@ class TestMobileApiSpaces:
         assert not second.attendees.filter(pk=user.pk).exists()
         assert non_conflicting.attendees.filter(pk=user.pk).exists()
         assert event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_resolve_conflicts_returns_fresh_409_for_unsubmitted_conflict(
+        self, client_with_user: tuple[Client, User]
+    ):
+        client, user = client_with_user
+        start = timezone.now() + timedelta(days=1)
+        consented = SessionFactory(start=start, duration_minutes=60)
+        newly_conflicting = SessionFactory(start=start + timedelta(minutes=45), duration_minutes=60)
+        consented.attendees.add(user)
+        newly_conflicting.attendees.add(user)
+        event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
+
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
+        response = client.post(
+            url,
+            {"conflicting_session_slugs": [consented.slug]},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 409
+        assert {item["slug"] for item in response.json()["conflicting_sessions"]} == {
+            consented.slug,
+            newly_conflicting.slug,
+        }
+        assert consented.attendees.filter(pk=user.pk).exists()
+        assert newly_conflicting.attendees.filter(pk=user.pk).exists()
+        assert not event.attendees.filter(pk=user.pk).exists()
 
     def test_rsvp_confirm_banned(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user

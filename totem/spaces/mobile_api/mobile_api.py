@@ -197,37 +197,27 @@ def rsvp_resolve_conflicts(request: HttpRequest, event_slug: str, payload: Resol
 
     try:
         with transaction.atomic():
-            locked_sessions = {
+            submitted_slugs = set(payload.conflicting_session_slugs)
+            submitted_sessions = {
                 item.slug: item
-                for item in Session.objects.select_for_update()
-                .select_related("space")
-                .filter(slug__in=[event_slug, payload.conflicting_session_slug])
-                .order_by("pk")
+                for item in Session.objects.visible_to(user).select_related("space").filter(slug__in=submitted_slugs)
             }
-            session = locked_sessions.get(event_slug)
-            conflicting_session = locked_sessions.get(payload.conflicting_session_slug)
-            if session is None or conflicting_session is None:
+            if set(submitted_sessions) != submitted_slugs:
                 raise Http404
-            if not conflicting_session.can_view(user):
-                raise Http404
-            if not conflicting_session.attendees.filter(pk=user.pk).exists():
-                raise Http404
-            if not session.overlaps(conflicting_session):
-                raise AuthorizationError(message="Sessions do not conflict")
+            for submitted_slug in submitted_slugs:
+                submitted_session = submitted_sessions[submitted_slug]
+                if not submitted_session.attendees.filter(pk=user.pk).exists():
+                    raise Http404
+                if not session.overlaps(submitted_session):
+                    raise AuthorizationError(message="Sessions do not conflict")
 
-            conflicting_sessions = []
-            if not user.is_staff:
-                conflicting_session_pks = list(
-                    Session.objects.time_conflicts_for(session, user).order_by().values_list("pk", flat=True)
-                )
-                conflicting_sessions = list(
-                    Session.objects.select_for_update(of=("self",))
-                    .select_related("space")
-                    .filter(pk__in=conflicting_session_pks)
-                    .order_by("pk")
-                )
-            session.can_attend(user=user, excluding_time_conflicts=conflicting_sessions)
-            for session_to_remove in conflicting_sessions:
+            current_conflicts = list(Session.objects.time_conflicts_for(session, user)) if not user.is_staff else []
+            current_conflict_slugs = {conflict.slug for conflict in current_conflicts}
+            if current_conflict_slugs - submitted_slugs:
+                return Status(409, _session_conflict_schema(session, user, SessionTimeConflict(current_conflicts[0])))
+
+            session.can_attend(user=user, excluding_time_conflicts=current_conflicts)
+            for session_to_remove in current_conflicts:
                 session_to_remove.remove_attendee(user)
             session.add_attendee(user)
             session.space.subscribe(user)

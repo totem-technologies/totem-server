@@ -120,18 +120,16 @@ class SessionQuerySet(models.QuerySet["Session"]):
             )
         )
 
+    def removable_attendance_for(self, user: "User") -> "SessionQuerySet":
+        """Visible sessions this user attends and can still give up."""
+        now = timezone.now()
+        return self.visible_to(user).not_ended().filter(attendees=user, start__gte=now)
+
     def time_conflicts_for(self, session: "Session", user: "User") -> "SessionQuerySet":
         """Visible, removable sessions this user attends that overlap ``session``."""
-        now = timezone.now()
         return (
-            self.visible_to(user)
-            .not_ended()
-            .filter(
-                attendees=user,
-                start__gte=now,
-                start__lt=session.end(),
-                session_end_time__gt=session.start,
-            )
+            self.removable_attendance_for(user)
+            .filter(start__lt=session.end(), session_end_time__gt=session.start)
             .exclude(pk=session.pk)
             .order_by("start", "pk")
         )

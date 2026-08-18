@@ -106,4 +106,4 @@ class SessionFeedbackSchema(Schema):
 
 
 class ResolveConflictsSchema(Schema):
-    conflicting_session_slug: str
+    conflicting_session_slugs: list[str]
