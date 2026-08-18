@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 import pytest
 from django.db import connection
+from django.db.models import Prefetch
 from django.test import Client
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
@@ -12,7 +13,8 @@ from totem.api.auth import generate_jwt_token
 from totem.email.exceptions import EmailBounced
 from totem.onboard.tests.factories import OnboardModelFactory
 from totem.rooms.models import Room
-from totem.spaces.models import Session, SessionException, SessionFeedback, SessionFeedbackOptions
+from totem.spaces.mobile_api.mobile_filters import space_detail_schema
+from totem.spaces.models import Session, SessionException, SessionFeedback, SessionFeedbackOptions, Space, SpaceCategory
 from totem.spaces.tests.factories import SessionFactory, SpaceCategoryFactory, SpaceFactory
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
@@ -523,6 +525,18 @@ class TestMobileApiSpaces:
         slugs = [item["space"]["slug"] for item in data]
         assert len(slugs) == len(set(slugs)), f"Duplicates found in results: {slugs}"
         assert len(data) == 2
+
+    def test_space_detail_uses_lowest_pk_category_when_prefetched(self, client_with_user: tuple[Client, User]):
+        _, user = client_with_user
+        first = SpaceCategoryFactory(name="First")
+        second = SpaceCategoryFactory(name="Second")
+        space = SpaceFactory(published=True, categories=[first, second])
+
+        space = Space.objects.prefetch_related(
+            Prefetch("categories", queryset=SpaceCategory.objects.order_by("-pk"))
+        ).get(pk=space.pk)
+
+        assert space_detail_schema(space, user).category == first.name
 
     def test_recommended_spaces_handles_name_and_slug_mixed(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user

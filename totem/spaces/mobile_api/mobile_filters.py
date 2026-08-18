@@ -108,7 +108,7 @@ def next_session_schema(next_session: Session, user: User):
 
 def space_detail_schema(space: Space, user: User):
     if hasattr(space, "_prefetched_objects_cache") and "categories" in space._prefetched_objects_cache:
-        category = next(iter(space.categories.all()), None)
+        category = min(space.categories.all(), key=lambda item: item.pk, default=None)
     else:
         category = space.categories.first()
     category_name = category.name if category else None
