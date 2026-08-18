@@ -240,7 +240,8 @@ def rsvp_resolve_conflicts(request: HttpRequest, event_slug: str, payload: Resol
             current_conflicts = [submitted_sessions[slug] for slug in current_conflict_slugs]
             for session_to_remove in current_conflicts:
                 session_to_remove.remove_attendee(user)
-            session.add_attendee(user, prevalidated=True)
+            if not session.add_attendee(user, prevalidated=True):
+                raise SessionException("Unable to save your spot")
             session.space.subscribe(user)
     except SessionTimeConflict as e:
         return Status(409, _session_conflict_schema(e.conflicting_sessions, user))

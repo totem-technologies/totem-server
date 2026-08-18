@@ -388,7 +388,7 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
             return SessionState.JOINABLE
         return SessionState.CLOSED
 
-    def add_attendee(self, user: "User", *, prevalidated: bool = False) -> None:
+    def add_attendee(self, user: "User", *, prevalidated: bool = False) -> bool:
         # checks if the user can attend and adds them to the attendees list, throws an exception if they can't
         if prevalidated or self.can_attend(user=user):
             self.attendees.add(user)
@@ -404,12 +404,13 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
                 # If the email was blocked, remove the user from the session and space
                 self.attendees.remove(user)
                 self.space.unsubscribe(user)
-                return
+                return False
             if not self.space.author == user:
                 notify_slack(
                     f"✅ New session attendee: {self._get_slack_attendee_message(user)}",
                     email_to_mention=self.space.author.email,
                 )
+            return True
 
     def started(self):
         return self.start < timezone.now()
