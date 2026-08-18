@@ -815,6 +815,23 @@ class TestMobileApiSpaces:
         assert draft.attendees.filter(pk=user.pk).exists()
         assert event.attendees.filter(pk=user.pk).exists()
 
+    def test_rsvp_confirm_ignores_session_user_is_banned_from(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        start = timezone.now() + timedelta(days=1)
+        banned = SessionFactory(start=start, duration_minutes=60)
+        banned.attendees.add(user)
+        room = Room.objects.get_or_create_for_session(banned)
+        room.banned_participants = [user.slug]
+        room.save()
+        event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
+
+        url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
+        response = client.post(url)
+
+        assert response.status_code == 200
+        assert banned.attendees.filter(pk=user.pk).exists()
+        assert event.attendees.filter(pk=user.pk).exists()
+
     def test_rsvp_confirm_ignores_started_overlapping_session(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         attending = SessionFactory(start=timezone.now() - timedelta(minutes=30), duration_minutes=60)

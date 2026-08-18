@@ -513,6 +513,16 @@ class TestSessionModel:
 
         assert session.can_attend(user=user) is True
 
+    def test_can_attend_ignores_session_user_is_banned_from(self, db):
+        user = UserFactory()
+        start = timezone.now() + timezone.timedelta(days=1)
+        banned = SessionFactory(start=start, duration_minutes=60)
+        banned.attendees.add(user)
+        _ban_user(banned, user)
+        session = SessionFactory(start=start + timezone.timedelta(minutes=30), duration_minutes=60)
+
+        assert session.can_attend(user=user) is True
+
     def test_can_attend_ignores_started_overlapping_session(self, db):
         user = UserFactory()
         attending = SessionFactory(

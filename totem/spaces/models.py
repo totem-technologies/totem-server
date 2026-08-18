@@ -120,6 +120,22 @@ class SessionQuerySet(models.QuerySet["Session"]):
             )
         )
 
+    def time_conflicts_for(self, session: "Session", user: "User") -> "SessionQuerySet":
+        """Visible, removable sessions this user attends that overlap ``session``."""
+        now = timezone.now()
+        return (
+            self.visible_to(user)
+            .not_ended()
+            .filter(
+                attendees=user,
+                start__gte=now,
+                start__lt=session.end(),
+                session_end_time__gt=session.start,
+            )
+            .exclude(pk=session.pk)
+            .order_by("start", "pk")
+        )
+
 
 class SessionState(Enum):
     OPEN = "OPEN"
@@ -313,27 +329,9 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         """Whether this session and another occupy any of the same time."""
         return self.start < other.end() and self.end() > other.start
 
-    def time_conflicts_for(self, user: "User") -> "SessionQuerySet":
-        """Return visible sessions this user is attending that overlap this one."""
-        sessions = (
-            Session.objects.filter(
-                attendees=user,
-                cancelled=False,
-                ended_at__isnull=True,
-                start__gte=timezone.now(),
-                start__lt=self.end(),
-            )
-            .annotate(session_end_time=SESSION_END_TIME)
-            .filter(session_end_time__gt=self.start)
-            .exclude(pk=self.pk)
-        )
-        if not user.is_staff:
-            sessions = sessions.filter(space__published=True)
-        return sessions.order_by("start", "pk")
-
     def time_conflict_for(self, user: "User", excluding: "list[Session] | None" = None) -> "Session | None":
         """Return the first session this user is attending that overlaps this one."""
-        sessions = self.time_conflicts_for(user)
+        sessions = Session.objects.time_conflicts_for(self, user)
         if excluding:
             sessions = sessions.exclude(pk__in=[session.pk for session in excluding])
         return sessions.first()

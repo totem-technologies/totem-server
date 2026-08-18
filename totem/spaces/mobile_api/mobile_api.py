@@ -35,7 +35,7 @@ spaces_router = Router(tags=["spaces"])
 
 
 def _session_conflict_schema(session: Session, user: User, error: SessionTimeConflict) -> SessionConflictSchema:
-    conflicting_sessions = session.time_conflicts_for(user).select_related("space")
+    conflicting_sessions = Session.objects.time_conflicts_for(session, user).select_related("space")
     return SessionConflictSchema(
         message=str(error),
         conflicting_sessions=[session_detail_schema(conflict, user) for conflict in conflicting_sessions],
@@ -217,8 +217,14 @@ def rsvp_resolve_conflicts(request: HttpRequest, event_slug: str, payload: Resol
 
             conflicting_sessions = []
             if not user.is_staff:
+                conflicting_session_pks = list(
+                    Session.objects.time_conflicts_for(session, user).order_by().values_list("pk", flat=True)
+                )
                 conflicting_sessions = list(
-                    session.time_conflicts_for(user).select_for_update().select_related("space").order_by("pk")
+                    Session.objects.select_for_update(of=("self",))
+                    .select_related("space")
+                    .filter(pk__in=conflicting_session_pks)
+                    .order_by("pk")
                 )
             session.can_attend(user=user, excluding_time_conflicts=conflicting_sessions)
             for session_to_remove in conflicting_sessions:
