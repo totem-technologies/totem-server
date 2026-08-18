@@ -14,12 +14,12 @@ from totem.spaces.mobile_api.mobile_filters import (
 )
 from totem.spaces.mobile_api.mobile_schemas import (
     MobileSpaceDetailSchema,
+    ResolveConflictsSchema,
     SessionConflictSchema,
     SessionDetailSchema,
     SessionFeedbackSchema,
     SpaceSchema,
     SummarySpacesSchema,
-    SwitchSessionSchema,
 )
 from totem.spaces.models import (
     Session,
@@ -184,12 +184,12 @@ def rsvp_confirm(request: HttpRequest, event_slug: str):
 
 
 @spaces_router.post(
-    "/rsvp/{event_slug}/switch",
+    "/rsvp/{event_slug}/resolve-conflicts",
     response={200: SessionDetailSchema, 409: SessionConflictSchema},
     tags=["spaces"],
-    url_name="rsvp_switch",
+    url_name="rsvp_resolve_conflicts",
 )
-def rsvp_switch(request: HttpRequest, event_slug: str, payload: SwitchSessionSchema):
+def rsvp_resolve_conflicts(request: HttpRequest, event_slug: str, payload: ResolveConflictsSchema):
     user: User = request.user  # type: ignore
     session = get_object_or_404(Session, slug=event_slug)
     if not session.can_view(user):

@@ -828,14 +828,14 @@ class TestMobileApiSpaces:
         assert attending.attendees.filter(pk=user.pk).exists()
         assert event.attendees.filter(pk=user.pk).exists()
 
-    def test_rsvp_switch_replaces_conflicting_session(self, client_with_user: tuple[Client, User]):
+    def test_rsvp_resolve_conflicts_replaces_conflicting_session(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         start = timezone.now() + timedelta(days=1)
         attending = SessionFactory(start=start, duration_minutes=60)
         attending.attendees.add(user)
         event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
 
-        url = reverse("mobile-api:rsvp_switch", kwargs={"event_slug": event.slug})
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
         response = client.post(
             url,
             {"conflicting_session_slug": attending.slug},
@@ -849,7 +849,7 @@ class TestMobileApiSpaces:
         assert event.attendees.filter(pk=user.pk).exists()
         assert event.space.subscribed.filter(pk=user.pk).exists()
 
-    def test_rsvp_switch_preserves_attendance_when_new_session_is_unavailable(
+    def test_rsvp_resolve_conflicts_preserves_attendance_when_new_session_is_unavailable(
         self, client_with_user: tuple[Client, User]
     ):
         client, user = client_with_user
@@ -858,7 +858,7 @@ class TestMobileApiSpaces:
         attending.attendees.add(user)
         event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60, open=False)
 
-        url = reverse("mobile-api:rsvp_switch", kwargs={"event_slug": event.slug})
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
         response = client.post(
             url,
             {"conflicting_session_slug": attending.slug},
@@ -869,7 +869,9 @@ class TestMobileApiSpaces:
         assert attending.attendees.filter(pk=user.pk).exists()
         assert not event.attendees.filter(pk=user.pk).exists()
 
-    def test_rsvp_switch_preserves_attendance_when_target_is_full(self, client_with_user: tuple[Client, User]):
+    def test_rsvp_resolve_conflicts_preserves_attendance_when_target_is_full(
+        self, client_with_user: tuple[Client, User]
+    ):
         client, user = client_with_user
         start = timezone.now() + timedelta(days=1)
         attending = SessionFactory(start=start, duration_minutes=60)
@@ -877,7 +879,7 @@ class TestMobileApiSpaces:
         event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60, seats=1)
         event.attendees.add(UserFactory())
 
-        url = reverse("mobile-api:rsvp_switch", kwargs={"event_slug": event.slug})
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
         response = client.post(
             url,
             {"conflicting_session_slug": attending.slug},
@@ -889,14 +891,14 @@ class TestMobileApiSpaces:
         assert attending.attendees.filter(pk=user.pk).exists()
         assert not event.attendees.filter(pk=user.pk).exists()
 
-    def test_rsvp_switch_rejects_non_overlapping_session(self, client_with_user: tuple[Client, User]):
+    def test_rsvp_resolve_conflicts_rejects_non_overlapping_session(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         start = timezone.now() + timedelta(days=1)
         attending = SessionFactory(start=start, duration_minutes=60)
         attending.attendees.add(user)
         event = SessionFactory(start=start + timedelta(hours=2), duration_minutes=60)
 
-        url = reverse("mobile-api:rsvp_switch", kwargs={"event_slug": event.slug})
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
         response = client.post(
             url,
             {"conflicting_session_slug": attending.slug},
@@ -908,13 +910,13 @@ class TestMobileApiSpaces:
         assert attending.attendees.filter(pk=user.pk).exists()
         assert not event.attendees.filter(pk=user.pk).exists()
 
-    def test_rsvp_switch_rejects_session_user_is_not_attending(self, client_with_user: tuple[Client, User]):
+    def test_rsvp_resolve_conflicts_rejects_session_user_is_not_attending(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         start = timezone.now() + timedelta(days=1)
         not_attending = SessionFactory(start=start, duration_minutes=60)
         event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
 
-        url = reverse("mobile-api:rsvp_switch", kwargs={"event_slug": event.slug})
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
         response = client.post(
             url,
             {"conflicting_session_slug": not_attending.slug},
@@ -924,13 +926,13 @@ class TestMobileApiSpaces:
         assert response.status_code == 404
         assert not event.attendees.filter(pk=user.pk).exists()
 
-    def test_rsvp_switch_keeps_started_conflicting_session(self, client_with_user: tuple[Client, User]):
+    def test_rsvp_resolve_conflicts_keeps_started_conflicting_session(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         attending = SessionFactory(start=timezone.now() - timedelta(minutes=30), duration_minutes=60)
         attending.attendees.add(user)
         event = SessionFactory(start=timezone.now() + timedelta(minutes=10), duration_minutes=60)
 
-        url = reverse("mobile-api:rsvp_switch", kwargs={"event_slug": event.slug})
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
         response = client.post(
             url,
             {"conflicting_session_slug": attending.slug},
@@ -941,14 +943,14 @@ class TestMobileApiSpaces:
         assert attending.attendees.filter(pk=user.pk).exists()
         assert event.attendees.filter(pk=user.pk).exists()
 
-    def test_rsvp_switch_rejects_hidden_conflicting_session(self, client_with_user: tuple[Client, User]):
+    def test_rsvp_resolve_conflicts_rejects_hidden_conflicting_session(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         start = timezone.now() + timedelta(days=1)
         hidden = SessionFactory(space__published=False, start=start, duration_minutes=60)
         hidden.attendees.add(user)
         event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
 
-        url = reverse("mobile-api:rsvp_switch", kwargs={"event_slug": event.slug})
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
         response = client.post(
             url,
             {"conflicting_session_slug": hidden.slug},
@@ -959,7 +961,9 @@ class TestMobileApiSpaces:
         assert hidden.attendees.filter(pk=user.pk).exists()
         assert not event.attendees.filter(pk=user.pk).exists()
 
-    def test_rsvp_switch_staff_keeps_started_conflicting_session(self, client_with_user: tuple[Client, User]):
+    def test_rsvp_resolve_conflicts_staff_keeps_started_conflicting_session(
+        self, client_with_user: tuple[Client, User]
+    ):
         client, user = client_with_user
         user.is_staff = True
         user.save(update_fields=["is_staff"])
@@ -967,7 +971,7 @@ class TestMobileApiSpaces:
         attending.attendees.add(user)
         event = SessionFactory(start=timezone.now() + timedelta(minutes=15), duration_minutes=60)
 
-        url = reverse("mobile-api:rsvp_switch", kwargs={"event_slug": event.slug})
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
         response = client.post(
             url,
             {"conflicting_session_slug": attending.slug},
@@ -978,7 +982,7 @@ class TestMobileApiSpaces:
         assert attending.attendees.filter(pk=user.pk).exists()
         assert event.attendees.filter(pk=user.pk).exists()
 
-    def test_rsvp_switch_replaces_all_conflicting_sessions(self, client_with_user: tuple[Client, User]):
+    def test_rsvp_resolve_conflicts_replaces_all_conflicting_sessions(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         start = timezone.now() + timedelta(days=1)
         first = SessionFactory(start=start, duration_minutes=60)
@@ -989,7 +993,7 @@ class TestMobileApiSpaces:
         non_conflicting.attendees.add(user)
         event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
 
-        url = reverse("mobile-api:rsvp_switch", kwargs={"event_slug": event.slug})
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
         response = client.post(
             url,
             {"conflicting_session_slug": first.slug},

@@ -105,5 +105,5 @@ class SessionFeedbackSchema(Schema):
     message: str | None = None
 
 
-class SwitchSessionSchema(Schema):
+class ResolveConflictsSchema(Schema):
     conflicting_session_slug: str
