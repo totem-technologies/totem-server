@@ -1048,7 +1048,7 @@ class TestMobileApiSpaces:
         assert attending.attendees.filter(pk=user.pk).exists()
         assert not event.attendees.filter(pk=user.pk).exists()
 
-    def test_rsvp_resolve_conflicts_rejects_non_overlapping_session(self, client_with_user: tuple[Client, User]):
+    def test_rsvp_resolve_conflicts_ignores_non_overlapping_session(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         start = timezone.now() + timedelta(days=1)
         attending = SessionFactory(start=start, duration_minutes=60)
@@ -1062,12 +1062,11 @@ class TestMobileApiSpaces:
             content_type="application/json",
         )
 
-        assert response.status_code == 403
-        assert response.json()["detail"] == "Sessions do not conflict"
+        assert response.status_code == 200
         assert attending.attendees.filter(pk=user.pk).exists()
-        assert not event.attendees.filter(pk=user.pk).exists()
+        assert event.attendees.filter(pk=user.pk).exists()
 
-    def test_rsvp_resolve_conflicts_rejects_session_user_is_not_attending(self, client_with_user: tuple[Client, User]):
+    def test_rsvp_resolve_conflicts_ignores_session_user_is_not_attending(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         start = timezone.now() + timedelta(days=1)
         not_attending = SessionFactory(start=start, duration_minutes=60)
@@ -1080,8 +1079,8 @@ class TestMobileApiSpaces:
             content_type="application/json",
         )
 
-        assert response.status_code == 404
-        assert not event.attendees.filter(pk=user.pk).exists()
+        assert response.status_code == 200
+        assert event.attendees.filter(pk=user.pk).exists()
 
     def test_rsvp_resolve_conflicts_keeps_started_conflicting_session(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -1100,7 +1099,7 @@ class TestMobileApiSpaces:
         assert attending.attendees.filter(pk=user.pk).exists()
         assert event.attendees.filter(pk=user.pk).exists()
 
-    def test_rsvp_resolve_conflicts_rejects_hidden_conflicting_session(self, client_with_user: tuple[Client, User]):
+    def test_rsvp_resolve_conflicts_ignores_hidden_conflicting_session(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         start = timezone.now() + timedelta(days=1)
         hidden = SessionFactory(space__published=False, start=start, duration_minutes=60)
@@ -1114,9 +1113,29 @@ class TestMobileApiSpaces:
             content_type="application/json",
         )
 
-        assert response.status_code == 404
+        assert response.status_code == 200
         assert hidden.attendees.filter(pk=user.pk).exists()
-        assert not event.attendees.filter(pk=user.pk).exists()
+        assert event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_resolve_conflicts_ignores_cancelled_and_unknown_submitted_sessions(
+        self, client_with_user: tuple[Client, User]
+    ):
+        client, user = client_with_user
+        start = timezone.now() + timedelta(days=1)
+        cancelled = SessionFactory(start=start, duration_minutes=60, cancelled=True)
+        cancelled.attendees.add(user)
+        event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
+
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
+        response = client.post(
+            url,
+            {"conflicting_session_slugs": [cancelled.slug, "no-longer-exists"]},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        assert cancelled.attendees.filter(pk=user.pk).exists()
+        assert event.attendees.filter(pk=user.pk).exists()
 
     def test_rsvp_resolve_conflicts_staff_keeps_started_conflicting_session(
         self, client_with_user: tuple[Client, User]

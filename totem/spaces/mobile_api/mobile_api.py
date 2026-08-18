@@ -219,14 +219,10 @@ def rsvp_resolve_conflicts(request: HttpRequest, event_slug: str, payload: Resol
                 item.slug: item
                 for item in Session.objects.visible_to(user)
                 .filter(slug__in=submitted_slugs, attendees=user)
-                .with_overlap(session)
+                .overlapping(session)
                 .select_related("space__author")
                 .prefetch_related("attendees")
             }
-            if set(submitted_sessions) != submitted_slugs:
-                raise Http404
-            if not all(item.overlaps_session for item in submitted_sessions.values()):  # type: ignore[attr-defined]
-                raise AuthorizationError(message="Sessions do not conflict")
 
             current_conflict_slugs = (
                 list(Session.objects.time_conflicts_for(session, user).values_list("slug", flat=True))
