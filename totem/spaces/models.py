@@ -332,22 +332,14 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         """Attendees, excluding users banned from this session's room."""
         return self._exclude_banned_users(self.attendees.all())
 
-    def time_conflict_for(self, user: "User", excluding: "list[Session] | None" = None) -> "Session | None":
-        """Return the first session this user is attending that overlaps this one."""
-        return self.time_conflicts_for(user, excluding=excluding).first()
-
-    def time_conflicts_for(self, user: "User", excluding: "list[Session] | None" = None) -> "SessionQuerySet":
+    def time_conflicts_for(self, user: "User") -> "SessionQuerySet":
         """Return sessions this user is attending that overlap this one."""
-        sessions = Session.objects.time_conflicts_for(self, user)
-        if excluding:
-            sessions = sessions.exclude(pk__in=[session.pk for session in excluding])
-        return sessions
+        return Session.objects.time_conflicts_for(self, user)
 
     def can_attend(
         self,
         user: "User | None" = None,
         silent: bool = False,
-        excluding_time_conflicts: "list[Session] | None" = None,
         check_time_conflicts: bool = True,
     ) -> bool:
         try:
@@ -368,7 +360,7 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
             if self.seats_left() <= 0:
                 raise SessionException("There are no spots left")
             if user and check_time_conflicts:
-                conflicting_sessions = list(self.time_conflicts_for(user, excluding=excluding_time_conflicts))
+                conflicting_sessions = list(self.time_conflicts_for(user))
                 if conflicting_sessions:
                     raise SessionTimeConflict(conflicting_sessions)
             return True
@@ -411,6 +403,7 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
                     email_to_mention=self.space.author.email,
                 )
             return True
+        return False
 
     def started(self):
         return self.start < timezone.now()

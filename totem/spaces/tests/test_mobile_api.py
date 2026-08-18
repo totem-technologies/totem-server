@@ -765,6 +765,19 @@ class TestMobileApiSpaces:
         assert data["slug"] == event.slug
         assert data["attending"] is True
 
+    def test_rsvp_confirm_does_not_resubscribe_after_signup_email_bounces(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = SessionFactory(space__published=True)
+        url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
+
+        with patch("totem.spaces.models.notify_session_signup") as mock_email:
+            mock_email.return_value.send.side_effect = EmailBounced()
+            response = client.post(url)
+
+        assert response.status_code == 403
+        assert not event.attendees.filter(pk=user.pk).exists()
+        assert not event.space.subscribed.filter(pk=user.pk).exists()
+
     def test_rsvp_confirm_returns_all_conflicting_sessions(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         start = timezone.now() + timedelta(days=1)
@@ -1129,6 +1142,10 @@ class TestMobileApiSpaces:
     def test_rsvp_resolve_conflicts_replaces_all_conflicting_sessions(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         start = timezone.now() + timedelta(days=1)
+        single_start = start + timedelta(days=2)
+        single_conflict = SessionFactory(start=single_start, duration_minutes=60)
+        single_conflict.attendees.add(user)
+        single_event = SessionFactory(start=single_start + timedelta(minutes=30), duration_minutes=60)
         first = SessionFactory(start=start, duration_minutes=60)
         second = SessionFactory(start=start + timedelta(minutes=45), duration_minutes=60)
         non_conflicting = SessionFactory(start=start + timedelta(hours=2), duration_minutes=60)
@@ -1137,14 +1154,23 @@ class TestMobileApiSpaces:
         non_conflicting.attendees.add(user)
         event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
 
+        single_url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": single_event.slug})
         url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
-        with CaptureQueriesContext(connection) as queries:
-            response = client.post(
-                url,
-                {"conflicting_session_slugs": [first.slug, second.slug]},
-                content_type="application/json",
-            )
+        with patch("totem.spaces.models.notify_session_signup"):
+            with CaptureQueriesContext(connection) as single_conflict_queries:
+                single_response = client.post(
+                    single_url,
+                    {"conflicting_session_slugs": [single_conflict.slug]},
+                    content_type="application/json",
+                )
+            with CaptureQueriesContext(connection) as two_conflict_queries:
+                response = client.post(
+                    url,
+                    {"conflicting_session_slugs": [first.slug, second.slug]},
+                    content_type="application/json",
+                )
 
+        assert single_response.status_code == 200
         assert response.status_code == 200
         assert response.json()["slug"] == event.slug
         assert response.json()["attending"] is True
@@ -1152,7 +1178,8 @@ class TestMobileApiSpaces:
         assert not second.attendees.filter(pk=user.pk).exists()
         assert non_conflicting.attendees.filter(pk=user.pk).exists()
         assert event.attendees.filter(pk=user.pk).exists()
-        assert len(queries) <= 34
+        # One extra removal adds only the M2M select/delete and its audit select/insert.
+        assert len(two_conflict_queries) == len(single_conflict_queries) + 4
 
     def test_rsvp_resolve_conflicts_returns_fresh_409_for_unsubmitted_conflict(
         self, client_with_user: tuple[Client, User]

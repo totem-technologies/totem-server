@@ -187,7 +187,8 @@ def rsvp_confirm(request: HttpRequest, event_slug: str):
         raise Http404
     try:
         with transaction.atomic():
-            session.add_attendee(user)
+            if not session.add_attendee(user):
+                raise SessionException("Unable to save your spot")
             session.space.subscribe(user)
     except SessionTimeConflict as e:
         return Status(409, _session_conflict_schema(e.conflicting_sessions, user))
@@ -243,8 +244,6 @@ def rsvp_resolve_conflicts(request: HttpRequest, event_slug: str, payload: Resol
             if not session.add_attendee(user, prevalidated=True):
                 raise SessionException("Unable to save your spot")
             session.space.subscribe(user)
-    except SessionTimeConflict as e:
-        return Status(409, _session_conflict_schema(e.conflicting_sessions, user))
     except SessionException as e:
         raise AuthorizationError(message=str(e))
     _prefetch_session_detail_relations([session], user)
