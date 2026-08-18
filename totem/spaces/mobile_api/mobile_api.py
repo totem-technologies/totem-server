@@ -14,6 +14,7 @@ from totem.spaces.mobile_api.mobile_filters import (
 )
 from totem.spaces.mobile_api.mobile_schemas import (
     MobileSpaceDetailSchema,
+    SessionConflictSchema,
     SessionDetailSchema,
     SessionFeedbackSchema,
     SpaceSchema,
@@ -31,6 +32,14 @@ from totem.spaces.models import (
 from totem.users.models import User
 
 spaces_router = Router(tags=["spaces"])
+
+
+def _session_conflict_schema(session: Session, user: User, error: SessionTimeConflict) -> SessionConflictSchema:
+    conflicting_sessions = session.time_conflicts_for(user).select_related("space")
+    return SessionConflictSchema(
+        message=str(error),
+        conflicting_sessions=[session_detail_schema(conflict, user) for conflict in conflicting_sessions],
+    )
 
 
 @spaces_router.post("/subscribe/{space_slug}", response={200: bool}, url_name="spaces_subscribe")
@@ -154,7 +163,7 @@ def get_spaces_summary(request: HttpRequest):
 
 @spaces_router.post(
     "/rsvp/{event_slug}",
-    response={200: SessionDetailSchema, 409: SessionDetailSchema},
+    response={200: SessionDetailSchema, 409: SessionConflictSchema},
     tags=["spaces"],
     url_name="rsvp_confirm",
 )
@@ -168,7 +177,7 @@ def rsvp_confirm(request: HttpRequest, event_slug: str):
             session.add_attendee(user)
             session.space.subscribe(user)
     except SessionTimeConflict as e:
-        return Status(409, session_detail_schema(e.conflicting_session, user))
+        return Status(409, _session_conflict_schema(session, user, e))
     except SessionException as e:
         raise AuthorizationError(message=str(e))
     return session_detail_schema(session, user)
@@ -176,7 +185,7 @@ def rsvp_confirm(request: HttpRequest, event_slug: str):
 
 @spaces_router.post(
     "/rsvp/{event_slug}/switch",
-    response={200: SessionDetailSchema, 409: SessionDetailSchema},
+    response={200: SessionDetailSchema, 409: SessionConflictSchema},
     tags=["spaces"],
     url_name="rsvp_switch",
 )
@@ -217,7 +226,7 @@ def rsvp_switch(request: HttpRequest, event_slug: str, payload: SwitchSessionSch
             session.add_attendee(user)
             session.space.subscribe(user)
     except SessionTimeConflict as e:
-        return Status(409, session_detail_schema(e.conflicting_session, user))
+        return Status(409, _session_conflict_schema(session, user, e))
     except SessionException as e:
         raise AuthorizationError(message=str(e))
     return session_detail_schema(session, user)

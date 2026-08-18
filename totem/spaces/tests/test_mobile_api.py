@@ -761,19 +761,24 @@ class TestMobileApiSpaces:
         assert data["slug"] == event.slug
         assert data["attending"] is True
 
-    def test_rsvp_confirm_returns_conflicting_session(self, client_with_user: tuple[Client, User]):
+    def test_rsvp_confirm_returns_all_conflicting_sessions(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         start = timezone.now() + timedelta(days=1)
-        attending = SessionFactory(start=start, duration_minutes=60)
-        attending.attendees.add(user)
+        first = SessionFactory(start=start, duration_minutes=60)
+        second = SessionFactory(start=start + timedelta(minutes=45), duration_minutes=60)
+        first.attendees.add(user)
+        second.attendees.add(user)
         event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
 
         url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
         response = client.post(url)
 
         assert response.status_code == 409
-        assert response.json()["slug"] == attending.slug
-        assert response.json()["attending"] is True
+        data = response.json()
+        assert data["message"] == "This session conflicts with one or more sessions you are attending"
+        assert [session["slug"] for session in data["conflicting_sessions"]] == [first.slug, second.slug]
+        assert all(session["attending"] is True for session in data["conflicting_sessions"])
+        assert "slug" not in data
         assert not event.attendees.filter(pk=user.pk).exists()
 
     def test_rsvp_confirm_allows_staff_to_attend_overlapping_sessions(self, client_with_user: tuple[Client, User]):

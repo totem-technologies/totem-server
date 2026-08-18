@@ -89,6 +89,11 @@ class SessionDetailSchema(Schema):
     meeting_provider: MeetingProviderEnum
 
 
+class SessionConflictSchema(Schema):
+    message: str
+    conflicting_sessions: list[SessionDetailSchema]
+
+
 class SummarySpacesSchema(Schema):
     upcoming: list[SessionDetailSchema]
     for_you: list[MobileSpaceDetailSchema]

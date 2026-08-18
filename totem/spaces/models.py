@@ -578,7 +578,7 @@ class SessionException(Exception):
 class SessionTimeConflict(SessionException):
     def __init__(self, conflicting_session: Session):
         self.conflicting_session = conflicting_session
-        super().__init__("This session conflicts with another session you are attending")
+        super().__init__("This session conflicts with one or more sessions you are attending")
 
 
 class SessionFeedbackOptions(models.TextChoices):
