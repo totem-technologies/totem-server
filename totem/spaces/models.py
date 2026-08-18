@@ -125,12 +125,19 @@ class SessionQuerySet(models.QuerySet["Session"]):
         now = timezone.now()
         return self.visible_to(user).not_ended().filter(attendees=user, start__gte=now)
 
+    def with_overlap(self, session: "Session") -> "SessionQuerySet":
+        """Annotate whether each session's half-open interval overlaps ``session``."""
+        return self.annotate(
+            session_end_time=SESSION_END_TIME,
+            overlaps_session=models.Q(
+                start__lt=session.end(),
+                session_end_time__gt=session.start,
+            ),
+        )
+
     def overlapping(self, session: "Session") -> "SessionQuerySet":
         """Sessions whose half-open time interval overlaps ``session``."""
-        return self.annotate(session_end_time=SESSION_END_TIME).filter(
-            start__lt=session.end(),
-            session_end_time__gt=session.start,
-        )
+        return self.with_overlap(session).filter(overlaps_session=True)
 
     def time_conflicts_for(self, session: "Session", user: "User") -> "SessionQuerySet":
         """Visible, removable sessions this user attends that overlap ``session``."""
@@ -327,16 +334,21 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
 
     def time_conflict_for(self, user: "User", excluding: "list[Session] | None" = None) -> "Session | None":
         """Return the first session this user is attending that overlaps this one."""
+        return self.time_conflicts_for(user, excluding=excluding).first()
+
+    def time_conflicts_for(self, user: "User", excluding: "list[Session] | None" = None) -> "SessionQuerySet":
+        """Return sessions this user is attending that overlap this one."""
         sessions = Session.objects.time_conflicts_for(self, user)
         if excluding:
             sessions = sessions.exclude(pk__in=[session.pk for session in excluding])
-        return sessions.first()
+        return sessions
 
     def can_attend(
         self,
         user: "User | None" = None,
         silent: bool = False,
         excluding_time_conflicts: "list[Session] | None" = None,
+        check_time_conflicts: bool = True,
     ) -> bool:
         try:
             if user and user in self.attendees.all():
@@ -355,10 +367,10 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
                 raise SessionException("Session has already started")
             if self.seats_left() <= 0:
                 raise SessionException("There are no spots left")
-            if user:
-                conflicting_session = self.time_conflict_for(user, excluding=excluding_time_conflicts)
-                if conflicting_session is not None:
-                    raise SessionTimeConflict(conflicting_session)
+            if user and check_time_conflicts:
+                conflicting_sessions = list(self.time_conflicts_for(user, excluding=excluding_time_conflicts))
+                if conflicting_sessions:
+                    raise SessionTimeConflict(conflicting_sessions)
             return True
         except SessionException as e:
             if silent:
@@ -376,9 +388,9 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
             return SessionState.JOINABLE
         return SessionState.CLOSED
 
-    def add_attendee(self, user):
+    def add_attendee(self, user: "User", *, prevalidated: bool = False) -> None:
         # checks if the user can attend and adds them to the attendees list, throws an exception if they can't
-        if self.can_attend(user=user):
+        if prevalidated or self.can_attend(user=user):
             self.attendees.add(user)
             try:
                 if self.notified and self.can_join(user):
@@ -570,9 +582,11 @@ class SessionException(Exception):
 
 
 class SessionTimeConflict(SessionException):
-    def __init__(self, conflicting_session: Session):
-        self.conflicting_session = conflicting_session
-        super().__init__("This session conflicts with one or more sessions you are attending")
+    message = "This session conflicts with one or more sessions you are attending"
+
+    def __init__(self, conflicting_sessions: list[Session]):
+        self.conflicting_sessions = conflicting_sessions
+        super().__init__(self.message)
 
 
 class SessionFeedbackOptions(models.TextChoices):

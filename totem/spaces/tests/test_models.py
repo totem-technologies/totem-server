@@ -493,7 +493,7 @@ class TestSessionModel:
         with pytest.raises(SessionTimeConflict) as exc_info:
             session.can_attend(user=user)
 
-        assert exc_info.value.conflicting_session == attending
+        assert attending in exc_info.value.conflicting_sessions
 
     def test_can_attend_staff_allows_overlapping_session(self, db):
         staff = UserFactory(is_staff=True)

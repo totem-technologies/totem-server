@@ -1,7 +1,9 @@
 from datetime import timedelta
 
 import pytest
+from django.db import connection
 from django.test import Client
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
@@ -785,6 +787,26 @@ class TestMobileApiSpaces:
         assert "slug" not in data
         assert not event.attendees.filter(pk=user.pk).exists()
 
+    def test_rsvp_conflict_response_queries_do_not_scale_with_conflicts(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        start = timezone.now() + timedelta(days=1)
+        first = SessionFactory(start=start, duration_minutes=60)
+        first.attendees.add(user)
+        event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
+        url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
+
+        with CaptureQueriesContext(connection) as one_conflict_queries:
+            one_conflict_response = client.post(url)
+
+        second = SessionFactory(start=start + timedelta(minutes=45), duration_minutes=60)
+        second.attendees.add(user)
+        with CaptureQueriesContext(connection) as two_conflict_queries:
+            two_conflict_response = client.post(url)
+
+        assert one_conflict_response.status_code == 409
+        assert two_conflict_response.status_code == 409
+        assert len(two_conflict_queries) == len(one_conflict_queries)
+
     def test_rsvp_confirm_allows_staff_to_attend_overlapping_sessions(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         user.is_staff = True
@@ -1011,11 +1033,12 @@ class TestMobileApiSpaces:
         event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
 
         url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
-        response = client.post(
-            url,
-            {"conflicting_session_slugs": [first.slug, second.slug]},
-            content_type="application/json",
-        )
+        with CaptureQueriesContext(connection) as queries:
+            response = client.post(
+                url,
+                {"conflicting_session_slugs": [first.slug, second.slug]},
+                content_type="application/json",
+            )
 
         assert response.status_code == 200
         assert response.json()["slug"] == event.slug
@@ -1024,6 +1047,7 @@ class TestMobileApiSpaces:
         assert not second.attendees.filter(pk=user.pk).exists()
         assert non_conflicting.attendees.filter(pk=user.pk).exists()
         assert event.attendees.filter(pk=user.pk).exists()
+        assert len(queries) <= 34
 
     def test_rsvp_resolve_conflicts_returns_fresh_409_for_unsubmitted_conflict(
         self, client_with_user: tuple[Client, User]
