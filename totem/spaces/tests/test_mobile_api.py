@@ -806,6 +806,19 @@ class TestMobileApiSpaces:
         assert draft.attendees.filter(pk=user.pk).exists()
         assert event.attendees.filter(pk=user.pk).exists()
 
+    def test_rsvp_confirm_ignores_started_overlapping_session(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        attending = SessionFactory(start=timezone.now() - timedelta(minutes=30), duration_minutes=60)
+        attending.attendees.add(user)
+        event = SessionFactory(start=timezone.now() + timedelta(minutes=10), duration_minutes=60)
+
+        url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
+        response = client.post(url)
+
+        assert response.status_code == 200
+        assert attending.attendees.filter(pk=user.pk).exists()
+        assert event.attendees.filter(pk=user.pk).exists()
+
     def test_rsvp_switch_replaces_conflicting_session(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         start = timezone.now() + timedelta(days=1)

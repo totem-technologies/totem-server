@@ -513,6 +513,17 @@ class TestSessionModel:
 
         assert session.can_attend(user=user) is True
 
+    def test_can_attend_ignores_started_overlapping_session(self, db):
+        user = UserFactory()
+        attending = SessionFactory(
+            start=timezone.now() - timezone.timedelta(minutes=30),
+            duration_minutes=60,
+        )
+        attending.attendees.add(user)
+        session = SessionFactory(start=timezone.now() + timezone.timedelta(minutes=10), duration_minutes=60)
+
+        assert session.can_attend(user=user) is True
+
     def test_can_attend_allows_back_to_back_session(self, db):
         user = UserFactory()
         start = timezone.now() + timezone.timedelta(days=1)

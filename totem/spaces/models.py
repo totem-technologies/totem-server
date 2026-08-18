@@ -320,6 +320,7 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
                 attendees=user,
                 cancelled=False,
                 ended_at__isnull=True,
+                start__gte=timezone.now(),
                 start__lt=self.end(),
             )
             .annotate(session_end_time=SESSION_END_TIME)
