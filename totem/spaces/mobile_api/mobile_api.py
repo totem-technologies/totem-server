@@ -221,8 +221,8 @@ def rsvp_switch(request: HttpRequest, event_slug: str, payload: SwitchSessionSch
                     session.time_conflicts_for(user).select_for_update().select_related("space").order_by("pk")
                 )
             session.can_attend(user=user, excluding_time_conflicts=conflicting_sessions)
-            for conflicting_session in conflicting_sessions:
-                conflicting_session.remove_attendee(user)
+            for session_to_remove in conflicting_sessions:
+                session_to_remove.remove_attendee(user)
             session.add_attendee(user)
             session.space.subscribe(user)
     except SessionTimeConflict as e:

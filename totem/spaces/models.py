@@ -341,9 +341,9 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
     def can_attend(
         self,
         user: "User | None" = None,
-        silent=False,
+        silent: bool = False,
         excluding_time_conflicts: "list[Session] | None" = None,
-    ):
+    ) -> bool:
         try:
             if user and user in self.attendees.all():
                 raise SessionException("You are already attending this session")
