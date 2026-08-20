@@ -53,7 +53,7 @@ def session_detail_schema(session: Session, user: User):
         subscribed = None
     ended = session.ended()
 
-    if hasattr(space, "_prefetched_objects_cache") and "attendees" in space._prefetched_objects_cache:
+    if hasattr(session, "_prefetched_objects_cache") and "attendees" in session._prefetched_objects_cache:
         attending = any(attendee.pk == user.pk for attendee in session.attendees.all())
     else:
         attending = session.attendees.filter(pk=user.pk).exists()
@@ -107,7 +107,10 @@ def next_session_schema(next_session: Session, user: User):
 
 
 def space_detail_schema(space: Space, user: User):
-    category = space.categories.first()
+    if hasattr(space, "_prefetched_objects_cache") and "categories" in space._prefetched_objects_cache:
+        category = min(space.categories.all(), key=lambda item: item.pk, default=None)
+    else:
+        category = space.categories.first()
     category_name = category.name if category else None
 
     if hasattr(space, "upcoming_sessions"):

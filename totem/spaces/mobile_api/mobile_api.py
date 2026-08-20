@@ -1,5 +1,5 @@
 from django.db import transaction
-from django.db.models import Prefetch
+from django.db.models import Prefetch, prefetch_related_objects
 from django.http import Http404, HttpRequest
 from django.shortcuts import get_object_or_404
 from ninja import Query, Router, Status
@@ -14,6 +14,8 @@ from totem.spaces.mobile_api.mobile_filters import (
 )
 from totem.spaces.mobile_api.mobile_schemas import (
     MobileSpaceDetailSchema,
+    ResolveConflictsSchema,
+    SessionConflictSchema,
     SessionDetailSchema,
     SessionFeedbackSchema,
     SpaceSchema,
@@ -24,11 +26,33 @@ from totem.spaces.models import (
     SessionException,
     SessionFeedback,
     SessionFeedbackOptions,
+    SessionTimeConflict,
     Space,
 )
 from totem.users.models import User
 
 spaces_router = Router(tags=["spaces"])
+
+
+def _prefetch_session_detail_relations(sessions: list[Session], user: User) -> None:
+    upcoming_sessions = upcoming_sessions_queryset(user).prefetch_related("joined")
+    prefetch_related_objects(
+        sessions,
+        "attendees",
+        "joined",
+        "space__author__sessions_joined",
+        "space__categories",
+        "space__subscribed",
+        Prefetch("space__sessions", queryset=upcoming_sessions, to_attr="upcoming_sessions"),
+    )
+
+
+def _session_conflict_schema(conflicting_sessions: list[Session], user: User) -> SessionConflictSchema:
+    _prefetch_session_detail_relations(conflicting_sessions, user)
+    return SessionConflictSchema(
+        message=SessionTimeConflict.message,
+        conflicting_sessions=[session_detail_schema(conflict, user) for conflict in conflicting_sessions],
+    )
 
 
 @spaces_router.post("/subscribe/{space_slug}", response={200: bool}, url_name="spaces_subscribe")
@@ -152,22 +176,70 @@ def get_spaces_summary(request: HttpRequest):
 
 @spaces_router.post(
     "/rsvp/{event_slug}",
-    response={200: SessionDetailSchema},
+    response={200: SessionDetailSchema, 409: SessionConflictSchema},
     tags=["spaces"],
     url_name="rsvp_confirm",
 )
 def rsvp_confirm(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
-    event = get_object_or_404(Session, slug=event_slug)
-    if not event.can_view(user):
+    session = get_object_or_404(Session, slug=event_slug)
+    if not session.can_view(user):
         raise Http404
     try:
         with transaction.atomic():
-            event.add_attendee(user)
-            event.space.subscribe(user)
+            if not session.add_attendee(user):
+                raise SessionException("Unable to save your spot")
+            session.space.subscribe(user)
+    except SessionTimeConflict as e:
+        return Status(409, _session_conflict_schema(e.conflicting_sessions, user))
     except SessionException as e:
         raise AuthorizationError(message=str(e))
-    return session_detail_schema(event, user)
+    return session_detail_schema(session, user)
+
+
+@spaces_router.post(
+    "/rsvp/{event_slug}/resolve-conflicts",
+    response={200: SessionDetailSchema, 409: SessionConflictSchema},
+    tags=["spaces"],
+    url_name="rsvp_resolve_conflicts",
+)
+def rsvp_resolve_conflicts(request: HttpRequest, event_slug: str, payload: ResolveConflictsSchema):
+    user: User = request.user  # type: ignore
+    session = get_object_or_404(
+        Session.objects.select_related("space", "space__author", "room").prefetch_related("attendees"),
+        slug=event_slug,
+    )
+    if not session.can_view(user):
+        raise Http404
+
+    try:
+        with transaction.atomic():
+            submitted_slugs = set(payload.conflicting_session_slugs)
+            submitted_sessions = {
+                item.slug: item
+                for item in Session.objects.visible_to(user)
+                .filter(slug__in=submitted_slugs, attendees=user)
+                .overlapping(session)
+                .select_related("space__author")
+                .prefetch_related("attendees")
+            }
+
+            detected_conflicts = list(Session.objects.time_conflicts_for(session, user)) if not user.is_staff else []
+            current_conflict_slugs = [conflict.slug for conflict in detected_conflicts]
+            if set(current_conflict_slugs) - submitted_slugs:
+                return Status(409, _session_conflict_schema(detected_conflicts, user))
+
+            session.can_attend(user=user, check_time_conflicts=False)
+            current_conflicts = [submitted_sessions[slug] for slug in current_conflict_slugs]
+            for session_to_remove in current_conflicts:
+                session_to_remove.remove_attendee(user)
+            if not session.add_attendee(user, prevalidated=True):
+                raise SessionException("Unable to save your spot")
+            session.space.subscribe(user)
+    except SessionException as e:
+        raise AuthorizationError(message=str(e))
+    _prefetch_session_detail_relations([session], user)
+    return session_detail_schema(session, user)
 
 
 @spaces_router.delete(
@@ -178,11 +250,11 @@ def rsvp_confirm(request: HttpRequest, event_slug: str):
 )
 def rsvp_cancel(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
-    event = get_object_or_404(Session, slug=event_slug)
-    if not event.can_view(user):
+    session = get_object_or_404(Session, slug=event_slug)
+    if not session.can_view(user):
         raise Http404
     try:
-        event.remove_attendee(user)
+        session.remove_attendee(user)
     except SessionException as e:
         raise AuthorizationError(message=str(e))
-    return session_detail_schema(event, user)
+    return session_detail_schema(session, user)

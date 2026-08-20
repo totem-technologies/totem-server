@@ -1,12 +1,13 @@
 import datetime
 import time
 from enum import Enum
+from functools import partial
 from typing import TYPE_CHECKING
 
 import pytz
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.db import models, transaction
 from django.db.models.query import QuerySet
 from django.urls import reverse
 from django.utils import timezone
@@ -119,6 +120,29 @@ class SessionQuerySet(models.QuerySet["Session"]):
                 )
             )
         )
+
+    def removable_attendance_for(self, user: "User") -> "SessionQuerySet":
+        """Visible sessions this user attends and can still give up."""
+        now = timezone.now()
+        return self.visible_to(user).not_ended().filter(attendees=user, start__gte=now)
+
+    def with_overlap(self, session: "Session") -> "SessionQuerySet":
+        """Annotate whether each session's half-open interval overlaps ``session``."""
+        return self.annotate(
+            session_end_time=SESSION_END_TIME,
+            overlaps_session=models.Q(
+                start__lt=session.end(),
+                session_end_time__gt=session.start,
+            ),
+        )
+
+    def overlapping(self, session: "Session") -> "SessionQuerySet":
+        """Sessions whose half-open time interval overlaps ``session``."""
+        return self.with_overlap(session).filter(overlaps_session=True)
+
+    def time_conflicts_for(self, session: "Session", user: "User") -> "SessionQuerySet":
+        """Visible, removable sessions this user attends that overlap ``session``."""
+        return self.removable_attendance_for(user).overlapping(session).exclude(pk=session.pk).order_by("start", "pk")
 
 
 class SessionState(Enum):
@@ -309,7 +333,16 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         """Attendees, excluding users banned from this session's room."""
         return self._exclude_banned_users(self.attendees.all())
 
-    def can_attend(self, user: "User | None" = None, silent=False):
+    def time_conflicts_for(self, user: "User") -> "SessionQuerySet":
+        """Return sessions this user is attending that overlap this one."""
+        return Session.objects.time_conflicts_for(self, user)
+
+    def can_attend(
+        self,
+        user: "User | None" = None,
+        silent: bool = False,
+        check_time_conflicts: bool = True,
+    ) -> bool:
         try:
             if user and user in self.attendees.all():
                 raise SessionException("You are already attending this session")
@@ -327,6 +360,10 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
                 raise SessionException("Session has already started")
             if self.seats_left() <= 0:
                 raise SessionException("There are no spots left")
+            if user and check_time_conflicts:
+                conflicting_sessions = list(self.time_conflicts_for(user))
+                if conflicting_sessions:
+                    raise SessionTimeConflict(conflicting_sessions)
             return True
         except SessionException as e:
             if silent:
@@ -344,9 +381,9 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
             return SessionState.JOINABLE
         return SessionState.CLOSED
 
-    def add_attendee(self, user):
+    def add_attendee(self, user: "User", *, prevalidated: bool = False) -> bool:
         # checks if the user can attend and adds them to the attendees list, throws an exception if they can't
-        if self.can_attend(user=user):
+        if prevalidated or self.can_attend(user=user):
             self.attendees.add(user)
             try:
                 if self.notified and self.can_join(user):
@@ -360,12 +397,17 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
                 # If the email was blocked, remove the user from the session and space
                 self.attendees.remove(user)
                 self.space.unsubscribe(user)
-                return
+                return False
             if not self.space.author == user:
-                notify_slack(
-                    f"✅ New session attendee: {self._get_slack_attendee_message(user)}",
-                    email_to_mention=self.space.author.email,
+                transaction.on_commit(
+                    partial(
+                        notify_slack,
+                        f"✅ New session attendee: {self._get_slack_attendee_message(user)}",
+                        email_to_mention=self.space.author.email,
+                    )
                 )
+            return True
+        return False
 
     def started(self):
         return self.start < timezone.now()
@@ -414,9 +456,12 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         if self.started():
             raise SessionException("Session has already started")
         self.attendees.remove(user)
-        notify_slack(
-            f"🛑 Session attendee left: {self._get_slack_attendee_message(user)}",
-            email_to_mention=self.space.author.email,
+        transaction.on_commit(
+            partial(
+                notify_slack,
+                f"🛑 Session attendee left: {self._get_slack_attendee_message(user)}",
+                email_to_mention=self.space.author.email,
+            )
         )
 
     def _get_slack_attendee_message(self, user):
@@ -535,6 +580,14 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
 
 class SessionException(Exception):
     pass
+
+
+class SessionTimeConflict(SessionException):
+    message = "This session conflicts with one or more sessions you are attending"
+
+    def __init__(self, conflicting_sessions: list[Session]):
+        self.conflicting_sessions = conflicting_sessions
+        super().__init__(self.message)
 
 
 class SessionFeedbackOptions(models.TextChoices):

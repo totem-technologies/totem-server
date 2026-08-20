@@ -1,14 +1,20 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 import pytest
+from django.db import connection
+from django.db.models import Prefetch
 from django.test import Client
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
 from totem.api.auth import generate_jwt_token
+from totem.email.exceptions import EmailBounced
 from totem.onboard.tests.factories import OnboardModelFactory
 from totem.rooms.models import Room
-from totem.spaces.models import SessionFeedback, SessionFeedbackOptions
+from totem.spaces.mobile_api.mobile_filters import space_detail_schema
+from totem.spaces.models import Session, SessionException, SessionFeedback, SessionFeedbackOptions, Space, SpaceCategory
 from totem.spaces.tests.factories import SessionFactory, SpaceCategoryFactory, SpaceFactory
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
@@ -520,6 +526,18 @@ class TestMobileApiSpaces:
         assert len(slugs) == len(set(slugs)), f"Duplicates found in results: {slugs}"
         assert len(data) == 2
 
+    def test_space_detail_uses_lowest_pk_category_when_prefetched(self, client_with_user: tuple[Client, User]):
+        _, user = client_with_user
+        first = SpaceCategoryFactory(name="First")
+        second = SpaceCategoryFactory(name="Second")
+        space = SpaceFactory(published=True, categories=[first, second])
+
+        space = Space.objects.prefetch_related(
+            Prefetch("categories", queryset=SpaceCategory.objects.order_by("-pk"))
+        ).get(pk=space.pk)
+
+        assert space_detail_schema(space, user).category == first.name
+
     def test_recommended_spaces_handles_name_and_slug_mixed(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
 
@@ -760,6 +778,476 @@ class TestMobileApiSpaces:
         data = response.json()
         assert data["slug"] == event.slug
         assert data["attending"] is True
+
+    def test_rsvp_confirm_does_not_resubscribe_after_signup_email_bounces(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = SessionFactory(space__published=True)
+        url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
+
+        with patch("totem.spaces.models.notify_session_signup") as mock_email:
+            mock_email.return_value.send.side_effect = EmailBounced()
+            response = client.post(url)
+
+        assert response.status_code == 403
+        assert not event.attendees.filter(pk=user.pk).exists()
+        assert not event.space.subscribed.filter(pk=user.pk).exists()
+
+    def test_rsvp_confirm_returns_all_conflicting_sessions(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        start = timezone.now() + timedelta(days=1)
+        first = SessionFactory(title="Earlier conflict", start=start, duration_minutes=60)
+        second = SessionFactory(title="Later conflict", start=start + timedelta(minutes=45), duration_minutes=60)
+        first.attendees.add(user)
+        second.attendees.add(user)
+        event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
+
+        url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
+        response = client.post(url)
+
+        assert response.status_code == 409
+        data = response.json()
+        assert data["message"] == "This session conflicts with one or more sessions you are attending"
+        assert [session["slug"] for session in data["conflicting_sessions"]] == [first.slug, second.slug]
+        assert [session["title"] for session in data["conflicting_sessions"]] == [
+            "Earlier conflict",
+            "Later conflict",
+        ]
+        assert all(session["attending"] is True for session in data["conflicting_sessions"])
+        assert "slug" not in data
+        assert not event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_conflict_response_queries_do_not_scale_with_conflicts(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        start = timezone.now() + timedelta(days=1)
+        first = SessionFactory(start=start, duration_minutes=60)
+        first.attendees.add(user)
+        event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
+        url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
+
+        with CaptureQueriesContext(connection) as one_conflict_queries:
+            one_conflict_response = client.post(url)
+
+        second = SessionFactory(start=start + timedelta(minutes=45), duration_minutes=60)
+        second.attendees.add(user)
+        with CaptureQueriesContext(connection) as two_conflict_queries:
+            two_conflict_response = client.post(url)
+
+        assert one_conflict_response.status_code == 409
+        assert two_conflict_response.status_code == 409
+        assert len(two_conflict_queries) == len(one_conflict_queries)
+
+    def test_rsvp_confirm_allows_staff_to_attend_overlapping_sessions(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        user.is_staff = True
+        user.save(update_fields=["is_staff"])
+        start = timezone.now() + timedelta(days=1)
+        attending = SessionFactory(start=start, duration_minutes=60)
+        attending.attendees.add(user)
+        event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
+
+        url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
+        response = client.post(url)
+
+        assert response.status_code == 200
+        assert attending.attendees.filter(pk=user.pk).exists()
+        assert event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_confirm_ignores_conflict_in_unpublished_space(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        start = timezone.now() + timedelta(days=1)
+        draft = SessionFactory(space__published=False, start=start, duration_minutes=60)
+        draft.attendees.add(user)
+        event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
+
+        url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
+        response = client.post(url)
+
+        assert response.status_code == 200
+        assert draft.attendees.filter(pk=user.pk).exists()
+        assert event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_confirm_ignores_session_user_is_banned_from(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        start = timezone.now() + timedelta(days=1)
+        banned = SessionFactory(start=start, duration_minutes=60)
+        banned.attendees.add(user)
+        room = Room.objects.get_or_create_for_session(banned)
+        room.banned_participants = [user.slug]
+        room.save()
+        event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
+
+        url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
+        response = client.post(url)
+
+        assert response.status_code == 200
+        assert banned.attendees.filter(pk=user.pk).exists()
+        assert event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_confirm_ignores_started_overlapping_session(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        attending = SessionFactory(start=timezone.now() - timedelta(minutes=30), duration_minutes=60)
+        attending.attendees.add(user)
+        event = SessionFactory(start=timezone.now() + timedelta(minutes=10), duration_minutes=60)
+
+        url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
+        response = client.post(url)
+
+        assert response.status_code == 200
+        assert attending.attendees.filter(pk=user.pk).exists()
+        assert event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_resolve_conflicts_replaces_conflicting_session(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        start = timezone.now() + timedelta(days=1)
+        attending = SessionFactory(start=start, duration_minutes=60)
+        attending.attendees.add(user)
+        event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
+
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
+        response = client.post(
+            url,
+            {"conflicting_session_slugs": [attending.slug]},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        assert response.json()["slug"] == event.slug
+        assert response.json()["attending"] is True
+        assert not attending.attendees.filter(pk=user.pk).exists()
+        assert event.attendees.filter(pk=user.pk).exists()
+        assert event.space.subscribed.filter(pk=user.pk).exists()
+
+    def test_rsvp_resolve_conflicts_with_empty_list_behaves_like_plain_rsvp(
+        self, client_with_user: tuple[Client, User]
+    ):
+        client, user = client_with_user
+        event = SessionFactory(start=timezone.now() + timedelta(days=1))
+
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
+        response = client.post(
+            url,
+            {"conflicting_session_slugs": []},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        assert response.json()["attending"] is True
+        assert event.attendees.filter(pk=user.pk).exists()
+        assert event.space.subscribed.filter(pk=user.pk).exists()
+
+    def test_rsvp_resolve_conflicts_rejects_user_already_attending_target(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        event = SessionFactory(start=timezone.now() + timedelta(days=1))
+        event.attendees.add(user)
+
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
+        response = client.post(
+            url,
+            {"conflicting_session_slugs": []},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 403
+        assert "already attending" in response.json()["detail"].lower()
+        assert event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_resolve_conflicts_rolls_back_when_signup_email_bounces(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        start = timezone.now() + timedelta(days=1)
+        attending = SessionFactory(start=start, duration_minutes=60)
+        attending.attendees.add(user)
+        event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
+
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
+        with patch("totem.spaces.models.notify_session_signup") as mock_email:
+            mock_email.return_value.send.side_effect = EmailBounced()
+            response = client.post(
+                url,
+                {"conflicting_session_slugs": [attending.slug]},
+                content_type="application/json",
+            )
+
+        assert response.status_code == 403
+        assert attending.attendees.filter(pk=user.pk).exists()
+        assert not event.attendees.filter(pk=user.pk).exists()
+        assert not event.space.subscribed.filter(pk=user.pk).exists()
+
+    def test_rsvp_resolve_conflicts_rolls_back_when_add_attendee_fails(
+        self, client_with_user: tuple[Client, User], django_capture_on_commit_callbacks
+    ):
+        client, user = client_with_user
+        start = timezone.now() + timedelta(days=1)
+        attending = SessionFactory(start=start, duration_minutes=60)
+        attending.attendees.add(user)
+        event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
+
+        def fail_after_conflicts_removed(target: Session, attendee: User, *, prevalidated: bool = False) -> bool:
+            assert target.pk == event.pk
+            assert attendee.pk == user.pk
+            assert prevalidated is True
+            assert not attending.attendees.filter(pk=user.pk).exists()
+            raise SessionException("Unable to add attendee")
+
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
+        with (
+            patch("totem.spaces.models.notify_slack") as mock_slack,
+            django_capture_on_commit_callbacks(execute=True) as callbacks,
+            patch.object(Session, "add_attendee", autospec=True, side_effect=fail_after_conflicts_removed),
+        ):
+            response = client.post(
+                url,
+                {"conflicting_session_slugs": [attending.slug]},
+                content_type="application/json",
+            )
+
+        assert response.status_code == 403
+        assert attending.attendees.filter(pk=user.pk).exists()
+        assert not event.attendees.filter(pk=user.pk).exists()
+        assert callbacks == []
+        mock_slack.assert_not_called()
+
+    def test_rsvp_resolve_conflicts_rejects_user_banned_from_target(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        start = timezone.now() + timedelta(days=1)
+        attending = SessionFactory(start=start, duration_minutes=60)
+        attending.attendees.add(user)
+        event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
+        room = Room.objects.get_or_create_for_session(event)
+        room.banned_participants = [user.slug]
+        room.save()
+
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
+        response = client.post(
+            url,
+            {"conflicting_session_slugs": [attending.slug]},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 403
+        assert "cannot attend" in response.json()["detail"].lower()
+        assert attending.attendees.filter(pk=user.pk).exists()
+        assert not event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_resolve_conflicts_preserves_attendance_when_new_session_is_unavailable(
+        self, client_with_user: tuple[Client, User]
+    ):
+        client, user = client_with_user
+        start = timezone.now() + timedelta(days=1)
+        attending = SessionFactory(start=start, duration_minutes=60)
+        attending.attendees.add(user)
+        event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60, open=False)
+
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
+        response = client.post(
+            url,
+            {"conflicting_session_slugs": [attending.slug]},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 403
+        assert attending.attendees.filter(pk=user.pk).exists()
+        assert not event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_resolve_conflicts_preserves_attendance_when_target_is_full(
+        self, client_with_user: tuple[Client, User]
+    ):
+        client, user = client_with_user
+        start = timezone.now() + timedelta(days=1)
+        attending = SessionFactory(start=start, duration_minutes=60)
+        attending.attendees.add(user)
+        event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60, seats=1)
+        event.attendees.add(UserFactory())
+
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
+        response = client.post(
+            url,
+            {"conflicting_session_slugs": [attending.slug]},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 403
+        assert "no spots left" in response.json()["detail"].lower()
+        assert attending.attendees.filter(pk=user.pk).exists()
+        assert not event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_resolve_conflicts_ignores_non_overlapping_session(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        start = timezone.now() + timedelta(days=1)
+        attending = SessionFactory(start=start, duration_minutes=60)
+        attending.attendees.add(user)
+        event = SessionFactory(start=start + timedelta(hours=2), duration_minutes=60)
+
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
+        response = client.post(
+            url,
+            {"conflicting_session_slugs": [attending.slug]},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        assert attending.attendees.filter(pk=user.pk).exists()
+        assert event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_resolve_conflicts_ignores_session_user_is_not_attending(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        start = timezone.now() + timedelta(days=1)
+        not_attending = SessionFactory(start=start, duration_minutes=60)
+        event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
+
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
+        response = client.post(
+            url,
+            {"conflicting_session_slugs": [not_attending.slug]},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        assert event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_resolve_conflicts_keeps_started_conflicting_session(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        attending = SessionFactory(start=timezone.now() - timedelta(minutes=30), duration_minutes=60)
+        attending.attendees.add(user)
+        event = SessionFactory(start=timezone.now() + timedelta(minutes=10), duration_minutes=60)
+
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
+        response = client.post(
+            url,
+            {"conflicting_session_slugs": [attending.slug]},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        assert attending.attendees.filter(pk=user.pk).exists()
+        assert event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_resolve_conflicts_ignores_hidden_conflicting_session(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        start = timezone.now() + timedelta(days=1)
+        hidden = SessionFactory(space__published=False, start=start, duration_minutes=60)
+        hidden.attendees.add(user)
+        event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
+
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
+        response = client.post(
+            url,
+            {"conflicting_session_slugs": [hidden.slug]},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        assert hidden.attendees.filter(pk=user.pk).exists()
+        assert event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_resolve_conflicts_ignores_cancelled_and_unknown_submitted_sessions(
+        self, client_with_user: tuple[Client, User]
+    ):
+        client, user = client_with_user
+        start = timezone.now() + timedelta(days=1)
+        cancelled = SessionFactory(start=start, duration_minutes=60, cancelled=True)
+        cancelled.attendees.add(user)
+        event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
+
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
+        response = client.post(
+            url,
+            {"conflicting_session_slugs": [cancelled.slug, "no-longer-exists"]},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        assert cancelled.attendees.filter(pk=user.pk).exists()
+        assert event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_resolve_conflicts_staff_keeps_started_conflicting_session(
+        self, client_with_user: tuple[Client, User]
+    ):
+        client, user = client_with_user
+        user.is_staff = True
+        user.save(update_fields=["is_staff"])
+        attending = SessionFactory(start=timezone.now() - timedelta(minutes=30), duration_minutes=60)
+        attending.attendees.add(user)
+        event = SessionFactory(start=timezone.now() + timedelta(minutes=15), duration_minutes=60)
+
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
+        response = client.post(
+            url,
+            {"conflicting_session_slugs": [attending.slug]},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        assert attending.attendees.filter(pk=user.pk).exists()
+        assert event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_resolve_conflicts_replaces_all_conflicting_sessions(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        start = timezone.now() + timedelta(days=1)
+        single_start = start + timedelta(days=2)
+        single_conflict = SessionFactory(start=single_start, duration_minutes=60)
+        single_conflict.attendees.add(user)
+        single_event = SessionFactory(start=single_start + timedelta(minutes=30), duration_minutes=60)
+        first = SessionFactory(start=start, duration_minutes=60)
+        second = SessionFactory(start=start + timedelta(minutes=45), duration_minutes=60)
+        non_conflicting = SessionFactory(start=start + timedelta(hours=2), duration_minutes=60)
+        first.attendees.add(user)
+        second.attendees.add(user)
+        non_conflicting.attendees.add(user)
+        event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
+
+        single_url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": single_event.slug})
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
+        with patch("totem.spaces.models.notify_session_signup"):
+            with CaptureQueriesContext(connection) as single_conflict_queries:
+                single_response = client.post(
+                    single_url,
+                    {"conflicting_session_slugs": [single_conflict.slug]},
+                    content_type="application/json",
+                )
+            with CaptureQueriesContext(connection) as two_conflict_queries:
+                response = client.post(
+                    url,
+                    {"conflicting_session_slugs": [first.slug, second.slug]},
+                    content_type="application/json",
+                )
+
+        assert single_response.status_code == 200
+        assert response.status_code == 200
+        assert response.json()["slug"] == event.slug
+        assert response.json()["attending"] is True
+        assert not first.attendees.filter(pk=user.pk).exists()
+        assert not second.attendees.filter(pk=user.pk).exists()
+        assert non_conflicting.attendees.filter(pk=user.pk).exists()
+        assert event.attendees.filter(pk=user.pk).exists()
+        # One extra removal adds only the M2M select/delete and its audit select/insert.
+        assert len(two_conflict_queries) == len(single_conflict_queries) + 4
+
+    def test_rsvp_resolve_conflicts_returns_fresh_409_for_unsubmitted_conflict(
+        self, client_with_user: tuple[Client, User]
+    ):
+        client, user = client_with_user
+        start = timezone.now() + timedelta(days=1)
+        consented = SessionFactory(start=start, duration_minutes=60)
+        newly_conflicting = SessionFactory(start=start + timedelta(minutes=45), duration_minutes=60)
+        consented.attendees.add(user)
+        newly_conflicting.attendees.add(user)
+        event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
+
+        url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
+        response = client.post(
+            url,
+            {"conflicting_session_slugs": [consented.slug]},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 409
+        assert {item["slug"] for item in response.json()["conflicting_sessions"]} == {
+            consented.slug,
+            newly_conflicting.slug,
+        }
+        assert consented.attendees.filter(pk=user.pk).exists()
+        assert newly_conflicting.attendees.filter(pk=user.pk).exists()
+        assert not event.attendees.filter(pk=user.pk).exists()
 
     def test_rsvp_confirm_banned(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user

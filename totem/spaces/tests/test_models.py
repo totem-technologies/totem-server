@@ -13,7 +13,7 @@ from totem.users.models import User
 from totem.users.tests.factories import UserFactory
 from totem.utils.testing import email_text
 
-from ..models import Session, SessionException
+from ..models import Session, SessionException, SessionTimeConflict
 from ..views import ics_hash
 from .factories import SessionFactory, SpaceFactory
 
@@ -482,6 +482,75 @@ class TestSessionModel:
         assert session.can_attend(user=user, silent=True) is False
         with pytest.raises(SessionException, match="already started"):
             session.can_attend(user=user)
+
+    def test_can_attend_rejects_overlapping_session(self, db):
+        user = UserFactory()
+        start = timezone.now() + timezone.timedelta(days=1)
+        attending = SessionFactory(start=start, duration_minutes=60)
+        attending.attendees.add(user)
+        session = SessionFactory(start=start + timezone.timedelta(minutes=30), duration_minutes=60)
+
+        with pytest.raises(SessionTimeConflict) as exc_info:
+            session.can_attend(user=user)
+
+        assert attending in exc_info.value.conflicting_sessions
+
+    def test_can_attend_staff_allows_overlapping_session(self, db):
+        staff = UserFactory(is_staff=True)
+        start = timezone.now() + timezone.timedelta(days=1)
+        attending = SessionFactory(start=start, duration_minutes=60)
+        attending.attendees.add(staff)
+        session = SessionFactory(start=start + timezone.timedelta(minutes=30), duration_minutes=60)
+
+        assert session.can_attend(user=staff) is True
+
+    def test_can_attend_ignores_session_in_unpublished_space(self, db):
+        user = UserFactory()
+        start = timezone.now() + timezone.timedelta(days=1)
+        draft = SessionFactory(space__published=False, start=start, duration_minutes=60)
+        draft.attendees.add(user)
+        session = SessionFactory(start=start + timezone.timedelta(minutes=30), duration_minutes=60)
+
+        assert session.can_attend(user=user) is True
+
+    def test_can_attend_ignores_session_user_is_banned_from(self, db):
+        user = UserFactory()
+        start = timezone.now() + timezone.timedelta(days=1)
+        banned = SessionFactory(start=start, duration_minutes=60)
+        banned.attendees.add(user)
+        _ban_user(banned, user)
+        session = SessionFactory(start=start + timezone.timedelta(minutes=30), duration_minutes=60)
+
+        assert session.can_attend(user=user) is True
+
+    def test_can_attend_ignores_started_overlapping_session(self, db):
+        user = UserFactory()
+        attending = SessionFactory(
+            start=timezone.now() - timezone.timedelta(minutes=30),
+            duration_minutes=60,
+        )
+        attending.attendees.add(user)
+        session = SessionFactory(start=timezone.now() + timezone.timedelta(minutes=10), duration_minutes=60)
+
+        assert session.can_attend(user=user) is True
+
+    def test_can_attend_allows_back_to_back_session(self, db):
+        user = UserFactory()
+        start = timezone.now() + timezone.timedelta(days=1)
+        attending = SessionFactory(start=start, duration_minutes=60)
+        attending.attendees.add(user)
+        session = SessionFactory(start=start + timezone.timedelta(minutes=60), duration_minutes=60)
+
+        assert session.can_attend(user=user) is True
+
+    def test_cancelled_session_does_not_conflict(self, db):
+        user = UserFactory()
+        start = timezone.now() + timezone.timedelta(days=1)
+        attending = SessionFactory(start=start, duration_minutes=60, cancelled=True)
+        attending.attendees.add(user)
+        session = SessionFactory(start=start + timezone.timedelta(minutes=30), duration_minutes=60)
+
+        assert session.can_attend(user=user) is True
 
     def test_advertise_skips_banned(self, db):
         user = UserFactory()
