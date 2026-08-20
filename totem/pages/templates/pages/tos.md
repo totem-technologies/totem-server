@@ -29,7 +29,7 @@ To access our Services, you may be required to create a user account (**"Account
 
 You should not share your Account information. You should not use another person's Account or registration information for the Services without permission. Similarly, no one else should be able to use your Account without permission. You are solely responsible for keeping your Account and Account password secure and for any consequence resulting from your failure to do so. You should never publish, distribute, or post login information for your Account.
 
-We have the right to disable any user name, password or other identifier, whether chosen by you or provided by us, at any time in our sole discretion for any or no reason, including if, in our opinion, you have violated any provision of these Terms. You can always delete your Account by emailing us at bo@totem.org.
+We have the right to disable any user name, password or other identifier, whether chosen by you or provided by us, at any time in our sole discretion for any or no reason, including if, in our opinion, you have violated any provision of these Terms. You can always delete your Account by emailing us at help@totem.org.
 
 **Cancellations by Totem**
 
@@ -83,11 +83,11 @@ In particular, audio or video content from Totem not explicitly indicated as dow
 
 You may not access or use for any commercial purposes any part of the Services. You acknowledge and agree that you do not acquire any ownership interest in the Services under these Terms, or any other rights thereto other than to use the Services in accordance with the license granted. Appropriate legal action may be taken for any illegal or unauthorized use of the Services.
 
-To inquire about obtaining authorization to use the materials or content other than as permitted in these Terms, please contact us at bo@totem.org.
+To inquire about obtaining authorization to use the materials or content other than as permitted in these Terms, please contact us at help@totem.org.
 
 **Availability of the Services**
 
-Although we aim to offer you the best service possible, we make no promise that the Services will meet your requirements and we cannot guarantee that the Services will be fault free. If a fault occurs in our Services, please report it to us at bo@totem.org and we will review your complaint and, where we determine it appropriate to do so, correct the fault. We will not be liable to you if the Services are unavailable from time to time.
+Although we aim to offer you the best service possible, we make no promise that the Services will meet your requirements and we cannot guarantee that the Services will be fault free. If a fault occurs in our Services, please report it to us at help@totem.org and we will review your complaint and, where we determine it appropriate to do so, correct the fault. We will not be liable to you if the Services are unavailable from time to time.
 
 Your access to the Services may be occasionally restricted to allow for repairs, maintenance or the introduction of new facilities or Services. We will restore the Services as soon as we reasonably can.
 
@@ -153,4 +153,4 @@ You release the Company and our successors from all losses, damages, rights, and
 
 **Comments, Concerns and Complaints**
 
-All feedback, comments, requests for technical support and other communications relating to the Services should be directed to: bo@totem.org.
+All feedback, comments, requests for technical support and other communications relating to the Services should be directed to: help@totem.org.

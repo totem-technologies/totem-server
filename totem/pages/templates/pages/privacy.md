@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last Updated: June 6, 2023**
+**Last Updated: August 20, 2026**
 
 Totem built the Totem app as a Freemium app. This SERVICE is provided by Totem at no cost and is intended for use as is.
 
@@ -56,10 +56,22 @@ This Service may contain links to other sites. If you click on a third-party lin
 
 These Services do not address anyone under the age of 13. We do not knowingly collect personally identifiable information from children under 13 years of age. In the case we discover that a child under 13 has provided us with personal information, we immediately delete this from our servers. If you are a parent or guardian and you are aware that your child has provided us with personal information, please contact us so that we will be able to do the necessary actions.
 
+**How to Delete Your Data**
+
+You can delete your account and the personal information associated with it at any time:
+
+1. Log in to your account at [totem.org](https://www.totem.org).
+2. Go to your [profile page](https://www.totem.org/users/profile/).
+3. Select "Delete Account" and confirm.
+
+Deleting your account permanently removes your personal information from our servers. This action cannot be undone.
+
+If you are unable to access your account, or would like us to delete your data on your behalf, email us at help@totem.org and we will process your request.
+
 **Changes to This Privacy Policy**
 
 We may update our Privacy Policy from time to time. Thus, you are advised to review this page periodically for any changes. We will notify you of any changes by posting the new Privacy Policy on this page.
 
 **Contact Us**
 
-If you have any questions or suggestions about our Privacy Policy, do not hesitate to contact us at bo@totem.org
+If you have any questions or suggestions about our Privacy Policy, do not hesitate to contact us at help@totem.org
