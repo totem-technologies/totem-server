@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 
+from django.db import transaction
 from django.http import HttpRequest
 from django.utils import timezone
 from ninja import Router, Status
@@ -45,7 +46,7 @@ from .schemas import (
     StartRoomEvent,
     TransitionError,
 )
-from .state_machine import apply_event
+from .state_machine import _reconcile_talking_order, apply_event
 
 router = Router(tags=["rooms"])
 
@@ -151,6 +152,30 @@ def get_state(
                 message="You are not an attendee of this session",
             ),
         )
+
+    if user.slug == room.keeper:
+        connected = get_connected_participants(session_slug)
+        if connected is not None:
+            with transaction.atomic():
+                room = Room.objects.for_session(session_slug).select_for_update().first()  # type: ignore
+                if not room:
+                    return Status(
+                        404,
+                        RoomErrorResponse(
+                            code=ErrorCode.NOT_FOUND,
+                            message="Room not found",
+                        ),
+                    )
+
+                connected -= set(room.banned_participants)
+                _reconcile_talking_order(room, connected)
+                room.save()
+                state = room.to_state()
+
+            # Side effect outside the DB transaction — best-effort.
+            # If it fails, clients will catch up via polling.
+            publish_state(session_slug, state)
+            return Status(200, state)
 
     return Status(200, room.to_state())
 
