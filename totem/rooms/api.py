@@ -155,7 +155,7 @@ def get_state(
 
     if user.slug == room.keeper:
         connected = get_connected_participants(session_slug)
-        if connected is not None:
+        if connected:
             with transaction.atomic():
                 room = Room.objects.for_session(session_slug).select_for_update().first()  # type: ignore
                 if not room:

@@ -106,6 +106,38 @@ class TestReconcileTalkingOrder:
         _reconcile_talking_order(room, set())
         assert room.talking_order == ["a", "b", "c"]
 
+    def test_empty_connected_preserves_active_speakers(self):
+        room = self._make_room(
+            "a",
+            ["a", "b", "c"],
+            current_speaker="b",
+            next_speaker="c",
+            turn_state=TurnState.PASSING,
+            status=RoomStatus.ACTIVE,
+        )
+
+        _reconcile_talking_order(room, set())
+
+        assert room.current_speaker == "b"
+        assert room.next_speaker == "c"
+        assert room.turn_state == TurnState.PASSING
+
+    def test_repairs_missing_active_speakers_when_participants_reconnect(self):
+        room = self._make_room(
+            "a",
+            ["a", "b", "c"],
+            current_speaker=None,
+            next_speaker=None,
+            turn_state=TurnState.PASSING,
+            status=RoomStatus.ACTIVE,
+        )
+
+        _reconcile_talking_order(room, {"a", "c"})
+
+        assert room.current_speaker == "a"
+        assert room.next_speaker == "c"
+        assert room.turn_state == TurnState.SPEAKING
+
     def test_fixes_current_speaker_on_disconnect(self):
         room = self._make_room(
             "a",

@@ -221,18 +221,24 @@ def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
 
     connected_order = [s for s in reconciled if s in connected]
 
-    # Fix current_speaker if absent from connected (disconnected or banned)
-    if room.current_speaker and room.current_speaker not in connected:
-        room.current_speaker = connected_order[0] if connected_order else None
+    # An active room must retain its speaker assignments while nobody is
+    # connected. Clearing them would leave no reference point from which a
+    # later event could recover the turn.
+    if room.status != RoomStatus.ACTIVE or not connected_order:
+        return
+
+    # Fix current_speaker if missing or absent from connected.
+    if room.current_speaker not in connected:
+        room.current_speaker = connected_order[0]
         if room.turn_state == TurnState.PASSING:
             room.turn_state = TurnState.SPEAKING
 
-    # Fix next_speaker if absent from connected (disconnected or banned)
-    if room.next_speaker and room.next_speaker not in connected:
+    # Fix next_speaker if missing or absent from connected.
+    if room.next_speaker not in connected:
         if room.current_speaker:
             room.next_speaker = _next_in_order(reconciled, room.current_speaker, connected)
         else:
-            room.next_speaker = connected_order[0] if connected_order else None
+            room.next_speaker = connected_order[0]
 
 
 # ---------------------------------------------------------------------------

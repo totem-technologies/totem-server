@@ -557,6 +557,35 @@ class TestGetState:
         assert room.talking_order == original_order
         mock_publish.assert_not_called()
 
+    def test_empty_livekit_room_does_not_clear_active_speakers(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        participant = UserFactory()
+        session = SessionFactory(space__author=keeper)
+        session.attendees.add(keeper, participant)
+        room = Room.objects.get_or_create_for_session(session)
+        room.talking_order = [keeper.slug, participant.slug]
+        room.status = RoomStatus.ACTIVE
+        room.turn_state = TurnState.PASSING
+        room.current_speaker = participant.slug
+        room.next_speaker = keeper.slug
+        room.save()
+
+        with (
+            patch("totem.rooms.api.get_connected_participants", return_value=set()),
+            patch("totem.rooms.api.publish_state") as mock_publish,
+        ):
+            resp = _get_state(client, session.slug)
+
+        assert resp.status_code == 200
+        assert resp.json()["current_speaker"] == participant.slug
+        assert resp.json()["next_speaker"] == keeper.slug
+        assert resp.json()["turn_state"] == "passing"
+        room.refresh_from_db()
+        assert room.current_speaker == participant.slug
+        assert room.next_speaker == keeper.slug
+        assert room.turn_state == TurnState.PASSING
+        mock_publish.assert_not_called()
+
     def test_keeper_reconciliation_excludes_banned_participants(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         banned = UserFactory()
