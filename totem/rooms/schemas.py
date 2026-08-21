@@ -209,6 +209,12 @@ class UnbanParticipantEvent(Schema):
     participant_slug: str = Field(alias="participantSlug")
 
 
+class EmptyRoomEvent(Schema):
+    """Server-internal event for reconciling state with LiveKit presence."""
+
+    type: Literal["empty"] = "empty"
+
+
 RoomEvent = Annotated[
     Union[
         StartRoomEvent,
@@ -220,6 +226,7 @@ RoomEvent = Annotated[
         EndRoomEvent,
         BanParticipantEvent,
         UnbanParticipantEvent,
+        EmptyRoomEvent,
     ],
     Field(discriminator="type"),
 ]

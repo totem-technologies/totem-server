@@ -1,9 +1,10 @@
 import pytest
 
-from totem.rooms.models import Room
+from totem.rooms.models import Room, RoomEventLog
 from totem.rooms.schemas import (
     AcceptStickEvent,
     BanParticipantEvent,
+    EmptyRoomEvent,
     EndReason,
     EndRoomEvent,
     ErrorCode,
@@ -17,7 +18,12 @@ from totem.rooms.schemas import (
     TurnState,
     UnbanParticipantEvent,
 )
-from totem.rooms.state_machine import _next_in_order, _reconcile_talking_order, _require_keeper_in_room, apply_event
+from totem.rooms.state_machine import (
+    _next_in_order,
+    _reconcile_talking_order,
+    _require_keeper_in_room,
+    apply_event,
+)
 from totem.spaces.tests.factories import SessionFactory
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
@@ -1214,6 +1220,58 @@ class TestUnbanParticipant:
         with pytest.raises(TransitionError) as exc_info:
             apply_event(slug, keeper.slug, UnbanParticipantEvent(participantSlug=user1.slug), 3, {keeper.slug})
         assert exc_info.value.code == ErrorCode.ROOM_ALREADY_ENDED
+
+
+# ---------------------------------------------------------------------------
+# Internal reconciliation event
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestEmptyRoomEvent:
+    def test_changed_reconciliation_is_versioned_and_logged(self):
+        keeper = UserFactory()
+        participant = UserFactory()
+        room, slug = _setup_room(keeper, [keeper])
+
+        state = apply_event(slug, keeper.slug, EmptyRoomEvent(), 0, {keeper.slug, participant.slug})
+
+        assert state.version == 1
+        assert state.talking_order == [keeper.slug, participant.slug]
+        room.refresh_from_db()
+        assert room.state_version == 1
+        log = RoomEventLog.objects.get(room=room)
+        assert log.version == 1
+        assert log.event_type == "empty"
+        assert log.actor == keeper.slug
+        assert log.snapshot == state.model_dump(mode="json")
+
+    def test_noop_reconciliation_is_still_versioned_and_logged(self):
+        keeper = UserFactory()
+        room, slug = _setup_room(keeper, [keeper])
+
+        state = apply_event(slug, keeper.slug, EmptyRoomEvent(), 0, {keeper.slug})
+
+        assert state.version == 1
+        room.refresh_from_db()
+        assert room.state_version == 1
+        log = RoomEventLog.objects.get(room=room)
+        assert log.version == 1
+        assert log.event_type == "empty"
+        assert log.snapshot == state.model_dump(mode="json")
+
+    def test_reconciliation_invalidates_previous_client_version(self):
+        keeper = UserFactory()
+        participant = UserFactory()
+        _, slug = _setup_room(keeper, [keeper])
+
+        state = apply_event(slug, keeper.slug, EmptyRoomEvent(), 0, {keeper.slug, participant.slug})
+        assert state.version == 1
+
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(slug, keeper.slug, StartRoomEvent(), 0, {keeper.slug, participant.slug})
+
+        assert exc_info.value.code == ErrorCode.STALE_VERSION
 
 
 # ---------------------------------------------------------------------------

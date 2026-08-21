@@ -14,6 +14,7 @@ from .models import Room, RoomEventLog
 from .schemas import (
     AcceptStickEvent,
     BanParticipantEvent,
+    EmptyRoomEvent,
     EndReason,
     EndRoomEvent,
     ErrorCode,
@@ -63,10 +64,12 @@ def apply_event(
                 detail=f"expected {last_seen_version}, current {room.state_version}",
             )
 
-        # Reconcile talking order with who's actually connected
+        # Reconcile talking order with who's actually connected.
         _reconcile_talking_order(room, connected)
 
         match event:
+            case EmptyRoomEvent():
+                pass
             case StartRoomEvent(prompt=prompt):
                 _handle_start(room, actor, connected, prompt)
             case PassStickEvent(prompt=prompt):

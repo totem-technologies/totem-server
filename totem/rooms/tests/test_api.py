@@ -6,7 +6,7 @@ from django.test import Client
 from django.utils import timezone
 
 from totem.rooms.livekit import LiveKitConfigurationError
-from totem.rooms.models import Room
+from totem.rooms.models import Room, RoomEventLog
 from totem.rooms.schemas import EndReason, RemoveReason, RoomStatus, TurnState
 from totem.spaces.models import Space
 from totem.spaces.tests.factories import SessionFactory
@@ -28,6 +28,24 @@ def _get_state(client: Client, session_slug: str):
 
 @pytest.mark.django_db
 class TestPostEvent:
+    def test_empty_room_event(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        session.attendees.add(keeper)
+        room = Room.objects.get_or_create_for_session(session)
+
+        with (
+            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug}),
+            patch("totem.rooms.api.publish_state") as mock_publish,
+        ):
+            resp = _post_event(client, session.slug, {"type": "empty"}, 0)
+
+        assert resp.status_code == 200
+        assert resp.json()["version"] == 1
+        mock_publish.assert_called_once()
+        log = RoomEventLog.objects.get(room=room)
+        assert log.event_type == "empty"
+
     def test_start_room(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         session = SessionFactory(space__author=user)
@@ -404,9 +422,13 @@ class TestGetState:
         assert data["session_slug"] == session.slug
         assert data["keeper"] == user.slug
         mock_connected.assert_called_once_with(session.slug)
-        mock_publish.assert_not_called()
+        mock_publish.assert_called_once()
+        assert mock_publish.call_args.args[1].version == 1
         room.refresh_from_db()
-        assert room.date_modified == modified_before
+        assert room.date_modified != modified_before
+        log = RoomEventLog.objects.get(room=room)
+        assert log.version == 1
+        assert log.event_type == "empty"
 
     def test_attendee_state_request_does_not_reconcile(self, client_with_user: tuple[Client, User]):
         client, attendee = client_with_user
@@ -480,8 +502,9 @@ class TestGetState:
             resp = _get_state(client, session.slug)
         assert resp.status_code == 200
         assert resp.json()["status"] == "active"
-        assert resp.json()["version"] == 1
-        mock_publish.assert_not_called()
+        assert resp.json()["version"] == 2
+        mock_publish.assert_called_once()
+        assert mock_publish.call_args.args[1].version == 2
 
     def test_keeper_state_request_reconciles_and_persists_participants(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
@@ -504,11 +527,17 @@ class TestGetState:
         assert resp.json()["talking_order"] == [keeper.slug, participant.slug]
         room.refresh_from_db()
         assert room.talking_order == [keeper.slug, participant.slug]
-        assert room.state_version == 0
+        assert room.state_version == 1
         mock_publish.assert_called_once()
         published_slug, published_state = mock_publish.call_args.args
         assert published_slug == session.slug
         assert published_state.talking_order == [keeper.slug, participant.slug]
+        assert published_state.version == 1
+        log = RoomEventLog.objects.get(room=room)
+        assert log.version == 1
+        assert log.event_type == "empty"
+        assert log.actor == keeper.slug
+        assert log.snapshot == published_state.model_dump(mode="json")
 
     def test_keeper_state_request_repairs_disconnected_speaker(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
@@ -537,11 +566,12 @@ class TestGetState:
         assert room.current_speaker == keeper.slug
         assert room.next_speaker == keeper.slug
         assert room.turn_state == TurnState.SPEAKING
-        assert room.state_version == 0
+        assert room.state_version == 1
         published_state = mock_publish.call_args.args[1]
         assert published_state.current_speaker == keeper.slug
         assert published_state.next_speaker == keeper.slug
         assert published_state.turn_state == TurnState.SPEAKING
+        assert published_state.version == 1
 
     def test_livekit_failure_does_not_mutate_room(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
@@ -590,7 +620,7 @@ class TestGetState:
         assert room.turn_state == TurnState.PASSING
         mock_publish.assert_not_called()
 
-    def test_keeper_reconciliation_excludes_banned_participants(self, client_with_user: tuple[Client, User]):
+    def test_keeper_reconciliation_preserves_banned_participants(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         banned = UserFactory()
         session = SessionFactory(space__author=keeper)
@@ -603,7 +633,7 @@ class TestGetState:
         with (
             patch(
                 "totem.rooms.api.get_connected_participants",
-                return_value={keeper.slug, banned.slug},
+                return_value={keeper.slug},
             ),
             patch("totem.rooms.api.publish_state") as mock_publish,
         ):
@@ -613,7 +643,8 @@ class TestGetState:
         assert banned.slug not in resp.json()["talking_order"]
         room.refresh_from_db()
         assert banned.slug not in room.talking_order
-        mock_publish.assert_not_called()
+        mock_publish.assert_called_once()
+        assert mock_publish.call_args.args[1].banned_participants == [banned.slug]
 
 
 # ---------------------------------------------------------------------------
