@@ -167,10 +167,13 @@ def get_state(
                         ),
                     )
 
+                before = room.to_state()
                 connected -= set(room.banned_participants)
                 _reconcile_talking_order(room, connected)
-                room.save()
                 state = room.to_state()
+                if state == before:
+                    return Status(200, state)
+                room.save()
 
             # Side effect outside the DB transaction — best-effort.
             # If it fails, clients will catch up via polling.

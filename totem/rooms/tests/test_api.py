@@ -389,7 +389,8 @@ class TestGetState:
         client, user = client_with_user
         session = SessionFactory(space__author=user)
         session.attendees.add(user)
-        Room.objects.get_or_create_for_session(session)
+        room = Room.objects.get_or_create_for_session(session)
+        modified_before = room.date_modified
 
         with (
             patch("totem.rooms.api.get_connected_participants", return_value={user.slug}) as mock_connected,
@@ -403,8 +404,9 @@ class TestGetState:
         assert data["session_slug"] == session.slug
         assert data["keeper"] == user.slug
         mock_connected.assert_called_once_with(session.slug)
-        mock_publish.assert_called_once()
-        assert mock_publish.call_args.args == (session.slug, session.room.to_state())
+        mock_publish.assert_not_called()
+        room.refresh_from_db()
+        assert room.date_modified == modified_before
 
     def test_attendee_state_request_does_not_reconcile(self, client_with_user: tuple[Client, User]):
         client, attendee = client_with_user
@@ -473,19 +475,21 @@ class TestGetState:
 
         with (
             patch("totem.rooms.api.get_connected_participants", return_value={user.slug}),
-            patch("totem.rooms.api.publish_state"),
+            patch("totem.rooms.api.publish_state") as mock_publish,
         ):
             resp = _get_state(client, session.slug)
         assert resp.status_code == 200
         assert resp.json()["status"] == "active"
         assert resp.json()["version"] == 1
+        mock_publish.assert_not_called()
 
     def test_keeper_state_request_reconciles_and_persists_participants(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         participant = UserFactory()
         session = SessionFactory(space__author=keeper)
-        session.attendees.add(keeper, participant)
+        session.attendees.add(keeper)
         room = Room.objects.get_or_create_for_session(session)
+        session.attendees.add(participant)
 
         with (
             patch(
@@ -609,8 +613,7 @@ class TestGetState:
         assert banned.slug not in resp.json()["talking_order"]
         room.refresh_from_db()
         assert banned.slug not in room.talking_order
-        published_state = mock_publish.call_args.args[1]
-        assert banned.slug not in published_state.talking_order
+        mock_publish.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
