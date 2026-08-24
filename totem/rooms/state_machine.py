@@ -36,7 +36,7 @@ def apply_event(
     session_slug: str,
     actor: str,  # user slug
     event: RoomEvent,
-    last_seen_version: int,
+    last_seen_version: int | None,
     connected: set[str],  # user slugs currently in the LiveKit room
 ) -> RoomState:
     """
@@ -57,7 +57,7 @@ def apply_event(
 
         _require_attendee(room, actor)
 
-        if room.state_version != last_seen_version:
+        if last_seen_version is not None and room.state_version != last_seen_version:
             raise TransitionError(
                 code=ErrorCode.STALE_VERSION,
                 message="State has changed since your last read. Re-fetch state and try again.",

@@ -161,7 +161,7 @@ def get_state(
                     session_slug=session_slug,
                     actor=user.slug,
                     event=EmptyRoomEvent(),
-                    last_seen_version=room.state_version,
+                    last_seen_version=None,
                     connected=connected,
                 )
             except TransitionError as e:
