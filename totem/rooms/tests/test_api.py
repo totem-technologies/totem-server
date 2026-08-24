@@ -22,11 +22,12 @@ def _post_event(client: Client, session_slug: str, event: dict, version: int):
     )
 
 
-def _get_state(client: Client, session_slug: str, attempt_reconcile: bool = False):
-    return client.get(
-        f"/api/mobile/protected/rooms/{session_slug}/state",
-        query_params={"attempt_reconcile": attempt_reconcile},
-    )
+def _get_state(client: Client, session_slug: str):
+    return client.get(f"/api/mobile/protected/rooms/{session_slug}/state")
+
+
+def _post_reconcile(client: Client, session_slug: str):
+    return client.post(f"/api/mobile/protected/rooms/{session_slug}/state/reconcile")
 
 
 @pytest.mark.django_db
@@ -418,7 +419,7 @@ class TestGetState:
         assert data["session_slug"] == session.slug
         assert data["keeper"] == user.slug
 
-    def test_attendee_state_request_does_not_reconcile(self, client_with_user: tuple[Client, User]):
+    def test_state_request_does_not_reconcile(self, client_with_user: tuple[Client, User]):
         client, attendee = client_with_user
         keeper = UserFactory()
         session = SessionFactory(space__author=keeper)
@@ -429,7 +430,7 @@ class TestGetState:
             patch("totem.rooms.api.get_connected_participants") as mock_connected,
             patch("totem.rooms.api.publish_state") as mock_publish,
         ):
-            resp = _get_state(client, session.slug, attempt_reconcile=True)
+            resp = _get_state(client, session.slug)
 
         assert resp.status_code == 200
         mock_connected.assert_not_called()
@@ -446,7 +447,7 @@ class TestGetState:
             patch("totem.rooms.api.get_connected_participants") as mock_connected,
             patch("totem.rooms.api.publish_state") as mock_publish,
         ):
-            resp = _get_state(client, session.slug, attempt_reconcile=True)
+            resp = _get_state(client, session.slug)
 
         assert resp.status_code == 403
         assert resp.json()["code"] == "not_in_room"
@@ -460,7 +461,7 @@ class TestGetState:
             patch("totem.rooms.api.get_connected_participants") as mock_connected,
             patch("totem.rooms.api.publish_state") as mock_publish,
         ):
-            resp = _get_state(client, "nonexistent", attempt_reconcile=True)
+            resp = _get_state(client, "nonexistent")
 
         assert resp.status_code == 404
         assert resp.json()["code"] == "not_found"
@@ -484,17 +485,52 @@ class TestGetState:
             _post_event(client, session.slug, {"type": "start_room"}, 0)
 
         with (
-            patch("totem.rooms.api.get_connected_participants", return_value={user.slug}),
+            patch("totem.rooms.api.get_connected_participants") as mock_connected,
             patch("totem.rooms.api.publish_state") as mock_publish,
         ):
-            resp = _get_state(client, session.slug, attempt_reconcile=True)
+            resp = _get_state(client, session.slug)
         assert resp.status_code == 200
         assert resp.json()["status"] == "active"
-        assert resp.json()["version"] == 2
-        mock_publish.assert_called_once()
-        assert mock_publish.call_args.args[1].version == 2
+        assert resp.json()["version"] == 1
+        mock_connected.assert_not_called()
+        mock_publish.assert_not_called()
 
-    def test_keeper_state_request_reconciles_and_persists_participants(self, client_with_user: tuple[Client, User]):
+
+@pytest.mark.django_db
+class TestReconcileRoom:
+    def test_non_keeper_returns_403_without_calling_livekit(self, client_with_user: tuple[Client, User]):
+        client, attendee = client_with_user
+        keeper = UserFactory()
+        session = SessionFactory(space__author=keeper)
+        session.attendees.add(keeper, attendee)
+        Room.objects.get_or_create_for_session(session)
+
+        with (
+            patch("totem.rooms.api.get_connected_participants") as mock_connected,
+            patch("totem.rooms.api.publish_state") as mock_publish,
+        ):
+            resp = _post_reconcile(client, session.slug)
+
+        assert resp.status_code == 403
+        assert resp.json()["code"] == "not_keeper"
+        mock_connected.assert_not_called()
+        mock_publish.assert_not_called()
+
+    def test_room_not_found_returns_404_without_calling_livekit(self, client_with_user: tuple[Client, User]):
+        client, _ = client_with_user
+
+        with (
+            patch("totem.rooms.api.get_connected_participants") as mock_connected,
+            patch("totem.rooms.api.publish_state") as mock_publish,
+        ):
+            resp = _post_reconcile(client, "nonexistent")
+
+        assert resp.status_code == 404
+        assert resp.json()["code"] == "not_found"
+        mock_connected.assert_not_called()
+        mock_publish.assert_not_called()
+
+    def test_reconciles_and_persists_participants(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         participant = UserFactory()
         session = SessionFactory(space__author=keeper)
@@ -509,7 +545,7 @@ class TestGetState:
             ),
             patch("totem.rooms.api.publish_state") as mock_publish,
         ):
-            resp = _get_state(client, session.slug, attempt_reconcile=True)
+            resp = _post_reconcile(client, session.slug)
 
         assert resp.status_code == 200
         assert resp.json()["talking_order"] == [keeper.slug, participant.slug]
@@ -527,7 +563,7 @@ class TestGetState:
         assert log.actor == keeper.slug
         assert log.snapshot == published_state.model_dump(mode="json")
 
-    def test_keeper_state_request_preserves_pending_pass(self, client_with_user: tuple[Client, User]):
+    def test_preserves_pending_pass(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         current_speaker = UserFactory()
         next_speaker = UserFactory()
@@ -548,7 +584,7 @@ class TestGetState:
             ),
             patch("totem.rooms.api.publish_state") as mock_publish,
         ):
-            resp = _get_state(client, session.slug, attempt_reconcile=True)
+            resp = _post_reconcile(client, session.slug)
 
         assert resp.status_code == 200
         assert resp.json()["current_speaker"] == current_speaker.slug
@@ -576,7 +612,7 @@ class TestGetState:
             patch("totem.rooms.api.get_connected_participants", return_value=None),
             patch("totem.rooms.api.publish_state") as mock_publish,
         ):
-            resp = _get_state(client, session.slug, attempt_reconcile=True)
+            resp = _post_reconcile(client, session.slug)
 
         assert resp.status_code == 200
         room.refresh_from_db()
@@ -600,7 +636,7 @@ class TestGetState:
             patch("totem.rooms.api.get_connected_participants", return_value=set()),
             patch("totem.rooms.api.publish_state") as mock_publish,
         ):
-            resp = _get_state(client, session.slug, attempt_reconcile=True)
+            resp = _post_reconcile(client, session.slug)
 
         assert resp.status_code == 200
         assert resp.json()["current_speaker"] == participant.slug

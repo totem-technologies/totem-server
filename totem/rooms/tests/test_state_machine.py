@@ -1286,6 +1286,25 @@ class TestUnbanParticipant:
 
 @pytest.mark.django_db
 class TestEmptyRoomEvent:
+    def test_requires_keeper(self):
+        keeper = UserFactory()
+        participant = UserFactory()
+        room, slug = _setup_room(keeper, [keeper, participant])
+
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(
+                slug,
+                participant.slug,
+                EmptyRoomEvent(),
+                0,
+                {keeper.slug, participant.slug},
+            )
+
+        assert exc_info.value.code == ErrorCode.NOT_KEEPER
+        room.refresh_from_db()
+        assert room.state_version == 0
+        assert not RoomEventLog.objects.filter(room=room).exists()
+
     def test_changed_reconciliation_is_versioned_and_logged(self):
         keeper = UserFactory()
         participant = UserFactory()

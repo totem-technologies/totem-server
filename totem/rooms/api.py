@@ -128,7 +128,7 @@ def post_event(
         "or as a fallback poll when LiveKit data messages may have been missed. "
     ),
 )
-def get_state(request: HttpRequest, session_slug: str, attempt_reconcile: bool = False):
+def get_state(request: HttpRequest, session_slug: str):
     user: User = request.user  # type: ignore
     room = Room.objects.for_session(session_slug).first()  # type: ignore
 
@@ -150,28 +150,46 @@ def get_state(request: HttpRequest, session_slug: str, attempt_reconcile: bool =
             ),
         )
 
-    if user.slug == room.keeper and attempt_reconcile:
-        connected = get_connected_participants(session_slug)
-        if connected:
-            try:
-                state = apply_event(
-                    session_slug=session_slug,
-                    actor=user.slug,
-                    event=EmptyRoomEvent(),
-                    last_seen_version=None,
-                    connected=connected,
-                )
-            except TransitionError as e:
-                return RoomErrorResponse(
-                    code=e.code,
-                    message=e.message,
-                    detail=e.detail,
-                ).as_http_response()
-
-            publish_state(session_slug, state)
-            return Status(200, state)
-
     return Status(200, room.to_state())
+
+
+@router.post(
+    "/{session_slug}/state/reconcile",
+    response={200: RoomState, **ERROR_RESPONSES},
+    summary="Reconcile room state",
+    description=(
+        "Keeper-only command that reconciles room state with connected "
+        "LiveKit participants and broadcasts the resulting state."
+    ),
+)
+def reconcile_room(request: HttpRequest, session_slug: str):
+    user: User = request.user  # type: ignore
+    result = _get_room_and_require_keeper(user, session_slug)
+    if isinstance(result, RoomErrorResponse):
+        return result.as_http_response()
+
+    connected = get_connected_participants(session_slug)
+    if not connected:
+        return Status(200, result.to_state())
+
+    try:
+        state = apply_event(
+            session_slug=session_slug,
+            actor=user.slug,
+            event=EmptyRoomEvent(),
+            last_seen_version=None,
+            connected=connected,
+        )
+    except TransitionError as e:
+        return RoomErrorResponse(
+            code=e.code,
+            message=e.message,
+            detail=e.detail,
+        ).as_http_response()
+
+    # Side effect outside the DB transaction — best-effort.
+    publish_state(session_slug, state)
+    return Status(200, state)
 
 
 # ---------------------------------------------------------------------------

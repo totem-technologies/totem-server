@@ -57,6 +57,9 @@ def apply_event(
 
         _require_attendee(room, actor)
 
+        if isinstance(event, EmptyRoomEvent):
+            _require_keeper(room, actor)
+
         if last_seen_version is not None and room.state_version != last_seen_version:
             raise TransitionError(
                 code=ErrorCode.STALE_VERSION,
@@ -242,7 +245,8 @@ def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
     # A disconnected current speaker remains the source of the handoff until
     # the next speaker accepts.
     elif room.current_speaker not in connected:
-        room.next_speaker = _next_in_order(reconciled, room.current_speaker, connected) or connected_order[0]
+        if room.next_speaker not in connected:
+            room.next_speaker = _next_in_order(reconciled, room.current_speaker, connected) or connected_order[0]
         room.turn_state = TurnState.PASSING
         return
 
