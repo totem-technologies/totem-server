@@ -389,7 +389,7 @@ class TestRSVPView:
         assert response.status_code == 409
         data = response.json()
         assert data["message"] == "This session conflicts with one or more sessions you are attending"
-        assert data["error"] == data["message"]
+        assert data["error"] == "This session conflicts with another one you're attending."
         assert [session["slug"] for session in data["conflicting_sessions"]] == [first.slug, second.slug]
         assert [session["title"] for session in data["conflicting_sessions"]] == [
             "Earlier Conflict",
@@ -426,7 +426,7 @@ class TestRSVPView:
         client.force_login(user)
         response = client.post(reverse("spaces:rsvp", kwargs={"session_slug": event.slug}), data={"action": "yes"})
         message = list(get_messages(response.wsgi_request))
-        assert "started" in message[0].message.lower()
+        assert message[0].message == "We couldn't update your RSVP right now. Please try again."
         assert response.status_code == 302
         assert event.slug in response.url
         assert user not in event.joined.all()
