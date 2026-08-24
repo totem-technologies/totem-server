@@ -69,6 +69,7 @@ def apply_event(
 
         match event:
             case EmptyRoomEvent():
+                # reconciliation already happened above
                 pass
             case StartRoomEvent(prompt=prompt):
                 _handle_start(room, actor, connected, prompt)
@@ -202,11 +203,13 @@ def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
     - Keeps disconnected participants in the order (they may reconnect)
     - Appends newly connected participants
     - Keeps the keeper first
-    - Fixes current_speaker/next_speaker to connected participants only
+    - Starts a pass to the next connected participant when the current
+      speaker disconnects
+    - Repairs missing speaker assignments
     """
     reconciled: list[str] = []
 
-    # Keeper first
+    # Keeper always first
     if room.keeper in set(room.talking_order) | connected:
         reconciled.append(room.keeper)
 
@@ -230,11 +233,18 @@ def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
     if room.status != RoomStatus.ACTIVE or not connected_order:
         return
 
-    # Fix current_speaker if missing or absent from connected.
-    if room.current_speaker not in connected:
+    # A missing assignment has no position from which to continue the order,
+    # so recover from the first connected participant.
+    if room.current_speaker is None:
         room.current_speaker = connected_order[0]
-        if room.turn_state == TurnState.PASSING:
-            room.turn_state = TurnState.SPEAKING
+        room.turn_state = TurnState.SPEAKING
+
+    # A disconnected current speaker remains the source of the handoff until
+    # the next speaker accepts.
+    elif room.current_speaker not in connected:
+        room.next_speaker = _next_in_order(reconciled, room.current_speaker, connected) or connected_order[0]
+        room.turn_state = TurnState.PASSING
+        return
 
     # Fix next_speaker if missing or absent from connected.
     if room.next_speaker not in connected:
@@ -434,6 +444,14 @@ def _handle_ban(room: Room, actor: str, participant_slug: str, connected: set[st
 
     room.banned_participants = [*room.banned_participants, participant_slug]
     room.talking_order = [s for s in room.talking_order if s != participant_slug]
+
+    # A ban is an explicit removal, not a transient disconnect. Remove the
+    # banned speaker assignment so reconciliation recovers from a connected
+    # participant instead of retaining them as the source of a handoff.
+    if room.current_speaker == participant_slug:
+        room.current_speaker = None
+        room.turn_state = TurnState.SPEAKING
+
     _reconcile_talking_order(room, connected - {participant_slug})
 
 

@@ -144,7 +144,7 @@ class TestReconcileTalkingOrder:
         assert room.next_speaker == "c"
         assert room.turn_state == TurnState.SPEAKING
 
-    def test_fixes_current_speaker_on_disconnect(self):
+    def test_current_speaker_disconnect_starts_pass_to_next_in_order(self):
         room = self._make_room(
             "a",
             ["a", "b", "c"],
@@ -153,7 +153,9 @@ class TestReconcileTalkingOrder:
             status=RoomStatus.ACTIVE,
         )
         _reconcile_talking_order(room, {"a", "c"})
-        assert room.current_speaker == "a"
+        assert room.current_speaker == "b"
+        assert room.next_speaker == "c"
+        assert room.turn_state == TurnState.PASSING
 
     def test_fixes_next_speaker_on_disconnect(self):
         room = self._make_room(
@@ -167,7 +169,7 @@ class TestReconcileTalkingOrder:
         _reconcile_talking_order(room, {"a", "c"})
         assert room.next_speaker == "c"
 
-    def test_passing_becomes_speaking_when_current_disconnects(self):
+    def test_passing_is_preserved_when_current_disconnects_but_next_is_connected(self):
         room = self._make_room(
             "a",
             ["a", "b", "c"],
@@ -177,8 +179,23 @@ class TestReconcileTalkingOrder:
             status=RoomStatus.ACTIVE,
         )
         _reconcile_talking_order(room, {"a", "c"})
-        assert room.current_speaker == "a"
-        assert room.turn_state == TurnState.SPEAKING
+        assert room.current_speaker == "b"
+        assert room.next_speaker == "c"
+        assert room.turn_state == TurnState.PASSING
+
+    def test_passing_moves_to_next_connected_when_current_and_next_disconnect(self):
+        room = self._make_room(
+            "a",
+            ["a", "b", "c"],
+            current_speaker="b",
+            next_speaker="c",
+            turn_state=TurnState.PASSING,
+            status=RoomStatus.ACTIVE,
+        )
+        _reconcile_talking_order(room, {"a"})
+        assert room.current_speaker == "b"
+        assert room.next_speaker == "a"
+        assert room.turn_state == TurnState.PASSING
 
 
 # ---------------------------------------------------------------------------
@@ -611,6 +628,46 @@ class TestAcceptStick:
         assert state.current_speaker == user1.slug
         assert state.next_speaker == keeper.slug
         assert state.turn_state == TurnState.SPEAKING
+
+    def test_pending_speaker_can_accept_after_current_speaker_disconnects(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        user2 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1, user2])
+        all_connected = {keeper.slug, user1.slug, user2.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, all_connected)
+        apply_event(slug, keeper.slug, PassStickEvent(), 1, all_connected)
+        apply_event(slug, user1.slug, AcceptStickEvent(), 2, all_connected)
+        passed = apply_event(slug, user1.slug, PassStickEvent(), 3, all_connected)
+
+        assert passed.current_speaker == user1.slug
+        assert passed.next_speaker == user2.slug
+        assert passed.turn_state == TurnState.PASSING
+
+        connected_after_disconnect = {keeper.slug, user2.slug}
+        reconciled = apply_event(
+            slug,
+            keeper.slug,
+            EmptyRoomEvent(),
+            4,
+            connected_after_disconnect,
+        )
+
+        assert reconciled.current_speaker == user1.slug
+        assert reconciled.next_speaker == user2.slug
+        assert reconciled.turn_state == TurnState.PASSING
+
+        accepted = apply_event(
+            slug,
+            user2.slug,
+            AcceptStickEvent(),
+            5,
+            connected_after_disconnect,
+        )
+
+        assert accepted.current_speaker == user2.slug
+        assert accepted.turn_state == TurnState.SPEAKING
 
     def test_wrong_person_cannot_accept(self):
         keeper = UserFactory()

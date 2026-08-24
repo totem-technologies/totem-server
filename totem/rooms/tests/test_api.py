@@ -31,7 +31,7 @@ def _get_state(client: Client, session_slug: str, attempt_reconcile: bool = Fals
 
 @pytest.mark.django_db
 class TestPostEvent:
-    def test_empty_room_event(self, client_with_user: tuple[Client, User]):
+    def test_empty_room_event_is_not_public(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         session = SessionFactory(space__author=keeper)
         session.attendees.add(keeper)
@@ -43,11 +43,9 @@ class TestPostEvent:
         ):
             resp = _post_event(client, session.slug, {"type": "empty"}, 0)
 
-        assert resp.status_code == 200
-        assert resp.json()["version"] == 1
-        mock_publish.assert_called_once()
-        log = RoomEventLog.objects.get(room=room)
-        assert log.event_type == "empty"
+        assert resp.status_code == 422
+        mock_publish.assert_not_called()
+        assert not RoomEventLog.objects.filter(room=room).exists()
 
     def test_start_room(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -529,38 +527,42 @@ class TestGetState:
         assert log.actor == keeper.slug
         assert log.snapshot == published_state.model_dump(mode="json")
 
-    def test_keeper_state_request_repairs_disconnected_speaker(self, client_with_user: tuple[Client, User]):
+    def test_keeper_state_request_preserves_pending_pass(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
-        participant = UserFactory()
+        current_speaker = UserFactory()
+        next_speaker = UserFactory()
         session = SessionFactory(space__author=keeper)
-        session.attendees.add(keeper, participant)
+        session.attendees.add(keeper, current_speaker, next_speaker)
         room = Room.objects.get_or_create_for_session(session)
-        room.talking_order = [keeper.slug, participant.slug]
+        room.talking_order = [keeper.slug, current_speaker.slug, next_speaker.slug]
         room.status = RoomStatus.ACTIVE
         room.turn_state = TurnState.PASSING
-        room.current_speaker = participant.slug
-        room.next_speaker = keeper.slug
+        room.current_speaker = current_speaker.slug
+        room.next_speaker = next_speaker.slug
         room.save()
 
         with (
-            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug}),
+            patch(
+                "totem.rooms.api.get_connected_participants",
+                return_value={keeper.slug, next_speaker.slug},
+            ),
             patch("totem.rooms.api.publish_state") as mock_publish,
         ):
             resp = _get_state(client, session.slug, attempt_reconcile=True)
 
         assert resp.status_code == 200
-        assert resp.json()["current_speaker"] == keeper.slug
-        assert resp.json()["next_speaker"] == keeper.slug
-        assert resp.json()["turn_state"] == "speaking"
+        assert resp.json()["current_speaker"] == current_speaker.slug
+        assert resp.json()["next_speaker"] == next_speaker.slug
+        assert resp.json()["turn_state"] == "passing"
         room.refresh_from_db()
-        assert room.current_speaker == keeper.slug
-        assert room.next_speaker == keeper.slug
-        assert room.turn_state == TurnState.SPEAKING
+        assert room.current_speaker == current_speaker.slug
+        assert room.next_speaker == next_speaker.slug
+        assert room.turn_state == TurnState.PASSING
         assert room.state_version == 1
         published_state = mock_publish.call_args.args[1]
-        assert published_state.current_speaker == keeper.slug
-        assert published_state.next_speaker == keeper.slug
-        assert published_state.turn_state == TurnState.SPEAKING
+        assert published_state.current_speaker == current_speaker.slug
+        assert published_state.next_speaker == next_speaker.slug
+        assert published_state.turn_state == TurnState.PASSING
         assert published_state.version == 1
 
     def test_livekit_failure_does_not_mutate_room(self, client_with_user: tuple[Client, User]):
