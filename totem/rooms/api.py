@@ -128,10 +128,7 @@ def post_event(
         "or as a fallback poll when LiveKit data messages may have been missed. "
     ),
 )
-def get_state(
-    request: HttpRequest,
-    session_slug: str,
-):
+def get_state(request: HttpRequest, session_slug: str, attempt_reconcile: bool = False):
     user: User = request.user  # type: ignore
     room = Room.objects.for_session(session_slug).first()  # type: ignore
 
@@ -153,7 +150,7 @@ def get_state(
             ),
         )
 
-    if user.slug == room.keeper:
+    if user.slug == room.keeper and attempt_reconcile:
         connected = get_connected_participants(session_slug)
         if connected:
             try:

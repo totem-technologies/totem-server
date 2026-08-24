@@ -226,7 +226,6 @@ RoomEvent = Annotated[
         EndRoomEvent,
         BanParticipantEvent,
         UnbanParticipantEvent,
-        EmptyRoomEvent,
     ],
     Field(discriminator="type"),
 ]

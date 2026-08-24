@@ -35,7 +35,7 @@ from .schemas import (
 def apply_event(
     session_slug: str,
     actor: str,  # user slug
-    event: RoomEvent,
+    event: RoomEvent | EmptyRoomEvent,
     last_seen_version: int | None,
     connected: set[str],  # user slugs currently in the LiveKit room
 ) -> RoomState:
