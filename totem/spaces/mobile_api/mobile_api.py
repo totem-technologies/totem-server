@@ -29,6 +29,7 @@ from totem.spaces.models import (
     SessionTimeConflict,
     Space,
 )
+from totem.spaces.rsvp import resolve_session_conflicts
 from totem.users.models import User
 
 spaces_router = Router(tags=["spaces"])
@@ -213,29 +214,9 @@ def rsvp_resolve_conflicts(request: HttpRequest, event_slug: str, payload: Resol
         raise Http404
 
     try:
-        with transaction.atomic():
-            submitted_slugs = set(payload.conflicting_session_slugs)
-            submitted_sessions = {
-                item.slug: item
-                for item in Session.objects.visible_to(user)
-                .filter(slug__in=submitted_slugs, attendees=user)
-                .overlapping(session)
-                .select_related("space__author")
-                .prefetch_related("attendees")
-            }
-
-            detected_conflicts = list(Session.objects.time_conflicts_for(session, user)) if not user.is_staff else []
-            current_conflict_slugs = [conflict.slug for conflict in detected_conflicts]
-            if set(current_conflict_slugs) - submitted_slugs:
-                return Status(409, _session_conflict_schema(detected_conflicts, user))
-
-            session.can_attend(user=user, check_time_conflicts=False)
-            current_conflicts = [submitted_sessions[slug] for slug in current_conflict_slugs]
-            for session_to_remove in current_conflicts:
-                session_to_remove.remove_attendee(user)
-            if not session.add_attendee(user, prevalidated=True):
-                raise SessionException("Unable to save your spot")
-            session.space.subscribe(user)
+        resolve_session_conflicts(session, user, payload.conflicting_session_slugs)
+    except SessionTimeConflict as e:
+        return Status(409, _session_conflict_schema(e.conflicting_sessions, user))
     except SessionException as e:
         raise AuthorizationError(message=str(e))
     _prefetch_session_detail_relations([session], user)

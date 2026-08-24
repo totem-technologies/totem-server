@@ -2,9 +2,28 @@ import { render } from "@solidjs/testing-library"
 import userEvent from "@testing-library/user-event"
 import type { ATCBActionEventConfig } from "add-to-calendar-button"
 import { beforeAll, beforeEach, expect, test, vi } from "vitest"
-import type { SessionDetailSchema } from "../client"
+import type { SessionConflictSchema, SessionDetailSchema } from "../client"
 import { EventInfo } from "./detailSidebar"
 import { makeSessionDetail } from "./testHelpers"
+
+const postData = vi.fn(() =>
+  Promise.resolve(new Response(JSON.stringify({ ok: true }), { status: 200 }))
+)
+vi.mock("@/libs/postData", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/libs/postData")>()),
+  postData: (...args: unknown[]) =>
+    (postData as (...a: unknown[]) => Promise<Response>)(...args),
+}))
+
+const resolveConflicts = vi.fn(
+  (..._args: unknown[]): Promise<{ data: unknown; error: unknown }> =>
+    Promise.resolve({ data: { attending: true }, error: undefined })
+)
+vi.mock("../client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../client")>()),
+  totemSpacesApiRsvpResolveConflicts: (...args: unknown[]) =>
+    (resolveConflicts as (...a: unknown[]) => Promise<unknown>)(...args),
+}))
 
 const user = userEvent.setup()
 const atcbAction = vi.fn<typeof atcb_action>(() => Promise.resolve(""))
@@ -20,9 +39,20 @@ beforeAll(() => {
 
 beforeEach(() => {
   atcbAction.mockClear()
+  postData.mockReset()
+  postData.mockResolvedValue(
+    new Response(JSON.stringify({ ok: true }), { status: 200 })
+  )
+  resolveConflicts.mockReset()
+  resolveConflicts.mockResolvedValue({
+    data: { attending: true },
+    error: undefined,
+  })
+  document.cookie = "csrftoken=test-csrf-token"
 })
 
 const START = new Date("2030-01-01T18:00:00.000Z").getTime()
+const CONFLICT_HEADING = "You’re already signed up for another session."
 
 function makeEvent(
   overrides: Partial<SessionDetailSchema> = {}
@@ -30,8 +60,22 @@ function makeEvent(
   return makeSessionDetail(START, overrides)
 }
 
-function renderEventInfo(event: SessionDetailSchema) {
-  return render(() => <EventInfo eventStore={event} refetchEvent={() => {}} />)
+function renderEventInfo(
+  event: SessionDetailSchema,
+  refetchEvent: () => void = () => {}
+) {
+  return render(() => (
+    <EventInfo eventStore={event} refetchEvent={refetchEvent} />
+  ))
+}
+
+function conflictResponse(
+  conflictingSessions: SessionDetailSchema[]
+): SessionConflictSchema {
+  return {
+    message: "This session conflicts with another session",
+    conflicting_sessions: conflictingSessions,
+  }
 }
 
 function calendarButton(result: ReturnType<typeof renderEventInfo>) {
@@ -130,4 +174,154 @@ test("clicking add-to-calendar opens the provider list with the session details"
   // positions off the trigger's flow position, which breaks inside our
   // centered full-width layout and rendered off-screen on mobile.
   expect(config.listStyle).toBe("modal")
+})
+
+test("an RSVP conflict opens the mobile-style session comparison dialog", async () => {
+  const conflict = makeEvent({
+    slug: "existing-session",
+    title: "Existing Session",
+    attending: true,
+  })
+  postData.mockResolvedValueOnce(
+    new Response(JSON.stringify(conflictResponse([conflict])), { status: 409 })
+  )
+  const result = renderEventInfo(
+    makeEvent({ slug: "new-session", title: "New Session" })
+  )
+
+  await user.click(result.getByRole("button", { name: "Attend this session" }))
+
+  expect(result.getByRole("heading", { name: CONFLICT_HEADING })).toBeTruthy()
+  expect(result.container.textContent).toContain(
+    "To join New Session, you’ll need to give up your spot in Existing Session."
+  )
+  expect(result.getByText("Your current session")).toBeTruthy()
+  expect(result.getByText("New session")).toBeTruthy()
+  const comparison = result.getByTestId("conflict-session-comparison")
+  expect(comparison.className).toContain("flex-col")
+  expect(comparison.className).toContain("[@media(max-height:700px)]:flex-row")
+  expect(comparison.className).not.toContain("md:flex-row")
+  const cancel = result.getByRole("button", { name: "Cancel" })
+  expect(cancel.className).toContain("btn-outline")
+  const switchButton = result.getByRole("button", { name: "Switch Sessions" })
+  expect(switchButton.parentElement?.className).toContain("flex-col")
+  expect(
+    result.getByText(
+      "Switching removes you from your current session and saves your seat in the new one right away."
+    )
+  ).toBeTruthy()
+})
+
+test("cancel closes the conflict dialog without changing attendance", async () => {
+  const conflict = makeEvent({
+    slug: "existing-session",
+    title: "Existing Session",
+    attending: true,
+  })
+  postData.mockResolvedValueOnce(
+    new Response(JSON.stringify(conflictResponse([conflict])), { status: 409 })
+  )
+  const result = renderEventInfo(makeEvent({ title: "New Session" }))
+  await user.click(result.getByRole("button", { name: "Attend this session" }))
+
+  await user.click(result.getByRole("button", { name: "Cancel" }))
+
+  expect(resolveConflicts).not.toHaveBeenCalled()
+  expect(result.queryByRole("heading", { name: CONFLICT_HEADING })).toBeNull()
+})
+
+test("switching sessions sends every conflict and completes the RSVP flow", async () => {
+  const first = makeEvent({ slug: "first-conflict", title: "First Conflict" })
+  const second = makeEvent({
+    slug: "second-conflict",
+    title: "Second Conflict",
+  })
+  postData.mockResolvedValueOnce(
+    new Response(JSON.stringify(conflictResponse([first, second])), {
+      status: 409,
+    })
+  )
+  const refetch = vi.fn()
+  const result = renderEventInfo(
+    makeEvent({ slug: "new-session", title: "New Session" }),
+    refetch
+  )
+  await user.click(result.getByRole("button", { name: "Attend this session" }))
+
+  await user.click(result.getByRole("button", { name: "Switch Sessions" }))
+
+  expect(resolveConflicts).toHaveBeenCalledWith({
+    path: { event_slug: "new-session" },
+    body: {
+      conflicting_session_slugs: ["first-conflict", "second-conflict"],
+    },
+    headers: { "X-CSRFToken": "test-csrf-token" },
+  })
+  expect(refetch).toHaveBeenCalledOnce()
+  expect(result.queryByRole("heading", { name: CONFLICT_HEADING })).toBeNull()
+})
+
+test("a fresh 409 updates the conflict list and keeps the dialog open", async () => {
+  const original = makeEvent({
+    slug: "original-conflict",
+    title: "Original Conflict",
+  })
+  const fresh = makeEvent({ slug: "fresh-conflict", title: "Fresh Conflict" })
+  postData.mockResolvedValueOnce(
+    new Response(JSON.stringify(conflictResponse([original])), { status: 409 })
+  )
+  resolveConflicts.mockResolvedValueOnce({
+    data: undefined,
+    error: conflictResponse([original, fresh]),
+  })
+  const result = renderEventInfo(makeEvent({ title: "New Session" }))
+  await user.click(result.getByRole("button", { name: "Attend this session" }))
+
+  await user.click(result.getByRole("button", { name: "Switch Sessions" }))
+
+  expect(result.getByText("Fresh Conflict")).toBeTruthy()
+  expect(result.getByRole("heading", { name: CONFLICT_HEADING })).toBeTruthy()
+})
+
+test("the switch action is disabled while the resolution request is pending", async () => {
+  const conflict = makeEvent({ slug: "existing", title: "Existing Session" })
+  postData.mockResolvedValueOnce(
+    new Response(JSON.stringify(conflictResponse([conflict])), { status: 409 })
+  )
+  let finishRequest:
+    | ((value: { data: unknown; error: unknown }) => void)
+    | undefined
+  resolveConflicts.mockReturnValueOnce(
+    new Promise((resolve) => {
+      finishRequest = resolve
+    })
+  )
+  const result = renderEventInfo(makeEvent({ title: "New Session" }))
+  await user.click(result.getByRole("button", { name: "Attend this session" }))
+
+  await user.click(result.getByRole("button", { name: "Switch Sessions" }))
+
+  const switching = result.getByRole("button", { name: "Switching…" })
+  expect((switching as HTMLButtonElement).disabled).toBe(true)
+  finishRequest?.({ data: { attending: true }, error: undefined })
+})
+
+test("a non-conflict resolution failure stays in the dialog", async () => {
+  const conflict = makeEvent({ slug: "existing", title: "Existing Session" })
+  postData.mockResolvedValueOnce(
+    new Response(JSON.stringify(conflictResponse([conflict])), { status: 409 })
+  )
+  resolveConflicts.mockResolvedValueOnce({
+    data: undefined,
+    error: { detail: "Unauthorized" },
+  })
+  const result = renderEventInfo(makeEvent({ title: "New Session" }))
+  await user.click(result.getByRole("button", { name: "Attend this session" }))
+
+  await user.click(result.getByRole("button", { name: "Switch Sessions" }))
+
+  expect(
+    result.getByText("Could not switch sessions. Please try again.")
+  ).toBeTruthy()
+  expect(result.getByRole("heading", { name: CONFLICT_HEADING })).toBeTruthy()
 })

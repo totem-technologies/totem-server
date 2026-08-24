@@ -159,6 +159,78 @@ class TestSessionDetail:
         assert response.json()["attending"] is True
 
 
+class TestRsvpConflictResolution:
+    def test_requires_authentication(self, client, db):
+        event = SessionFactory()
+
+        response = client.post(
+            reverse("api-1:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug}),
+            {"conflicting_session_slugs": []},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 401
+
+    def test_replaces_all_conflicting_sessions(self, client, db):
+        start = timezone.now() + timedelta(days=1)
+        event = SessionFactory(title="New Session", start=start, duration_minutes=60)
+        first = SessionFactory(title="First Conflict", start=start, duration_minutes=60)
+        second = SessionFactory(
+            title="Second Conflict",
+            start=start + timedelta(minutes=30),
+            duration_minutes=60,
+        )
+        unrelated = SessionFactory(start=start + timedelta(hours=2), duration_minutes=60)
+        user = UserFactory()
+        first.attendees.add(user)
+        second.attendees.add(user)
+        unrelated.attendees.add(user)
+        client.force_login(user)
+
+        response = client.post(
+            reverse("api-1:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug}),
+            {"conflicting_session_slugs": [first.slug, second.slug]},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        assert response.json()["slug"] == event.slug
+        assert response.json()["attending"] is True
+        assert event.attendees.filter(pk=user.pk).exists()
+        assert not first.attendees.filter(pk=user.pk).exists()
+        assert not second.attendees.filter(pk=user.pk).exists()
+        assert unrelated.attendees.filter(pk=user.pk).exists()
+
+    def test_returns_fresh_conflicts_without_changing_attendance(self, client, db):
+        start = timezone.now() + timedelta(days=1)
+        event = SessionFactory(start=start, duration_minutes=60)
+        submitted = SessionFactory(title="Submitted Conflict", start=start, duration_minutes=60)
+        new_conflict = SessionFactory(
+            title="New Conflict",
+            start=start + timedelta(minutes=30),
+            duration_minutes=60,
+        )
+        user = UserFactory()
+        submitted.attendees.add(user)
+        new_conflict.attendees.add(user)
+        client.force_login(user)
+
+        response = client.post(
+            reverse("api-1:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug}),
+            {"conflicting_session_slugs": [submitted.slug]},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 409
+        assert {session["slug"] for session in response.json()["conflicting_sessions"]} == {
+            submitted.slug,
+            new_conflict.slug,
+        }
+        assert submitted.attendees.filter(pk=user.pk).exists()
+        assert new_conflict.attendees.filter(pk=user.pk).exists()
+        assert not event.attendees.filter(pk=user.pk).exists()
+
+
 class TestSpacesSummary:
     def test_summary_requires_login(self, client, db):
         response = client.get(reverse("api-1:spaces_summary"))

@@ -20,9 +20,10 @@ from totem.utils.utils import is_ajax
 
 from .actions import JoinSessionAction, SubscribeSpaceAction
 from .filters import (
+    session_conflict_schema,
     upcoming_sessions_by_author,
 )
-from .models import Session, SessionException, Space
+from .models import Session, SessionException, SessionTimeConflict, Space
 
 ICS_QUERY_PARAM = "key"
 AUTO_RSVP_SESSION_KEY = "auto_rsvp"
@@ -109,13 +110,21 @@ def rsvp(request: HttpRequest, session_slug):
         return redirect_to_login(request.get_full_path())
     session = _get_session(session_slug)
     error = ""
+    conflicts: list[Session] | None = None
     if request.POST:
         try:
             with transaction.atomic():
                 _add_or_remove_attendee(request.user, session, request.POST.get("action") != "remove")
+        except SessionTimeConflict as e:
+            error = str(e)
+            conflicts = e.conflicting_sessions
         except SessionException as e:
             error = str(e)
     if is_ajax(request):
+        if conflicts is not None:
+            payload = session_conflict_schema(conflicts, request.user).model_dump(mode="json")
+            payload["error"] = error
+            return JsonResponse(payload, status=409)
         if error:
             return JsonResponse({"error": error}, status=400)
         return JsonResponse({"ok": True})

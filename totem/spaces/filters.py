@@ -1,13 +1,14 @@
 import datetime
 from dataclasses import dataclass
 
-from django.db.models import Count, Exists, OuterRef, Prefetch, Q
+from django.db.models import Count, Exists, OuterRef, Prefetch, Q, prefetch_related_objects
 from django.urls import reverse
 from django.utils import timezone
 
 from totem.onboard.models import OnboardModel
 from totem.spaces.schemas import (
     NextSessionSchema,
+    SessionConflictSchema,
     SessionDetailSchema,
     SessionSpaceSchema,
     SpaceDetailSchema,
@@ -15,7 +16,7 @@ from totem.spaces.schemas import (
 )
 from totem.users.models import User
 
-from .models import Session, SessionQuerySet, Space
+from .models import Session, SessionQuerySet, SessionTimeConflict, Space
 
 
 def upcoming_sessions_queryset(user: User | None = None) -> SessionQuerySet:
@@ -179,20 +180,20 @@ def _next_session_schema(user: User, session: Session) -> UpcomingSessionSchema 
     )
 
 
-def session_detail_schema(session: Session, user: User):
+def session_detail_schema(session: Session, user: User, *, include_next_session: bool = True):
     space: Space = session.space
     start = session.start
     subscribed = space.subscribed.contains(user) if user.is_authenticated else None
     started = session.started()
     ended = session.ended()
 
-    attending = session.attendees.filter(pk=user.pk).exists()
+    attending = session.attendees.contains(user) if user.is_authenticated else False
     join_opens_at, join_closes_at = session.join_window(user)
 
     # When this session can no longer be attended, point people at the
     # space's next one.
     next_session = None
-    if started or ended or session.seats_left() <= 0:
+    if include_next_session and (started or ended or session.seats_left() <= 0):
         next_session = _next_session_schema(user, session)
 
     return SessionDetailSchema(
@@ -224,6 +225,23 @@ def session_detail_schema(session: Session, user: User):
         subscribed=subscribed,
         user_timezone=str("UTC"),
         meeting_provider=space.meeting_provider,
+    )
+
+
+def session_conflict_schema(conflicting_sessions: list[Session], user: User) -> SessionConflictSchema:
+    prefetch_related_objects(
+        conflicting_sessions,
+        "attendees",
+        "joined",
+        "space__author__sessions_joined",
+        "space__categories",
+        "space__subscribed",
+    )
+    return SessionConflictSchema(
+        message=SessionTimeConflict.message,
+        conflicting_sessions=[
+            session_detail_schema(conflict, user, include_next_session=False) for conflict in conflicting_sessions
+        ],
     )
 
 

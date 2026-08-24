@@ -2,13 +2,16 @@ from datetime import datetime
 
 from django.http import Http404, HttpRequest
 from django.shortcuts import get_object_or_404
-from ninja import Field, FilterSchema, Router, Schema
+from ninja import Field, FilterSchema, Router, Schema, Status
+from ninja.errors import AuthorizationError
 from ninja.pagination import paginate
 from ninja.params.functions import Query
 from ninja.security import django_auth
 
 from totem.spaces.schemas import (
     FilterOptionsSchema,
+    ResolveConflictsSchema,
+    SessionConflictSchema,
     SessionDetailSchema,
     SessionListSchema,
     SessionsFilterSchema,
@@ -20,12 +23,14 @@ from totem.users.models import User
 from .filters import (
     all_upcoming_recommended_sessions,
     get_upcoming_spaces_list,
+    session_conflict_schema,
     session_detail_schema,
     sessions_by_month,
     space_detail_schema,
     spaces_summary_data,
 )
-from .models import Session
+from .models import Session, SessionException, SessionTimeConflict
+from .rsvp import resolve_session_conflicts
 
 router = Router()
 
@@ -65,6 +70,36 @@ def event_detail(request: HttpRequest, event_slug: str):
     if not event.can_view(user):
         raise Http404
     return session_detail_schema(event, user)
+
+
+@router.post(
+    "/rsvp/{event_slug}/resolve-conflicts",
+    response={200: SessionDetailSchema, 409: SessionConflictSchema},
+    tags=["events"],
+    url_name="rsvp_resolve_conflicts",
+    auth=django_auth,
+)
+def rsvp_resolve_conflicts(request: HttpRequest, event_slug: str, payload: ResolveConflictsSchema):
+    user: User = request.user  # type: ignore
+    session = get_object_or_404(
+        Session.objects.select_related("space", "space__author", "room").prefetch_related(
+            "attendees",
+            "joined",
+            "space__categories",
+            "space__subscribed",
+        ),
+        slug=event_slug,
+    )
+    if not session.can_view(user):
+        raise Http404
+
+    try:
+        resolve_session_conflicts(session, user, payload.conflicting_session_slugs)
+    except SessionTimeConflict as e:
+        return Status(409, session_conflict_schema(e.conflicting_sessions, user))
+    except SessionException as e:
+        raise AuthorizationError(message=str(e))
+    return session_detail_schema(session, user)
 
 
 class EventCalendarSchema(Schema):
