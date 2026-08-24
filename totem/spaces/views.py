@@ -116,10 +116,12 @@ def rsvp(request: HttpRequest, session_slug):
             with transaction.atomic():
                 _add_or_remove_attendee(request.user, session, request.POST.get("action") != "remove")
         except SessionTimeConflict as e:
-            error = str(e)
+            capture_exception(e)
+            error = "This session conflicts with another one you're attending."
             conflicts = e.conflicting_sessions
         except SessionException as e:
-            error = str(e)
+            capture_exception(e)
+            error = "We couldn't update your RSVP right now. Please try again."
     if is_ajax(request):
         if conflicts is not None:
             payload = session_conflict_schema(conflicts, request.user).model_dump(mode="json")

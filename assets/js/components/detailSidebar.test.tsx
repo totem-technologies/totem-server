@@ -306,22 +306,20 @@ test("the switch action is disabled while the resolution request is pending", as
   finishRequest?.({ data: { attending: true }, error: undefined })
 })
 
-test("a non-conflict resolution failure stays in the dialog", async () => {
+test("a non-conflict resolution failure shows the server message", async () => {
   const conflict = makeEvent({ slug: "existing", title: "Existing Session" })
   postData.mockResolvedValueOnce(
     new Response(JSON.stringify(conflictResponse([conflict])), { status: 409 })
   )
   resolveConflicts.mockResolvedValueOnce({
     data: undefined,
-    error: { detail: "Unauthorized" },
+    error: { detail: "There are no spots left" },
   })
   const result = renderEventInfo(makeEvent({ title: "New Session" }))
   await user.click(result.getByRole("button", { name: "Attend this session" }))
 
   await user.click(result.getByRole("button", { name: "Switch Sessions" }))
 
-  expect(
-    result.getByText("Could not switch sessions. Please try again.")
-  ).toBeTruthy()
+  expect(result.getByText("There are no spots left")).toBeTruthy()
   expect(result.getByRole("heading", { name: CONFLICT_HEADING })).toBeTruthy()
 })

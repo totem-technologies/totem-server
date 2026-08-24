@@ -230,6 +230,26 @@ class TestRsvpConflictResolution:
         assert new_conflict.attendees.filter(pk=user.pk).exists()
         assert not event.attendees.filter(pk=user.pk).exists()
 
+    def test_returns_session_error_when_target_becomes_unavailable(self, client, db):
+        start = timezone.now() + timedelta(days=1)
+        event = SessionFactory(start=start, duration_minutes=60, seats=1)
+        conflict = SessionFactory(start=start, duration_minutes=60)
+        user = UserFactory()
+        conflict.attendees.add(user)
+        event.attendees.add(UserFactory())
+        client.force_login(user)
+
+        response = client.post(
+            reverse("api-1:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug}),
+            {"conflicting_session_slugs": [conflict.slug]},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 400
+        assert response.json() == {"detail": "There are no spots left"}
+        assert conflict.attendees.filter(pk=user.pk).exists()
+        assert not event.attendees.filter(pk=user.pk).exists()
+
 
 class TestSpacesSummary:
     def test_summary_requires_login(self, client, db):

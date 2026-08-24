@@ -21,6 +21,7 @@ import {
 import {
   type SessionDetailSchema,
   type SessionConflictSchema,
+  type SessionErrorSchema,
   totemSpacesApiEventDetail,
   totemSpacesApiRsvpResolveConflicts,
   type UpcomingSessionSchema,
@@ -244,6 +245,11 @@ function isSessionConflict(value: unknown): value is SessionConflictSchema {
   )
 }
 
+function isSessionError(value: unknown): value is SessionErrorSchema {
+  if (!value || typeof value !== "object") return false
+  return typeof (value as Partial<SessionErrorSchema>).detail === "string"
+}
+
 function ConflictSessionCard(props: {
   session: SessionDetailSchema
   label: string
@@ -257,7 +263,7 @@ function ConflictSessionCard(props: {
         "bg-tmauve/15": !!props.replacement,
       }}>
       <img
-        class="w-24 shrink-0 object-cover m-4 rounded-2xl"
+        class="m-4 w-24 shrink-0 rounded-2xl object-cover"
         src={
           props.session.space.image || "/static/images/spaces/default-bg.jpg"
         }
@@ -306,7 +312,7 @@ function ConflictingSessionsDialog(props: {
           <div class="modal-box max-h-[90vh] max-w-lg overflow-y-auto">
             <div class="flex flex-col items-center gap-3">
               <Icon name="calendar" size={32} />
-              <h3 class="text-xl font-semibold text-center">
+              <h3 class="text-center text-xl font-semibold">
                 You’re already signed up for another session.
               </h3>
             </div>
@@ -444,6 +450,10 @@ export function EventInfo(props: {
       }
       if (isSessionConflict(response.error)) {
         setConflict(response.error)
+        return
+      }
+      if (isSessionError(response.error)) {
+        setConflictError(response.error.detail)
         return
       }
       setConflictError("Could not switch sessions. Please try again.")

@@ -131,6 +131,10 @@ class SessionConflictSchema(Schema):
     conflicting_sessions: list[SessionDetailSchema]
 
 
+class SessionErrorSchema(Schema):
+    detail: str
+
+
 class ResolveConflictsSchema(Schema):
     conflicting_session_slugs: list[str]
 

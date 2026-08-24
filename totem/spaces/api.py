@@ -3,7 +3,6 @@ from datetime import datetime
 from django.http import Http404, HttpRequest
 from django.shortcuts import get_object_or_404
 from ninja import Field, FilterSchema, Router, Schema, Status
-from ninja.errors import AuthorizationError
 from ninja.pagination import paginate
 from ninja.params.functions import Query
 from ninja.security import django_auth
@@ -13,6 +12,7 @@ from totem.spaces.schemas import (
     ResolveConflictsSchema,
     SessionConflictSchema,
     SessionDetailSchema,
+    SessionErrorSchema,
     SessionListSchema,
     SessionsFilterSchema,
     SpaceDetailSchema,
@@ -23,6 +23,7 @@ from totem.users.models import User
 from .filters import (
     all_upcoming_recommended_sessions,
     get_upcoming_spaces_list,
+    prefetch_session_detail_relations,
     session_conflict_schema,
     session_detail_schema,
     sessions_by_month,
@@ -74,7 +75,7 @@ def event_detail(request: HttpRequest, event_slug: str):
 
 @router.post(
     "/rsvp/{event_slug}/resolve-conflicts",
-    response={200: SessionDetailSchema, 409: SessionConflictSchema},
+    response={200: SessionDetailSchema, 400: SessionErrorSchema, 409: SessionConflictSchema},
     tags=["events"],
     url_name="rsvp_resolve_conflicts",
     auth=django_auth,
@@ -98,7 +99,8 @@ def rsvp_resolve_conflicts(request: HttpRequest, event_slug: str, payload: Resol
     except SessionTimeConflict as e:
         return Status(409, session_conflict_schema(e.conflicting_sessions, user))
     except SessionException as e:
-        raise AuthorizationError(message=str(e))
+        return Status(400, SessionErrorSchema(detail=str(e)))
+    prefetch_session_detail_relations([session], user, include_next_sessions=True)
     return session_detail_schema(session, user)
 
 

@@ -404,6 +404,16 @@ export type UpcomingSessionSchema = {
 };
 
 /**
+ * SessionErrorSchema
+ */
+export type SessionErrorSchema = {
+    /**
+     * Detail
+     */
+    detail: string;
+};
+
+/**
  * SessionConflictSchema
  */
 export type SessionConflictSchema = {
@@ -774,6 +784,10 @@ export type TotemSpacesApiRsvpResolveConflictsData = {
 };
 
 export type TotemSpacesApiRsvpResolveConflictsErrors = {
+    /**
+     * Bad Request
+     */
+    400: SessionErrorSchema;
     /**
      * Conflict
      */
