@@ -662,7 +662,7 @@ class TestAcceptStick:
             slug,
             user2.slug,
             AcceptStickEvent(),
-            5,
+            4,
             connected_after_disconnect,
         )
 
@@ -1322,21 +1322,18 @@ class TestEmptyRoomEvent:
         assert log.actor == keeper.slug
         assert log.snapshot == state.model_dump(mode="json")
 
-    def test_noop_reconciliation_is_still_versioned_and_logged(self):
+    def test_noop_reconciliation_is_not_versioned_or_logged(self):
         keeper = UserFactory()
         room, slug = _setup_room(keeper, [keeper])
 
         state = apply_event(slug, keeper.slug, EmptyRoomEvent(), 0, {keeper.slug})
 
-        assert state.version == 1
+        assert state.version == 0
         room.refresh_from_db()
-        assert room.state_version == 1
-        log = RoomEventLog.objects.get(room=room)
-        assert log.version == 1
-        assert log.event_type == "empty"
-        assert log.snapshot == state.model_dump(mode="json")
+        assert room.state_version == 0
+        assert not RoomEventLog.objects.filter(room=room).exists()
 
-    def test_reconciliation_invalidates_previous_client_version(self):
+    def test_changed_reconciliation_invalidates_previous_client_version(self):
         keeper = UserFactory()
         participant = UserFactory()
         _, slug = _setup_room(keeper, [keeper])

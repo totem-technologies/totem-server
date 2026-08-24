@@ -563,7 +563,25 @@ class TestReconcileRoom:
         assert log.actor == keeper.slug
         assert log.snapshot == published_state.model_dump(mode="json")
 
-    def test_preserves_pending_pass(self, client_with_user: tuple[Client, User]):
+    def test_noop_does_not_increment_version_log_or_publish(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        session.attendees.add(keeper)
+        room = Room.objects.get_or_create_for_session(session)
+
+        with (
+            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug}),
+            patch("totem.rooms.api.publish_state"),
+        ):
+            resp = _post_reconcile(client, session.slug)
+
+        assert resp.status_code == 200
+        assert resp.json()["version"] == 0
+        room.refresh_from_db()
+        assert room.state_version == 0
+        assert not RoomEventLog.objects.filter(room=room).exists()
+
+    def test_preserves_pending_pass_without_writing(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         current_speaker = UserFactory()
         next_speaker = UserFactory()
@@ -582,7 +600,7 @@ class TestReconcileRoom:
                 "totem.rooms.api.get_connected_participants",
                 return_value={keeper.slug, next_speaker.slug},
             ),
-            patch("totem.rooms.api.publish_state") as mock_publish,
+            patch("totem.rooms.api.publish_state"),
         ):
             resp = _post_reconcile(client, session.slug)
 
@@ -594,12 +612,8 @@ class TestReconcileRoom:
         assert room.current_speaker == current_speaker.slug
         assert room.next_speaker == next_speaker.slug
         assert room.turn_state == TurnState.PASSING
-        assert room.state_version == 1
-        published_state = mock_publish.call_args.args[1]
-        assert published_state.current_speaker == current_speaker.slug
-        assert published_state.next_speaker == next_speaker.slug
-        assert published_state.turn_state == TurnState.PASSING
-        assert published_state.version == 1
+        assert room.state_version == 0
+        assert not RoomEventLog.objects.filter(room=room).exists()
 
     def test_livekit_failure_does_not_mutate_room(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user

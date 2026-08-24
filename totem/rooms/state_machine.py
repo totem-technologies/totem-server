@@ -67,6 +67,8 @@ def apply_event(
                 detail=f"expected {last_seen_version}, current {room.state_version}",
             )
 
+        state_before = room.to_state()
+
         # Reconcile talking order with who's actually connected.
         _reconcile_talking_order(room, connected)
 
@@ -94,6 +96,10 @@ def apply_event(
                 _handle_unban(room, actor, slug)
             case _:
                 raise AssertionError(f"Unhandled event type: {type(event).__name__}")
+
+        state = room.to_state()
+        if state == state_before:
+            return state
 
         room.state_version += 1
         room.save()
