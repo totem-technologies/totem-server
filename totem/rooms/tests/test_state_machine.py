@@ -1,9 +1,10 @@
 import pytest
 
-from totem.rooms.models import Room
+from totem.rooms.models import Room, RoomEventLog
 from totem.rooms.schemas import (
     AcceptStickEvent,
     BanParticipantEvent,
+    EmptyRoomEvent,
     EndReason,
     EndRoomEvent,
     ErrorCode,
@@ -17,7 +18,12 @@ from totem.rooms.schemas import (
     TurnState,
     UnbanParticipantEvent,
 )
-from totem.rooms.state_machine import _next_in_order, _reconcile_talking_order, _require_keeper_in_room, apply_event
+from totem.rooms.state_machine import (
+    _next_in_order,
+    _reconcile_talking_order,
+    _require_keeper_in_room,
+    apply_event,
+)
 from totem.spaces.tests.factories import SessionFactory
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
@@ -106,7 +112,39 @@ class TestReconcileTalkingOrder:
         _reconcile_talking_order(room, set())
         assert room.talking_order == ["a", "b", "c"]
 
-    def test_fixes_current_speaker_on_disconnect(self):
+    def test_empty_connected_preserves_active_speakers(self):
+        room = self._make_room(
+            "a",
+            ["a", "b", "c"],
+            current_speaker="b",
+            next_speaker="c",
+            turn_state=TurnState.PASSING,
+            status=RoomStatus.ACTIVE,
+        )
+
+        _reconcile_talking_order(room, set())
+
+        assert room.current_speaker == "b"
+        assert room.next_speaker == "c"
+        assert room.turn_state == TurnState.PASSING
+
+    def test_repairs_missing_active_speakers_when_participants_reconnect(self):
+        room = self._make_room(
+            "a",
+            ["a", "b", "c"],
+            current_speaker=None,
+            next_speaker=None,
+            turn_state=TurnState.PASSING,
+            status=RoomStatus.ACTIVE,
+        )
+
+        _reconcile_talking_order(room, {"a", "c"})
+
+        assert room.current_speaker == "a"
+        assert room.next_speaker == "c"
+        assert room.turn_state == TurnState.SPEAKING
+
+    def test_current_speaker_disconnect_starts_pass_to_next_in_order(self):
         room = self._make_room(
             "a",
             ["a", "b", "c"],
@@ -115,7 +153,9 @@ class TestReconcileTalkingOrder:
             status=RoomStatus.ACTIVE,
         )
         _reconcile_talking_order(room, {"a", "c"})
-        assert room.current_speaker == "a"
+        assert room.current_speaker == "b"
+        assert room.next_speaker == "c"
+        assert room.turn_state == TurnState.PASSING
 
     def test_fixes_next_speaker_on_disconnect(self):
         room = self._make_room(
@@ -129,7 +169,7 @@ class TestReconcileTalkingOrder:
         _reconcile_talking_order(room, {"a", "c"})
         assert room.next_speaker == "c"
 
-    def test_passing_becomes_speaking_when_current_disconnects(self):
+    def test_passing_is_preserved_when_current_disconnects_but_next_is_connected(self):
         room = self._make_room(
             "a",
             ["a", "b", "c"],
@@ -139,8 +179,23 @@ class TestReconcileTalkingOrder:
             status=RoomStatus.ACTIVE,
         )
         _reconcile_talking_order(room, {"a", "c"})
-        assert room.current_speaker == "a"
-        assert room.turn_state == TurnState.SPEAKING
+        assert room.current_speaker == "b"
+        assert room.next_speaker == "c"
+        assert room.turn_state == TurnState.PASSING
+
+    def test_passing_moves_to_next_connected_when_current_and_next_disconnect(self):
+        room = self._make_room(
+            "a",
+            ["a", "b", "c"],
+            current_speaker="b",
+            next_speaker="c",
+            turn_state=TurnState.PASSING,
+            status=RoomStatus.ACTIVE,
+        )
+        _reconcile_talking_order(room, {"a"})
+        assert room.current_speaker == "b"
+        assert room.next_speaker == "a"
+        assert room.turn_state == TurnState.PASSING
 
 
 # ---------------------------------------------------------------------------
@@ -573,6 +628,46 @@ class TestAcceptStick:
         assert state.current_speaker == user1.slug
         assert state.next_speaker == keeper.slug
         assert state.turn_state == TurnState.SPEAKING
+
+    def test_pending_speaker_can_accept_after_current_speaker_disconnects(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        user2 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1, user2])
+        all_connected = {keeper.slug, user1.slug, user2.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, all_connected)
+        apply_event(slug, keeper.slug, PassStickEvent(), 1, all_connected)
+        apply_event(slug, user1.slug, AcceptStickEvent(), 2, all_connected)
+        passed = apply_event(slug, user1.slug, PassStickEvent(), 3, all_connected)
+
+        assert passed.current_speaker == user1.slug
+        assert passed.next_speaker == user2.slug
+        assert passed.turn_state == TurnState.PASSING
+
+        connected_after_disconnect = {keeper.slug, user2.slug}
+        reconciled = apply_event(
+            slug,
+            keeper.slug,
+            EmptyRoomEvent(),
+            4,
+            connected_after_disconnect,
+        )
+
+        assert reconciled.current_speaker == user1.slug
+        assert reconciled.next_speaker == user2.slug
+        assert reconciled.turn_state == TurnState.PASSING
+
+        accepted = apply_event(
+            slug,
+            user2.slug,
+            AcceptStickEvent(),
+            4,
+            connected_after_disconnect,
+        )
+
+        assert accepted.current_speaker == user2.slug
+        assert accepted.turn_state == TurnState.SPEAKING
 
     def test_wrong_person_cannot_accept(self):
         keeper = UserFactory()
@@ -1182,6 +1277,74 @@ class TestUnbanParticipant:
         with pytest.raises(TransitionError) as exc_info:
             apply_event(slug, keeper.slug, UnbanParticipantEvent(participantSlug=user1.slug), 3, {keeper.slug})
         assert exc_info.value.code == ErrorCode.ROOM_ALREADY_ENDED
+
+
+# ---------------------------------------------------------------------------
+# Internal reconciliation event
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestEmptyRoomEvent:
+    def test_requires_keeper(self):
+        keeper = UserFactory()
+        participant = UserFactory()
+        room, slug = _setup_room(keeper, [keeper, participant])
+
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(
+                slug,
+                participant.slug,
+                EmptyRoomEvent(),
+                0,
+                {keeper.slug, participant.slug},
+            )
+
+        assert exc_info.value.code == ErrorCode.NOT_KEEPER
+        room.refresh_from_db()
+        assert room.state_version == 0
+        assert not RoomEventLog.objects.filter(room=room).exists()
+
+    def test_changed_reconciliation_is_versioned_and_logged(self):
+        keeper = UserFactory()
+        participant = UserFactory()
+        room, slug = _setup_room(keeper, [keeper])
+
+        state = apply_event(slug, keeper.slug, EmptyRoomEvent(), 0, {keeper.slug, participant.slug})
+
+        assert state.version == 1
+        assert state.talking_order == [keeper.slug, participant.slug]
+        room.refresh_from_db()
+        assert room.state_version == 1
+        log = RoomEventLog.objects.get(room=room)
+        assert log.version == 1
+        assert log.event_type == "empty"
+        assert log.actor == keeper.slug
+        assert log.snapshot == state.model_dump(mode="json")
+
+    def test_noop_reconciliation_is_not_versioned_or_logged(self):
+        keeper = UserFactory()
+        room, slug = _setup_room(keeper, [keeper])
+
+        state = apply_event(slug, keeper.slug, EmptyRoomEvent(), 0, {keeper.slug})
+
+        assert state.version == 0
+        room.refresh_from_db()
+        assert room.state_version == 0
+        assert not RoomEventLog.objects.filter(room=room).exists()
+
+    def test_changed_reconciliation_invalidates_previous_client_version(self):
+        keeper = UserFactory()
+        participant = UserFactory()
+        _, slug = _setup_room(keeper, [keeper])
+
+        state = apply_event(slug, keeper.slug, EmptyRoomEvent(), 0, {keeper.slug, participant.slug})
+        assert state.version == 1
+
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(slug, keeper.slug, StartRoomEvent(), 0, {keeper.slug, participant.slug})
+
+        assert exc_info.value.code == ErrorCode.STALE_VERSION
 
 
 # ---------------------------------------------------------------------------
