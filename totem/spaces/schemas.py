@@ -126,6 +126,19 @@ class SessionDetailSchema(Schema):
     meeting_provider: MeetingProviderEnum
 
 
+class SessionConflictSchema(Schema):
+    message: str
+    conflicting_sessions: list[SessionDetailSchema]
+
+
+class SessionErrorSchema(Schema):
+    detail: str
+
+
+class ResolveConflictsSchema(Schema):
+    conflicting_session_slugs: list[str]
+
+
 class NextSessionSchema(Schema):
     slug: str
     start: datetime

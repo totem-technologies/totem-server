@@ -1,13 +1,14 @@
 import datetime
 from dataclasses import dataclass
 
-from django.db.models import Count, Exists, OuterRef, Prefetch, Q
+from django.db.models import Count, Exists, OuterRef, Prefetch, Q, prefetch_related_objects
 from django.urls import reverse
 from django.utils import timezone
 
 from totem.onboard.models import OnboardModel
 from totem.spaces.schemas import (
     NextSessionSchema,
+    SessionConflictSchema,
     SessionDetailSchema,
     SessionSpaceSchema,
     SpaceDetailSchema,
@@ -15,7 +16,7 @@ from totem.spaces.schemas import (
 )
 from totem.users.models import User
 
-from .models import Session, SessionQuerySet, Space
+from .models import Session, SessionQuerySet, SessionTimeConflict, Space
 
 
 def upcoming_sessions_queryset(user: User | None = None) -> SessionQuerySet:
@@ -169,30 +170,37 @@ def spaces_summary_data(user: User) -> SpacesSummary:
 
 
 def _next_session_schema(user: User, session: Session) -> UpcomingSessionSchema | None:
-    upcoming = list(other_sessions_in_space(user, session, limit=1))
-    if not upcoming:
+    if hasattr(session.space, "rsvp_next_sessions"):
+        next_session = next(
+            (candidate for candidate in session.space.rsvp_next_sessions if candidate.pk != session.pk),  # type: ignore[attr-defined]
+            None,
+        )
+    else:
+        upcoming = list(other_sessions_in_space(user, session, limit=1))
+        next_session = upcoming[0] if upcoming else None
+    if next_session is None:
         return None
     return UpcomingSessionSchema(
-        slug=upcoming[0].slug,
-        start=upcoming[0].start,
-        link=upcoming[0].get_absolute_url(),
+        slug=next_session.slug,
+        start=next_session.start,
+        link=next_session.get_absolute_url(),
     )
 
 
-def session_detail_schema(session: Session, user: User):
+def session_detail_schema(session: Session, user: User, *, include_next_session: bool = True):
     space: Space = session.space
     start = session.start
     subscribed = space.subscribed.contains(user) if user.is_authenticated else None
     started = session.started()
     ended = session.ended()
 
-    attending = session.attendees.filter(pk=user.pk).exists()
+    attending = session.attendees.contains(user) if user.is_authenticated else False
     join_opens_at, join_closes_at = session.join_window(user)
 
     # When this session can no longer be attended, point people at the
     # space's next one.
     next_session = None
-    if started or ended or session.seats_left() <= 0:
+    if include_next_session and (started or ended or session.seats_left() <= 0):
         next_session = _next_session_schema(user, session)
 
     return SessionDetailSchema(
@@ -224,6 +232,43 @@ def session_detail_schema(session: Session, user: User):
         subscribed=subscribed,
         user_timezone=str("UTC"),
         meeting_provider=space.meeting_provider,
+    )
+
+
+def prefetch_session_detail_relations(
+    sessions: list[Session],
+    user: User,
+    *,
+    include_next_sessions: bool = False,
+) -> None:
+    relations: list[str | Prefetch] = [
+        "attendees",
+        "joined",
+        "space__author__sessions_joined",
+        "space__categories",
+        "space__subscribed",
+    ]
+    if include_next_sessions:
+        next_sessions = (
+            Session.objects.visible_to(user).open_to(user).filter(start__gte=timezone.now()).order_by("start")
+        )
+        relations.append(
+            Prefetch(
+                "space__sessions",
+                queryset=next_sessions,
+                to_attr="rsvp_next_sessions",
+            )
+        )
+    prefetch_related_objects(sessions, *relations)
+
+
+def session_conflict_schema(conflicting_sessions: list[Session], user: User) -> SessionConflictSchema:
+    prefetch_session_detail_relations(conflicting_sessions, user)
+    return SessionConflictSchema(
+        message=SessionTimeConflict.message,
+        conflicting_sessions=[
+            session_detail_schema(conflict, user, include_next_session=False) for conflict in conflicting_sessions
+        ],
     )
 
 

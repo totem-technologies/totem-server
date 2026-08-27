@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/solid-query"
 import {
   createEffect,
   createSignal,
+  For,
   type JSX,
   type JSXElement,
   Match,
@@ -10,6 +11,7 @@ import {
   Suspense,
   Switch,
 } from "solid-js"
+import { getCsrfToken } from "@/libs/csrf"
 import { postData, postErrorMessage } from "@/libs/postData"
 import {
   timestampToDateString,
@@ -18,7 +20,10 @@ import {
 } from "@/libs/time"
 import {
   type SessionDetailSchema,
+  type SessionConflictSchema,
+  type SessionErrorSchema,
   totemSpacesApiEventDetail,
+  totemSpacesApiRsvpResolveConflicts,
   type UpcomingSessionSchema,
 } from "../client"
 import AddToCalendarButton from "./AddToCalendarButton"
@@ -220,6 +225,166 @@ function plural(number: number) {
   return number > 1 ? "s" : ""
 }
 
+function sessionTitle(session: SessionDetailSchema) {
+  return session.title || session.space_title
+}
+
+function sessionTitleList(sessions: SessionDetailSchema[]) {
+  const titles = sessions.map(sessionTitle)
+  if (titles.length <= 1) return titles[0] ?? ""
+  if (titles.length === 2) return `${titles[0]} and ${titles[1]}`
+  return `${titles.slice(0, -1).join(", ")}, and ${titles.at(-1)}`
+}
+
+function isSessionConflict(value: unknown): value is SessionConflictSchema {
+  if (!value || typeof value !== "object") return false
+  const candidate = value as Partial<SessionConflictSchema>
+  return (
+    typeof candidate.message === "string" &&
+    Array.isArray(candidate.conflicting_sessions)
+  )
+}
+
+function isSessionError(value: unknown): value is SessionErrorSchema {
+  if (!value || typeof value !== "object") return false
+  return typeof (value as Partial<SessionErrorSchema>).detail === "string"
+}
+
+function ConflictSessionCard(props: {
+  session: SessionDetailSchema
+  label: string
+  replacement?: boolean
+}) {
+  return (
+    <div
+      class="flex min-h-28 min-w-0 flex-1 overflow-hidden rounded-2xl"
+      classList={{
+        "bg-tcreme": !props.replacement,
+        "bg-tmauve/15": !!props.replacement,
+      }}>
+      <img
+        class="m-4 w-24 shrink-0 rounded-2xl object-cover"
+        src={
+          props.session.space.image || "/static/images/spaces/default-bg.jpg"
+        }
+        alt=""
+      />
+      <div class="flex min-w-0 flex-col justify-center gap-1 p-3 text-left">
+        <div class="text-xs font-medium text-gray-600">{props.label}</div>
+        <div class="font-semibold">{sessionTitle(props.session)}</div>
+        <div class="text-xs text-gray-600">
+          {timestampToDateStringShort(props.session.start)} ·{" "}
+          {timestampToTimeString(props.session.start)}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ConflictingSessionsDialog(props: {
+  conflict?: SessionConflictSchema
+  newSession: SessionDetailSchema
+  busy: boolean
+  error: string
+  onClose: () => void
+  onSwitch: () => void
+}) {
+  let modalRef: HTMLDialogElement | undefined // eslint-disable-line no-unassigned-vars
+  createEffect(() => {
+    if (props.conflict) {
+      if (!modalRef?.open) modalRef?.showModal()
+    } else if (modalRef?.open) {
+      modalRef.close()
+    }
+  })
+
+  return (
+    <dialog
+      ref={modalRef}
+      class="modal"
+      onClose={() => props.onClose()}
+      onCancel={(event) => {
+        event.preventDefault()
+        props.onClose()
+      }}>
+      <Show when={props.conflict}>
+        {(conflict) => (
+          <div class="modal-box max-h-[90vh] max-w-lg overflow-y-auto">
+            <div class="flex flex-col items-center gap-3">
+              <Icon name="calendar" size={32} />
+              <h3 class="text-center text-xl font-semibold">
+                You’re already signed up for another session.
+              </h3>
+            </div>
+            <p class="py-4 text-center">
+              To join <strong>{sessionTitle(props.newSession)}</strong>, you’ll
+              need to give up your spot in{" "}
+              <strong>
+                {sessionTitleList(conflict().conflicting_sessions)}
+              </strong>
+              .
+            </p>
+            <div
+              data-testid="conflict-session-comparison"
+              class="flex flex-col items-stretch gap-3 [@media(max-height:700px)]:flex-row [@media(max-height:700px)]:items-center">
+              <div class="flex min-w-0 flex-1 flex-col gap-2">
+                <For each={conflict().conflicting_sessions}>
+                  {(session) => (
+                    <ConflictSessionCard
+                      session={session}
+                      label="Your current session"
+                    />
+                  )}
+                </For>
+              </div>
+              <div class="self-center text-2xl" aria-hidden="true">
+                <span class="[@media(max-height:700px)]:hidden">↓</span>
+                <span class="hidden [@media(max-height:700px)]:inline">→</span>
+              </div>
+              <ConflictSessionCard
+                session={props.newSession}
+                label="New session"
+                replacement
+              />
+            </div>
+            <Show when={props.error}>
+              <p class="pt-4 text-sm text-red-500">{props.error}</p>
+            </Show>
+            <div class="modal-action flex-col gap-2">
+              <button
+                type="button"
+                class="btn btn-outline w-full"
+                disabled={props.busy}
+                onClick={props.onClose}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary w-full"
+                disabled={props.busy}
+                onClick={props.onSwitch}>
+                <Show when={props.busy} fallback="Switch Sessions">
+                  <span class="loading loading-spinner loading-sm" />
+                  Switching…
+                </Show>
+              </button>
+            </div>
+            <p class="pt-3 text-center text-xs text-gray-600">
+              Switching removes you from your current session and saves your
+              seat in the new one right away.
+            </p>
+          </div>
+        )}
+      </Show>
+      <form method="dialog" class="modal-backdrop">
+        <button disabled={props.busy} aria-label="Close conflict dialog">
+          close
+        </button>
+      </form>
+    </dialog>
+  )
+}
+
 // When the shown session can't be attended anymore, point people at the
 // space's next one instead of dead-ending them.
 function NextSessionLink(props: { next?: UpcomingSessionSchema | null }) {
@@ -251,6 +416,54 @@ export function EventInfo(props: {
   refetchEvent: () => void
 }) {
   const [error, setError] = createSignal("")
+  const [conflict, setConflict] = createSignal<SessionConflictSchema>()
+  const [conflictError, setConflictError] = createSignal("")
+  const [resolvingConflict, setResolvingConflict] = createSignal(false)
+
+  function closeConflict() {
+    if (resolvingConflict()) return
+    setConflict(undefined)
+    setConflictError("")
+  }
+
+  async function handleResolveConflict() {
+    const currentConflict = conflict()
+    if (!currentConflict || resolvingConflict()) return
+    setResolvingConflict(true)
+    setConflictError("")
+    try {
+      const response = await totemSpacesApiRsvpResolveConflicts({
+        path: { event_slug: props.eventStore.slug },
+        body: {
+          conflicting_session_slugs: currentConflict.conflicting_sessions.map(
+            (session) => session.slug
+          ),
+        },
+        headers: { "X-CSRFToken": getCsrfToken() },
+      })
+      if (response.data) {
+        setConflict(undefined)
+        props.refetchEvent()
+        setShowAttendingPopup(true)
+        setError("")
+        return
+      }
+      if (isSessionConflict(response.error)) {
+        setConflict(response.error)
+        return
+      }
+      if (isSessionError(response.error)) {
+        setConflictError(response.error.detail)
+        return
+      }
+      setConflictError("Could not switch sessions. Please try again.")
+    } catch {
+      setConflictError("Could not switch sessions. Please try again.")
+    } finally {
+      setResolvingConflict(false)
+    }
+  }
+
   async function handleAttend(e: Event) {
     if (!props.eventStore.rsvp_url) return
     e.preventDefault()
@@ -260,6 +473,21 @@ export function EventInfo(props: {
       setLoginRedirectUrl(response.url)
       // Show the login modal instead of redirecting immediately
       setShowLoginPopup(true)
+      return
+    }
+    if (response.status === 409) {
+      try {
+        const responseConflict: unknown = await response.json()
+        if (isSessionConflict(responseConflict)) {
+          setConflict(responseConflict)
+          setConflictError("")
+          setError("")
+          return
+        }
+      } catch {
+        // Fall through to the generic RSVP error below.
+      }
+      setError("Could not save your spot. Please try again.")
       return
     }
     if (response.ok) {
@@ -284,110 +512,120 @@ export function EventInfo(props: {
     props.refetchEvent()
   }
   return (
-    <DetailBox>
-      <div class="flex flex-wrap justify-between gap-x-4 gap-y-2 pb-2">
-        <Show when={props.eventStore.subscribers}>
-          <IconLine
-            icon="star"
-            tip="How many people are getting updates about this Space.">
-            {props.eventStore.subscribers} subscriber
-            {plural(props.eventStore.subscribers)}
-          </IconLine>
-        </Show>
-        <IconLine icon="dollar" tip="The cost of each session, if any.">
-          <Show when={props.eventStore.price} fallback="No Cost">
-            ${props.eventStore.price}
+    <>
+      <ConflictingSessionsDialog
+        conflict={conflict()}
+        newSession={props.eventStore}
+        busy={resolvingConflict()}
+        error={conflictError()}
+        onClose={closeConflict}
+        onSwitch={() => void handleResolveConflict()}
+      />
+      <DetailBox>
+        <div class="flex flex-wrap justify-between gap-x-4 gap-y-2 pb-2">
+          <Show when={props.eventStore.subscribers}>
+            <IconLine
+              icon="star"
+              tip="How many people are getting updates about this Space.">
+              {props.eventStore.subscribers} subscriber
+              {plural(props.eventStore.subscribers)}
+            </IconLine>
           </Show>
-        </IconLine>
-        <IconLine icon="clock" tip="How long this session is.">
-          {props.eventStore.duration} min
-        </IconLine>
-        <IconLine
-          icon="recur"
-          tip="How often this Space generally runs. There may be changes in the schedule due to holidays or other events.">
-          {capitalize(props.eventStore.recurring)}
-        </IconLine>
-        <IconLine
-          icon="chair"
-          tip="How many people are getting updates about this Space.">
-          {props.eventStore.seats_left} seat
-          {plural(props.eventStore.seats_left)} left
-        </IconLine>
-      </div>
-      <div class="pt-2 pb-1">
-        <strong>{timestampToDateString(props.eventStore.start)}</strong>
-        <div>{timestampToTimeString(props.eventStore.start)}</div>
-      </div>
-      <Show when={error()}>
-        <div class="text-red-500">{error()}</div>
-      </Show>
-      <div class="pt-3 text-center">
-        <Switch>
-          <Match when={props.eventStore.cancelled}>
-            <div>
-              This session has been cancelled.{" "}
-              <a class="link" href={spacesListLink}>
-                See upcoming Spaces.
+          <IconLine icon="dollar" tip="The cost of each session, if any.">
+            <Show when={props.eventStore.price} fallback="No Cost">
+              ${props.eventStore.price}
+            </Show>
+          </IconLine>
+          <IconLine icon="clock" tip="How long this session is.">
+            {props.eventStore.duration} min
+          </IconLine>
+          <IconLine
+            icon="recur"
+            tip="How often this Space generally runs. There may be changes in the schedule due to holidays or other events.">
+            {capitalize(props.eventStore.recurring)}
+          </IconLine>
+          <IconLine
+            icon="chair"
+            tip="How many people are getting updates about this Space.">
+            {props.eventStore.seats_left} seat
+            {plural(props.eventStore.seats_left)} left
+          </IconLine>
+        </div>
+        <div class="pt-2 pb-1">
+          <strong>{timestampToDateString(props.eventStore.start)}</strong>
+          <div>{timestampToTimeString(props.eventStore.start)}</div>
+        </div>
+        <Show when={error()}>
+          <div class="text-red-500">{error()}</div>
+        </Show>
+        <div class="pt-3 text-center">
+          <Switch>
+            <Match when={props.eventStore.cancelled}>
+              <div>
+                This session has been cancelled.{" "}
+                <a class="link" href={spacesListLink}>
+                  See upcoming Spaces.
+                </a>
+              </div>
+            </Match>
+            <Match when={props.eventStore.joinable}>
+              <p class="pb-4">You can enter this session now.</p>
+              <a
+                class="btn btn-primary w-full"
+                target="_blank"
+                href={props.eventStore.join_url ?? ""}
+                rel="noreferrer">
+                Enter Session
               </a>
-            </div>
-          </Match>
-          <Match when={props.eventStore.joinable}>
-            <p class="pb-4">You can enter this session now.</p>
-            <a
-              class="btn btn-primary w-full"
-              target="_blank"
-              href={props.eventStore.join_url ?? ""}
-              rel="noreferrer">
-              Enter Session
-            </a>
-          </Match>
-          <Match when={props.eventStore.ended}>
-            <div>This session has ended.</div>
-            <NextSessionLink next={props.eventStore.next_session} />
-          </Match>
-          <Match when={props.eventStore.started}>
-            <div>This session has already started.</div>
-            <NextSessionLink next={props.eventStore.next_session} />
-          </Match>
-          <Match when={!props.eventStore.open && !props.eventStore.attending}>
-            <div>
-              This session is not open to new participants.{" "}
-              <a class="link" href={spacesListLink}>
-                See upcoming Spaces.
-              </a>
-            </div>
-          </Match>
+            </Match>
+            <Match when={props.eventStore.ended}>
+              <div>This session has ended.</div>
+              <NextSessionLink next={props.eventStore.next_session} />
+            </Match>
+            <Match when={props.eventStore.started}>
+              <div>This session has already started.</div>
+              <NextSessionLink next={props.eventStore.next_session} />
+            </Match>
+            <Match when={!props.eventStore.open && !props.eventStore.attending}>
+              <div>
+                This session is not open to new participants.{" "}
+                <a class="link" href={spacesListLink}>
+                  See upcoming Spaces.
+                </a>
+              </div>
+            </Match>
 
-          <Match when={props.eventStore.attending}>
-            {createCalendarButton(props.eventStore)}
-            <button
-              type="button"
-              class="btn-quiet pt-2"
-              onClick={(e) => void handleGiveUp(e)}>
-              Give up spot
-            </button>
-          </Match>
+            <Match when={props.eventStore.attending}>
+              {createCalendarButton(props.eventStore)}
+              <button
+                type="button"
+                class="btn-quiet pt-2"
+                onClick={(e) => void handleGiveUp(e)}>
+                Give up spot
+              </button>
+            </Match>
 
-          <Match when={props.eventStore.seats_left <= 0}>
-            <div>This session is full.</div>
-            <NextSessionLink next={props.eventStore.next_session} />
-          </Match>
+            <Match when={props.eventStore.seats_left <= 0}>
+              <div>This session is full.</div>
+              <NextSessionLink next={props.eventStore.next_session} />
+            </Match>
 
-          <Match when={!props.eventStore.attending}>
-            <button
-              type="button"
-              onClick={(e) => void handleAttend(e)}
-              class="btn btn-primary w-full p-2 px-6">
-              Attend this session
-            </button>
-            <div class="pt-4">{createCalendarButton(props.eventStore)}</div>
-            <div class="pt-1 text-sm text-gray-400">
-              Adding to your calendar doesn't reserve a spot.
-            </div>
-          </Match>
-        </Switch>
-      </div>
-    </DetailBox>
+            <Match when={!props.eventStore.attending}>
+              <button
+                type="button"
+                onClick={(e) => void handleAttend(e)}
+                class="btn btn-primary w-full p-2 px-6">
+                Attend this session
+              </button>
+              <div class="pt-4">{createCalendarButton(props.eventStore)}</div>
+              <div class="pt-1 text-sm text-gray-400">
+                Adding to your calendar doesn't reserve a spot.
+              </div>
+            </Match>
+          </Switch>
+        </div>
+      </DetailBox>
+    </>
   )
 }
 

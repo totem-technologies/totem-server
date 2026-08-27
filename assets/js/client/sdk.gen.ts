@@ -2,7 +2,7 @@
 
 import { type Client, type ClientMeta, formDataBodySerializer, type Options as Options2, type RequestResult, type TDataShape } from './client';
 import { client } from './client.gen';
-import type { TotemApiApiCurrentUserData, TotemApiApiCurrentUserErrors, TotemApiApiCurrentUserResponses, TotemApiApiDevVersionData, TotemApiApiDevVersionResponses, TotemApiApiUserAvatarUpdateData, TotemApiApiUserAvatarUpdateErrors, TotemApiApiUserAvatarUpdateResponses, TotemApiApiUserUploadProfileImageData, TotemApiApiUserUploadProfileImageErrors, TotemApiApiUserUploadProfileImageResponses, TotemSpacesApiEventDetailData, TotemSpacesApiEventDetailResponses, TotemSpacesApiFilterOptionsData, TotemSpacesApiFilterOptionsResponses, TotemSpacesApiListEventsData, TotemSpacesApiListEventsResponses, TotemSpacesApiListSpacesData, TotemSpacesApiListSpacesResponses, TotemSpacesApiSpacesSummaryData, TotemSpacesApiSpacesSummaryResponses, TotemSpacesApiUpcomingEventsData, TotemSpacesApiUpcomingEventsResponses } from './types.gen';
+import type { TotemApiApiCurrentUserData, TotemApiApiCurrentUserErrors, TotemApiApiCurrentUserResponses, TotemApiApiDevVersionData, TotemApiApiDevVersionResponses, TotemApiApiUserAvatarUpdateData, TotemApiApiUserAvatarUpdateErrors, TotemApiApiUserAvatarUpdateResponses, TotemApiApiUserUploadProfileImageData, TotemApiApiUserUploadProfileImageErrors, TotemApiApiUserUploadProfileImageResponses, TotemSpacesApiEventDetailData, TotemSpacesApiEventDetailResponses, TotemSpacesApiFilterOptionsData, TotemSpacesApiFilterOptionsResponses, TotemSpacesApiListEventsData, TotemSpacesApiListEventsResponses, TotemSpacesApiListSpacesData, TotemSpacesApiListSpacesResponses, TotemSpacesApiRsvpResolveConflictsData, TotemSpacesApiRsvpResolveConflictsErrors, TotemSpacesApiRsvpResolveConflictsResponses, TotemSpacesApiSpacesSummaryData, TotemSpacesApiSpacesSummaryResponses, TotemSpacesApiUpcomingEventsData, TotemSpacesApiUpcomingEventsResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -67,6 +67,23 @@ export const totemSpacesApiFilterOptions = <ThrowOnError extends boolean = false
  * Event Detail
  */
 export const totemSpacesApiEventDetail = <ThrowOnError extends boolean = false>(options: Options<TotemSpacesApiEventDetailData, ThrowOnError>): RequestResult<TotemSpacesApiEventDetailResponses, unknown, ThrowOnError> => (options.client ?? client).get<TotemSpacesApiEventDetailResponses, unknown, ThrowOnError>({ url: '/api/v1/spaces/event/{event_slug}', ...options });
+
+/**
+ * Rsvp Resolve Conflicts
+ */
+export const totemSpacesApiRsvpResolveConflicts = <ThrowOnError extends boolean = false>(options: Options<TotemSpacesApiRsvpResolveConflictsData, ThrowOnError>): RequestResult<TotemSpacesApiRsvpResolveConflictsResponses, TotemSpacesApiRsvpResolveConflictsErrors, ThrowOnError> => (options.client ?? client).post<TotemSpacesApiRsvpResolveConflictsResponses, TotemSpacesApiRsvpResolveConflictsErrors, ThrowOnError>({
+    security: [{
+            in: 'cookie',
+            name: 'sessionid',
+            type: 'apiKey'
+        }],
+    url: '/api/v1/spaces/rsvp/{event_slug}/resolve-conflicts',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
 
 /**
  * Upcoming Events

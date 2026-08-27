@@ -404,6 +404,40 @@ export type UpcomingSessionSchema = {
 };
 
 /**
+ * SessionErrorSchema
+ */
+export type SessionErrorSchema = {
+    /**
+     * Detail
+     */
+    detail: string;
+};
+
+/**
+ * SessionConflictSchema
+ */
+export type SessionConflictSchema = {
+    /**
+     * Message
+     */
+    message: string;
+    /**
+     * Conflicting Sessions
+     */
+    conflicting_sessions: Array<SessionDetailSchema>;
+};
+
+/**
+ * ResolveConflictsSchema
+ */
+export type ResolveConflictsSchema = {
+    /**
+     * Conflicting Session Slugs
+     */
+    conflicting_session_slugs: Array<string>;
+};
+
+/**
  * EventCalendarFilterSchema
  */
 export type EventCalendarFilterSchema = {
@@ -736,6 +770,40 @@ export type TotemSpacesApiEventDetailResponses = {
 };
 
 export type TotemSpacesApiEventDetailResponse = TotemSpacesApiEventDetailResponses[keyof TotemSpacesApiEventDetailResponses];
+
+export type TotemSpacesApiRsvpResolveConflictsData = {
+    body: ResolveConflictsSchema;
+    path: {
+        /**
+         * Event Slug
+         */
+        event_slug: string;
+    };
+    query?: never;
+    url: '/api/v1/spaces/rsvp/{event_slug}/resolve-conflicts';
+};
+
+export type TotemSpacesApiRsvpResolveConflictsErrors = {
+    /**
+     * Bad Request
+     */
+    400: SessionErrorSchema;
+    /**
+     * Conflict
+     */
+    409: SessionConflictSchema;
+};
+
+export type TotemSpacesApiRsvpResolveConflictsError = TotemSpacesApiRsvpResolveConflictsErrors[keyof TotemSpacesApiRsvpResolveConflictsErrors];
+
+export type TotemSpacesApiRsvpResolveConflictsResponses = {
+    /**
+     * OK
+     */
+    200: SessionDetailSchema;
+};
+
+export type TotemSpacesApiRsvpResolveConflictsResponse = TotemSpacesApiRsvpResolveConflictsResponses[keyof TotemSpacesApiRsvpResolveConflictsResponses];
 
 export type TotemSpacesApiUpcomingEventsData = {
     body?: never;

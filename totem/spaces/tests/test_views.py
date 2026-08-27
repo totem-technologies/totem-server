@@ -2,7 +2,9 @@ import datetime
 
 from django.contrib.messages import get_messages
 from django.core import mail
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
@@ -364,6 +366,58 @@ class TestRSVPView:
         assert event.slug in response.url
         assert user in event.attendees.all()
 
+    def test_rsvp_ajax_returns_conflicting_sessions(self, client, db):
+        start = timezone.now() + datetime.timedelta(days=1)
+        event = SessionFactory(title="New Session", start=start, duration_minutes=60)
+        first = SessionFactory(title="Earlier Conflict", start=start, duration_minutes=30)
+        second = SessionFactory(
+            title="Later Conflict",
+            start=start + datetime.timedelta(minutes=30),
+            duration_minutes=60,
+        )
+        user = UserFactory()
+        first.attendees.add(user)
+        second.attendees.add(user)
+        client.force_login(user)
+
+        response = client.post(
+            reverse("spaces:rsvp", kwargs={"session_slug": event.slug}),
+            data={"action": "yes"},
+            HTTP_ACCEPT="application/json",
+        )
+
+        assert response.status_code == 409
+        data = response.json()
+        assert data["message"] == "This session conflicts with one or more sessions you are attending"
+        assert data["error"] == "This session conflicts with another one you're attending."
+        assert [session["slug"] for session in data["conflicting_sessions"]] == [first.slug, second.slug]
+        assert [session["title"] for session in data["conflicting_sessions"]] == [
+            "Earlier Conflict",
+            "Later Conflict",
+        ]
+        assert not event.attendees.filter(pk=user.pk).exists()
+
+    def test_rsvp_ajax_conflict_queries_do_not_scale_with_conflicts(self, client, db):
+        start = timezone.now() + datetime.timedelta(days=1)
+        event = SessionFactory(start=start, duration_minutes=60)
+        first = SessionFactory(start=start, duration_minutes=60)
+        user = UserFactory()
+        first.attendees.add(user)
+        client.force_login(user)
+        url = reverse("spaces:rsvp", kwargs={"session_slug": event.slug})
+
+        with CaptureQueriesContext(connection) as one_conflict_queries:
+            one_conflict_response = client.post(url, data={"action": "yes"}, HTTP_ACCEPT="application/json")
+
+        second = SessionFactory(start=start + datetime.timedelta(minutes=30), duration_minutes=60)
+        second.attendees.add(user)
+        with CaptureQueriesContext(connection) as two_conflict_queries:
+            two_conflict_response = client.post(url, data={"action": "yes"}, HTTP_ACCEPT="application/json")
+
+        assert one_conflict_response.status_code == 409
+        assert two_conflict_response.status_code == 409
+        assert len(two_conflict_queries) == len(one_conflict_queries)
+
     def test_rsvp_attending_late(self, client, db):
         event = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=20))
         event.save()
@@ -372,7 +426,7 @@ class TestRSVPView:
         client.force_login(user)
         response = client.post(reverse("spaces:rsvp", kwargs={"session_slug": event.slug}), data={"action": "yes"})
         message = list(get_messages(response.wsgi_request))
-        assert "started" in message[0].message.lower()
+        assert message[0].message == "We couldn't update your RSVP right now. Please try again."
         assert response.status_code == 302
         assert event.slug in response.url
         assert user not in event.joined.all()
