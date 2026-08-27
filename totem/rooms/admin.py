@@ -62,6 +62,10 @@ class RoomAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
         ("Participants", {"fields": ("talking_order_display", "banned_participants_display")}),
     )
 
+    @override
+    def has_add_permission(self, request):
+        return False
+
     @staticmethod
     def _resolve_names(slugs: list[str]) -> dict[str, str]:
         # Slugs missing from the DB fall back to the slug itself.
