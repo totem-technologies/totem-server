@@ -3,7 +3,7 @@
   <summary>
     {% blocktranslate with filter_title=title %}By {{ filter_title }}{% endblocktranslate %}
   </summary>
-  <script>
+  <script nonce="{{ csp_nonce }}">
     function safeDropdownRedirect(url) {
       // Create an anchor element to parse the URL
       var a = document.createElement("a")
@@ -15,13 +15,20 @@
         console.error("Unsafe URL blocked:", url)
       }
     }
+    document.addEventListener("DOMContentLoaded", function () {
+      const select = document.getElementById("filter-select-{{ title }}")
+      if (select) {
+        select.addEventListener("change", function () {
+          safeDropdownRedirect(select.value)
+        })
+      }
+    })
   </script>
   <div style="padding: 0 15px 10px 15px;">
     <select
       style="width: 100%"
       id="filter-select-{{ title }}"
-      class="form-control"
-      onChange="safeDropdownRedirect(this.value)">
+      class="form-control">
       {% for choice in choices %}
         <option
           value="{{ choice.query_string|iriencode }}"

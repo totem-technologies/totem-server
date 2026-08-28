@@ -15,6 +15,7 @@ from django.urls import reverse
 from django.views.generic import TemplateView
 
 from ..users.models import User
+from ..utils.csp import csp_override_from_settings
 from .models import Redirect
 from .proxied_site import ProxiedSiteUnavailable, get_proxied_site_page
 from .qrmaker import make_qr
@@ -177,6 +178,7 @@ def redirect_qr(request, slug):
     return render(request, "pages/qr.html", {"img": img_str.decode("utf-8"), "obj": redirect})
 
 
+@csp_override_from_settings("CSP_PROXIED_SITE_OVERRIDE")
 def proxied_site_page(request, page: str | None = None):
     one_hour = 60 * 60
     one_week = 60 * 60 * 24 * 7

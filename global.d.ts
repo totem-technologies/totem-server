@@ -16,9 +16,7 @@ declare global {
     triggerElement?: HTMLElement,
     keyboardTrigger?: boolean
   ): Promise<string>
-  function dismiss_alert(e: HTMLElement): void
   function _AutofillCallbackHandler(): void
-  function copyTextToClipboard(element: HTMLElement): void
   var TOTEM_DATA: {
     debug: boolean
     is_authenticated: boolean

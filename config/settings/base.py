@@ -150,6 +150,10 @@ AUTH_PASSWORD_VALIDATORS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.middleware.csp.ContentSecurityPolicyMiddleware",
+    # Below the CSP middleware so it runs first on the response and can
+    # swap the policy for inert content (JSON, images, …) before the
+    # header is built.
+    "totem.utils.middleware.inert_csp",
     "corsheaders.middleware.CorsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -500,6 +504,15 @@ SOCIAL_LINKS = {
     "linkedin": "https://www.linkedin.com/company/totemorg/",
 }
 
+
+# CSP
+# ------------------------------------------------------------------------------
+# The site policy (SECURE_CSP / SECURE_CSP_REPORT_ONLY) is set in
+# production.py. These per-view override policies replace it on views that
+# serve third-party HTML which can't carry our nonces (see
+# totem.utils.csp.csp_override_from_settings). Empty means no override.
+CSP_ROOM_OVERRIDE: dict = {}
+CSP_PROXIED_SITE_OVERRIDE: dict = {}
 
 # LiveKit
 # ------------------------------------------------------------------------------

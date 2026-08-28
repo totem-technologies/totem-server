@@ -3,7 +3,7 @@
 <h2>Text</h2>
 {{ text }}
 {% if debug %}
-<script>
+<script nonce="{{ csp_nonce }}">
   document.write(
     "<" +
       'script src="http://localhost:35729/livereload.js?snipver=1"></' +

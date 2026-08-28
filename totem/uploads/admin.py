@@ -55,6 +55,9 @@ class ImageAdmin(admin.ModelAdmin):
     list_max_show_all = 200
     save_on_top = True
 
+    class Media:
+        js = ("js/admin_copy.js",)
+
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
@@ -131,13 +134,7 @@ class ImageAdmin(admin.ModelAdmin):
     def markdown_code(self, obj: Image):
         code = f'{{% image slug="{obj.slug}" %}}'
         return mark_safe(
-            f'<a href="#" style="text-decoration: underline; color: #0066cc;" '
-            f'onclick="event.preventDefault(); '
-            f"navigator.clipboard.writeText('{escape(code)}').then(() => {{ "
-            f"const originalText = this.innerHTML; "
-            f"this.innerHTML = 'Copied!'; "
-            f"setTimeout(() => {{ this.innerHTML = originalText; }}, 1500); "
-            f"}}).catch(err => console.error('Failed to copy:', err)); return false;\">"
+            f'<a href="#" style="text-decoration: underline; color: #0066cc;" data-copy="{escape(code)}">'
             f"<code>{escape(code)}</code></a> "
             f'<span style="color: #666; font-size: 0.9em;">(Click to copy)</span>'
         )
