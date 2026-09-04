@@ -7,12 +7,16 @@
 {% load absurl %}
 
 {# djlint:off #}
-{% block title %}{{ object.title }}{% endblock title %}
-{% block description %}{{ object.content_text|truncatechars:140 }}{% endblock description %}
+{% block title %}{% if session %}{{ session.title|default:object.title }} - {{ session.start|date:"M j, Y" }}{% else %}{{ object.title }}{% endif %}{% endblock title %}
+{% block description %}{% if session and session.content_text.strip %}{{ session.content_text.strip|truncatechars:140 }}{% else %}{{ object.content_text.strip|truncatechars:140 }}{% endif %}{% endblock description %}
 {% block ogimage %}{% if session %}{% absurl 'spaces:session_social_img' session_slug=session.slug image_format="2to1" %}{% endif %}{% endblock ogimage %}
 {# djlint:on #}
 {% block meta %}
-  {% if session and not session.listed %}<meta name="robots" content="noindex" />{% endif %}
+  {% comment %}
+    Sessions without their own description are the space's page with a
+    different date, so only sessions that add something get indexed.
+  {% endcomment %}
+  {% if session and not session.listed or session and not session.content_text.strip %}<meta name="robots" content="noindex" />{% endif %}
 {% endblock meta %}
 {% block jsonld %}
   {{ session.jsonld|jsonld }}

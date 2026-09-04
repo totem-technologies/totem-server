@@ -1,4 +1,4 @@
-{% load static i18n %}
+{% load static i18n absurl %}
 <!doctype html>
 {% get_current_language as LANGUAGE_CODE %}
 <html lang="{{ LANGUAGE_CODE }}">
@@ -23,13 +23,18 @@
     {# djlint:on #}
     {% comment %}Open Graph / Facebook{% endcomment %}
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://www.totem.org/" />
+    <meta property="og:url" content="{{ request.path|as_absurl }}" />
     <meta
       property="og:image"
       content="{% block ogimage %}{% static 'images/ogimage.jpg' %}{% endblock ogimage %}" />
     {% comment %}Twitter{% endcomment %}
     <meta property="twitter:card" content="summary_large_image" />
     <meta property="twitter:site" content="@totemcircles" />
+    {% comment %}
+      Built from SITE_BASE_URL and the path only, so host aliases and query
+      strings never become the URL search engines index.
+    {% endcomment %}
+    <link rel="canonical" href="{{ request.path|as_absurl }}" />
     <link rel="icon" href="{% static 'images/favicons/favicon.ico' %}" />
     <link
       rel="apple-touch-icon"

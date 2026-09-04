@@ -32,6 +32,14 @@ class TestPages:
         response = client.get(url)
         assert response.status_code == 200
 
+    def test_canonical_url(self, client):
+        # Every page declares itself as the canonical URL, built from
+        # SITE_BASE_URL so host aliases and query strings never leak into it.
+        response = client.get(reverse("pages:tos") + "?utm_source=newsletter")
+        content = response.content.decode()
+        assert '<link rel="canonical" href="http://testserver/tos/" />' in content
+        assert '<meta property="og:url" content="http://testserver/tos/" />' in content
+
 
 class HomeViewTest:
     def test_home(self, client, proxied_site_mock):

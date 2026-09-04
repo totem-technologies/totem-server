@@ -108,14 +108,41 @@ class TestSessionView:
     def test_unlisted_session_page_not_indexable(self, client, db):
         # Unlisted sessions are reachable by direct link but must not be
         # search-indexable.
-        listed = SessionFactory()
+        listed = SessionFactory(content="A description for this session.")
         response = client.get(reverse("spaces:session_detail", kwargs={"session_slug": listed.slug}))
         assert "noindex" not in response.content.decode()
 
-        unlisted = SessionFactory(listed=False)
+        unlisted = SessionFactory(listed=False, content="A description for this session.")
         response = client.get(reverse("spaces:session_detail", kwargs={"session_slug": unlisted.slug}))
         assert response.status_code == 200
         assert '<meta name="robots" content="noindex" />' in response.content.decode()
+
+    def test_session_without_own_content_not_indexable(self, client, db):
+        # A session with no description of its own is a copy of its space's
+        # page with a different date. Keep those out of the index so every
+        # session of a recurring space doesn't compete as a duplicate.
+        for content in (None, "", "   "):
+            session = SessionFactory(content=content)
+            response = client.get(reverse("spaces:session_detail", kwargs={"session_slug": session.slug}))
+            assert response.status_code == 200
+            assert '<meta name="robots" content="noindex" />' in response.content.decode()
+
+    def test_session_page_title_and_description_are_session_specific(self, client, db):
+        space = SpaceFactory(title="What is Love?", content="Space level description of the topic.")
+        start = timezone.make_aware(datetime.datetime(2026, 9, 12, 17, 0))
+
+        titled = SessionFactory(space=space, start=start, title="Week 3: Boundaries", content="Session text here.")
+        content = client.get(reverse("spaces:session_detail", kwargs={"session_slug": titled.slug})).content.decode()
+        assert "Week 3: Boundaries - Sep 12, 2026 - Totem Spaces" in content
+        assert 'content="Session text here." />' in content
+
+        untitled = SessionFactory(space=space, start=start, content="Session text here.")
+        content = client.get(reverse("spaces:session_detail", kwargs={"session_slug": untitled.slug})).content.decode()
+        assert "What is Love? - Sep 12, 2026 - Totem Spaces" in content
+
+        empty = SessionFactory(space=space, start=start + datetime.timedelta(days=7), content=None)
+        content = client.get(reverse("spaces:session_detail", kwargs={"session_slug": empty.slug})).content.decode()
+        assert 'content="Space level description of the topic." />' in content
 
     # def test_event_with_token(self, client, db):
     #     event = SessionFactory()
