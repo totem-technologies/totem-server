@@ -37,7 +37,8 @@ class PagesSitemap(Sitemap):
             "team",
             "team-pam",
         ]
-        return [f"pages:{page}" for page in static_pages + proxied_site_pages]
+        hub_pages = ["blog:list", "blog:archive", "spaces:list", "spaces:sessions"]
+        return [f"pages:{page}" for page in static_pages + proxied_site_pages] + hub_pages
 
     def location(self, item):
         return reverse(item)

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% load avatar %}
+
+{# djlint:off #}
+{% block title %}Blog Archive{% endblock title %}
+{% block description %}Every article from the Totem blog, newest first.{% endblock description %}
+{# djlint:on #}
+
+{% block content %}
+  <div class="relative">
+    {% include "blog/_hero.html" with title="Blog Archive" subtitle="Every post we've published, newest first" %}
+
+    <div class="relative -mt-[200px]">
+      <div class="m-auto max-w-3xl px-5 pb-20">
+        <div class="card bg-base-100 shadow-xl">
+          <div class="card-body">
+            {% regroup posts by date_published.year as years %}
+            {% for year in years %}
+              <h2 class="h3 mt-6 first:mt-0">{{ year.grouper }}</h2>
+              <ul class="divide-y divide-gray-100">
+                {% for post in year.list %}
+                  <li>
+                    <a
+                      class="group flex items-center gap-4 py-4"
+                      href="{{ post.get_absolute_url }}">
+                      {% if post.author %}
+                        {% avatar user=post.author size=44 %}
+                      {% endif %}
+                      <div class="grow">
+                        <h3 class="group-hover:text-tblue-tint font-semibold text-gray-900">
+                          {% if not post.publish %}[DRAFT]{% endif %}{{ post.title }}
+                        </h3>
+                        <p class="text-sm text-gray-500">
+                          {% if post.author %}{{ post.author.name }} ·{% endif %}
+                          <time datetime="{{ post.date_published|date:'Y-m-d' }}"
+                            >{{ post.date_published|date:"M j, Y" }}</time
+                          >
+                        </p>
+                      </div>
+                      <span class="group-hover:text-tblue-tint text-2xl text-gray-300">→</span>
+                    </a>
+                  </li>
+                {% endfor %}
+              </ul>
+              {% empty %}
+              <p class="text-center text-gray-500">No blog posts yet. Check back soon!</p>
+            {% endfor %}
+          </div>
+        </div>
+        <p class="mt-10 text-center">
+          <a class="link" href="{% url 'blog:list' %}">← Back to Blog</a>
+        </p>
+      </div>
+    </div>
+  </div>
+{% endblock content %}

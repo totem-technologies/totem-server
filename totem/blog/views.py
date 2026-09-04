@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from django.conf import settings
+from django.db.models import Q, QuerySet
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import render
 from django.views.generic import DetailView, ListView
@@ -10,22 +11,64 @@ from totem.utils.img_gen import BlogImageParams, generate_blog_image
 from .models import BlogPost
 
 
+def _visible_posts(request: HttpRequest) -> QuerySet[BlogPost]:
+    """Posts this visitor may see: published ones, plus drafts for staff."""
+    qs = BlogPost.objects.all()
+    if request.user.is_staff:
+        return qs
+    return qs.filter(publish=True)
+
+
 class BlogPostDetailView(DetailView):  # pyright: ignore[reportMissingTypeArgument]
     model = BlogPost
     template_name = "blog/detail.html"
     context_object_name = "post"
 
     def get_queryset(self):
-        qs = BlogPost.objects.select_related("author")
-        if self.request.user.is_staff:
-            return qs
-        return qs.filter(publish=True)
+        return _visible_posts(self.request).select_related("author")
 
     def get_object(self, queryset=None):
         post = super().get_object(queryset)
         if not post.publish and not self.request.user.is_staff:
             raise Http404("Post not found")
         return post
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        post: BlogPost = context["post"]
+        # Posts share timestamps often enough (bulk imports, tests) that the
+        # primary key has to break ties, or neighbours would be skipped.
+        posts = _visible_posts(self.request).only("slug", "title", "date_published", "publish")
+        context["older_post"] = (
+            posts.filter(Q(date_published__lt=post.date_published) | Q(date_published=post.date_published, pk__lt=post.pk))
+            .order_by("-date_published", "-pk")
+            .first()
+        )
+        context["newer_post"] = (
+            posts.filter(Q(date_published__gt=post.date_published) | Q(date_published=post.date_published, pk__gt=post.pk))
+            .order_by("date_published", "pk")
+            .first()
+        )
+        return context
+
+
+def archive(request: HttpRequest):
+    """Every post on one page, so each is one click from the blog index."""
+    posts = (
+        _visible_posts(request)
+        .select_related("author")
+        .only(
+            "slug",
+            "title",
+            "date_published",
+            "publish",
+            "author__name",
+            "author__profile_image",
+            "author__profile_avatar_seed",
+            "author__profile_avatar_type",
+        )
+    )
+    return render(request, "blog/archive.html", {"posts": posts})
 
 
 class BlogPostListView(ListView):  # pyright: ignore[reportMissingTypeArgument]
@@ -35,10 +78,7 @@ class BlogPostListView(ListView):  # pyright: ignore[reportMissingTypeArgument]
     paginate_by = 12
 
     def get_queryset(self):
-        qs = BlogPost.objects.select_related("author")
-        if self.request.user.is_staff:
-            return qs
-        return qs.filter(publish=True)
+        return _visible_posts(self.request).select_related("author")
 
 
 @dataclass

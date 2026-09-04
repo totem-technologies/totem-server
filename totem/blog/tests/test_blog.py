@@ -154,3 +154,62 @@ class BlogViewTests(TestCase):
         posts = response.context["posts"]
         self.assertEqual(posts[0], self.published_post)
         self.assertEqual(posts[1], older_post)
+
+    def test_archive_lists_every_published_post(self):
+        # The list view paginates, the archive does not: every post is one
+        # click away so search engines can reach all of them.
+        base = self.published_post.date_published
+        posts = [BlogPostFactory(publish=True, date_published=base - timedelta(days=i)) for i in range(1, 20)]
+        response = self.client.get(reverse("blog:archive"))
+        self.assertEqual(response.status_code, 200)
+        for post in posts + [self.published_post]:
+            self.assertContains(response, post.title)
+            self.assertContains(response, post.get_absolute_url())
+        self.assertNotContains(response, self.unpublished_post.title)
+
+    def test_archive_is_one_query(self):
+        # Authors render as avatars on every row, so they must come along
+        # with the posts instead of one query per row.
+        for i in range(1, 6):
+            BlogPostFactory(publish=True, date_published=self.published_post.date_published - timedelta(days=i))
+        with self.assertNumQueries(1):
+            self.client.get(reverse("blog:archive"))
+
+    def test_archive_staff_sees_drafts(self):
+        self.client.force_login(self.staff)
+        response = self.client.get(reverse("blog:archive"))
+        self.assertContains(response, self.unpublished_post.title)
+        self.assertContains(response, "[DRAFT]")
+
+    def test_list_links_to_archive(self):
+        response = self.client.get(reverse("blog:list"))
+        self.assertContains(response, reverse("blog:archive"))
+
+    def test_detail_links_to_older_and_newer_posts(self):
+        base = self.published_post.date_published
+        older = BlogPostFactory(publish=True, date_published=base - timedelta(days=2))
+        draft_between = BlogPostFactory(publish=False, date_published=base - timedelta(days=1))
+        newer = BlogPostFactory(publish=True, date_published=base + timedelta(days=1))
+
+        response = self.client.get(self.published_post.get_absolute_url())
+        self.assertContains(response, older.get_absolute_url())
+        self.assertContains(response, newer.get_absolute_url())
+        self.assertNotContains(response, draft_between.get_absolute_url())
+        self.assertContains(response, reverse("blog:archive"))
+
+        response = self.client.get(newer.get_absolute_url())
+        self.assertEqual(response.context["newer_post"], None)
+        self.assertEqual(response.context["older_post"], self.published_post)
+
+        response = self.client.get(older.get_absolute_url())
+        self.assertEqual(response.context["older_post"], None)
+        self.assertEqual(response.context["newer_post"], self.published_post)
+
+    def test_detail_neighbours_break_ties_on_same_timestamp(self):
+        # The factory stamps every post with the same date, so the ordering
+        # must fall back to something deterministic instead of skipping posts.
+        same_time = BlogPostFactory(publish=True, date_published=self.published_post.date_published)
+        response = self.client.get(same_time.get_absolute_url())
+        self.assertEqual(response.context["older_post"], self.published_post)
+        response = self.client.get(self.published_post.get_absolute_url())
+        self.assertEqual(response.context["newer_post"], same_time)

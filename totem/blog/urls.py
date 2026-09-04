@@ -21,6 +21,8 @@ class BlogSitemap(Sitemap):
 
 urlpatterns = [
     path("", views.BlogPostListView.as_view(), name="list"),
+    # Before the slug route, which would otherwise swallow "archive".
+    path("archive/", views.archive, name="archive"),
     path("<slug:slug>/social", views.post_social, name="post_social"),
     path("<slug:slug>/social/<str:image_format>.jpg", views.post_social_img, name="post_social_img"),
     path("<slug:slug>/", views.BlogPostDetailView.as_view(), name="detail"),
