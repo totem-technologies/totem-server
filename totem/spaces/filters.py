@@ -19,13 +19,19 @@ from totem.users.models import User
 from .models import Session, SessionQuerySet, SessionTimeConflict, Space
 
 
+def author_circle_count_prefetch(author_path: str = "author") -> Prefetch:
+    """User.circle_count reads sessions_joined from the prefetch cache, so any
+    list that serialises an author needs this. Ids are all the count needs."""
+    return Prefetch(f"{author_path}__sessions_joined", queryset=Session.objects.only("id"))
+
+
 def upcoming_sessions_queryset(user: User | None = None) -> SessionQuerySet:
     """A space's upcoming sessions as shown to this user, soonest first.
 
     Sessions stay visible until they end (even when full) so attendees can
     find them.
     """
-    return Session.objects.visible_to(user).not_ended().order_by("start").prefetch_related("attendees")
+    return Session.objects.visible_to(user).not_ended().order_by("start").prefetch_related("attendees", "joined")
 
 
 def get_upcoming_spaces_list(
@@ -48,6 +54,7 @@ def get_upcoming_spaces_list(
         .prefetch_related(
             "categories",
             "subscribed",
+            author_circle_count_prefetch(),
             Prefetch("sessions", queryset=upcoming_sessions, to_attr="upcoming_sessions"),
         )
         .annotate(subscriber_count=Count("subscribed", distinct=True))
@@ -93,7 +100,7 @@ def all_upcoming_recommended_sessions(user: User | None, category: str | None = 
         sessions = sessions.filter(Q(space__categories__slug=category) | Q(space__categories__name=category))
     if author:
         sessions = sessions.filter(space__author__slug=author)
-    return sessions.prefetch_related("space__author")
+    return sessions.prefetch_related("space__author", author_circle_count_prefetch("space__author"))
 
 
 def upcoming_attending_sessions(user: User, limit: int = 10):
@@ -135,7 +142,14 @@ def spaces_summary_data(user: User) -> SpacesSummary:
         .filter(attendees=user)
         .not_ended()
         .select_related("space")
-        .prefetch_related("space__author", "space__categories", "attendees", "joined", "space__subscribed")
+        .prefetch_related(
+            "space__author",
+            author_circle_count_prefetch("space__author"),
+            "space__categories",
+            "attendees",
+            "joined",
+            "space__subscribed",
+        )
         .order_by("start")
     )
     upcoming_space_slugs = {session.space.slug for session in upcoming}
@@ -244,7 +258,7 @@ def prefetch_session_detail_relations(
     relations: list[str | Prefetch] = [
         "attendees",
         "joined",
-        "space__author__sessions_joined",
+        author_circle_count_prefetch("space__author"),
         "space__categories",
         "space__subscribed",
     ]

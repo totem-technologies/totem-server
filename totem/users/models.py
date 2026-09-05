@@ -54,7 +54,15 @@ def upload_to_id_image(instance, filename: str):
     return f"profiles/{user_slug}/{new_filename}.{extension}"
 
 
+class PeersUserManager(UserManager):
+    """See PeersManager."""
+
+    def get_queryset(self):
+        return super().get_queryset().fetch_mode(models.FETCH_PEERS)
+
+
 class User(AdminURLMixin, SluggedModel, AbstractUser):
+    objects = PeersUserManager()  # pyright: ignore [reportAssignmentType]
     """
     Default custom user model for Totem.
     If adding fields that need to be filled at user signup,
@@ -130,6 +138,16 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
 
     def is_keeper(self):
         return hasattr(self, "keeper_profile")
+
+    @property
+    def circle_count(self) -> int:
+        """Sessions this user has joined. A related manager's .count() always
+        queries, even after prefetch_related, so list views that prefetch
+        sessions_joined get the answer from the cache here instead."""
+        prefetched = getattr(self, "_prefetched_objects_cache", {})
+        if "sessions_joined" in prefetched:
+            return len(prefetched["sessions_joined"])
+        return self.sessions_joined.count()
 
     def month_joined(self):
         return self.date_created.strftime("%B %Y")

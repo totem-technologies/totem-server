@@ -286,3 +286,21 @@ class TestLoginPinMultiPin:
 
         LoginPin.cleanup()
         assert list(LoginPin.objects.filter(user=user).values_list("pk", flat=True)) == [keep.pk]
+
+
+@pytest.mark.django_db
+class TestCircleCount:
+    def test_uses_prefetched_sessions(self, django_assert_num_queries):
+        from totem.spaces.tests.factories import SessionFactory
+
+        user = UserFactory()
+        for _ in range(3):
+            SessionFactory().joined.add(user)
+
+        fetched = User.objects.prefetch_related("sessions_joined").get(pk=user.pk)
+        with django_assert_num_queries(0):
+            assert fetched.circle_count == 3
+
+        plain = User.objects.get(pk=user.pk)
+        with django_assert_num_queries(1):
+            assert plain.circle_count == 3

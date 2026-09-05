@@ -11,7 +11,7 @@ from imagekit.processors import ResizeToFit, Transpose
 from totem.utils.hash import basic_hash
 from totem.utils.images import ConvertToSRGB
 from totem.utils.md import MarkdownField, MarkdownMixin
-from totem.utils.models import AdminURLMixin, SluggedModel
+from totem.utils.models import AdminURLMixin, PeersManager, SluggedModel
 
 User = get_user_model()
 
@@ -33,6 +33,8 @@ def upload_to_id_image(instance, filename: str):
 
 
 class BlogPost(AdminURLMixin, MarkdownMixin, SluggedModel):
+    objects = PeersManager()
+
     title = models.CharField(max_length=255)
     subtitle = models.CharField(max_length=2000, blank=True)
     summary = models.CharField(

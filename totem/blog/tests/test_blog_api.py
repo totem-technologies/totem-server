@@ -9,6 +9,25 @@ from totem.users.models import User
 
 @pytest.mark.django_db
 class TestBlogAPI:
+    def test_list_posts_queries_do_not_grow_with_rows(self, client: Client, auth_token):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        url = reverse("mobile-api:list_posts")
+
+        def query_count() -> int:
+            with CaptureQueriesContext(connection) as ctx:
+                response = client.get(url, HTTP_AUTHORIZATION=f"Bearer {auth_token}")
+            assert response.status_code == 200
+            return len(ctx)
+
+        for _ in range(2):
+            BlogPostFactory(publish=True)
+        small = query_count()
+        for _ in range(8):
+            BlogPostFactory(publish=True)
+        assert query_count() == small
+
     def test_list_posts(self, client: Client, auth_token):
         """
         Users should only see published posts in a paginated format.

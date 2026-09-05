@@ -17,6 +17,16 @@ def make_slug():
     )
 
 
+class PeersManager(models.Manager):
+    """Default queryset to FETCH_PEERS: when one instance touches an unloaded
+    relation or deferred field, Django fetches it for every instance from the
+    same queryset. A forgotten select_related costs two queries, not N+1.
+    Many-to-many access and .count() are not covered; prefetch those."""
+
+    def get_queryset(self):
+        return super().get_queryset().fetch_mode(models.FETCH_PEERS)
+
+
 class BaseModel(models.Model):
     date_created = models.DateTimeField(auto_now_add=True)
     date_modified = models.DateTimeField(auto_now=True)

@@ -1476,3 +1476,35 @@ class TestMobileApiSpaces:
         )
 
         assert response.status_code == 422
+
+
+@pytest.mark.django_db
+class TestListQueryCounts:
+    """Serialising a list must not query once per row (author circle counts,
+    attendees, joined) as the catalog grows."""
+
+    @staticmethod
+    def _count(client: Client, url: str) -> int:
+        with CaptureQueriesContext(connection) as ctx:
+            response = client.get(url)
+        assert response.status_code == 200
+        return len(ctx)
+
+    @staticmethod
+    def _seed(n: int, attendee: User) -> None:
+        for _ in range(n):
+            session = SessionFactory(space=SpaceFactory(author=UserFactory()))
+            session.attendees.add(UserFactory())
+            session.joined.add(attendee)
+
+    @pytest.mark.parametrize(
+        "url_name",
+        ["mobile-api:mobile_spaces_list", "mobile-api:recommended_spaces", "mobile-api:spaces_summary"],
+    )
+    def test_queries_do_not_grow_with_rows(self, client_with_user: tuple[Client, User], url_name: str):
+        client, user = client_with_user
+        url = reverse(url_name) + "?limit=50"
+        self._seed(2, user)
+        small = self._count(client, url)
+        self._seed(6, user)
+        assert self._count(client, url) == small

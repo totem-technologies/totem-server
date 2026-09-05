@@ -14,10 +14,6 @@ class PublicUserSchema(ModelSchema):
     profile_avatar_type: ProfileAvatarTypeEnum
     circle_count: int | None = None
 
-    @staticmethod
-    def resolve_circle_count(obj: User) -> int:
-        return obj.sessions_joined.count()
-
     class Meta:
         model = User
         fields = [
@@ -40,10 +36,6 @@ class UserSchema(ModelSchema):
         if obj.profile_image:
             return obj.profile_image.url
         return None
-
-    @staticmethod
-    def resolve_circle_count(obj: User) -> int:
-        return obj.sessions_joined.count()
 
     class Meta:
         model = User
@@ -80,7 +72,7 @@ class KeeperProfileSchema(ModelSchema):
 
     @staticmethod
     def resolve_circle_count(obj: KeeperProfile) -> int:
-        return obj.user.sessions_joined.count()
+        return obj.user.circle_count
 
     @staticmethod
     def resolve_month_joined(obj: KeeperProfile) -> str:

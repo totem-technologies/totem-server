@@ -1,39 +1,84 @@
 {% extends "base.html" %}
 {% block title %}
-  Plans
+  Self-Guided Plans
 {% endblock title %}
 {% block content %}
-  <section class="body-font mx-auto max-w-5xl overflow-hidden text-gray-600">
-    <div class="section-prose pt-5">
-      <h1>Self-Guided Plans</h1>
+  <section
+    class="bg-tblue relative px-5 pt-16 pb-24 text-center md:pt-24 md:pb-32">
+    <div class="mx-auto max-w-3xl">
+      <p class="mb-4 text-sm font-semibold tracking-widest uppercase">
+        Make space for connection
+      </p>
+      <h1 class="h1 tracking-tight">Self-Guided Plans</h1>
+      <p class="mx-auto mt-6 max-w-xl text-lg leading-8">
+        A starting point for meaningful conversations. Choose a plan to guide
+        your own Circle, one question at a time.
+      </p>
     </div>
-    <div class="container px-5 py-10">
+    <svg
+      class="text-tcreme absolute bottom-0 left-0 h-10 w-full md:h-16"
+      viewBox="0 0 1200 120"
+      preserveAspectRatio="none"
+      fill="currentColor"
+      aria-hidden="true">
+      <path d="M0 40Q300 120 600 40T1200 40V120H0Z" />
+    </svg>
+  </section>
+  <section
+    class="mx-auto max-w-5xl px-5 pt-6 pb-20 md:pt-10"
+    aria-label="Available plans">
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
       {% for plan in object_list %}
-        <div class="-my-8 divide-y-2 divide-gray-100">
-          <div class="flex flex-wrap py-8 md:flex-nowrap">
-            <div class="md:grow">
-              <a href="{% url 'plans:detail' plan.id %}">
-                <h2 class="h2 mb-2">{{ plan.name }}</h2>
-              </a>
-              <p class="leading-relaxed">{{ plan.description }}</p>
-              <a
-                class="mt-4 inline-flex items-center text-blue-500"
-                href="{% url 'plans:detail' plan.id %}"
-                >Get Plan
-                <svg
-                  class="ml-2 h-4 w-4"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  fill="none"
-                  stroke-linecap="round"
-                  stroke-linejoin="round">
-                  <path d="M5 12h14"></path>
-                  <path d="M12 5l7 7-7 7"></path>
-                </svg>
-              </a>
-            </div>
+        <article
+          class="flex min-w-0 flex-col rounded-3xl bg-white p-7 shadow-sm ring-1 ring-gray-900/5 md:p-8">
+          <div
+            class="bg-tyellow mb-6 flex h-12 w-12 items-center justify-center rounded-2xl"
+            aria-hidden="true">
+            <svg
+              class="h-6 w-6"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linecap="round"
+              stroke-linejoin="round">
+              <path
+                d="M12 6v14M3 4h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5v14h-5a4 4 0 0 0-4 2 4 4 0 0 0-4-2H3Z" />
+            </svg>
           </div>
+          <h2 class="text-2xl leading-snug font-semibold wrap-break-word">
+            {{ plan.name }}
+          </h2>
+          <p class="mt-4 line-clamp-4 leading-7 wrap-break-word text-gray-600">
+            {{ plan.description }}
+          </p>
+          <div class="mt-auto pt-7">
+            <a
+              class="btn btn-primary"
+              href="{% url 'plans:detail' plan.id %}"
+              aria-label="View plan: {{ plan.name }}">
+              View plan
+              <svg
+                class="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true">
+                <path d="M5 12h14m-7-7 7 7-7 7" />
+              </svg>
+            </a>
+          </div>
+        </article>
+        {% empty %}
+        <div
+          class="col-span-full rounded-3xl bg-white px-6 py-12 text-center ring-1 ring-gray-900/5">
+          <h2 class="h3">More conversations are on the way</h2>
+          <p class="mt-4 text-gray-600">
+            Check back soon for self-guided plans to try with your Circle.
+          </p>
         </div>
       {% endfor %}
     </div>

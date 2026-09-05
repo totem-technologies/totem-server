@@ -6,7 +6,12 @@ from ninja import Query, Router, Status
 from ninja.errors import AuthorizationError
 from ninja.pagination import paginate
 
-from totem.spaces.filters import get_upcoming_spaces_list, spaces_summary_data, upcoming_sessions_queryset
+from totem.spaces.filters import (
+    author_circle_count_prefetch,
+    get_upcoming_spaces_list,
+    spaces_summary_data,
+    upcoming_sessions_queryset,
+)
 from totem.spaces.mobile_api.mobile_filters import (
     session_detail_schema,
     space_detail_schema,
@@ -41,7 +46,7 @@ def _prefetch_session_detail_relations(sessions: list[Session], user: User) -> N
         sessions,
         "attendees",
         "joined",
-        "space__author__sessions_joined",
+        author_circle_count_prefetch("space__author"),
         "space__categories",
         "space__subscribed",
         Prefetch("space__sessions", queryset=upcoming_sessions, to_attr="upcoming_sessions"),

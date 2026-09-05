@@ -2,6 +2,7 @@ from django.shortcuts import get_object_or_404
 from ninja import ModelSchema, Router
 from ninja.pagination import paginate
 
+from totem.spaces.filters import author_circle_count_prefetch
 from totem.users.schemas import PublicUserSchema
 
 from .models import BlogPost
@@ -50,7 +51,7 @@ def list_posts(request):
         posts = BlogPost.objects.all()
     else:
         posts = BlogPost.objects.filter(publish=True)
-    return posts.order_by("-date_published").select_related("author")
+    return posts.order_by("-date_published").select_related("author").prefetch_related(author_circle_count_prefetch())
 
 
 @blog_router.get("/post/{slug}", response=BlogPostSchema, tags=["blog"], url_name="get_post")

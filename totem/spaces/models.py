@@ -35,7 +35,7 @@ from totem.utils.fields import MaxLengthTextField
 from totem.utils.hash import basic_hash, hmac
 from totem.utils.images import ConvertToSRGB
 from totem.utils.md import MarkdownField, MarkdownMixin
-from totem.utils.models import AdminURLMixin, BaseModel, SluggedModel
+from totem.utils.models import AdminURLMixin, BaseModel, PeersManager, SluggedModel
 from totem.utils.slack import notify_slack
 from totem.utils.utils import full_url
 
@@ -184,6 +184,8 @@ class SpaceCategory(models.Model):
 
 
 class Space(AdminURLMixin, MarkdownMixin, SluggedModel):
+    objects = PeersManager()
+
     class MeetingProviderChoices(models.TextChoices):
         GOOGLE_MEET = "google_meet", _("Google Meet")
         LIVEKIT = "livekit", _("LiveKit")
@@ -294,7 +296,7 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
     seats = models.IntegerField(default=8, validators=[MinValueValidator(1)])
     start = models.DateTimeField(default=timezone.now)
 
-    objects: "SessionQuerySet" = SessionQuerySet.as_manager()  # pyright: ignore [reportAssignmentType]
+    objects: "SessionQuerySet" = PeersManager.from_queryset(SessionQuerySet)()  # pyright: ignore [reportAssignmentType]
 
     class Meta:  # pyright: ignore [reportIncompatibleVariableOverride]
         ordering = ["start"]

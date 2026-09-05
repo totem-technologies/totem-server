@@ -9,6 +9,25 @@ from totem.users.tests.factories import UserFactory
 
 
 class TestSessionListAPI:
+    def test_session_list_queries_do_not_grow_with_rows(self, client, db):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+
+        def query_count() -> int:
+            with CaptureQueriesContext(connection) as ctx:
+                response = client.get(
+                    reverse("api-1:events_list"), SessionsFilterSchema(category="", author=""), format="json"
+                )
+            assert response.status_code == 200
+            return len(ctx)
+
+        for _ in range(2):
+            SessionFactory(space=SpaceFactory(author=UserFactory()))
+        small = query_count()
+        for _ in range(8):
+            SessionFactory(space=SpaceFactory(author=UserFactory()))
+        assert query_count() == small
+
     def test_get_session_list_bad_category(self, client, db):
         response = client.get(
             reverse("api-1:events_list"), SessionsFilterSchema(category="empty", author=""), format="json"
