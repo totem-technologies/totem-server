@@ -9,7 +9,7 @@
     "esModuleInterop": true,
     "jsx": "preserve",
     "jsxImportSource": "solid-js",
-    "types": ["vite/client", "@testing-library/jest-dom", "@types/bun"],
+    "types": ["vite/client", "@types/bun"],
     "noEmit": true,
     "paths": {
       "@/*": ["./assets/js/*"],

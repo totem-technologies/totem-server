@@ -1,6 +1,7 @@
 import uFuzzy from "@leeoniya/ufuzzy"
 import {
   createEffect,
+  createMemo,
   createSignal,
   For,
   type JSXElement,
@@ -63,15 +64,18 @@ function PromptSearch(props: { dataid?: string; children?: JSXElement }) {
   const haystack = () => {
     return data().map((r) => `${r.prompt} ${r.tags.join(" ")}`)
   }
-  const items = () => {
+  const items = createMemo(() => {
     if (search() === "") {
       return data()
     }
     const [idxs, _info, order] = uf.search(haystack(), search(), 0)
-    if (order) {
-      return order.map((i: number) => idxs.map((i: number) => data()[i])[i])
+    if (!order) return []
+    const matches: PromptItem[] = []
+    for (const i of order) {
+      matches.push(data()[idxs[i]])
     }
-  }
+    return matches
+  })
 
   createEffect(() => {
     // add search to url

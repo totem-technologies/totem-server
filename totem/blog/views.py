@@ -40,12 +40,16 @@ class BlogPostDetailView(DetailView):  # pyright: ignore[reportMissingTypeArgume
         # primary key has to break ties, or neighbours would be skipped.
         posts = _visible_posts(self.request).only("slug", "title", "date_published", "publish")
         context["older_post"] = (
-            posts.filter(Q(date_published__lt=post.date_published) | Q(date_published=post.date_published, pk__lt=post.pk))
+            posts.filter(
+                Q(date_published__lt=post.date_published) | Q(date_published=post.date_published, pk__lt=post.pk)
+            )
             .order_by("-date_published", "-pk")
             .first()
         )
         context["newer_post"] = (
-            posts.filter(Q(date_published__gt=post.date_published) | Q(date_published=post.date_published, pk__gt=post.pk))
+            posts.filter(
+                Q(date_published__gt=post.date_published) | Q(date_published=post.date_published, pk__gt=post.pk)
+            )
             .order_by("date_published", "pk")
             .first()
         )

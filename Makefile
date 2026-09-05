@@ -16,7 +16,10 @@ build:
 build-prod:
 	docker build -t totem-prod -f compose/production/django/Dockerfile .
 
-test: test-python test-js
+test: test-python test-js pre-commit
+
+pre-commit:
+	pre-commit run --all-files
 
 test-js:
 	bun run test:ci

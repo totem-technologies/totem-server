@@ -91,9 +91,7 @@ describe("bot form handling", () => {
     const form = makeForm()
     initBot()
     submit(form)
-    expect(
-      form.querySelector('input[name="csrfmiddlewaretoken"]')
-    ).toBeNull()
+    expect(form.querySelector('input[name="csrfmiddlewaretoken"]')).toBeNull()
     expect(form.submit).toHaveBeenCalledOnce()
   })
 })
