@@ -38,18 +38,17 @@ CACHES = {
 
 # EMAIL
 # ------------------------------------------------------------------------------
-# https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
+# https://docs.djangoproject.com/en/dev/ref/settings/#mailers
 USE_MAILPIT = env.bool("USE_MAILPIT", default=False)  # type: ignore
 if USE_MAILPIT:
-    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-    EMAIL_HOST = "mailpit"
-    EMAIL_PORT = 1025
+    MAILERS = {
+        "default": {
+            "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
+            "OPTIONS": {"host": "mailpit", "port": 1025, "timeout": 5},
+        },
+    }
 else:
-    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"  # type: ignore
-
-# INSTALLED_APPS += ["anymail"]  # noqa: F405
-# EMAIL_BACKEND = "anymail.backends.mailersend.EmailBackend"
-# ANYMAIL = {"MAILERSEND_API_TOKEN": MAILERSEND_API_TOKEN, "MAILERSEND_BATCH_SEND_MODE": "use-bulk-email"}
+    MAILERS = {"default": {"BACKEND": "django.core.mail.backends.console.EmailBackend"}}
 
 # WhiteNoise
 # ------------------------------------------------------------------------------
@@ -101,10 +100,10 @@ INSTALLED_APPS += ["django_extensions"]  # noqa: F405
 # # # ------------------------------------------------------------------------------
 # # # https://anymail.readthedocs.io/en/stable/installation/#installing-anymail
 # INSTALLED_APPS += ["anymail"]  # noqa: F405
-# # # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
+# # # https://docs.djangoproject.com/en/dev/ref/settings/#mailers
 # # # https://anymail.readthedocs.io/en/stable/installation/#anymail-settings-reference
-# # # https://anymail.readthedocs.io/en/stable/esps/mailgun/
-# EMAIL_BACKEND = "anymail.backends.mailersend.EmailBackend"
+# # # https://anymail.readthedocs.io/en/stable/esps/mailersend/
+# MAILERS = {"default": {"BACKEND": "anymail.backends.mailersend.EmailBackend"}}
 # ANYMAIL = {
 #     "MAILERSEND_API_TOKEN": env("MAILERSEND_API_TOKEN"),
 #     "MAILERSEND_BATCH_SEND_MODE": "use-bulk-email",

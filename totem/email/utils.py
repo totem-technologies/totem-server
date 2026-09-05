@@ -17,7 +17,6 @@ def send_mail(
     text_message: str,
     recipient_list: list[str],
     from_email: str = settings.DEFAULT_FROM_EMAIL,
-    fail_silently: bool = False,
 ) -> int:
     # remove newlines from subject
     subject = subject.replace("\n", " ")
@@ -27,7 +26,6 @@ def send_mail(
             message=text_message,
             from_email=from_email,
             recipient_list=recipient_list,
-            fail_silently=fail_silently,
             html_message=html_message,
         )
     except AnymailRecipientsRefused:

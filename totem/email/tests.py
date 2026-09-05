@@ -134,3 +134,22 @@ class TestMissedSessionEmail:
         assert event.title in message
         assert "missed you" in message
         assert "forms.gle" in message
+
+
+class TestMailerSettings:
+    def test_email_backend_configured_through_mailers(self, settings):
+        # Django 6.1 deprecated EMAIL_BACKEND and friends in favour of MAILERS.
+        # Any settings module that still defines them trips a warning on
+        # every request, so guard against them creeping back in.
+        assert "default" in settings.MAILERS
+        for name in ("EMAIL_BACKEND", "EMAIL_TIMEOUT", "EMAIL_HOST", "EMAIL_PORT"):
+            assert not settings.is_overridden(name), f"{name} should live in MAILERS"
+
+    def test_outbox_receives_mail(self, settings):
+        from django.core import mail
+
+        from totem.email.utils import send_mail
+
+        send_mail("Hi", "<p>hi</p>", "hi", ["to@example.com"])
+        assert len(mail.outbox) == 1
+        assert mail.outbox[0].subject == "Hi"
