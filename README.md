@@ -47,6 +47,23 @@ Steps:
 - Totem used `dokku` for deployment. The `Dockerfile` is used to build the image.
   - Configure `dokku` to use the production Dockerfile: `dokku builder:set totem selected dockerfile` and `dokku builder-dockerfile:set totem dockerfile-path compose/production/django/Dockerfile`.
 
+## PostgreSQL major-version upgrades
+
+For a production major-version upgrade, prepare the destination service,
+configuration, SSL, and a rehearsal restore before stopping the app. Suspend
+both Dokku cron jobs and wait for running jobs to finish before the final
+export. Restore into the destination, verify rows, sequences, column
+nullability, constraints, and indexes, then run `ANALYZE`.
+
+Link and promote the destination, then explicitly run `dokku ps:start totem`:
+promotion does not start an app that was stopped. Verify the application's
+database connection and pages before resuming cron jobs. Transfer and test the
+backup schedule. Measure export and restore timings during the rehearsal to
+estimate production downtime.
+Run the cutover from a persistent terminal session such as `tmux` so an SSH
+disconnect does not interrupt the procedure. Dokku's `postgres:upgrade` command
+replaces the container but does not migrate major-version data.
+
 ## Update PostgreSQL config
 
 The production Postgres config is at `compose/production/postgres/postgresql.conf`. To apply changes:

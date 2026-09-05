@@ -1,5 +1,5 @@
 volumes:
-  totem_local_postgres_data: {}
+  totem_local_postgres_18_data: {}
   totem_local_postgres_data_backups: {}
 
 services:
@@ -35,12 +35,12 @@ services:
     build:
       context: .
       dockerfile: ./compose/local/postgres/Dockerfile
-    image: totem_production_postgres
+    image: totem_local_postgres
     container_name: totem_local_postgres
     ports:
       - "5432:5432"
     volumes:
-      - totem_local_postgres_data:/var/lib/postgresql/data
+      - totem_local_postgres_18_data:/var/lib/postgresql
       - totem_local_postgres_data_backups:/backups
       - ./compose/local/postgres/postgresql.conf:/etc/postgresql/postgresql.conf:ro
     env_file:
