@@ -14,15 +14,15 @@ class PlanBaseView(View):
 
 
 class PlanListView(PlanBaseView, ListView):
-    """View to list all films.
-    Use the 'film_list' variable in the template
-    to access all Film objects"""
+    """List self-guided Space plans."""
+
+    template_name = "plans/spaceplan_list.html"
 
 
 class PlanDetailView(PlanBaseView, DetailView):
-    """View to list the details from one film.
-    Use the 'film' variable in the template to access
-    the specific film here and in the Views below"""
+    """Display a self-guided Space plan."""
+
+    template_name = "plans/spaceplan_detail.html"
 
 
 class PlanCreateView(PlanBaseView, CreateView):
