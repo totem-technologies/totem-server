@@ -74,22 +74,6 @@ The production Postgres config is at `compose/production/postgres/postgresql.con
 
 Note: `shared_buffers` changes require a full restart to take effect.
 
-After a Postgres point update, refresh collation versions to suppress warnings:
-
-```bash
-docker exec -i dokku.postgres.totemdb psql -U postgres <<'EOF'
-SELECT format('ALTER DATABASE %I REFRESH COLLATION VERSION', datname)
-FROM pg_database WHERE datallowconn \gexec
-EOF
-```
-
-For the local dev database:
-
-```bash
-docker exec -i totem_local_postgres psql -U debug -d totem <<'EOF'
-SELECT format('ALTER DATABASE %I REFRESH COLLATION VERSION', datname)
-FROM pg_database WHERE datallowconn \gexec
-EOF
 ```
 
 ## Restore DB from backup
