@@ -411,11 +411,19 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
             return True
         return False
 
-    def started(self):
+    def started(self) -> bool:
         return self.start < timezone.now()
 
-    def end(self):
+    def end(self) -> datetime.datetime:
         return self.start + datetime.timedelta(minutes=self.duration_minutes)
+
+    def completion_time(self) -> datetime.datetime:
+        if self.ended_at is not None:
+            return self.ended_at
+        scheduled_end = self.end()
+        if self.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT:
+            return scheduled_end + _livekit_ended_backstop
+        return scheduled_end
 
     def join_window(self, user: "User | AnonymousUser") -> tuple[datetime.datetime, datetime.datetime | None]:
         """Absolute times between which `user` may join, the single source of
@@ -440,15 +448,10 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
             return False
         return opens < now < closes
 
-    def ended(self):
+    def ended(self) -> bool:
         # Mirrors SessionQuerySet.not_ended: LiveKit ends via ended_at (plus
         # the backstop); Google Meet ends at the scheduled end.
-        if self.ended_at is not None:
-            return True
-        end = self.end()
-        if self.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT:
-            return end + _livekit_ended_backstop < timezone.now()
-        return end < timezone.now()
+        return self.ended_at is not None or self.completion_time() < timezone.now()
 
     def remove_attendee(self, user):
         if user not in self.attendees.all():
