@@ -158,10 +158,16 @@ def _session_message_result_schema(result: SessionMessageResult) -> SessionMessa
     response={200: ConversationPageSchema},
     url_name="messages_conversations",
 )
-def list_conversations(request: HttpRequest, cursor: str | None = None, limit: int = 20):
+def list_conversations(
+    request: HttpRequest,
+    cursor: str | None = None,
+    limit: int = 20,
+    query: str = "",
+):
+    """Conversation summaries, optionally filtered by peer name or latest message text."""
     user: User = request.user  # type: ignore
     try:
-        summaries, next_cursor, unread_count = inbox_page(user, cursor=cursor, limit=limit)
+        summaries, next_cursor, unread_count = inbox_page(user, cursor=cursor, limit=limit, query=query)
     except MessageValidationError as error:
         _validation_error(error)
     return ConversationPageSchema(
@@ -214,7 +220,12 @@ def list_recipients(
     cursor: str | None = None,
     limit: int = 20,
 ):
-    """Authorized 1:1 recipients; the first ordered keepers page powers recommendations."""
+    """Authorized 1:1 recipients; omit ``kind`` to prefer eligible keepers for dual-role users.
+
+    The first ordered keepers page powers recommendations. Participants always
+    receive their keepers directory; keepers composing to their own participants
+    must explicitly request ``kind=participants``.
+    """
     user: User = request.user  # type: ignore
     try:
         directory_kind, entries, next_cursor = recipient_directory_page(

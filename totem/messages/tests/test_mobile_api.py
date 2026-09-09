@@ -173,6 +173,59 @@ class TestConversationAPI:
             "is_mine",
         }
 
+    def test_inbox_search_matches_peer_name_or_last_message_preview_only(self):
+        participant = UserFactory(name="Current participant")
+        named_keeper = UserFactory(name="Calm keeper")
+        preview_keeper = UserFactory(name="Other keeper")
+        history_keeper = UserFactory(name="History keeper")
+        relationship(named_keeper, participant)
+        relationship(preview_keeper, participant)
+        relationship(history_keeper, participant)
+        named_conversation = get_or_create_conversation(participant, named_keeper)
+        preview_conversation = get_or_create_conversation(participant, preview_keeper)
+        history_conversation = get_or_create_conversation(participant, history_keeper)
+        create_message(named_conversation, named_keeper, "Welcome", None)
+        create_message(preview_conversation, preview_keeper, "Session logistics", None)
+        create_message(history_conversation, history_keeper, "Historic needle", None)
+        create_message(history_conversation, history_keeper, "Current topic", None)
+        client = authenticated_client(participant)
+
+        name_match = client.get(reverse("mobile-api:messages_conversations"), {"query": "CALM"})
+        preview_match = client.get(reverse("mobile-api:messages_conversations"), {"query": "logistics"})
+        historical_match = client.get(reverse("mobile-api:messages_conversations"), {"query": "needle"})
+
+        assert name_match.status_code == preview_match.status_code == historical_match.status_code == 200
+        assert [item["peer"]["slug"] for item in name_match.json()["items"]] == [named_keeper.slug]
+        assert [item["peer"]["slug"] for item in preview_match.json()["items"]] == [preview_keeper.slug]
+        assert historical_match.json()["items"] == []
+
+    def test_inbox_search_cursor_is_bound_to_the_query(self):
+        participant = UserFactory()
+        for index in range(3):
+            keeper = UserFactory(name=f"Keeper {index}")
+            relationship(keeper, participant)
+            conversation = get_or_create_conversation(participant, keeper)
+            create_message(conversation, keeper, "Searchable preview", None)
+        client = authenticated_client(participant)
+
+        first = client.get(reverse("mobile-api:messages_conversations"), {"query": "searchable", "limit": 2})
+        second = client.get(
+            reverse("mobile-api:messages_conversations"),
+            {"query": "searchable", "limit": 2, "cursor": first.json()["next_cursor"]},
+        )
+        mismatched_query = client.get(
+            reverse("mobile-api:messages_conversations"),
+            {"query": "different", "cursor": first.json()["next_cursor"]},
+        )
+
+        first_slugs = [item["peer"]["slug"] for item in first.json()["items"]]
+        second_slugs = [item["peer"]["slug"] for item in second.json()["items"]]
+        assert first.status_code == second.status_code == 200
+        assert len(first_slugs) == 2
+        assert len(set(first_slugs + second_slugs)) == 3
+        assert second.json()["next_cursor"] is None
+        assert mismatched_query.status_code == 422
+
     def test_cold_conversation_lookup_returns_authorized_summary(self):
         keeper = UserFactory(name="Keeper")
         participant = UserFactory()
@@ -267,6 +320,32 @@ class TestRecipientDirectoryAPI:
         assert "hidden-one@example.com" not in response.content.decode()
         assert "hidden-two@example.com" not in response.content.decode()
 
+    def test_participant_directory_ignores_participants_kind(self):
+        participant = UserFactory()
+        keeper = UserFactory(name="Authorized keeper")
+        relationship(keeper, participant)
+
+        response = authenticated_client(participant).get(
+            reverse("mobile-api:messages_recipients"),
+            {"kind": "participants"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["kind"] == "keepers"
+        assert response.json()["participants"] == []
+        assert [entry["profile"]["slug"] for entry in response.json()["keepers"]] == [keeper.slug]
+
+    def test_joined_only_participant_directory_lists_session_keeper(self):
+        participant = UserFactory()
+        keeper = UserFactory(name="Joined session keeper")
+        relationship(keeper, participant, attendee=False, joined=True)
+
+        response = authenticated_client(participant).get(reverse("mobile-api:messages_recipients"))
+
+        assert response.status_code == 200
+        assert response.json()["kind"] == "keepers"
+        assert [entry["profile"]["slug"] for entry in response.json()["keepers"]] == [keeper.slug]
+
     @pytest.mark.parametrize(
         ("query", "expected_name"), [("fresh session", "Existing"), ("no existing", "No Existing")]
     )
@@ -328,6 +407,18 @@ class TestRecipientDirectoryAPI:
         assert len(slugs) == len(set(slugs)) == 3
         assert first.json()["next_cursor"]
         assert second.json()["next_cursor"] is None
+
+    def test_dual_role_user_defaults_to_keepers_when_they_participated_in_another_keepers_session(self):
+        dual_role_user = keeper_with_profile()
+        other_keeper = keeper_with_profile(name="Other keeper")
+        relationship(other_keeper, dual_role_user, attendee=False, joined=True)
+        relationship(dual_role_user, UserFactory())
+
+        response = authenticated_client(dual_role_user).get(reverse("mobile-api:messages_recipients"))
+
+        assert response.status_code == 200
+        assert response.json()["kind"] == "keepers"
+        assert [entry["profile"]["slug"] for entry in response.json()["keepers"]] == [other_keeper.slug]
 
     def test_dual_role_user_can_select_their_keepers_directory(self):
         dual_role_user = keeper_with_profile()

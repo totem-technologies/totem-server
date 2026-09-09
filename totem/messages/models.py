@@ -43,10 +43,10 @@ class Conversation(models.Model):
 
     class Meta:
         constraints = [
-            models.CheckConstraint(condition=Q(user_low_id__lt=F("user_high_id")), name="message_pair_is_canonical"),
-            models.UniqueConstraint(fields=["user_low", "user_high"], name="unique_message_user_pair"),
+            models.CheckConstraint(condition=Q(user_low_id__lt=F("user_high_id")), name="messaging_pair_canonical"),
+            models.UniqueConstraint(fields=["user_low", "user_high"], name="messaging_user_pair_unique"),
         ]
-        indexes = [models.Index(fields=["-last_activity_at", "-id"], name="message_inbox_order_idx")]
+        indexes = [models.Index(fields=["-last_activity_at", "-id"], name="messaging_inbox_order_idx")]
 
     def peer_for(self, user_id: int) -> User:
         if user_id == self.user_low_id:
@@ -81,12 +81,12 @@ class ConversationMembership(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["conversation", "user"], name="unique_message_conversation_member"),
-            models.UniqueConstraint(fields=["conversation", "slot"], name="unique_message_conversation_slot"),
+            models.UniqueConstraint(fields=["conversation", "user"], name="messaging_conversation_member_unique"),
+            models.UniqueConstraint(fields=["conversation", "slot"], name="messaging_conversation_slot_unique"),
         ]
         indexes = [
-            models.Index(fields=["user", "-updated_at", "-id"], name="message_sync_lookup_idx"),
-            models.Index(fields=["user", "conversation"], name="message_member_lookup_idx"),
+            models.Index(fields=["user", "-updated_at", "-id"], name="messaging_sync_lookup_idx"),
+            models.Index(fields=["user", "conversation"], name="messaging_member_lookup_idx"),
         ]
 
 
@@ -113,10 +113,10 @@ class Message(models.Model):
             models.UniqueConstraint(
                 fields=["sender", "client_message_id"],
                 condition=Q(client_message_id__isnull=False),
-                name="unique_sender_client_message_id",
+                name="messaging_sender_client_message_unique",
             )
         ]
-        indexes = [models.Index(fields=["conversation", "-created_at", "-id"], name="message_history_idx")]
+        indexes = [models.Index(fields=["conversation", "-created_at", "-id"], name="messaging_history_idx")]
         ordering = ["-created_at", "-id"]
 
     def save(self, *args, **kwargs):
@@ -151,8 +151,8 @@ class MessageNotification(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=["status", "last_attempt_at"], name="message_notify_retry_idx"),
-            models.Index(fields=["recipient", "status"], name="message_notify_user_idx"),
+            models.Index(fields=["status", "last_attempt_at"], name="messaging_notify_retry_idx"),
+            models.Index(fields=["recipient", "status"], name="messaging_notify_user_idx"),
         ]
 
 
@@ -172,7 +172,7 @@ class SessionMessageRequest(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["keeper", "client_request_id"], name="unique_keeper_message_request")
+            models.UniqueConstraint(fields=["keeper", "client_request_id"], name="messaging_keeper_request_unique")
         ]
 
 
@@ -207,8 +207,8 @@ class AutomationPrompt(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=["recipient", "status", "-created_at"], name="message_prompt_user_idx"),
-            models.Index(fields=["session", "kind"], name="message_prompt_session_idx"),
+            models.Index(fields=["recipient", "status", "-created_at"], name="messaging_prompt_user_idx"),
+            models.Index(fields=["session", "kind"], name="messaging_prompt_session_idx"),
         ]
 
     def mark_delivered(self) -> None:

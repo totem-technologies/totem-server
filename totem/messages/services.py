@@ -180,14 +180,39 @@ def _unsign_cursor(cursor: str) -> dict[str, Any]:
     return json.loads(signing.Signer(salt=_CURSOR_SALT).unsign(cursor))
 
 
-def _encode_cursor(created_at: datetime, object_id: UUID, *, kind: str, scope: str) -> str:
-    return _sign_cursor({"at": created_at.isoformat(), "id": str(object_id), "kind": kind, "scope": scope})
+def _query_hash(query: str) -> str:
+    return hashlib.sha256(query.encode()).hexdigest()
 
 
-def _decode_cursor(cursor: str, *, kind: str, scope: str) -> tuple[datetime, UUID]:
+def _encode_cursor(
+    created_at: datetime,
+    object_id: UUID,
+    *,
+    kind: str,
+    scope: str,
+    query: str | None = None,
+) -> str:
+    value = {"at": created_at.isoformat(), "id": str(object_id), "kind": kind, "scope": scope}
+    if query is not None:
+        value["query"] = _query_hash(query)
+    return _sign_cursor(value)
+
+
+def _decode_cursor(
+    cursor: str,
+    *,
+    kind: str,
+    scope: str,
+    query: str | None = None,
+) -> tuple[datetime, UUID]:
     try:
         value = _unsign_cursor(cursor)
-        if value.get("kind") != kind or value.get("scope") != scope:
+        if (
+            value.get("kind") != kind
+            or value.get("scope") != scope
+            or (query is None and "query" in value)
+            or (query is not None and value.get("query") != _query_hash(query))
+        ):
             raise ValueError
         return datetime_from_iso(value["at"]), UUID(value["id"])
     except (signing.BadSignature, KeyError, TypeError, ValueError) as error:
@@ -462,13 +487,13 @@ def conversation_summary(conversation: Conversation, user: User) -> Conversation
 
 
 def _directory_kind(user: User, requested_kind: str | None) -> str:
-    if requested_kind is not None:
-        if requested_kind not in {"keepers", "participants"}:
-            raise MessageValidationError("Invalid recipient directory kind")
-        if requested_kind == "participants" and not is_messaging_keeper(user):
-            raise MessageAccessDenied
-        return requested_kind
-    return "participants" if is_messaging_keeper(user) else "keepers"
+    if requested_kind is None:
+        return _default_directory_kind(user)
+    if requested_kind not in {"keepers", "participants"}:
+        raise MessageValidationError("Invalid recipient directory kind")
+    if requested_kind == "participants" and not is_messaging_keeper(user):
+        return "keepers"
+    return requested_kind
 
 
 def _directory_candidates(user: User, kind: str):
@@ -494,6 +519,14 @@ def _directory_candidates(user: User, kind: str):
     )
 
 
+def _default_directory_kind(user: User) -> str:
+    if not is_messaging_keeper(user):
+        return "keepers"
+    if any(can_users_message(user, candidate) for candidate in _directory_candidates(user, "keepers").iterator()):
+        return "keepers"
+    return "participants"
+
+
 def _existing_conversations(user: User, peer_ids: list[int]) -> dict[int, tuple[UUID, datetime]]:
     conversations = Conversation.objects.filter(
         Q(user_low=user, user_high_id__in=peer_ids) | Q(user_high=user, user_low_id__in=peer_ids)
@@ -515,10 +548,6 @@ def _directory_sort_key(kind: str, entry: RecipientDirectoryEntry, snapshot: dat
     return existing_rank, -entry.latest_session.start.timestamp(), entry.user.pk
 
 
-def _directory_query_hash(query: str) -> str:
-    return hashlib.sha256(query.encode()).hexdigest()
-
-
 def _encode_directory_cursor(
     user: User,
     kind: str,
@@ -531,7 +560,7 @@ def _encode_directory_cursor(
         {
             "kind": kind,
             "scope": str(user.pk),
-            "query": _directory_query_hash(query),
+            "query": _query_hash(query),
             "rank": rank,
             "at": entry.latest_session.start.isoformat(),
             "peer": peer_id,
@@ -543,11 +572,7 @@ def _encode_directory_cursor(
 def _decode_directory_cursor(user: User, kind: str, query: str, cursor: str) -> tuple[tuple[int, float, int], datetime]:
     try:
         value = _unsign_cursor(cursor)
-        if (
-            value.get("kind") != kind
-            or value.get("scope") != str(user.pk)
-            or value.get("query") != _directory_query_hash(query)
-        ):
+        if value.get("kind") != kind or value.get("scope") != str(user.pk) or value.get("query") != _query_hash(query):
             raise ValueError
         relationship_at = datetime_from_iso(value["at"])
         snapshot = datetime_from_iso(value["snapshot"])
@@ -631,12 +656,35 @@ def _membership_queryset(user: User):
     )
 
 
-def inbox_page(user: User, *, cursor: str | None, limit: int) -> tuple[list[ConversationSummary], str | None, int]:
+def inbox_page(
+    user: User,
+    *,
+    cursor: str | None,
+    limit: int,
+    query: str = "",
+) -> tuple[list[ConversationSummary], str | None, int]:
     if limit < 1 or limit > 50:
         raise MessageValidationError("Limit must be between 1 and 50")
+    if len(query) > 100:
+        raise MessageValidationError("Query cannot exceed 100 characters")
+    normalized_query = query.strip().casefold()
+    cursor_query = normalized_query or None
     memberships = _membership_queryset(user)
+    if normalized_query:
+        # ponytail: Search only the indexed inbox relation and latest preview; add
+        # a dedicated, permission-scoped message-search index before searching history.
+        memberships = memberships.filter(
+            Q(conversation__user_low_id=user.pk, conversation__user_high__name__icontains=normalized_query)
+            | Q(conversation__user_high_id=user.pk, conversation__user_low__name__icontains=normalized_query)
+            | Q(conversation__last_message__body__icontains=normalized_query)
+        )
     if cursor:
-        cursor_at, cursor_id = _decode_cursor(cursor, kind="inbox", scope=str(user.pk))
+        cursor_at, cursor_id = _decode_cursor(
+            cursor,
+            kind="inbox",
+            scope=str(user.pk),
+            query=cursor_query,
+        )
         memberships = memberships.filter(
             Q(conversation__last_activity_at__lt=cursor_at)
             | Q(conversation__last_activity_at=cursor_at, conversation_id__lt=cursor_id)
@@ -653,7 +701,13 @@ def inbox_page(user: User, *, cursor: str | None, limit: int) -> tuple[list[Conv
     next_cursor = None
     if has_more:
         last = authorized[-1].conversation
-        next_cursor = _encode_cursor(last.last_activity_at, last.pk, kind="inbox", scope=str(user.pk))
+        next_cursor = _encode_cursor(
+            last.last_activity_at,
+            last.pk,
+            kind="inbox",
+            scope=str(user.pk),
+            query=cursor_query,
+        )
     return authorized, next_cursor, total_unread_count(user)
 
 
