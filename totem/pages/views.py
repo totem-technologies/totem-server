@@ -1,8 +1,5 @@
 import base64
-import random
-import uuid
 from dataclasses import dataclass
-from typing import Optional
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
 from django.contrib.auth.decorators import login_required
