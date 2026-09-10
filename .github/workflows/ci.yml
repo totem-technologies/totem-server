@@ -1,5 +1,8 @@
 name: CI
 
+permissions:
+  contents: read
+
 # Enable Buildkit and let compose use it to speed up image building
 env:
   DOCKER_BUILDKIT: 1
