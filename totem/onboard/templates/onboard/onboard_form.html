@@ -20,8 +20,16 @@
           >
           {{ form.name.errors }} {{ form.name }}
           <p class="pt-1 text-xs">
-            Other people will see this, but you don't have to use your real
-            name. Add any pronouns in parentheses if you'd like.
+            What would you like other participants to call you? A first name,
+            nickname, or alias is welcome. It doesn’t have to be your real name,
+            but it must follow our
+            <a
+              href="{% url 'pages:guidelines' %}"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="link"
+              >community guidelines</a
+            >.
           </p>
         </div>
         <div class="pb-5">
