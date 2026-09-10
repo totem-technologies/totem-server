@@ -11,113 +11,12 @@ from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpResponse
 from django.shortcuts import redirect as django_redirect
 from django.shortcuts import render
-from django.urls import reverse
 from django.views.generic import TemplateView
 
 from ..users.models import User
 from .models import Redirect
 from .proxied_site import ProxiedSiteUnavailable, get_proxied_site_page
 from .qrmaker import make_qr
-
-
-@dataclass
-class Member:
-    name: str
-    title: str
-    image: str
-    url: Optional[str]
-    external: bool
-
-    def imageurl(self):
-        return f"images/team/{self.image}"
-
-
-def team_view(request):
-    team = [
-        Member(
-            name="Bo Lopker",
-            title="Executive Director, Keeper, Co-Founder",
-            image="bo.jpg",
-            url=reverse("pages:keepers", kwargs={"name": "bo"}),
-            external=False,
-        ),
-        Member(name="Pam Lopker", title="Board Member", image="pam.jpg", url=reverse("pages:team-pam"), external=False),
-        Member(
-            name="Gabe Kenny",
-            title="User Research, Keeper, Co-Founder",
-            image="gabe.jpg",
-            url=reverse("pages:keepers", kwargs={"name": "gabe"}),
-            external=False,
-        ),
-        Member(
-            name="Claire Hopkins",
-            title="Keeper",
-            image="claire.webp",
-            url=reverse("pages:keepers", kwargs={"name": "claire"}),
-            external=False,
-        ),
-        Member(
-            name="Adil Sakout", title="Engineer", image="adil.webp", url="https://www.adilsakout.com/", external=True
-        ),
-        Member(
-            name="Bruno D'Luka", title="Engineer", image="bruno.webp", url="https://github.com/bdlukaa", external=True
-        ),
-        Member(
-            name="Heather Gressett",
-            title="Content Curator, Keeper, Co-Founder",
-            image="heather.jpg",
-            url=reverse("pages:keepers", kwargs={"name": "heather"}),
-            external=False,
-        ),
-        Member(
-            name="Vanessa Robinson",
-            title="Webmaster, Keeper, Co-Founder",
-            image="vanessa.jpg",
-            url=reverse("pages:keepers", kwargs={"name": "vanessa"}),
-            external=False,
-        ),
-        Member(
-            name="Bob Lesser, MPP, LP",
-            title="Psychotherapist Advisor",
-            image="boblesser.webp",
-            url="https://boblesser.com/",
-            external=True,
-        ),
-        Member(
-            name="Steve Schalkhauser",
-            title="Engineer, Phase 2",
-            image="blank.jpg",
-            url="https://phase2industries.com/",
-            external=True,
-        ),
-        Member(
-            name="Steve Ansell",
-            title="Engineer, Phase 2",
-            image="blank.jpg",
-            url="https://phase2industries.com/",
-            external=True,
-        ),
-        Member(
-            name="Smita Agarwal",
-            title="Advisor",
-            image="smita.jpg",
-            url="https://www.linkedin.com/in/smita-agarwal-4012164/",
-            external=True,
-        ),
-        Member(
-            name="Jesse Woche",
-            title="Keeper",
-            image="jesse.webp",
-            url=reverse("pages:keepers", kwargs={"name": "jesse"}),
-            external=False,
-        ),
-    ]
-    # randomly shuffle the team
-    random.seed(str(uuid.uuid4()))
-    random.shuffle(team)
-    template_name = "pages/team.html"
-    context = {"team": team, "keepers": keepers}
-    return render(request, template_name, context=context)
 
 
 @dataclass
