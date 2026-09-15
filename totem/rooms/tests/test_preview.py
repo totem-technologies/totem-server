@@ -3,9 +3,13 @@ from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 import pytest
-from django.test import Client
+from django.contrib.sessions.backends.db import SessionStore
+from django.http import HttpRequest, HttpResponse
+from django.test import Client, RequestFactory
 from django.urls import reverse
 
+from totem.rooms.preview import RoomPreviewMiddleware
+from totem.rooms.tests.test_proxy import _fake_upstream
 from totem.users.models import LoginPin
 from totem.users.tests.factories import UserFactory
 
@@ -69,12 +73,14 @@ def test_expiry_does_not_slide_or_log_the_user_out(client, settings):
     client.get("/room/", {"room_preview": ALIAS})
     selection = client.session["room_preview"]
 
-    with patch("django.utils.timezone.now", return_value=NOW + timedelta(hours=1)):
-        client.get("/room/")
-    assert client.session["room_preview"] == selection
+    fake = _fake_upstream(200, b"<html></html>", "text/html")
+    with patch("totem.rooms.proxy._session.request", return_value=fake):
+        with patch("django.utils.timezone.now", return_value=NOW + timedelta(hours=1)):
+            client.get("/room/lobby", HTTP_SEC_FETCH_MODE="navigate")
+        assert client.session["room_preview"] == selection
 
-    with patch("django.utils.timezone.now", return_value=NOW + timedelta(hours=2)):
-        client.get("/room/")
+        with patch("django.utils.timezone.now", return_value=NOW + timedelta(hours=2)):
+            client.get("/room/lobby", HTTP_SEC_FETCH_MODE="navigate")
     assert "room_preview" not in client.session
     assert client.session["_auth_user_id"] == str(user.pk)
     assert client.session.get_expiry_age() == settings.SESSION_COOKIE_AGE
@@ -155,8 +161,47 @@ def test_selection_is_isolated_between_sessions(client):
 
 @pytest.mark.parametrize("selection", ["bad", {}, {"alias": ALIAS, "expires_at": "bad"}])
 def test_invalid_session_selection_is_discarded(client, selection):
+    client.force_login(UserFactory())
     session = client.session
     session["room_preview"] = selection
     session.save()
-    client.get("/room/")
+    fake = _fake_upstream(200, b"<html></html>", "text/html")
+    with patch("totem.rooms.proxy._session.request", return_value=fake):
+        client.get("/room/lobby", HTTP_SEC_FETCH_MODE="navigate")
     assert "room_preview" not in client.session
+
+
+@pytest.mark.parametrize("path", ["/room/hash%23tag", "/room/query%3Fmark", "/room/percent%25", "/room/%252F"])
+def test_selection_redirect_preserves_escaped_path(client: Client, path: str) -> None:
+    response = client.get(path, {"room_preview": ALIAS, "keep": "yes"})
+    assert response.status_code == 302
+    assert response.url == f"{path}?keep=yes"
+
+
+@pytest.mark.parametrize("alias, status", [(ALIAS, 302), ("invalid", 400)])
+def test_selection_responses_have_security_headers(client: Client, settings, alias: str, status: int) -> None:
+    settings.ROBOTS_NO_INDEX = True
+    response = client.get("/room/lobby", {"room_preview": alias})
+    assert response.status_code == status
+    assert response["X-Frame-Options"] == settings.X_FRAME_OPTIONS
+    assert "noindex" in response["X-Robots-Tag"]
+
+
+def test_selection_does_not_bypass_cdn_guard(client: Client, settings) -> None:
+    settings.STATIC_HOST = "testserver"
+    settings.STATIC_URL = "http://testserver/static/"
+    response = client.get("/room/lobby", {"room_preview": ALIAS})
+    assert response.status_code == 404
+    assert "room_preview" not in client.session
+
+
+def test_unrelated_request_does_not_access_preview_session() -> None:
+    request = RequestFactory().get("/unrelated/")
+    request.session = SessionStore()
+
+    def respond(request: HttpRequest) -> HttpResponse:
+        return HttpResponse("OK")
+
+    response = RoomPreviewMiddleware(respond)(request)
+    assert response.status_code == 200
+    assert not request.session.accessed

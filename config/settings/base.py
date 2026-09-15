@@ -160,13 +160,13 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "impersonate.middleware.ImpersonateMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
-    "totem.rooms.preview.RoomPreviewMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "totem.utils.middleware.robotnoindex",
     "totem.utils.middleware.TimezoneMiddleware",
     "totem.utils.middleware.CDNGuard",
     "auditlog.middleware.AuditlogMiddleware",
+    "totem.rooms.preview.RoomPreviewMiddleware",
 ]
 
 # STATIC

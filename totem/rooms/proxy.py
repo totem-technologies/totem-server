@@ -19,7 +19,7 @@ What it does:
 - Overrides the upstream Host header so any URLs the upstream embeds
   (e.g. dwds dev-tooling) resolve from the browser.
 - On staging, a session selection can route HTML to a PR's preview alias.
-  Room responses bypass caching so changing builds takes effect on reload.
+  Room HTML responses bypass caching so changing builds takes effect on reload.
 """
 
 from __future__ import annotations
@@ -104,7 +104,7 @@ def _build_upstream_url(base: str, path: str, query: str) -> str:
     return url
 
 
-def _uncached_response(response):
+def _uncached_response(response: HttpResponse | StreamingHttpResponse) -> HttpResponse | StreamingHttpResponse:
     for header in ("ETag", "Last-Modified", "Age", "Expires"):
         if header in response:
             del response[header]
