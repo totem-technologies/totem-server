@@ -11,10 +11,25 @@ from django.utils import timezone
 from totem.users.tests.factories import UserFactory
 
 from ..actions import JoinSessionAction
+from ..models import Space
 from .factories import SessionFactory, SpaceFactory
 
 
 class TestSpaceDetailView:
+    def test_past_meet_session_has_no_entry_after_provider_change(self, client, db):
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(days=30))
+        user = session.space.author
+        session.attendees.add(user)
+        session.joined.add(user)
+        session.space.meeting_provider = Space.MeetingProviderChoices.LIVEKIT
+        session.space.save()
+        client.force_login(user)
+
+        response = client.get(session.get_absolute_url())
+
+        assert response.status_code == 200
+        assert response.context["joinable"] is False
+
     def test_detail_loggedin(self, client, db):
         user = UserFactory()
         user.save()

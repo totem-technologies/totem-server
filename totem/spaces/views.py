@@ -39,7 +39,7 @@ def _get_space(slug: str) -> Space:
 def _get_session(slug: str) -> Session:
     try:
         return (
-            Session.objects.select_related("space", "space__author")
+            Session.objects.select_related("space", "space__author", "room")
             .prefetch_related("attendees", "space__subscribed")
             .get(slug=slug)
         )
