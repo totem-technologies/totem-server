@@ -258,6 +258,7 @@ def prefetch_session_detail_relations(
     relations: list[str | Prefetch] = [
         "attendees",
         "joined",
+        "room",
         author_circle_count_prefetch("space__author"),
         "space__categories",
         "space__subscribed",

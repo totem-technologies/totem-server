@@ -56,10 +56,10 @@ _default_grace_period = datetime.timedelta(minutes=10)
 
 
 # Google Meet gives us no end-of-call signal, so a session's scheduled end
-# (start + duration) is the best estimate. LiveKit rooms are ours: they end
-# when ended_at is set (keeper ends the session, or the disconnect watchdog
-# does), so overrunning sessions stay live. The backstop covers watchdog
-# failures so a session can't stay listed forever.
+# (start + duration) is the best estimate. LiveKit rooms opened before the
+# scheduled end can overrun: they end when ended_at is set by the keeper or
+# the disconnect watchdog. The backstop covers watchdog failures so a session
+# can't stay listed forever.
 _livekit_ended_backstop = datetime.timedelta(hours=3)
 
 # The scheduled end of a session, as a SQL expression. Mirrors Session.end().
@@ -116,6 +116,7 @@ class SessionQuerySet(models.QuerySet["Session"]):
                 models.Q(session_end_time__gt=now)
                 | models.Q(
                     space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+                    room__date_created__lt=models.F("session_end_time"),
                     session_end_time__gt=now - _livekit_ended_backstop,
                 )
             )
@@ -417,14 +418,25 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
     def end(self):
         return self.start + datetime.timedelta(minutes=self.duration_minutes)
 
+    def _livekit_room_opened_in_time(self) -> bool:
+        """Only a room opened before the scheduled end can keep a session live.
+
+        A Space's provider can change after a session ends. Attendance alone
+        does not establish that the session took place on LiveKit.
+        """
+        if self.space.meeting_provider != Space.MeetingProviderChoices.LIVEKIT:
+            return False
+        room = getattr(self, "room", None)
+        return room is not None and room.date_created < self.end()
+
     def join_window(self, user: "User | AnonymousUser") -> tuple[datetime.datetime, datetime.datetime | None]:
         """Absolute times between which `user` may join, the single source of
         truth for join timing. A None close means the room stays open for
-        rejoining until explicitly ended."""
+        rejoining until the session ends, including the overrun backstop."""
         is_joined = user in self.joined.all()
         wide = user.is_staff or is_joined
         opens = self.start - datetime.timedelta(minutes=60 if wide else 15)
-        if self.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT and is_joined:
+        if is_joined and self._livekit_room_opened_in_time():
             return opens, None
         grace_after = datetime.timedelta(minutes=self.duration_minutes) if wide else _default_grace_period
         return opens, self.start + grace_after
@@ -434,19 +446,19 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
             return False
         opens, closes = self.join_window(user)
         now = timezone.now()
-        if closes is None:
-            return self.ended_at is None and opens < now
         if self.ended():
             return False
+        if closes is None:
+            return opens < now
         return opens < now < closes
 
     def ended(self):
-        # Mirrors SessionQuerySet.not_ended: LiveKit ends via ended_at (plus
-        # the backstop); Google Meet ends at the scheduled end.
+        # Mirrors SessionQuerySet.not_ended: rooms opened before the scheduled
+        # end can overrun until ended_at or the backstop.
         if self.ended_at is not None:
             return True
         end = self.end()
-        if self.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT:
+        if self._livekit_room_opened_in_time():
             return end + _livekit_ended_backstop < timezone.now()
         return end < timezone.now()
 

@@ -255,6 +255,9 @@ class TestFilters(TestCase):
             cancelled=False,
             open=True,
         )
+        room = Room.objects.get_or_create_for_session(overrunning)
+        room.date_created = overrunning.start
+        room.save(update_fields=["date_created"])
         sessions = all_upcoming_recommended_sessions(None)
         self.assertIn(overrunning, sessions)
         self.assertEqual(livekit_space.next_session(), overrunning)
