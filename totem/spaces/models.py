@@ -418,7 +418,7 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
     def end(self):
         return self.start + datetime.timedelta(minutes=self.duration_minutes)
 
-    def _has_livekit_room(self) -> bool:
+    def _livekit_room_opened_in_time(self) -> bool:
         """Only a room opened before the scheduled end can keep a session live.
 
         A Space's provider can change after a session ends. Attendance alone
@@ -432,11 +432,11 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
     def join_window(self, user: "User | AnonymousUser") -> tuple[datetime.datetime, datetime.datetime | None]:
         """Absolute times between which `user` may join, the single source of
         truth for join timing. A None close means the room stays open for
-        rejoining until explicitly ended."""
+        rejoining until the session ends, including the overrun backstop."""
         is_joined = user in self.joined.all()
         wide = user.is_staff or is_joined
         opens = self.start - datetime.timedelta(minutes=60 if wide else 15)
-        if is_joined and self._has_livekit_room():
+        if is_joined and self._livekit_room_opened_in_time():
             return opens, None
         grace_after = datetime.timedelta(minutes=self.duration_minutes) if wide else _default_grace_period
         return opens, self.start + grace_after
@@ -446,10 +446,10 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
             return False
         opens, closes = self.join_window(user)
         now = timezone.now()
-        if closes is None:
-            return self.ended_at is None and opens < now
         if self.ended():
             return False
+        if closes is None:
+            return opens < now
         return opens < now < closes
 
     def ended(self):
@@ -458,7 +458,7 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         if self.ended_at is not None:
             return True
         end = self.end()
-        if self._has_livekit_room():
+        if self._livekit_room_opened_in_time():
             return end + _livekit_ended_backstop < timezone.now()
         return end < timezone.now()
 

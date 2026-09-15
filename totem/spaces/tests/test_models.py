@@ -491,6 +491,28 @@ class TestSessionModel:
         assert session.can_join(user)
         assert Session.objects.not_ended().filter(pk=session.pk).exists()
 
+    @pytest.mark.parametrize("minutes_ago, joinable", [(239, True), (241, False)])
+    def test_livekit_rejoin_respects_backstop(self, db, minutes_ago, joinable):
+        from ..filters import session_detail_schema
+        from ..models import Space
+
+        user = UserFactory()
+        session = SessionFactory(
+            space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+            start=timezone.now() - timezone.timedelta(minutes=minutes_ago),
+            duration_minutes=60,
+        )
+        session.attendees.add(user)
+        session.joined.add(user)
+        room = Room.objects.get_or_create_for_session(session)
+        room.date_created = session.start
+        room.save(update_fields=["date_created"])
+
+        assert session.can_join(user) is joinable
+        assert session.ended() is not joinable
+        assert Session.objects.not_ended().filter(pk=session.pk).exists() is joinable
+        assert session_detail_schema(session, user).joinable is joinable
+
     def test_ended_is_provider_aware(self, db):
         from ..models import Space
 
