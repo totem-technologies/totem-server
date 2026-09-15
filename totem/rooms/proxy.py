@@ -2,7 +2,7 @@
 
 In dev this points at `flutter run -d chrome`'s dev server (defaults to
 `http://localhost:5173`). In prod it points at wherever the built Flutter
-app is hosted (e.g. a Cloudflare Pages URL). Same code path either way.
+app is hosted (e.g. a Cloudflare Worker). Same code path either way.
 
 What it does:
 - Strips the `/room/` URL prefix before forwarding upstream.
@@ -18,6 +18,8 @@ What it does:
   Modified instead of re-downloading the whole asset bundle.
 - Overrides the upstream Host header so any URLs the upstream embeds
   (e.g. dwds dev-tooling) resolve from the browser.
+- On staging, a session selection can route HTML to a PR's preview alias.
+  Room responses bypass caching so changing builds takes effect on reload.
 """
 
 from __future__ import annotations
@@ -26,7 +28,10 @@ import requests
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse, StreamingHttpResponse
+from django.utils.cache import add_never_cache_headers
 from django.views.decorators.csrf import csrf_exempt
+
+from .preview import PREVIEW_KEY, preview_hostname, selected_alias
 
 # Single shared session so HTTP keep-alive to the upstream is reused
 # across requests.
@@ -88,19 +93,23 @@ def _is_spa_navigation(request: HttpRequest, path: str) -> bool:
     return True
 
 
-def _build_upstream_url(path: str, query: str) -> str:
-    # Base URL is fixed at startup from `ROOM_APP_PROXY_BASE_URL`. The user-
-    # controlled `path` is appended after a literal `/`, which `requests`
-    # treats as part of the path — it cannot escape to a different scheme,
-    # host, or port. So although /room/<path> is unauthenticated and
-    # publicly reachable, this proxy can only ever fetch from the configured
-    # upstream. (`ROOM_APP_PROXY_BASE_URL` itself must never be set to an
-    # internal service the public web shouldn't expose.)
-    base = settings.ROOM_APP_PROXY_BASE_URL.rstrip("/")
+def _build_upstream_url(base: str, path: str, query: str) -> str:
+    # The base is configured by the server or constructed from a validated
+    # preview alias. Appending paths after a literal slash keeps them on that
+    # origin, including paths that begin with a slash or resemble a URL.
+    base = base.rstrip("/")
     url = f"{base}/{path}" if path else f"{base}/"
     if query:
         url = f"{url}?{query}"
     return url
+
+
+def _uncached_response(response):
+    for header in ("ETag", "Last-Modified", "Age", "Expires"):
+        if header in response:
+            del response[header]
+    add_never_cache_headers(response)
+    return response
 
 
 def _rewrite_dev_base_href(body: bytes) -> bytes:
@@ -128,17 +137,40 @@ def room_app_proxy(request: HttpRequest, path: str = "") -> HttpResponse | Strea
         return HttpResponse(status=405, headers={"Allow": ", ".join(_ALLOWED_METHODS)})
 
     upstream_path = "" if _is_spa_navigation(request, path) else path
-    url = _build_upstream_url(upstream_path, request.META.get("QUERY_STRING", ""))
+    alias = selected_alias(request.session)
+    host = preview_hostname(alias) if alias else settings.ROOM_APP_PROXY_BROWSER_HOST
+    base = f"https://{host}" if alias else settings.ROOM_APP_PROXY_BASE_URL
+    url = _build_upstream_url(base, upstream_path, request.META.get("QUERY_STRING", ""))
 
     forward_headers = {h: request.headers[h] for h in _FORWARDED_REQUEST_HEADERS if h in request.headers}
-    forward_headers["Host"] = settings.ROOM_APP_PROXY_BROWSER_HOST
+    forward_headers["Host"] = host
+    if settings.ROOM_PREVIEW_ENABLED:
+        # A validator or byte range may describe a different build, including
+        # when returning from a preview to the default staging build.
+        for header in ("If-None-Match", "If-Modified-Since", "Range"):
+            forward_headers.pop(header, None)
 
     # Upstream errors (timeout, connection refused, 5xx) propagate as
     # unhandled exceptions. Django's DjangoIntegration in Sentry captures
     # them with full request context, and Django shows the user its
     # standard 500 page. The (5, 60) tuple is connect/read; the long read
     # timeout is for multi-MB wasm/dart bundles.
-    upstream = _session.request(request.method, url, headers=forward_headers, stream=True, timeout=(5, 60))
+    upstream = _session.request(
+        request.method, url, headers=forward_headers, stream=True, timeout=(5, 60), allow_redirects=not alias
+    )
+    if alias and upstream.status_code in (404, 410) and upstream_path in ("", "index.html"):
+        upstream.close()
+        request.session.pop(PREVIEW_KEY, None)
+        return _uncached_response(
+            HttpResponse(
+                "Room preview unavailable. Your selection has been cleared. Reload to return to normal staging.",
+                status=404,
+                content_type="text/plain",
+            )
+        )
+    if alias and 300 <= upstream.status_code < 400:
+        upstream.close()
+        return _uncached_response(HttpResponse("Room preview returned an unexpected redirect.", status=502))
     if 500 <= upstream.status_code < 600:
         # 4xx is forwarded — `404` from upstream means the asset genuinely
         # doesn't exist and the browser should see that. Only 5xx is an
@@ -149,8 +181,7 @@ def room_app_proxy(request: HttpRequest, path: str = "") -> HttpResponse | Strea
 
     if content_type.startswith("text/html"):
         # `upstream.content` buffers the body so we can mutate the bytes for
-        # the dev-only `<base href>` rewrite. HTML responses are tiny; do not
-        # convert this to streaming or the rewrite stops working.
+        # the dev-only `<base href>` rewrite.
         body = _rewrite_dev_base_href(upstream.content)
         response = HttpResponse(body, status=upstream.status_code, content_type=content_type)
     else:
@@ -167,4 +198,4 @@ def room_app_proxy(request: HttpRequest, path: str = "") -> HttpResponse | Strea
         if header.lower() in _FORWARDED_RESPONSE_HEADERS:
             response[header] = value
 
-    return response
+    return _uncached_response(response) if settings.ROOM_PREVIEW_ENABLED else response

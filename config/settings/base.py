@@ -160,6 +160,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "impersonate.middleware.ImpersonateMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "totem.rooms.preview.RoomPreviewMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "allauth.account.middleware.AccountMiddleware",
     "totem.utils.middleware.robotnoindex",
@@ -488,6 +489,8 @@ ROOM_APP_PROXY_BROWSER_HOST = env(
     "ROOM_APP_PROXY_BROWSER_HOST",
     default="localhost:5173",
 )
+# Enable only on staging; selections are stored in each visitor's session.
+ROOM_PREVIEW_ENABLED = env.bool("ROOM_PREVIEW_ENABLED", default=False)
 
 
 # Social
