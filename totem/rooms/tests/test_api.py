@@ -683,6 +683,33 @@ def _make_joinable_session(keeper: User, attendees: list[User] | None = None):
 
 @pytest.mark.django_db
 class TestJoinRoom:
+    @pytest.mark.parametrize("has_late_room", [False, True])
+    @pytest.mark.parametrize("is_keeper", [False, True])
+    def test_past_meet_session_cannot_create_or_join_room(self, client_with_user, has_late_room, is_keeper):
+        client, user = client_with_user
+        session = SessionFactory(
+            space__author=user if is_keeper else UserFactory(),
+            start=timezone.now() - datetime.timedelta(days=30),
+        )
+        session.attendees.add(user)
+        session.joined.add(user)
+        session.space.meeting_provider = Space.MeetingProviderChoices.LIVEKIT
+        session.space.save()
+        if has_late_room:
+            Room.objects.get_or_create_for_session(session)
+
+        with (
+            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token") as token,
+            patch("totem.rooms.api.get_connected_participants", return_value={user.slug}) as participants,
+        ):
+            resp = client.post(f"{BASE}/{session.slug}/join")
+
+        assert resp.status_code == 403
+        assert resp.json()["code"] == "not_joinable"
+        assert Room.objects.filter(session=session).exists() == has_late_room
+        token.assert_not_called()
+        participants.assert_not_called()
+
     def test_join_success(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         session = _make_joinable_session(user)
@@ -774,9 +801,10 @@ class TestJoinRoom:
         assert resp.json()["token"] == "fake-jwt-token"
         assert resp.json()["is_already_present"] is True
 
-    def test_join_rejoin_livekit_after_timeout(self, client_with_user: tuple[Client, User]):
+    @pytest.mark.parametrize("minutes_ago", [65, 300])
+    def test_join_rejoin_livekit_after_timeout(self, client_with_user: tuple[Client, User], minutes_ago):
         client, user = client_with_user
-        start = timezone.now() - datetime.timedelta(minutes=65)
+        start = timezone.now() - datetime.timedelta(minutes=minutes_ago)
         session = SessionFactory(
             space__author=user,
             space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
@@ -785,6 +813,9 @@ class TestJoinRoom:
         )
         session.attendees.add(user)
         session.joined.add(user)
+        room = Room.objects.get_or_create_for_session(session)
+        room.date_created = start
+        room.save(update_fields=["date_created"])
 
         with (
             patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),
@@ -808,6 +839,9 @@ class TestJoinRoom:
         session.joined.add(user)
         session.ended_at = timezone.now()
         session.save()
+        room = Room.objects.get_or_create_for_session(session)
+        room.date_created = start
+        room.save(update_fields=["date_created"])
 
         resp = client.post(f"{BASE}/{session.slug}/join")
 
@@ -880,12 +914,16 @@ class TestJoinRoom:
         )
         session.attendees.add(keeper, user)
         session.joined.add(user)
+        room = Room.objects.get_or_create_for_session(session)
+        room.date_created = start
+        room.save(update_fields=["date_created"])
 
-        with patch("totem.rooms.api.get_connected_participants", return_value=set()):
+        with patch("totem.rooms.api.get_connected_participants", return_value=set()) as participants:
             resp = client.post(f"{BASE}/{session.slug}/join")
 
         assert resp.status_code == 403
         assert resp.json()["code"] == "not_joinable"
+        participants.assert_called_once_with(session.slug)
 
     def test_join_populated_room_past_duration_allowed(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -899,6 +937,9 @@ class TestJoinRoom:
         )
         session.attendees.add(keeper, user)
         session.joined.add(user)
+        room = Room.objects.get_or_create_for_session(session)
+        room.date_created = start
+        room.save(update_fields=["date_created"])
 
         with (
             patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),

@@ -435,6 +435,7 @@ class TestSessionModel:
         # LiveKit rooms stay open for rejoiners until explicitly ended.
         session.space.meeting_provider = Space.MeetingProviderChoices.LIVEKIT
         session.space.save()
+        Room.objects.get_or_create_for_session(session)
         opens, closes = session.join_window(user)
         assert closes is None
 
@@ -452,6 +453,44 @@ class TestSessionModel:
         late.attendees.add(user)
         assert late.can_join(user) is False
 
+    @pytest.mark.parametrize("hours_ago", [2, 24 * 30])
+    @pytest.mark.parametrize("has_late_room", [False, True])
+    @pytest.mark.parametrize("is_keeper", [False, True])
+    def test_past_meet_session_stays_closed_after_provider_change(self, db, hours_ago, has_late_room, is_keeper):
+        from ..models import Space
+
+        session = SessionFactory(start=timezone.now() - timezone.timedelta(hours=hours_ago))
+        user = session.space.author if is_keeper else UserFactory()
+        session.attendees.add(user)
+        session.joined.add(user)
+        assert session.ended()
+        assert not session.can_join(user)
+
+        session.space.meeting_provider = Space.MeetingProviderChoices.LIVEKIT
+        session.space.save()
+        if has_late_room:
+            Room.objects.get_or_create_for_session(session)
+        session.refresh_from_db()
+
+        assert session.ended()
+        assert not session.can_join(user)
+        assert session.join_window(user)[1] == session.end()
+        assert not Session.objects.not_ended().filter(pk=session.pk).exists()
+        assert session.space.next_session(user) is None
+
+    def test_upcoming_session_can_join_after_provider_change(self, db):
+        from ..models import Space
+
+        user = UserFactory()
+        session = SessionFactory(start=timezone.now() + timezone.timedelta(minutes=5))
+        session.attendees.add(user)
+        session.space.meeting_provider = Space.MeetingProviderChoices.LIVEKIT
+        session.space.save()
+
+        assert not session.ended()
+        assert session.can_join(user)
+        assert Session.objects.not_ended().filter(pk=session.pk).exists()
+
     def test_ended_is_provider_aware(self, db):
         from ..models import Space
 
@@ -464,6 +503,9 @@ class TestSessionModel:
         livekit = SessionFactory(start=timezone.now() - timezone.timedelta(hours=2), duration_minutes=60)
         livekit.space.meeting_provider = Space.MeetingProviderChoices.LIVEKIT
         livekit.space.save()
+        room = Room.objects.get_or_create_for_session(livekit)
+        room.date_created = livekit.start
+        room.save(update_fields=["date_created"])
         assert livekit.ended() is False
         livekit.ended_at = timezone.now()
         assert livekit.ended() is True
@@ -472,6 +514,9 @@ class TestSessionModel:
         stale = SessionFactory(start=timezone.now() - timezone.timedelta(hours=5), duration_minutes=60)
         stale.space.meeting_provider = Space.MeetingProviderChoices.LIVEKIT
         stale.space.save()
+        room = Room.objects.get_or_create_for_session(stale)
+        room.date_created = stale.start
+        room.save(update_fields=["date_created"])
         assert stale.ended() is True
 
     def test_can_attend_after_start(self, db):
