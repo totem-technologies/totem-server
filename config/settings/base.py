@@ -166,6 +166,7 @@ MIDDLEWARE = [
     "totem.utils.middleware.TimezoneMiddleware",
     "totem.utils.middleware.CDNGuard",
     "auditlog.middleware.AuditlogMiddleware",
+    "totem.rooms.preview.RoomPreviewMiddleware",
 ]
 
 # STATIC
@@ -488,6 +489,8 @@ ROOM_APP_PROXY_BROWSER_HOST = env(
     "ROOM_APP_PROXY_BROWSER_HOST",
     default="localhost:5173",
 )
+# Enable only on staging; selections are stored in each visitor's session.
+ROOM_PREVIEW_ENABLED = env.bool("ROOM_PREVIEW_ENABLED", default=False)
 
 
 # Social

@@ -6,6 +6,7 @@ base-href rewriting, conditional-header forwarding) is exercised manually
 against the Flutter dev server.
 """
 
+from io import BytesIO
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
@@ -76,7 +77,7 @@ def _fake_upstream(status: int, body: bytes = b"", content_type: str = "text/pla
     r.status_code = status
     r._content = body
     r.headers["Content-Type"] = content_type
-    r.raw = type("R", (), {"stream": lambda self, *a, **kw: iter([body])})()
+    r.raw = BytesIO(body)
     return r
 
 
@@ -173,3 +174,113 @@ def test_proxy_refuses_to_stream_assets_in_prod(client: Client, db):
     with patch("totem.rooms.proxy._session.request", return_value=fake):
         with pytest.raises(Exception, match="Asset proxy should only be activated in dev"):
             client.get("/room/foo.js", raise_request_exception=True)
+
+
+@pytest.mark.django_db
+class TestRoomPreviewProxy:
+    alias = "pr-166-video-experience"
+    host = "pr-166-video-experience-totem-web-preview.lopkerk.workers.dev"
+
+    @pytest.fixture(autouse=True)
+    def authenticated(self, client, settings):
+        settings.ROOM_PREVIEW_ENABLED = True
+        settings.DEBUG = False
+        settings.ROOM_APP_PROXY_BASE_URL = "https://normal.lopkerk.workers.dev"
+        settings.ROOM_APP_PROXY_BROWSER_HOST = "normal.lopkerk.workers.dev"
+        client.force_login(UserFactory())
+
+    def test_selected_origin_and_host(self, client):
+        client.get("/room/lobby", {"room_preview": self.alias})
+        fake = _fake_upstream(200, b"<html><body>Flutter</body></html>", "text/html")
+        with patch("totem.rooms.proxy._session.request", return_value=fake) as upstream:
+            response = client.get(
+                "/room/lobby?keep=yes", HTTP_SEC_FETCH_MODE="navigate", HTTP_AUTHORIZATION="Bearer private"
+            )
+        assert response.status_code == 200
+        assert upstream.call_args.args == ("GET", f"https://{self.host}/?keep=yes")
+        assert upstream.call_args.kwargs["headers"]["Host"] == self.host
+        assert "Cookie" not in upstream.call_args.kwargs["headers"]
+        assert "Authorization" not in upstream.call_args.kwargs["headers"]
+        assert upstream.call_args.kwargs["allow_redirects"] is False
+        assert response.content == fake.content
+
+    def test_switch_reset_and_expiry_select_the_right_upstream(self, client):
+        fake = _fake_upstream(200, b"<html><body>Flutter</body></html>", "text/html")
+        with patch("totem.rooms.proxy._session.request", return_value=fake) as upstream:
+            for alias in [self.alias, "pr-2-other"]:
+                client.get("/room/lobby", {"room_preview": alias})
+                client.get("/room/lobby", HTTP_SEC_FETCH_MODE="navigate")
+                assert upstream.call_args.args[1] == f"https://{alias}-totem-web-preview.lopkerk.workers.dev/"
+            client.get("/room/lobby", {"room_preview": "off"})
+            client.get("/room/lobby", HTTP_SEC_FETCH_MODE="navigate")
+            assert upstream.call_args.args[1] == "https://normal.lopkerk.workers.dev/"
+            assert upstream.call_args.kwargs["headers"]["Host"] == "normal.lopkerk.workers.dev"
+            client.get("/room/lobby", {"room_preview": self.alias})
+            session = client.session
+            session["room_preview"] = {"alias": self.alias, "expires_at": 0}
+            session.save()
+            client.get("/room/lobby", HTTP_SEC_FETCH_MODE="navigate")
+            assert upstream.call_args.args[1] == "https://normal.lopkerk.workers.dev/"
+
+    @pytest.mark.parametrize("selected", [True, False])
+    def test_html_cannot_reuse_validators_from_a_different_build(self, client, selected):
+        if selected:
+            client.get("/room/lobby", {"room_preview": self.alias})
+        fake = _fake_upstream(200, b"<html><body>Flutter</body></html>", "text/html")
+        fake.headers.update(
+            {"Cache-Control": "public, max-age=86400", "ETag": '"old"', "Last-Modified": "yesterday", "Age": "100"}
+        )
+        with patch("totem.rooms.proxy._session.request", return_value=fake) as upstream:
+            response = client.get(
+                "/room/lobby",
+                HTTP_SEC_FETCH_MODE="navigate",
+                HTTP_IF_NONE_MATCH='"old"',
+                HTTP_IF_MODIFIED_SINCE="yesterday",
+                HTTP_RANGE="bytes=0-10",
+            )
+        for header in ["If-None-Match", "If-Modified-Since", "Range"]:
+            assert header not in upstream.call_args.kwargs["headers"]
+        for header in ["ETag", "Last-Modified", "Age"]:
+            assert header not in response.headers
+        assert "no-store" in response["Cache-Control"]
+        assert "private" in response["Cache-Control"]
+        assert "public" not in response["Cache-Control"]
+
+    @pytest.mark.parametrize("status", [404, 410])
+    def test_missing_preview_clears_selection_and_explains_recovery(self, client, status):
+        client.get("/room/lobby", {"room_preview": self.alias})
+        with patch("totem.rooms.proxy._session.request", return_value=_fake_upstream(status, b"gone")):
+            response = client.get("/room/lobby", HTTP_SEC_FETCH_MODE="navigate")
+        assert response.status_code == 404
+        assert b"Room preview unavailable" in response.content
+        assert b"Reload to return to normal staging" in response.content
+        assert "room_preview" not in client.session
+        assert "_auth_user_id" in client.session
+        assert "no-store" in response["Cache-Control"]
+
+    def test_upstream_failures_do_not_clear_selection(self, client):
+        client.get("/room/lobby", {"room_preview": self.alias})
+        with patch("totem.rooms.proxy._session.request", return_value=_fake_upstream(503, b"down")):
+            with pytest.raises(requests.HTTPError):
+                client.get("/room/lobby", HTTP_SEC_FETCH_MODE="navigate")
+        assert client.session["room_preview"]["alias"] == self.alias
+
+    def test_preview_redirect_is_not_followed(self, client):
+        client.get("/room/lobby", {"room_preview": self.alias})
+        fake = _fake_upstream(302)
+        fake.headers["Location"] = "https://other.example"
+        with patch("totem.rooms.proxy._session.request", return_value=fake) as upstream:
+            response = client.get("/room/lobby", HTTP_SEC_FETCH_MODE="navigate")
+        assert upstream.call_args.kwargs["allow_redirects"] is False
+        assert response.status_code == 502
+        assert "Location" not in response
+        assert client.session["room_preview"]["alias"] == self.alias
+
+    def test_disabled_feature_ignores_saved_preview(self, client, settings):
+        client.get("/room/lobby", {"room_preview": self.alias})
+        settings.ROOM_PREVIEW_ENABLED = False
+        fake = _fake_upstream(200, b"<html><body>Normal build</body></html>", "text/html")
+        with patch("totem.rooms.proxy._session.request", return_value=fake) as upstream:
+            response = client.get("/room/lobby", HTTP_SEC_FETCH_MODE="navigate")
+        assert upstream.call_args.args[1] == "https://normal.lopkerk.workers.dev/"
+        assert self.alias.encode() not in response.content
