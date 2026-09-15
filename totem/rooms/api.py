@@ -209,7 +209,7 @@ def join_room(
 ):
     user: User = request.user  # type: ignore
 
-    session = Session.objects.filter(slug=session_slug).first()
+    session = Session.objects.select_related("space", "room").filter(slug=session_slug).first()
     if not session:
         return Status(
             404,

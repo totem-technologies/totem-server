@@ -13,7 +13,7 @@ from totem.users.models import User
 from totem.users.tests.factories import UserFactory
 from totem.utils.testing import email_text
 
-from ..models import Session, SessionException, SessionTimeConflict
+from ..models import Session, SessionException, SessionTimeConflict, Space
 from ..views import ics_hash
 from .factories import SessionFactory, SpaceFactory
 
@@ -411,8 +411,6 @@ class TestSessionModel:
         assert user not in session.attendees.all()
 
     def test_join_window(self, db):
-        from ..models import Space
-
         user = UserFactory()
         staff = UserFactory(is_staff=True)
         session = SessionFactory(start=timezone.now() + timezone.timedelta(days=1), duration_minutes=60)
@@ -457,8 +455,6 @@ class TestSessionModel:
     @pytest.mark.parametrize("has_late_room", [False, True])
     @pytest.mark.parametrize("is_keeper", [False, True])
     def test_past_meet_session_stays_closed_after_provider_change(self, db, hours_ago, has_late_room, is_keeper):
-        from ..models import Space
-
         session = SessionFactory(start=timezone.now() - timezone.timedelta(hours=hours_ago))
         user = session.space.author if is_keeper else UserFactory()
         session.attendees.add(user)
@@ -479,8 +475,6 @@ class TestSessionModel:
         assert session.space.next_session(user) is None
 
     def test_upcoming_session_can_join_after_provider_change(self, db):
-        from ..models import Space
-
         user = UserFactory()
         session = SessionFactory(start=timezone.now() + timezone.timedelta(minutes=5))
         session.attendees.add(user)
@@ -494,7 +488,6 @@ class TestSessionModel:
     @pytest.mark.parametrize("minutes_ago, joinable", [(239, True), (241, False)])
     def test_livekit_rejoin_respects_backstop(self, db, minutes_ago, joinable):
         from ..filters import session_detail_schema
-        from ..models import Space
 
         user = UserFactory()
         session = SessionFactory(
@@ -514,8 +507,6 @@ class TestSessionModel:
         assert session_detail_schema(session, user).joinable is joinable
 
     def test_ended_is_provider_aware(self, db):
-        from ..models import Space
-
         # Google Meet gives no end signal; the scheduled end is the best guess.
         meet = SessionFactory(start=timezone.now() - timezone.timedelta(hours=2), duration_minutes=60)
         assert meet.ended() is True
@@ -630,16 +621,12 @@ class TestSessionModel:
         assert mail.outbox[0].to == [user.email]
 
     def test_join_url_livekit(self, db):
-        from ..models import Space
-
         space = SpaceFactory(meeting_provider=Space.MeetingProviderChoices.LIVEKIT)
         session = SessionFactory(space=space)
         url = session.room_url()
         assert f"/room/{session.slug}" in url
 
     def test_join_url_google_meet(self, db):
-        from ..models import Space
-
         meeting_url = "https://example.com"
         space = SpaceFactory(meeting_provider=Space.MeetingProviderChoices.GOOGLE_MEET)
         session = SessionFactory(space=space, meeting_url=meeting_url)
