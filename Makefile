@@ -19,7 +19,7 @@ build-prod:
 test: test-python test-js pre-commit
 
 pre-commit:
-	pre-commit run --all-files
+	uv run pre-commit run --all-files
 
 test-js:
 	bun run test:ci

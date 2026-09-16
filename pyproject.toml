@@ -78,6 +78,8 @@ dev = [
 minversion = "6.0"
 addopts = "--ds=config.settings.test --reuse-db --disable-socket --allow-hosts=postgres"
 python_files = ["tests.py", "test_*.py"]
+# This setting replaces pytest's defaults, so retain them alongside scratch.
+norecursedirs = ["*.egg", ".*", "_darcs", "build", "CVS", "dist", "node_modules", "venv", "{arch}", "scratch"]
 filterwarnings = [
   # "ignore::pydantic.warnings.PydanticDeprecatedSince20",
   "ignore:::httplib2.*",
