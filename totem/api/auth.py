@@ -14,6 +14,7 @@ from totem.email.emails import login_pin_email
 from totem.email.exceptions import EmailBounced
 from totem.users import analytics
 from totem.users.models import LoginPin, RefreshToken, User
+from totem.users.registration import validate_registration_email
 from totem.utils.utils import request_log_context
 
 # Create router
@@ -81,7 +82,9 @@ def check_account_deactivated(user: User) -> bool:
 
 
 # Endpoints
-@router.post("/request-pin", response={200: MessageResponse, 401: ErrorResponse}, url_name="auth_request_pin")
+@router.post(
+    "/request-pin", response={200: MessageResponse, 401: ErrorResponse, 403: ErrorResponse}, url_name="auth_request_pin"
+)
 def request_pin(request, data: PinRequestSchema):
     """
     Request a PIN code to be sent via email.
@@ -92,6 +95,11 @@ def request_pin(request, data: PinRequestSchema):
         User(email=data.email).full_clean(exclude=["password"], validate_unique=False)
     except DjangoValidationError:
         return Status(401, ErrorResponse(error=AuthErrors.INVALID_EMAIL.value))
+
+    try:
+        validate_registration_email(data.email)
+    except DjangoValidationError as error:
+        return Status(403, ErrorResponse(error=error.messages[0]))
 
     # Get or create user
     user, created = User.objects.get_or_create(

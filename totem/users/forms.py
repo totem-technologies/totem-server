@@ -8,6 +8,8 @@ from django.utils.translation import gettext_lazy as _
 
 from totem.email.utils import validate_email_blocked
 
+from .registration import validate_registration_email
+
 User = get_user_model()
 
 
@@ -39,6 +41,9 @@ class UserSignupForm(AllauthSignupForm):
     Check UserSocialSignupForm for accounts created from social.
     """
 
+    def clean_email(self):
+        return validate_registration_email(super().clean_email())
+
 
 class UserSocialSignupForm(SocialSignupForm):
     """
@@ -46,6 +51,9 @@ class UserSocialSignupForm(SocialSignupForm):
     Default fields will be added automatically.
     See UserSignupForm otherwise.
     """
+
+    def clean_email(self):
+        return validate_registration_email(super().clean_email())
 
 
 class LoginForm(Form):
@@ -67,3 +75,6 @@ class SignupForm(LoginForm):
         label=_("Yes, receive email updates (optional)"),
         template_name="fields/checkbox.html",  # type: ignore
     )
+
+    def clean_email(self):
+        return validate_registration_email(self.cleaned_data["email"])

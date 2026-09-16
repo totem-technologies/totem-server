@@ -47,6 +47,15 @@ Steps:
 - Totem used `dokku` for deployment. The `Dockerfile` is used to build the image.
   - Configure `dokku` to use the production Dockerfile: `dokku builder:set totem selected dockerfile` and `dokku builder-dockerfile:set totem dockerfile-path compose/production/django/Dockerfile`.
 
+### Staging account creation
+
+With `SITE_HOST=totem.kbl.io`, public signup only accepts `@totem.org` email
+addresses (case insensitive). Other new users see a message directing them to
+https://totem.org. This applies to website, API, and allauth signup; existing
+accounts can still log in regardless of email domain. The restriction uses the
+configured host, so alternate request hosts cannot bypass it. Production and
+local development signup remain unrestricted.
+
 ## Room app previews
 
 Set `ROOM_PREVIEW_ENABLED=True` on staging to allow testers to select a Flutter
