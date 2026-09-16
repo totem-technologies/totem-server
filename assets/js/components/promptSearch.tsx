@@ -211,7 +211,7 @@ function PromptSearch(props: { dataid?: string; children?: JSXElement }) {
           </h3>
           <p class="text-tdeepgray mt-3 text-sm leading-relaxed">
             {data().length === 0
-              ? "Check back soon for prompts from our Keepers."
+              ? "Check back soon for more conversation prompts."
               : "Try a different word or choose a theme above."}
           </p>
         </div>
