@@ -285,8 +285,10 @@ def deliver_message_notification(notification_id: UUID) -> bool:
     notification = MessageNotification.objects.select_related("message", "message__sender", "recipient").get(
         pk=notification_id
     )
-    if _message_has_been_read(notification) or not can_users_message(
-        notification.recipient, notification.message.sender
+    if (
+        notification.message.deleted_at
+        or _message_has_been_read(notification)
+        or not can_users_message(notification.recipient, notification.message.sender)
     ):
         MessageNotification.objects.filter(pk=notification_id, status=MessageNotification.Status.SENDING).update(
             status=MessageNotification.Status.DISMISSED,
@@ -325,8 +327,11 @@ def deliver_message_notification(notification_id: UUID) -> bool:
 
 
 def queue_message_notification(notification_id: UUID) -> None:
-    """Dispatch FCM work after commit without blocking the request worker."""
-    global_pool.add_task(deliver_message_notification, notification_id)
+    """Dispatch FCM work after commit without blocking production request workers."""
+    if settings.TOTEM_ASYNC_WORKER_QUEUE_ENABLED:
+        global_pool.add_task(deliver_message_notification, notification_id)
+    else:
+        deliver_message_notification(notification_id)
 
 
 def retry_unread_message_notifications() -> int:
@@ -424,6 +429,38 @@ def create_message(
         message = Message.objects.get(sender=sender, client_message_id=client_message_id)
         if message.conversation_id != conversation.pk:
             raise MessageValidationError("Client message id is already in use")
+        return message
+
+
+def delete_message(conversation: Conversation, actor: User, message_id: UUID) -> Message:
+    """Soft-delete the actor's message while retaining its audit record."""
+    with transaction.atomic():
+        locked_conversation = (
+            Conversation.objects.select_for_update().select_related("user_low", "user_high").get(pk=conversation.pk)
+        )
+        require_conversation_access(locked_conversation, actor)
+        try:
+            message = Message.objects.select_for_update().get(pk=message_id, conversation=locked_conversation)
+        except Message.DoesNotExist as error:
+            raise MessageAccessDenied from error
+        if message.sender_id != actor.pk:
+            raise MessageAccessDenied
+        if message.deleted_at is not None:
+            return message
+
+        deleted_at = timezone.now()
+        Message.objects.filter(pk=message.pk).update(deleted_at=deleted_at, deleted_by=actor)
+        sync_version = _next_membership_sync_version()
+        ConversationMembership.objects.filter(conversation=locked_conversation).update(
+            updated_at=deleted_at,
+            sync_version=sync_version,
+        )
+        MessageNotification.objects.filter(
+            message=message,
+            status=MessageNotification.Status.PENDING,
+        ).update(status=MessageNotification.Status.DISMISSED)
+        message.deleted_at = deleted_at
+        message.deleted_by = actor
         return message
 
 

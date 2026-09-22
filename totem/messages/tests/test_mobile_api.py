@@ -172,6 +172,7 @@ class TestConversationAPI:
             "text",
             "created_at",
             "is_mine",
+            "is_deleted",
         }
 
     def test_inbox_search_matches_peer_name_or_last_message_preview_only(self):
@@ -680,6 +681,48 @@ class TestMessageAPI:
         assert second.json()["next_before"] is None
         assert all(item["created_at"] for item in first.json()["items"] + second.json()["items"])
         assert "Today" not in first.content.decode() + second.content.decode()
+
+    def test_sender_can_soft_delete_a_message(self):
+        keeper = UserFactory()
+        participant = UserFactory()
+        relationship(keeper, participant)
+        conversation = get_or_create_conversation(participant, keeper)
+        message = create_message(conversation, participant, "Sensitive message", None)
+
+        response = authenticated_client(participant).delete(
+            reverse(
+                "mobile-api:messages_delete",
+                kwargs={"conversation_id": conversation.pk, "message_id": message.pk},
+            )
+        )
+
+        assert response.status_code == 204
+        message.refresh_from_db()
+        assert message.body == "Sensitive message"
+        assert message.deleted_at is not None
+        assert message.deleted_by == participant
+
+        history = authenticated_client(keeper).get(
+            reverse("mobile-api:messages_history", kwargs={"conversation_id": conversation.pk})
+        )
+        item = history.json()["items"][0]
+        assert item["text"] == "This message was deleted"
+        assert item["is_deleted"] is True
+
+    def test_message_delete_is_idempotent_and_sender_only(self):
+        keeper = UserFactory()
+        participant = UserFactory()
+        relationship(keeper, participant)
+        conversation = get_or_create_conversation(participant, keeper)
+        message = create_message(conversation, participant, "Message", None)
+        url = reverse(
+            "mobile-api:messages_delete",
+            kwargs={"conversation_id": conversation.pk, "message_id": message.pk},
+        )
+
+        assert authenticated_client(keeper).delete(url).status_code == 404
+        assert authenticated_client(participant).delete(url).status_code == 204
+        assert authenticated_client(participant).delete(url).status_code == 204
 
     def test_read_rejects_message_from_another_conversation(self):
         participant = UserFactory()

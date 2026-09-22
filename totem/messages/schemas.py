@@ -24,6 +24,7 @@ class MessagePreviewSchema(Schema):
     text: str
     created_at: datetime
     is_mine: bool
+    is_deleted: bool
 
 
 class ConversationSummarySchema(Schema):
@@ -78,6 +79,7 @@ class MessageSchema(Schema):
     created_at: datetime
     cursor: str
     is_mine: bool
+    is_deleted: bool
 
 
 class MessagePageSchema(Schema):

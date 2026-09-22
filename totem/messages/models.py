@@ -113,8 +113,17 @@ class Message(models.Model):
         related_name="messages",
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="deleted_direct_messages",
+    )
     conversation_id: uuid.UUID
     sender_id: int
+    deleted_by_id: int | None
     bulk_request_id: uuid.UUID | None
 
     class Meta:

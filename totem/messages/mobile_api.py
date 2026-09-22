@@ -39,6 +39,7 @@ from .services import (
     SessionParticipantEntry,
     conversation_summary,
     create_message,
+    delete_message,
     get_authorized_conversation,
     get_or_create_conversation,
     get_owned_session,
@@ -73,15 +74,20 @@ def _peer_schema(user: User) -> MessagePeerSchema:
     )
 
 
+def _message_text(message: Message) -> str:
+    return "This message was deleted" if message.deleted_at else message.body
+
+
 def _message_schema(message: Message, user: User) -> MessageSchema:
     return MessageSchema(
         id=message.pk,
         sender_slug=message.sender.slug,
-        text=message.body,
+        text=_message_text(message),
         client_message_id=message.client_message_id,
         created_at=message.created_at,
         cursor=message_cursor(message),
         is_mine=message.sender_id == user.pk,
+        is_deleted=message.deleted_at is not None,
     )
 
 
@@ -91,9 +97,10 @@ def _preview_schema(message: Message | None, user: User) -> MessagePreviewSchema
     return MessagePreviewSchema(
         id=message.pk,
         sender_slug=message.sender.slug,
-        text=message.body,
+        text=_message_text(message),
         created_at=message.created_at,
         is_mine=message.sender_id == user.pk,
+        is_deleted=message.deleted_at is not None,
     )
 
 
@@ -298,6 +305,21 @@ def send_message(request: HttpRequest, conversation_id: UUID, payload: SendMessa
         _validation_error(error)
     message.sender = user
     return Status(201, _message_schema(message, user))
+
+
+@messages_router.delete(
+    "/conversations/{conversation_id}/messages/{message_id}",
+    response={204: None},
+    url_name="messages_delete",
+)
+def delete_message_endpoint(request: HttpRequest, conversation_id: UUID, message_id: UUID):
+    user: User = request.user  # type: ignore
+    try:
+        conversation = get_authorized_conversation(conversation_id, user)
+        delete_message(conversation, user, message_id)
+    except MessageAccessDenied:
+        _not_found()
+    return Status(204, None)
 
 
 @messages_router.post(
