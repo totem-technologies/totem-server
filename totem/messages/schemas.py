@@ -6,7 +6,7 @@ from ninja import Field, Schema
 
 from totem.users.schemas import ProfileAvatarTypeEnum
 
-from .services import MAX_SESSION_MESSAGE_RECIPIENTS
+from .models import MAX_SESSION_MESSAGE_RECIPIENTS
 
 
 class MessagePeerSchema(Schema):
@@ -99,7 +99,10 @@ class MarkReadSchema(Schema):
 
 
 class SyncPageSchema(Schema):
+    """Incremental conversation changes plus idempotent relationship-revocation tombstones."""
+
     items: list[ConversationSummarySchema]
+    removed_conversation_ids: list[UUID]
     next_cursor: str | None
     total_unread_count: int
 

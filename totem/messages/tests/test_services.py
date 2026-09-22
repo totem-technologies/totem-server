@@ -9,6 +9,7 @@ from totem.messages.models import Conversation, ConversationMembership, Message
 from totem.messages.services import (
     MessageAccessDenied,
     MessageValidationError,
+    _encode_cursor,
     can_users_message,
     create_message,
     get_or_create_conversation,
@@ -263,12 +264,12 @@ class TestConversationPersistence:
         Conversation.objects.filter(pk__in=[conversation.pk for conversation in conversations]).update(
             last_activity_at=tied_at
         )
-        ConversationMembership.objects.filter(user=participant).update(updated_at=tied_at)
+        ConversationMembership.objects.filter(user=participant).update(updated_at=tied_at, sync_version=0)
 
         inbox_first, inbox_cursor, _unread_count = inbox_page(participant, cursor=None, limit=2)
         inbox_second, _next_cursor, _unread_count = inbox_page(participant, cursor=inbox_cursor, limit=2)
-        sync_first, sync_cursor, _unread_count = sync_page(participant, since=None, limit=2)
-        sync_second, _next_cursor, _unread_count = sync_page(participant, since=sync_cursor, limit=2)
+        sync_first, _removed_ids, sync_cursor, _unread_count = sync_page(participant, since=None, limit=2)
+        sync_second, _removed_ids, _next_cursor, _unread_count = sync_page(participant, since=sync_cursor, limit=2)
 
         inbox_ids = [summary.conversation.pk for summary in inbox_first + inbox_second]
         sync_ids = [summary.membership.pk for summary in sync_first + sync_second]
@@ -276,6 +277,47 @@ class TestConversationPersistence:
         assert sync_ids == sorted(sync_ids)
         assert len(inbox_ids) == len(set(inbox_ids)) == 3
         assert len(sync_ids) == len(set(sync_ids)) == 3
+
+    def test_sync_accepts_legacy_timestamp_cursor_as_a_safe_replay(self):
+        participant = UserFactory()
+        keeper = UserFactory()
+        relationship(keeper, participant)
+        conversation = get_or_create_conversation(participant, keeper)
+        membership = ConversationMembership.objects.get(conversation=conversation, user=participant)
+        legacy_cursor = _encode_cursor(
+            membership.updated_at,
+            membership.pk,
+            kind="sync",
+            scope=str(participant.pk),
+        )
+
+        summaries, _removed_ids, _next_cursor, _unread_count = sync_page(
+            participant,
+            since=legacy_cursor,
+            limit=10,
+        )
+
+        assert [summary.conversation.pk for summary in summaries] == [conversation.pk]
+
+    def test_sync_advances_past_revoked_memberships(self):
+        participant = UserFactory()
+        revoked_keeper = UserFactory()
+        active_keeper = UserFactory()
+        revoked_session = relationship(revoked_keeper, participant)
+        revoked_conversation = get_or_create_conversation(participant, revoked_keeper)
+        relationship(active_keeper, participant)
+        active_conversation = get_or_create_conversation(participant, active_keeper)
+        revoked_session.cancelled = True
+        revoked_session.save(update_fields=["cancelled"])
+
+        first, removed_ids, cursor, _unread_count = sync_page(participant, since=None, limit=1)
+        second, second_removed_ids, _next_cursor, _unread_count = sync_page(participant, since=cursor, limit=1)
+
+        assert first == []
+        assert removed_ids == [revoked_conversation.pk]
+        assert cursor is not None
+        assert [summary.conversation.pk for summary in second] == [active_conversation.pk]
+        assert second_removed_ids == [revoked_conversation.pk]
 
     def test_inbox_cursor_is_scoped_to_its_user(self):
         first_participant = UserFactory()

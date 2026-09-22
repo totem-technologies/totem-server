@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from totem.users.models import User
 
 MAX_MESSAGE_LENGTH = 4000
+MAX_SESSION_MESSAGE_RECIPIENTS = 50
 
 
 class Conversation(models.Model):
@@ -56,6 +57,13 @@ class Conversation(models.Model):
         raise ValueError("User is not a conversation member")
 
 
+class MessagingSyncState(models.Model):
+    """Singleton counter that orders membership changes for incremental sync."""
+
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    version = models.BigIntegerField(default=0)
+
+
 class ConversationMembership(models.Model):
     class Slot(models.TextChoices):
         LOW = "low", "Low user"
@@ -75,6 +83,7 @@ class ConversationMembership(models.Model):
     last_read_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    sync_version = models.BigIntegerField(default=0)
     unread_count = models.PositiveIntegerField(default=0)
     user_id: int
     last_read_message_id: uuid.UUID | None
@@ -85,7 +94,7 @@ class ConversationMembership(models.Model):
             models.UniqueConstraint(fields=["conversation", "slot"], name="messaging_conversation_slot_unique"),
         ]
         indexes = [
-            models.Index(fields=["user", "-updated_at", "-id"], name="messaging_sync_lookup_idx"),
+            models.Index(fields=["user", "sync_version", "id"], name="messaging_sync_lookup_idx"),
             models.Index(fields=["user", "conversation"], name="messaging_member_lookup_idx"),
         ]
 

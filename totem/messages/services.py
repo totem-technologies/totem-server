@@ -10,7 +10,7 @@ from uuid import UUID
 from django.conf import settings
 from django.core import signing
 from django.db import IntegrityError, transaction
-from django.db.models import Count, F, IntegerField, OuterRef, Q, Subquery, Value
+from django.db.models import Count, F, IntegerField, OuterRef, Q, Subquery, Sum, Value
 from django.utils import timezone
 
 from totem.notifications.services import send_notification_to_user
@@ -19,16 +19,17 @@ from totem.users.models import User
 
 from .models import (
     MAX_MESSAGE_LENGTH,
+    MAX_SESSION_MESSAGE_RECIPIENTS,
     Conversation,
     ConversationMembership,
     Message,
     MessageNotification,
+    MessagingSyncState,
     SessionMessageRequest,
 )
 
 logger = logging.getLogger(__name__)
 _CURSOR_SALT = "totem.messages.cursor.v1"
-MAX_SESSION_MESSAGE_RECIPIENTS = 50
 
 
 class MessageAccessDenied(Exception):
@@ -126,6 +127,22 @@ def _ordered_users(first: User, second: User) -> tuple[User, User]:
     return (first, second) if first.pk < second.pk else (second, first)
 
 
+def _next_membership_sync_version() -> int:
+    """Allocate the next commit-ordered version for conversation membership changes.
+
+    ponytail: this global row lock serializes membership mutations. Replace it
+    with an append-only sync event log if messaging write throughput requires it.
+    """
+    # The migration seeds this row; get_or_create also keeps existing test and
+    # restored databases safe when the data migration was not replayed.
+    MessagingSyncState.objects.get_or_create(pk=1)
+    state = MessagingSyncState.objects.select_for_update().get(pk=1)
+    state.version = F("version") + 1
+    state.save(update_fields=["version"])
+    state.refresh_from_db(fields=["version"])
+    return state.version
+
+
 def get_or_create_conversation(actor: User, peer: User) -> Conversation:
     require_users_can_message(actor, peer)
     low, high = _ordered_users(actor, peer)
@@ -133,17 +150,20 @@ def get_or_create_conversation(actor: User, peer: User) -> Conversation:
         with transaction.atomic():
             conversation, created = Conversation.objects.get_or_create(user_low=low, user_high=high)
             if created:
+                sync_version = _next_membership_sync_version()
                 ConversationMembership.objects.bulk_create(
                     [
                         ConversationMembership(
                             conversation=conversation,
                             user=low,
                             slot=ConversationMembership.Slot.LOW,
+                            sync_version=sync_version,
                         ),
                         ConversationMembership(
                             conversation=conversation,
                             user=high,
                             slot=ConversationMembership.Slot.HIGH,
+                            sync_version=sync_version,
                         ),
                     ]
                 )
@@ -368,12 +388,15 @@ def create_message(
                 last_activity_at=message.created_at,
                 last_message=message,
             )
+            sync_version = _next_membership_sync_version()
             ConversationMembership.objects.filter(conversation=locked_conversation).update(
-                updated_at=message.created_at
+                updated_at=message.created_at,
+                sync_version=sync_version,
             )
             ConversationMembership.objects.filter(conversation=locked_conversation, user=recipient).update(
                 unread_count=F("unread_count") + 1,
                 updated_at=message.created_at,
+                sync_version=sync_version,
             )
             notification = MessageNotification.objects.create(message=message, recipient=recipient)
             transaction.on_commit(partial(deliver_message_notification, notification.pk))
@@ -459,7 +482,10 @@ def mark_conversation_read(
                 .exclude(sender=actor)
                 .count()
             )
-            membership.save(update_fields=["last_read_message", "last_read_at", "unread_count", "updated_at"])
+            membership.sync_version = _next_membership_sync_version()
+            membership.save(
+                update_fields=["last_read_message", "last_read_at", "unread_count", "sync_version", "updated_at"]
+            )
             MessageNotification.objects.filter(
                 recipient=actor,
                 status=MessageNotification.Status.PENDING,
@@ -553,13 +579,9 @@ def _authorized_directory_sessions(
                 Q(attendees=user) | Q(joined=user),
             )
 
-        # visible_to(candidate): listed sessions are visible to everyone, while
-        # unlisted sessions are visible only to their attendees. Unpublished
-        # spaces remain staff-only.
-        sessions = sessions.filter(Q(listed=True) | Q(attendees=candidate))
-        if not candidate.is_staff:
-            sessions = sessions.filter(space__published=True)
-        sessions = sessions.exclude(room__banned_participants__contains=[candidate.slug])
+        # Require both sides of the relationship to see the session. Candidate
+        # visibility belongs to SessionQuerySet.visible_to, not this directory.
+        sessions = sessions.filter(pk__in=Session.objects.visible_to(candidate).values("pk"))
         branches.append(
             sessions.annotate(
                 directory_candidate_id=Value(candidate.pk, output_field=IntegerField()),
@@ -644,6 +666,8 @@ def recipient_directory_page(
     cursor: str | None,
     limit: int,
 ) -> tuple[str, list[RecipientDirectoryEntry], str | None]:
+    if not user.is_active:
+        raise MessageAccessDenied
     if limit < 1 or limit > 50:
         raise MessageValidationError("Limit must be between 1 and 50")
     if len(query) > 100:
@@ -708,6 +732,76 @@ def _membership_queryset(user: User):
     )
 
 
+def _conversation_peer_ids(user: User) -> set[int]:
+    pairs = ConversationMembership.objects.filter(user=user).values_list(
+        "conversation__user_low_id",
+        "conversation__user_high_id",
+    )
+    return {high_id if low_id == user.pk else low_id for low_id, high_id in pairs}
+
+
+def _authorized_peer_ids(user: User) -> set[int]:
+    peer_ids = _conversation_peer_ids(user)
+    if not peer_ids or not user.is_active:
+        return set()
+
+    authorized_ids: set[int] = set()
+    if is_messaging_keeper(user):
+        participants = _directory_candidates(user, "participants").filter(pk__in=peer_ids)
+        authorized_ids.update(
+            int(session.directory_candidate_id)
+            for session in _authorized_directory_sessions(user, "participants", participants)
+        )
+
+    keepers = _directory_candidates(user, "keepers").filter(pk__in=peer_ids)
+    authorized_ids.update(
+        int(session.directory_candidate_id) for session in _authorized_directory_sessions(user, "keepers", keepers)
+    )
+    return authorized_ids
+
+
+def _for_peer_ids(memberships, user: User, peer_ids: set[int]):
+    if not peer_ids:
+        return memberships.none()
+    return memberships.filter(
+        Q(conversation__user_low_id=user.pk, conversation__user_high_id__in=peer_ids)
+        | Q(conversation__user_high_id=user.pk, conversation__user_low_id__in=peer_ids)
+    )
+
+
+def _peer_id(membership: ConversationMembership, user: User) -> int:
+    return (
+        membership.conversation.user_high_id
+        if membership.conversation.user_low_id == user.pk
+        else membership.conversation.user_low_id
+    )
+
+
+def _encode_sync_cursor(version: int, membership_id: UUID, user: User) -> str:
+    return _sign_cursor(
+        {
+            "version": version,
+            "id": str(membership_id),
+            "kind": "sync",
+            "scope": str(user.pk),
+        }
+    )
+
+
+def _decode_sync_cursor(cursor: str, user: User) -> tuple[int, UUID]:
+    try:
+        value = _unsign_cursor(cursor)
+        if value.get("kind") != "sync" or value.get("scope") != str(user.pk):
+            raise ValueError
+        if "version" not in value:
+            # Timestamp cursors predate sync_version. Replay safely once so an
+            # upgraded client cannot skip existing version-zero memberships.
+            return 0, UUID(int=0)
+        return int(value["version"]), UUID(value["id"])
+    except (signing.BadSignature, KeyError, TypeError, ValueError) as error:
+        raise MessageValidationError("Invalid cursor") from error
+
+
 def inbox_page(
     user: User,
     *,
@@ -721,7 +815,8 @@ def inbox_page(
         raise MessageValidationError("Query cannot exceed 100 characters")
     normalized_query = query.strip().casefold()
     cursor_query = normalized_query or None
-    memberships = _membership_queryset(user)
+    authorized_peer_ids = _authorized_peer_ids(user)
+    memberships = _for_peer_ids(_membership_queryset(user), user, authorized_peer_ids)
     if normalized_query:
         # NOTE: Search only the indexed inbox relation and latest preview; add
         # a dedicated, permission-scoped message-search index before searching history.
@@ -742,12 +837,7 @@ def inbox_page(
             | Q(conversation__last_activity_at=cursor_at, conversation_id__lt=cursor_id)
         )
     memberships = memberships.order_by("-conversation__last_activity_at", "-conversation_id")
-    authorized: list[ConversationSummary] = []
-    for membership in memberships.iterator(chunk_size=limit + 1):
-        if can_users_message(user, membership.conversation.peer_for(user.pk)):
-            authorized.append(_summary(membership))
-            if len(authorized) > limit:
-                break
+    authorized = [_summary(membership) for membership in memberships[: limit + 1]]
     has_more = len(authorized) > limit
     authorized = authorized[:limit]
     next_cursor = None
@@ -760,38 +850,44 @@ def inbox_page(
             scope=str(user.pk),
             query=cursor_query,
         )
-    return authorized, next_cursor, total_unread_count(user)
+    return authorized, next_cursor, total_unread_count(user, authorized_peer_ids)
 
 
-def total_unread_count(user: User) -> int:
-    return sum(
-        membership.unread_count
-        for membership in _membership_queryset(user)
-        if can_users_message(user, membership.conversation.peer_for(user.pk))
-    )
+def total_unread_count(user: User, authorized_peer_ids: set[int] | None = None) -> int:
+    peer_ids = _authorized_peer_ids(user) if authorized_peer_ids is None else authorized_peer_ids
+    total = _for_peer_ids(ConversationMembership.objects.filter(user=user), user, peer_ids).aggregate(
+        unread_count=Sum("unread_count")
+    )["unread_count"]
+    return int(total or 0)
 
 
-def sync_page(user: User, *, since: str | None, limit: int) -> tuple[list[ConversationSummary], str | None, int]:
+def sync_page(
+    user: User,
+    *,
+    since: str | None,
+    limit: int,
+) -> tuple[list[ConversationSummary], list[UUID], str | None, int]:
     if limit < 1 or limit > 100:
         raise MessageValidationError("Limit must be between 1 and 100")
+    authorized_peer_ids = _authorized_peer_ids(user)
     memberships = _membership_queryset(user)
     if since:
-        cursor_at, cursor_id = _decode_cursor(since, kind="sync", scope=str(user.pk))
-        memberships = memberships.filter(Q(updated_at__gt=cursor_at) | Q(updated_at=cursor_at, id__gt=cursor_id))
-    memberships = memberships.order_by("updated_at", "id")
-    authorized: list[ConversationSummary] = []
-    authorized_memberships: list[ConversationMembership] = []
-    for membership in memberships.iterator(chunk_size=limit):
-        if can_users_message(user, membership.conversation.peer_for(user.pk)):
-            authorized.append(_summary(membership))
-            authorized_memberships.append(membership)
-            if len(authorized) >= limit:
-                break
+        cursor_version, cursor_id = _decode_sync_cursor(since, user)
+        memberships = memberships.filter(
+            Q(sync_version__gt=cursor_version) | Q(sync_version=cursor_version, id__gt=cursor_id)
+        )
+    scanned = list(memberships.order_by("sync_version", "id")[:limit])
+    authorized = [_summary(membership) for membership in scanned if _peer_id(membership, user) in authorized_peer_ids]
+    removed_conversation_ids = list(
+        _for_peer_ids(
+            ConversationMembership.objects.filter(user=user), user, _conversation_peer_ids(user) - authorized_peer_ids
+        ).values_list("conversation_id", flat=True)
+    )
     next_cursor = None
-    if authorized_memberships:
-        last = authorized_memberships[-1]
-        next_cursor = _encode_cursor(last.updated_at, last.pk, kind="sync", scope=str(user.pk))
-    return authorized, next_cursor, total_unread_count(user)
+    if scanned:
+        last = scanned[-1]
+        next_cursor = _encode_sync_cursor(last.sync_version, last.pk, user)
+    return authorized, removed_conversation_ids, next_cursor, total_unread_count(user, authorized_peer_ids)
 
 
 def _session_participant_cursor_scope(user: User, session: Session) -> str:
@@ -835,6 +931,8 @@ def get_owned_session(session_slug: str, keeper: User) -> Session:
 
 
 def _session_messageable_participants(session: Session, keeper: User):
+    # This badge intentionally counts sessions the participant joined, not merely
+    # sessions they registered for: it represents attended session history.
     joined_sessions_count = (
         User.objects.filter(pk=OuterRef("pk")).annotate(count=Count("sessions_joined", distinct=True)).values("count")
     )

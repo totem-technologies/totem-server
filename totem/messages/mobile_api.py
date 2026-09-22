@@ -321,11 +321,12 @@ def mark_read(request: HttpRequest, conversation_id: UUID, payload: MarkReadSche
 def sync_messages(request: HttpRequest, since: str | None = None, limit: int = 50):
     user: User = request.user  # type: ignore
     try:
-        summaries, next_cursor, unread_count = sync_page(user, since=since, limit=limit)
+        summaries, removed_conversation_ids, next_cursor, unread_count = sync_page(user, since=since, limit=limit)
     except MessageValidationError as error:
         _validation_error(error)
     return SyncPageSchema(
         items=[_summary_schema(summary, user) for summary in summaries],
+        removed_conversation_ids=removed_conversation_ids,
         next_cursor=next_cursor,
         total_unread_count=unread_count,
     )

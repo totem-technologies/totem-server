@@ -714,8 +714,23 @@ class TestMessageAPI:
         assert len(data["items"]) == 1
         assert "messages" not in data["items"][0]
         assert data["items"][0]["last_message"]["text"] == "Two"
+        assert data["removed_conversation_ids"] == []
         assert data["next_cursor"]
         assert data["total_unread_count"] == 2
+
+    def test_sync_returns_tombstone_for_a_revoked_conversation(self):
+        keeper = UserFactory()
+        participant = UserFactory()
+        session = relationship(keeper, participant)
+        conversation = get_or_create_conversation(participant, keeper)
+        session.cancelled = True
+        session.save(update_fields=["cancelled"])
+
+        response = authenticated_client(participant).get(reverse("mobile-api:messages_sync"), {"limit": 10})
+
+        assert response.status_code == 200
+        assert response.json()["items"] == []
+        assert response.json()["removed_conversation_ids"] == [str(conversation.pk)]
 
 
 @pytest.mark.django_db
