@@ -10,7 +10,7 @@ from uuid import UUID
 from django.conf import settings
 from django.core import signing
 from django.db import IntegrityError, transaction
-from django.db.models import Count, F, Q, Sum
+from django.db.models import Count, F, IntegerField, Q, Sum, Value
 from django.utils import timezone
 
 from totem.notifications.services import send_notification_to_user
@@ -520,10 +520,55 @@ def _directory_candidates(user: User, kind: str):
     )
 
 
+def _authorized_directory_sessions(
+    user: User,
+    kind: str,
+    candidates,
+):
+    """Return each authorized candidate/session pair in one set-based query.
+
+    Candidate-specific visibility and room bans must stay attached to the same
+    candidate branch. Applying them after joining all candidates to sessions
+    would allow one candidate's authorization to leak to another candidate.
+    """
+    candidate_list = list(candidates)
+    branches = []
+    for candidate in candidate_list:
+        sessions = Session.objects.visible_to(user)
+        if kind == "participants":
+            sessions = sessions.filter(space__author=user).filter(
+                Q(attendees=candidate) | Q(joined=candidate),
+            )
+        else:
+            sessions = sessions.filter(space__author=candidate).filter(
+                Q(attendees=user) | Q(joined=user),
+            )
+
+        # visible_to(candidate): listed sessions are visible to everyone, while
+        # unlisted sessions are visible only to their attendees. Unpublished
+        # spaces remain staff-only.
+        sessions = sessions.filter(Q(listed=True) | Q(attendees=candidate))
+        if not candidate.is_staff:
+            sessions = sessions.filter(space__published=True)
+        sessions = sessions.exclude(room__banned_participants__contains=[candidate.slug])
+        branches.append(
+            sessions.annotate(
+                directory_candidate_id=Value(candidate.pk, output_field=IntegerField()),
+            )
+            .select_related("space")
+            .distinct()
+        )
+
+    if not branches:
+        return Session.objects.none()
+    return branches[0].union(*branches[1:], all=True).order_by("-start", "-pk")
+
+
 def _default_directory_kind(user: User) -> str:
     if not is_messaging_keeper(user):
         return "keepers"
-    if any(can_users_message(user, candidate) for candidate in _directory_candidates(user, "keepers").iterator()):
+    candidates = _directory_candidates(user, "keepers")
+    if _authorized_directory_sessions(user, "keepers", candidates).exists():
         return "keepers"
     return "participants"
 
@@ -601,16 +646,15 @@ def recipient_directory_page(
     if cursor:
         cursor_key, snapshot = _decode_directory_cursor(user, directory_kind, normalized_query, cursor)
 
+    candidates = list(_directory_candidates(user, directory_kind))
+    sessions_by_candidate: dict[int, list[Session]] = {}
+    for session in _authorized_directory_sessions(user, directory_kind, candidates):
+        candidate_id = int(getattr(session, "directory_candidate_id"))
+        sessions_by_candidate.setdefault(candidate_id, []).append(session)
+
     authorized: list[tuple[User, Session, tuple[str, ...]]] = []
-    for candidate in _directory_candidates(user, directory_kind):
-        keeper, participant = (user, candidate) if directory_kind == "participants" else (candidate, user)
-        if not can_users_message(user, candidate):
-            continue
-        sessions = list(
-            qualifying_sessions(keeper=keeper, participant=participant)
-            .select_related("space")
-            .order_by("-start", "-pk")
-        )
+    for candidate in candidates:
+        sessions = sessions_by_candidate.get(candidate.pk, [])
         if not sessions:
             continue
         titles = tuple(session.session_title_or_title() for session in sessions)

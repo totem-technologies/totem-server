@@ -3,7 +3,9 @@ from unittest.mock import patch
 from uuid import UUID, uuid4
 
 import pytest
+from django.db import connection
 from django.test import Client
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
 from totem.api.auth import generate_jwt_token
@@ -386,6 +388,20 @@ class TestRecipientDirectoryAPI:
             "participants": [],
             "next_cursor": None,
         }
+
+    def test_participant_directory_uses_a_bounded_number_of_queries(self):
+        participant = UserFactory()
+        for index in range(8):
+            relationship(UserFactory(name=f"Keeper {index}"), participant)
+
+        with CaptureQueriesContext(connection) as queries:
+            response = authenticated_client(participant).get(
+                reverse("mobile-api:messages_recipients"),
+                {"kind": "keepers"},
+            )
+
+        assert response.status_code == 200
+        assert len(queries) <= 8
 
     def test_participant_directory_uses_stable_cursor_paging(self):
         participant = UserFactory()
