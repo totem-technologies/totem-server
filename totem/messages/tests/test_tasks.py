@@ -14,6 +14,7 @@ from totem.messages.tasks import (
     retry_unread_message_notifications,
     send_post_session_discovery_nudges,
 )
+from totem.messages.tests.helpers import relationship
 from totem.notifications.models import FCMDevice
 from totem.rooms.models import Room
 from totem.spaces.models import Space
@@ -206,6 +207,57 @@ class TestUnreadMessageNotificationRetry:
         notification.refresh_from_db()
         assert notification.status == MessageNotification.Status.DISMISSED
         send.assert_not_called()
+
+    def test_exhausted_notification_is_dismissed_without_another_fcm_attempt(
+        self,
+        settings,
+        django_capture_on_commit_callbacks,
+    ):
+        settings.MESSAGING_DIRECT_MESSAGE_MAX_ATTEMPTS = 2
+        _session, keeper, participant = completed_session()
+        conversation = get_or_create_conversation(participant, keeper)
+        with (
+            patch("totem.messages.services.send_notification_to_user", return_value=False),
+            django_capture_on_commit_callbacks(execute=True),
+        ):
+            message = create_message(conversation, participant, "Need help", None)
+        notification = MessageNotification.objects.get(message=message)
+        MessageNotification.objects.filter(pk=notification.pk).update(
+            attempt_count=2,
+            last_attempt_at=timezone.now() - timedelta(minutes=16),
+        )
+
+        with patch("totem.messages.services.send_notification_to_user") as send:
+            assert retry_unread_message_notifications() == 0
+
+        notification.refresh_from_db()
+        assert notification.status == MessageNotification.Status.DISMISSED
+        send.assert_not_called()
+
+    def test_retry_processes_only_the_configured_batch(self, settings, django_capture_on_commit_callbacks):
+        settings.MESSAGING_DIRECT_MESSAGE_RETRY_BATCH_SIZE = 2
+        _session, keeper, participant = completed_session()
+        conversations = []
+        for _ in range(3):
+            other_participant = UserFactory()
+            relationship(keeper, other_participant)
+            conversations.append(get_or_create_conversation(other_participant, keeper))
+        with (
+            patch("totem.messages.services.send_notification_to_user", return_value=False),
+            django_capture_on_commit_callbacks(execute=True),
+        ):
+            messages = [create_message(conversation, keeper, "Need help", None) for conversation in conversations]
+        MessageNotification.objects.filter(message__in=messages).update(
+            last_attempt_at=timezone.now() - timedelta(minutes=16)
+        )
+
+        with patch("totem.messages.services.send_notification_to_user", return_value=False) as send:
+            assert retry_unread_message_notifications() == 0
+
+        assert send.call_count == 2
+        assert (
+            MessageNotification.objects.filter(status=MessageNotification.Status.PENDING, attempt_count=1).count() == 1
+        )
 
     def test_relationship_revocation_suppresses_a_failed_delivery_retry(self):
         session, keeper, participant = completed_session()

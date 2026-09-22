@@ -16,6 +16,7 @@ from django.utils import timezone
 from totem.notifications.services import send_notification_to_user
 from totem.spaces.models import Session
 from totem.users.models import User
+from totem.utils.pool import global_pool
 
 from .models import (
     MAX_MESSAGE_LENGTH,
@@ -323,23 +324,39 @@ def deliver_message_notification(notification_id: UUID) -> bool:
     return delivered
 
 
+def queue_message_notification(notification_id: UUID) -> None:
+    """Dispatch FCM work after commit without blocking the request worker."""
+    global_pool.add_task(deliver_message_notification, notification_id)
+
+
 def retry_unread_message_notifications() -> int:
-    """Retry failed direct-message notifications at a bounded cadence until they are read."""
+    """Retry a bounded batch of unread direct-message notifications."""
     retry_delay = timedelta(minutes=settings.MESSAGING_DIRECT_MESSAGE_RETRY_DELAY_MINUTES)
     retry_before = timezone.now() - retry_delay
+    max_attempts = settings.MESSAGING_DIRECT_MESSAGE_MAX_ATTEMPTS
+    batch_size = settings.MESSAGING_DIRECT_MESSAGE_RETRY_BATCH_SIZE
+    if max_attempts < 1 or batch_size < 1:
+        raise ValueError("Direct-message notification retry limits must be positive")
+
     # A worker crash after claiming a row leaves it available for a later retry.
     MessageNotification.objects.filter(
         status=MessageNotification.Status.SENDING,
         claimed_at__lt=retry_before,
     ).update(status=MessageNotification.Status.PENDING, claimed_at=None)
-    notification_ids = (
+    MessageNotification.objects.filter(
+        status=MessageNotification.Status.PENDING,
+        attempt_count__gte=max_attempts,
+    ).update(status=MessageNotification.Status.DISMISSED)
+    notification_ids = list(
         MessageNotification.objects.filter(
             status=MessageNotification.Status.PENDING,
+            attempt_count__lt=max_attempts,
         )
         .filter(Q(last_attempt_at__isnull=True) | Q(last_attempt_at__lte=retry_before))
-        .values_list("pk", flat=True)
+        .order_by("last_attempt_at", "pk")
+        .values_list("pk", flat=True)[:batch_size]
     )
-    return sum(deliver_message_notification(notification_id) for notification_id in notification_ids.iterator())
+    return sum(deliver_message_notification(notification_id) for notification_id in notification_ids)
 
 
 def _validated_message_body(text: str) -> str:
@@ -399,7 +416,7 @@ def create_message(
                 sync_version=sync_version,
             )
             notification = MessageNotification.objects.create(message=message, recipient=recipient)
-            transaction.on_commit(partial(deliver_message_notification, notification.pk))
+            transaction.on_commit(partial(queue_message_notification, notification.pk))
             return message
     except IntegrityError:
         if client_message_id is None:
