@@ -1,4 +1,5 @@
 @import "tailwindcss" source(none);
+@import "./course.css";
 @source "./";
 @source "../js";
 @source "../../totem/**/*.html";

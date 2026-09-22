@@ -4,16 +4,30 @@
   Prompts
 {% endblock title %}
 {% block content %}
-  <div class="section m-auto max-w-3xl px-5 pt-10">
-    <h1 class="h1">Prompts</h1>
-    <p class="pt-4">
-      These prompts are created for Totem by expert Keepers. They are designed
-      to encourage authentic communication.
-    </p>
-    <p class="pt-4">
-      You can use the search bar below, or filter by tag by selecting the tag
-      pill.
-    </p>
+  <div class="mx-auto max-w-6xl px-5 pt-5 pb-12 md:pt-6">
+    <header
+      class="border-tmauve/20 bg-tmauve/10 relative mb-5 overflow-hidden rounded-3xl border p-5 md:px-8 md:py-6">
+      <div class="relative z-10 max-w-2xl">
+        <p class="eyebrow text-tpink-tint">Conversation prompts</p>
+        <h1 class="mt-3 text-4xl font-semibold tracking-tight md:text-6xl">
+          A place to begin.
+        </h1>
+        <p
+          class="text-tdeepgray mt-3 max-w-xl text-base leading-relaxed md:text-lg">
+          Find a question that opens up a conversation. Use these prompts in a
+          Space, with friends, or for a moment of reflection on your own.
+        </p>
+      </div>
+      <div
+        class="border-tmauve/20 pointer-events-none absolute -top-12 -right-24 size-80 rounded-full border max-md:opacity-40"
+        aria-hidden="true">
+        <div
+          class="border-tmauve/20 absolute inset-10 rounded-full border"></div>
+        <div class="bg-tmauve/15 absolute inset-20 rounded-full"></div>
+        <div
+          class="bg-tyellow absolute right-12 bottom-4 size-12 rounded-full"></div>
+      </div>
+    </header>
     {{ search_data|json_script:"search_data" }}
     <t-promptsearch dataid="search_data"></t-promptsearch>
   </div>

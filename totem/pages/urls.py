@@ -13,6 +13,7 @@ proxied_site_pages = [
     "how-it-works",
     "privacy-notice",
     "staying-grounded",
+    "team",
     "topics/lgbtq",
     "topics/love-and-other-emotions",
     "topics/mothers",
@@ -34,8 +35,6 @@ class PagesSitemap(Sitemap):
             "home",
             "tos",
             "privacy",
-            "team",
-            "team-pam",
         ]
         hub_pages = ["blog:list", "blog:archive", "spaces:list", "spaces:sessions"]
         return [f"pages:{page}" for page in static_pages + proxied_site_pages] + hub_pages
@@ -47,13 +46,11 @@ class PagesSitemap(Sitemap):
 app_name = "pages"
 urlpatterns = [
     path("", views.proxied_site_page, name="home"),
-    path("team/", views.team_view, name="team"),
     # path("about/", TemplateView.as_view(template_name="pages/about.html"), name="about"),
     # path("how-it-works/", views.HowItWorksView.as_view(), name="how-it-works"),
     path("tos/", TemplateView.as_view(template_name="pages/tos.html"), name="tos"),
     path("privacy/", TemplateView.as_view(template_name="pages/privacy.html"), name="privacy"),
     path("keepers/<str:name>/", views.keepers, name="keepers"),
-    path("team/pam/", TemplateView.as_view(template_name="pages/pam.html"), name="team-pam"),
     path("metrics/", TemplateView.as_view(template_name="pages/metrics.html"), name="metrics"),
     path(
         "thank-you-voting/", TemplateView.as_view(template_name="pages/thank_you_voting.html"), name="thank-you-voting"

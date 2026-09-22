@@ -46,6 +46,7 @@ def _prefetch_session_detail_relations(sessions: list[Session], user: User) -> N
         sessions,
         "attendees",
         "joined",
+        "room",
         author_circle_count_prefetch("space__author"),
         "space__categories",
         "space__subscribed",
@@ -113,7 +114,7 @@ def get_keeper_spaces(request: HttpRequest, slug: str):
 def get_session_detail(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
     session = get_object_or_404(
-        Session.objects.select_related("space").prefetch_related(
+        Session.objects.select_related("space", "room").prefetch_related(
             Prefetch("space__sessions", queryset=upcoming_sessions_queryset(user), to_attr="upcoming_sessions"),
         ),
         slug=event_slug,

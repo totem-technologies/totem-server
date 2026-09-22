@@ -209,7 +209,7 @@ def join_room(
 ):
     user: User = request.user  # type: ignore
 
-    session = Session.objects.filter(slug=session_slug).first()
+    session = Session.objects.select_related("space", "room").filter(slug=session_slug).first()
     if not session:
         return Status(
             404,
@@ -219,7 +219,7 @@ def join_room(
             ),
         )
 
-    if not session.can_join(user):
+    if session.space.meeting_provider != Space.MeetingProviderChoices.LIVEKIT or not session.can_join(user):
         return RoomErrorResponse(
             code=ErrorCode.NOT_JOINABLE,
             message="Session is not joinable at this time",
@@ -233,9 +233,7 @@ def join_room(
         ).as_http_response()
 
     now = timezone.now()
-    need_participants = session.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT and (
-        (now > session.end() and user != session.space.author) or session.joined.count() > 0
-    )
+    need_participants = (now > session.end() and user != session.space.author) or session.joined.count() > 0
     connected: set[str] | None = None
     if need_participants:
         try:

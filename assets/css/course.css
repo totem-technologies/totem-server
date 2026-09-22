@@ -1,0 +1,288 @@
+.course-shell {
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.25rem 5rem;
+}
+
+.course-header {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 2rem;
+  padding: 3rem;
+  border: 1px solid color-mix(in srgb, var(--color-tmauve) 20%, transparent);
+  border-radius: 1.5rem;
+  background: color-mix(in srgb, var(--color-tmauve) 11%, var(--color-tcreme));
+  scroll-margin-top: 1.5rem;
+}
+
+.course-header-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 42rem;
+}
+
+.course-header .eyebrow {
+  color: var(--color-tpink-tint);
+}
+
+.course-header h1 {
+  margin: 1rem 0;
+  font-size: clamp(2.25rem, 5vw, 3.75rem);
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+.course-byline {
+  color: var(--color-tdeepgray);
+  font-size: 0.875rem;
+}
+
+.course-orbits {
+  position: absolute;
+  right: -2rem;
+  top: -5rem;
+  width: 23rem;
+  height: 23rem;
+  border: 1px solid color-mix(in srgb, var(--color-tmauve) 30%, transparent);
+  border-radius: 50%;
+  box-shadow: 0 0 0 3rem color-mix(in srgb, var(--color-tmauve) 7%, transparent);
+  pointer-events: none;
+}
+
+.course-orbits::before,
+.course-orbits::after,
+.course-orbits span {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+}
+
+.course-orbits::before {
+  inset: 3rem;
+  border: inherit;
+}
+
+.course-orbits::after {
+  inset: 6rem;
+  background: color-mix(in srgb, var(--color-tmauve) 18%, transparent);
+}
+
+.course-orbits span {
+  right: 3rem;
+  bottom: 2rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  background: var(--color-tyellow);
+}
+
+.course-layout {
+  display: grid;
+  gap: 2rem;
+  align-items: start;
+  max-width: 52rem;
+  margin: 0 auto;
+}
+
+.course-layout-with-toc {
+  grid-template-columns: 17rem minmax(0, 1fr);
+  max-width: none;
+}
+
+.course-sidebar {
+  position: sticky;
+  top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 3rem);
+  border: 1px solid color-mix(in srgb, var(--color-tmauve) 18%, transparent);
+  border-radius: 1.25rem;
+  background: color-mix(in srgb, white 65%, var(--color-tcreme));
+}
+
+.course-sidebar-heading {
+  flex-shrink: 0;
+  padding: 1.5rem 1.25rem 1rem;
+}
+
+.course-sidebar-heading .eyebrow {
+  color: var(--color-tpink-tint);
+}
+
+.course-sidebar-heading p {
+  margin-top: 0.5rem;
+  color: var(--color-tdeepgray);
+  font-size: 0.75rem;
+}
+
+.course-toc {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-tmauve) transparent;
+  padding: 0 0.75rem 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.course-toc ul,
+.course-toc ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.course-toc li > ul,
+.course-toc li > ol {
+  margin-left: 0.75rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid
+    color-mix(in srgb, var(--color-tmauve) 25%, transparent);
+}
+
+.course-toc a {
+  display: block;
+  margin: 0.125rem 0;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.5rem;
+  color: var(--color-tdeepgray);
+  overflow-wrap: anywhere;
+  text-decoration: none;
+}
+
+.course-toc a:hover,
+.course-toc .is-active-link {
+  background: color-mix(in srgb, var(--color-tmauve) 15%, transparent);
+  color: var(--color-tslate);
+}
+
+.course-toc .is-active-link {
+  font-weight: 600;
+  box-shadow: inset 3px 0 var(--color-tmauve);
+}
+
+.course-shell a:focus-visible,
+.course-shell summary:focus-visible,
+.course-toc:focus-visible {
+  outline: 2px solid var(--color-tpink-tint);
+  outline-offset: 2px;
+}
+
+.course-back-to-top {
+  flex-shrink: 0;
+  border-top: 1px solid color-mix(in srgb, var(--color-tmauve) 18%, transparent);
+  padding: 1rem 1.5rem;
+  font-size: 0.75rem;
+  color: var(--color-tdeepgray);
+}
+
+.course-mobile-contents {
+  display: none;
+}
+
+.course-article {
+  min-width: 0;
+  padding: clamp(1.5rem, 4vw, 3.5rem);
+  border: 1px solid color-mix(in srgb, var(--color-tmauve) 15%, transparent);
+  border-radius: 1.25rem;
+  background: color-mix(in srgb, white 85%, var(--color-tcreme));
+  box-shadow: 0 8px 30px rgb(38 47 55 / 3%);
+}
+
+.course-article .page-content {
+  max-width: 65ch;
+  margin: 0 auto;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+  --tw-prose-body: var(--color-tdeepgray);
+  --tw-prose-headings: var(--color-tslate);
+  --tw-prose-links: var(--color-tpink-tint);
+}
+
+.course-article :is(h1, h2, h3, h4, h5, h6) {
+  scroll-margin-top: 2rem;
+}
+
+.course-article :is(h1, h2) {
+  padding-top: 1.75rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-tmauve) 20%, transparent);
+  letter-spacing: -0.025em;
+}
+
+.course-article .page-content > :first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.course-article blockquote {
+  border-color: var(--color-tmauve);
+  border-radius: 0 0.75rem 0.75rem 0;
+  padding: 0.25rem 1.25rem;
+  background: color-mix(in srgb, var(--color-tmauve) 8%, transparent);
+}
+
+.course-article-footer {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid color-mix(in srgb, var(--color-tmauve) 20%, transparent);
+  color: var(--color-tpink-tint);
+  font-size: 0.8125rem;
+}
+
+@media (width < 64rem) {
+  .course-shell {
+    padding-top: 1.5rem;
+  }
+
+  .course-header {
+    padding: 2rem 1.5rem;
+  }
+
+  .course-orbits {
+    opacity: 0.4;
+    right: -12rem;
+  }
+
+  .course-layout-with-toc {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .course-sidebar {
+    display: none;
+  }
+
+  .course-mobile-contents {
+    display: block;
+    position: sticky;
+    top: 0.75rem;
+    z-index: 10;
+    border: 1px solid color-mix(in srgb, var(--color-tmauve) 25%, transparent);
+    border-radius: 1rem;
+    background: var(--color-tcreme);
+    box-shadow: 0 4px 16px rgb(38 47 55 / 8%);
+  }
+
+  .course-mobile-contents summary {
+    padding: 1rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .course-mobile-contents .course-toc {
+    max-height: min(60dvh, calc(100dvh - 7rem));
+  }
+
+  .course-article :is(h1, h2, h3, h4, h5, h6) {
+    scroll-margin-top: 6rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:has(.course-shell) {
+    scroll-behavior: auto;
+  }
+}

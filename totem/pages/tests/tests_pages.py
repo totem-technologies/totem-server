@@ -27,7 +27,7 @@ class TestPages:
         response = client.get(url)
         assert response.status_code == 200
 
-    def test_team(self, client):
+    def test_team(self, client, proxied_site_mock):
         url = reverse("pages:team")
         response = client.get(url)
         assert response.status_code == 200

@@ -47,6 +47,57 @@ Steps:
 - Totem used `dokku` for deployment. The `Dockerfile` is used to build the image.
   - Configure `dokku` to use the production Dockerfile: `dokku builder:set totem selected dockerfile` and `dokku builder-dockerfile:set totem dockerfile-path compose/production/django/Dockerfile`.
 
+## Room app previews
+
+Set `ROOM_PREVIEW_ENABLED=True` on staging to allow testers to select a Flutter
+PR build. The setting defaults to `False`; leave it disabled on production.
+The normal build still uses `ROOM_APP_PROXY_BASE_URL` and
+`ROOM_APP_PROXY_BROWSER_HOST`.
+
+Open a preview link from the app PR comment, for example:
+
+```text
+https://totem.kbl.io/?room_preview=pr-166-video-experience
+```
+
+The server validates the alias and saves `{alias, expires_at}` in the Django
+session under `room_preview`. Selection lasts **two hours from the time the
+link is opened**. Browsing and logging in do not extend it; explicitly opening
+a preview link again starts a new two-hour period. The login session keeps its
+normal lifetime. Selection is shared across tabs and survives PIN login.
+Logout also clears it. No additional cookie or database migration is required.
+
+The query parameter is removed with a redirect, preserving the path and other
+parameters. Subsequent `/room/<session>` requests proxy HTML from
+`https://<alias>-totem-web-preview.lopkerk.workers.dev/`; compiled assets load
+directly from that alias URL. The app build keeps `--base-href=/room/` for
+navigation and sets `WEB_ASSET_BASE` to the absolute alias URL (with a trailing
+slash). Its Flutter bootstrap uses that URL for both `assetBase` and
+`entrypointBaseUrl`. Authentication, CSRF, and API calls stay on staging.
+Aliases must match `pr-<positive-number>-<slug>` using lowercase ASCII
+letters, numbers, and dashes, with no trailing dash. Alias plus
+`-totem-web-preview` must fit in a 63-character DNS label.
+
+Use the PR comment's **Return to normal staging** link or `?room_preview=off`
+to clear only the selection.
+After expiry, the next room load clears it and uses the default build.
+An already-loaded room continues running its existing build.
+
+On staging, room HTML responses bypass caching and conditional requests so a
+switch cannot reuse another build's HTML. If the preview's index returns 404 or 410,
+the selection is cleared and a plain-text response instructs the user to reload
+to return to normal staging.
+Network errors and upstream 5xx responses remain errors without clearing the
+selection. Preview upstream redirects are not followed.
+
+Tests run in normal Python CI. To run the relevant suites locally:
+
+```sh
+docker compose -f local.yml run --rm django pytest \
+  totem/rooms/tests/test_preview.py totem/rooms/tests/test_proxy.py \
+  totem/users/tests/test_login.py
+```
+
 ## PostgreSQL major-version upgrades
 
 For a production major-version upgrade, prepare the destination service,
