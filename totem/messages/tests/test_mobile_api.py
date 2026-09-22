@@ -56,7 +56,7 @@ class TestConversationAPI:
             content_type="application/json",
         )
 
-        assert response.status_code == 200
+        assert response.status_code == 201
         data = response.json()
         assert set(data["peer"]) == {
             "slug",
@@ -131,7 +131,7 @@ class TestConversationAPI:
             content_type="application/json",
         )
 
-        assert response.status_code == 200
+        assert response.status_code == 201
 
     def test_unauthenticated_request_is_rejected(self, client: Client):
         response = client.get(reverse("mobile-api:messages_conversations"))
@@ -729,7 +729,7 @@ class TestSessionParticipantsAPI:
             set(profile["profile"]) == {"slug", "name", "profile_image", "profile_avatar_seed", "profile_avatar_type"}
             for profile in data["items"]
         )
-        assert all(profile["reviews_count"] is None for profile in data["items"])
+        assert all(set(profile) == {"profile", "sessions_count"} for profile in data["items"])
         assert data["next_cursor"] is None
 
     def test_session_participants_are_paginated(self):

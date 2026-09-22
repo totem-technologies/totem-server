@@ -2,12 +2,15 @@ from datetime import datetime
 from enum import StrEnum
 from uuid import UUID
 
-from ninja import Schema
+from ninja import Field, Schema
 
 from totem.users.schemas import ProfileAvatarTypeEnum
 
+from .services import MAX_SESSION_MESSAGE_RECIPIENTS
+
 
 class MessagePeerSchema(Schema):
+    # Deliberately narrow privacy projection for messaging peers.
     slug: str
     name: str
     profile_image: str | None
@@ -69,7 +72,6 @@ class RecipientDirectorySchema(Schema):
 
 class MessageSchema(Schema):
     id: UUID
-    sender_id: int
     sender_slug: str
     text: str
     client_message_id: UUID | None
@@ -105,7 +107,6 @@ class SyncPageSchema(Schema):
 class SessionParticipantSchema(Schema):
     profile: MessagePeerSchema
     sessions_count: int
-    reviews_count: int | None = None
 
 
 class SessionParticipantPageSchema(Schema):
@@ -114,7 +115,7 @@ class SessionParticipantPageSchema(Schema):
 
 
 class SendSessionMessagesSchema(Schema):
-    recipient_slugs: list[str]
+    recipient_slugs: list[str] = Field(max_length=MAX_SESSION_MESSAGE_RECIPIENTS)
     text: str
     client_request_id: UUID
 

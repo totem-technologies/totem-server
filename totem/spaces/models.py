@@ -321,16 +321,16 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
     def attendee_email_list(self):
         return ", ".join([str(attendee.email) for attendee in self.attendees.all()])
 
-    def _banned_slugs(self) -> list[str]:
+    def banned_slugs(self) -> list[str]:
         room = getattr(self, "room", None)  # reverse OneToOne from rooms.Room
         return room.banned_participants if room else []
 
     def _exclude_banned_users(self, users: "QuerySet[User]") -> "QuerySet[User]":
-        banned = self._banned_slugs()
+        banned = self.banned_slugs()
         return users.exclude(slug__in=banned) if banned else users
 
     def user_is_banned(self, user: "User") -> bool:
-        return user.slug in self._banned_slugs()
+        return user.slug in self.banned_slugs()
 
     def active_attendees(self) -> "QuerySet[User]":
         """Attendees, excluding users banned from this session's room."""

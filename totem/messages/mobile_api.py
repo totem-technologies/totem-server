@@ -76,7 +76,6 @@ def _peer_schema(user: User) -> MessagePeerSchema:
 def _message_schema(message: Message, user: User) -> MessageSchema:
     return MessageSchema(
         id=message.pk,
-        sender_id=message.sender_id,
         sender_slug=message.sender.slug,
         text=message.body,
         client_message_id=message.client_message_id,
@@ -132,8 +131,6 @@ def _session_participant_schema(entry: SessionParticipantEntry) -> SessionPartic
     return SessionParticipantSchema(
         profile=_peer_schema(entry.user),
         sessions_count=entry.sessions_count,
-        # Session feedback exists but is not a canonical "review" metric.
-        reviews_count=None,
     )
 
 
@@ -179,7 +176,7 @@ def list_conversations(
 
 @messages_router.post(
     "/conversations",
-    response={200: ConversationSummarySchema},
+    response={201: ConversationSummarySchema},
     url_name="messages_conversation_open",
 )
 def open_conversation(request: HttpRequest, payload: OpenConversationSchema):

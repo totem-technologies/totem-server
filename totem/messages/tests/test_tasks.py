@@ -8,15 +8,15 @@ from django.utils import timezone
 
 from totem.messages.models import AutomationPrompt, Message, MessageNotification
 from totem.messages.services import create_message, get_or_create_conversation, mark_conversation_read
-from totem.notifications.models import FCMDevice
-from totem.rooms.models import Room
-from totem.spaces.models import Space
-from totem.spaces.tasks import (
+from totem.messages.tasks import (
     create_keeper_follow_up_prompts,
     create_share_upcoming_space_prompts,
     retry_unread_message_notifications,
     send_post_session_discovery_nudges,
 )
+from totem.notifications.models import FCMDevice
+from totem.rooms.models import Room
+from totem.spaces.models import Space
 from totem.spaces.tests.factories import SessionFactory, SpaceFactory
 from totem.users.tests.factories import KeeperProfileFactory, UserFactory
 
@@ -42,7 +42,7 @@ class TestPostSessionMessagingTasks:
         settings.MESSAGING_KEEPER_FOLLOW_UP_NOTIFY_ENABLED = True
         session, keeper, _participant = completed_session()
 
-        with patch("totem.spaces.tasks.send_notification_to_user", return_value=True) as send:
+        with patch("totem.messages.tasks.send_notification_to_user", return_value=True) as send:
             assert create_keeper_follow_up_prompts() == 1
             assert create_keeper_follow_up_prompts() == 0
 
@@ -97,7 +97,7 @@ class TestPostSessionMessagingTasks:
         session.attendees.add(banned)
         Room.objects.create(session=session, keeper=keeper.slug, banned_participants=[banned.slug])
 
-        with patch("totem.spaces.tasks.send_notification_to_user", return_value=True) as send:
+        with patch("totem.messages.tasks.send_notification_to_user", return_value=True) as send:
             assert send_post_session_discovery_nudges() == 1
             assert send_post_session_discovery_nudges() == 0
 
@@ -152,7 +152,7 @@ def test_concurrent_task_runs_deliver_one_keeper_notification(settings):
         finally:
             close_old_connections()
 
-    with patch("totem.spaces.tasks.send_notification_to_user", return_value=True) as send:
+    with patch("totem.messages.tasks.send_notification_to_user", return_value=True) as send:
         with ThreadPoolExecutor(max_workers=2) as executor:
             results = list(executor.map(lambda _: run_task(), range(2)))
 

@@ -28,6 +28,7 @@ from .models import (
 
 logger = logging.getLogger(__name__)
 _CURSOR_SALT = "totem.messages.cursor.v1"
+MAX_SESSION_MESSAGE_RECIPIENTS = 50
 
 
 class MessageAccessDenied(Exception):
@@ -648,9 +649,7 @@ def _membership_queryset(user: User):
     return ConversationMembership.objects.filter(user=user).select_related(
         "conversation",
         "conversation__user_low",
-        "conversation__user_low__keeper_profile",
         "conversation__user_high",
-        "conversation__user_high__keeper_profile",
         "conversation__last_message",
         "conversation__last_message__sender",
     )
@@ -671,7 +670,7 @@ def inbox_page(
     cursor_query = normalized_query or None
     memberships = _membership_queryset(user)
     if normalized_query:
-        # ponytail: Search only the indexed inbox relation and latest preview; add
+        # NOTE: Search only the indexed inbox relation and latest preview; add
         # a dedicated, permission-scoped message-search index before searching history.
         memberships = memberships.filter(
             Q(conversation__user_low_id=user.pk, conversation__user_high__name__icontains=normalized_query)
@@ -782,7 +781,7 @@ def _session_messageable_participants(session: Session, keeper: User):
     return (
         User.objects.filter(Q(sessions_attending=session) | Q(sessions_joined=session), is_active=True)
         .exclude(pk=keeper.pk)
-        .exclude(slug__in=session._banned_slugs())
+        .exclude(slug__in=session.banned_slugs())
         .annotate(message_sessions_count=Count("sessions_joined", distinct=True))
         .distinct()
     )
@@ -843,7 +842,11 @@ def send_session_messages(
     client_request_id: UUID,
 ) -> SessionMessageResult:
     body = _validated_message_body(text)
-    if not recipient_slugs or len(recipient_slugs) != len(set(recipient_slugs)):
+    if (
+        not recipient_slugs
+        or len(recipient_slugs) > MAX_SESSION_MESSAGE_RECIPIENTS
+        or len(recipient_slugs) != len(set(recipient_slugs))
+    ):
         raise MessageValidationError("Choose one or more distinct eligible participants")
     eligible = {user.slug: user for user in _session_messageable_participants(session, keeper)}
     recipients = [eligible.get(slug) for slug in recipient_slugs]
