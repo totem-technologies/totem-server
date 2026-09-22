@@ -10,7 +10,7 @@ from uuid import UUID
 from django.conf import settings
 from django.core import signing
 from django.db import IntegrityError, transaction
-from django.db.models import Count, F, IntegerField, Q, Sum, Value
+from django.db.models import Count, F, IntegerField, OuterRef, Q, Subquery, Value
 from django.utils import timezone
 
 from totem.notifications.services import send_notification_to_user
@@ -449,7 +449,16 @@ def mark_conversation_read(
         if current_position is None or target_position > current_position:
             membership.last_read_message = target
             membership.last_read_at = target.created_at
-            membership.unread_count = 0
+            membership.unread_count = (
+                Message.objects.filter(
+                    conversation=locked_conversation,
+                )
+                .filter(
+                    Q(created_at__gt=target.created_at) | Q(created_at=target.created_at, id__gt=target.pk),
+                )
+                .exclude(sender=actor)
+                .count()
+            )
             membership.save(update_fields=["last_read_message", "last_read_at", "unread_count", "updated_at"])
             MessageNotification.objects.filter(
                 recipient=actor,
@@ -755,7 +764,11 @@ def inbox_page(
 
 
 def total_unread_count(user: User) -> int:
-    return ConversationMembership.objects.filter(user=user).aggregate(total=Sum("unread_count"))["total"] or 0
+    return sum(
+        membership.unread_count
+        for membership in _membership_queryset(user)
+        if can_users_message(user, membership.conversation.peer_for(user.pk))
+    )
 
 
 def sync_page(user: User, *, since: str | None, limit: int) -> tuple[list[ConversationSummary], str | None, int]:
@@ -822,11 +835,14 @@ def get_owned_session(session_slug: str, keeper: User) -> Session:
 
 
 def _session_messageable_participants(session: Session, keeper: User):
+    joined_sessions_count = (
+        User.objects.filter(pk=OuterRef("pk")).annotate(count=Count("sessions_joined", distinct=True)).values("count")
+    )
     return (
         User.objects.filter(Q(sessions_attending=session) | Q(sessions_joined=session), is_active=True)
         .exclude(pk=keeper.pk)
         .exclude(slug__in=session.banned_slugs())
-        .annotate(message_sessions_count=Count("sessions_joined", distinct=True))
+        .annotate(message_sessions_count=Subquery(joined_sessions_count, output_field=IntegerField()))
         .distinct()
     )
 

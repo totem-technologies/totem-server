@@ -20,25 +20,9 @@ from totem.messages.services import (
 from totem.rooms.models import Room
 from totem.spaces.tests.factories import SessionFactory, SpaceFactory
 from totem.users.models import User
-from totem.users.tests.factories import KeeperProfileFactory, UserFactory
+from totem.users.tests.factories import UserFactory
 
-
-def relationship(
-    keeper: User,
-    participant: User,
-    *,
-    attendee: bool = True,
-    joined: bool = False,
-    **session_fields,
-):
-    if not keeper.is_keeper():
-        KeeperProfileFactory(user=keeper)
-    session = SessionFactory(space=SpaceFactory(author=keeper), **session_fields)
-    if attendee:
-        session.attendees.add(participant)
-    if joined:
-        session.joined.add(participant)
-    return session
+from .helpers import relationship
 
 
 @pytest.mark.django_db
@@ -312,6 +296,20 @@ class TestConversationPersistence:
 
         with pytest.raises(MessageValidationError, match="Invalid cursor"):
             inbox_page(other_participant, cursor=cursor, limit=1)
+
+    def test_marking_first_message_recomputes_later_peer_messages_as_unread(self):
+        keeper = UserFactory()
+        participant = UserFactory()
+        relationship(keeper, participant)
+        conversation = get_or_create_conversation(participant, keeper)
+        first = create_message(conversation, keeper, "First", None)
+        create_message(conversation, keeper, "Second", None)
+        create_message(conversation, keeper, "Third", None)
+
+        membership = mark_conversation_read(conversation, participant, first.pk)
+
+        assert membership.last_read_message_id == first.pk
+        assert membership.unread_count == 2
 
     def test_read_state_only_advances_and_unread_excludes_sender(self):
         keeper = UserFactory()

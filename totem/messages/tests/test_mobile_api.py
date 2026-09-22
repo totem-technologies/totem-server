@@ -16,6 +16,8 @@ from totem.spaces.tests.factories import SessionFactory, SpaceFactory
 from totem.users.models import User
 from totem.users.tests.factories import KeeperProfileFactory, UserFactory
 
+from .helpers import relationship
+
 
 def authenticated_client(user: User) -> Client:
     return Client(HTTP_AUTHORIZATION=f"Bearer {generate_jwt_token(user)}")
@@ -25,24 +27,6 @@ def keeper_with_profile(**kwargs) -> User:
     keeper = UserFactory(**kwargs)
     KeeperProfileFactory(user=keeper)
     return keeper
-
-
-def relationship(
-    keeper: User,
-    participant: User,
-    *,
-    attendee: bool = True,
-    joined: bool = False,
-    **session_fields,
-):
-    if not keeper.is_keeper():
-        KeeperProfileFactory(user=keeper)
-    session = SessionFactory(space=SpaceFactory(author=keeper), **session_fields)
-    if attendee:
-        session.attendees.add(participant)
-    if joined:
-        session.joined.add(participant)
-    return session
 
 
 @pytest.mark.django_db
@@ -120,6 +104,21 @@ class TestConversationAPI:
         )
 
         assert response.status_code == 404
+
+    def test_inbox_total_unread_excludes_conversations_after_relationship_ends(self):
+        keeper = UserFactory()
+        participant = UserFactory()
+        session = relationship(keeper, participant)
+        conversation = get_or_create_conversation(participant, keeper)
+        create_message(conversation, keeper, "Unread", None)
+        session.cancelled = True
+        session.save(update_fields=["cancelled"])
+
+        response = authenticated_client(participant).get(reverse("mobile-api:messages_conversations"))
+
+        assert response.status_code == 200
+        assert response.json()["items"] == []
+        assert response.json()["total_unread_count"] == 0
 
     def test_session_cookie_auth_uses_same_route(self, client: Client):
         keeper = UserFactory()
@@ -747,6 +746,25 @@ class TestSessionParticipantsAPI:
         )
         assert all(set(profile) == {"profile", "sessions_count"} for profile in data["items"])
         assert data["next_cursor"] is None
+
+    def test_session_participant_count_includes_full_join_history(self):
+        keeper = keeper_with_profile()
+        participant = UserFactory(name="Participant")
+        session = SessionFactory(space=SpaceFactory(author=keeper))
+        session.joined.add(participant)
+        for _ in range(3):
+            other_session = SessionFactory(space=SpaceFactory(author=keeper))
+            other_session.joined.add(participant)
+
+        response = authenticated_client(keeper).get(
+            reverse("mobile-api:messages_session_participants", kwargs={"session_slug": session.slug})
+        )
+
+        assert response.status_code == 200
+        items = response.json()["items"]
+        assert len(items) == 1
+        assert items[0]["profile"]["slug"] == participant.slug
+        assert items[0]["sessions_count"] == 4
 
     def test_session_participants_are_paginated(self):
         keeper = keeper_with_profile()
