@@ -47,6 +47,25 @@ Steps:
 - Totem used `dokku` for deployment. The `Dockerfile` is used to build the image.
   - Configure `dokku` to use the production Dockerfile: `dokku builder:set totem selected dockerfile` and `dokku builder-dockerfile:set totem dockerfile-path compose/production/django/Dockerfile`.
 
+## Room app cross-origin isolation
+
+Room app HTML responses set `Cross-Origin-Embedder-Policy: credentialless`.
+Together with Django's `SecurityMiddleware` default of
+`Cross-Origin-Opener-Policy: same-origin`, this enables cross-origin isolation
+on HTTPS so Flutter's skwasm renderer can run on a worker. This applies to
+normal builds and previews; other pages and API responses do not get COEP.
+Upstream security headers remain excluded from the proxy's allowlist.
+
+Same-origin session and CSRF cookies are preserved. Cross-origin `no-cors`
+resource requests omit credentials; cross-origin CORS requests still require
+the resource server's CORS headers. Cross-origin iframes need compatible
+embedder policies. COOP separates cross-origin popups from their opener,
+so integrations that depend on `window.opener` need to be checked.
+
+After deployment, check `window.crossOriginIsolated === true` in a room and
+confirm that rendering runs on a worker. Exercise login, joining a call,
+camera/microphone, screen sharing, and CDN asset loading in supported browsers.
+
 ## Room app previews
 
 Set `ROOM_PREVIEW_ENABLED=True` on staging to allow testers to select a Flutter

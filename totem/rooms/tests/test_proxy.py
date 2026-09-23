@@ -7,14 +7,17 @@ against the Flutter dev server.
 """
 
 from io import BytesIO
+from types import SimpleNamespace
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlparse
 
 import pytest
 import requests
+from django.middleware.security import SecurityMiddleware
 from django.test import Client, override_settings
 from django.urls import reverse
 
+from totem.rooms.proxy import room_app_proxy
 from totem.users.tests.factories import UserFactory
 
 
@@ -79,6 +82,50 @@ def _fake_upstream(status: int, body: bytes = b"", content_type: str = "text/pla
     r.headers["Content-Type"] = content_type
     r.raw = BytesIO(body)
     return r
+
+
+@pytest.mark.parametrize(
+    ("debug", "alias"),
+    [(False, None), (True, None), (False, "pr-166-video-experience")],
+    ids=["production", "development", "preview"],
+)
+@pytest.mark.parametrize("method", ["get", "head"])
+def test_room_html_cross_origin_isolation(rf, settings, debug, alias, method):
+    settings.DEBUG = debug
+    settings.ROOM_PREVIEW_ENABLED = alias is not None
+    request = getattr(rf, method)("/room/lobby", HTTP_SEC_FETCH_MODE="navigate")
+    request.user = SimpleNamespace(is_authenticated=True)
+    request.session = {}
+    fake = _fake_upstream(200, b"<html>Flutter</html>", "text/html; charset=utf-8")
+    fake.headers.update({"Cross-Origin-Opener-Policy": "unsafe-none", "Cross-Origin-Embedder-Policy": "require-corp"})
+
+    with (
+        patch("totem.rooms.proxy._session.request", return_value=fake),
+        patch("totem.rooms.proxy.selected_alias", return_value=alias),
+    ):
+        response = SecurityMiddleware(lambda req: room_app_proxy(req, path="lobby"))(request)
+
+    assert response.status_code == 200
+    assert response["Cross-Origin-Opener-Policy"] == "same-origin"
+    assert response["Cross-Origin-Embedder-Policy"] == "credentialless"
+
+
+@override_settings(DEBUG=True, ROOM_PREVIEW_ENABLED=False)
+def test_room_asset_does_not_receive_cross_origin_embedder_policy(rf):
+    request = rf.get("/room/main.dart.js")
+    request.user = SimpleNamespace(is_authenticated=True)
+    request.session = {}
+    fake = _fake_upstream(200, b"void 0;", "application/javascript")
+    fake.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+
+    with patch("totem.rooms.proxy._session.request", return_value=fake):
+        response = room_app_proxy(request, path="main.dart.js")
+
+    try:
+        assert response.status_code == 200
+        assert "Cross-Origin-Embedder-Policy" not in response.headers
+    finally:
+        response.close()
 
 
 @override_settings(DEBUG=True)

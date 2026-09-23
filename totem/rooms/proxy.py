@@ -184,6 +184,9 @@ def room_app_proxy(request: HttpRequest, path: str = "") -> HttpResponse | Strea
         # the dev-only `<base href>` rewrite.
         body = _rewrite_dev_base_href(upstream.content)
         response = HttpResponse(body, status=upstream.status_code, content_type=content_type)
+        # Together with SecurityMiddleware's COOP: same-origin, this allows
+        # Flutter's skwasm renderer to use a worker. Same-origin cookies are retained.
+        response["Cross-Origin-Embedder-Policy"] = "credentialless"
     else:
         if not settings.DEBUG:
             # In production, assets should be served by CDN
