@@ -54,7 +54,12 @@ def notify_missed_session():
     return len(recently_ended_sessions)
 
 
-tasks = [notify_session_ready, advertise_session, notify_session_tomorrow, notify_missed_session]
+tasks = [
+    notify_session_ready,
+    advertise_session,
+    notify_session_tomorrow,
+    notify_missed_session,
+]
 
 notify_circle_ready = notify_session_ready
 notify_circle_tomorrow = notify_session_tomorrow
