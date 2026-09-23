@@ -111,6 +111,7 @@ def test_room_html_cross_origin_isolation(rf, settings, debug, alias, method):
 
 
 @override_settings(DEBUG=True, ROOM_PREVIEW_ENABLED=False)
+@pytest.mark.django_db
 def test_room_asset_does_not_receive_cross_origin_embedder_policy(rf):
     request = rf.get("/room/main.dart.js")
     request.user = SimpleNamespace(is_authenticated=True)
@@ -152,6 +153,7 @@ def test_proxy_raises_on_5xx_from_upstream(client: Client, db):
 
 
 @override_settings(DEBUG=True)
+@pytest.mark.django_db
 def test_proxy_response_headers_allow_list(client: Client, db):
     """Upstream-sourced sensitive headers (Set-Cookie, HSTS, CSP, server
     info) must not survive the proxy; only the allow-listed caching/range
