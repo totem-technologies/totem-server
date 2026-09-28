@@ -8,7 +8,10 @@ No LiveKit calls, no HTTP concerns. Side effects are limited to the database.
 from __future__ import annotations
 
 from django.db import transaction
+from django.db.models import Count
 from django.utils import timezone
+
+from totem.users.models import User
 
 from .models import Room, RoomEventLog
 from .schemas import (
@@ -206,6 +209,40 @@ def _next_in_order(
     return None
 
 
+def _sort_waiting_room_order(room: Room, connected: set[str]) -> None:
+    """Order waiting participants by prior attendance, then arrival time."""
+    if room.waiting_order_manually_set:
+        return
+
+    arrivals = dict(room.participant_arrivals)
+    now = timezone.now().isoformat()
+    for slug in connected:
+        arrivals.setdefault(slug, now)
+    room.participant_arrivals = arrivals
+
+    slugs = [slug for slug in room.talking_order if slug != room.keeper]
+    user_ids = dict(User.objects.filter(slug__in=slugs).values_list("slug", "id"))
+    attendance_counts = dict(
+        room.session.joined.through.objects.filter(
+            user_id__in=user_ids.values(),
+            session__start__lt=room.session.start,
+            session__cancelled=False,
+        )
+        .values("user_id")
+        .annotate(count=Count("session_id"))
+        .values_list("user_id", "count")
+    )
+    positions = {slug: index for index, slug in enumerate(slugs)}
+    slugs.sort(
+        key=lambda slug: (
+            -attendance_counts.get(user_ids.get(slug), 0),
+            arrivals.get(slug, ""),
+            positions[slug],
+        )
+    )
+    room.talking_order = ([room.keeper] if room.keeper in room.talking_order else []) + slugs
+
+
 def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
     """
     Reconcile talking_order with connected participants.
@@ -227,14 +264,16 @@ def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
         if slug not in reconciled:
             reconciled.append(slug)
 
-    # Append any newly connected members (sorted for deterministic order)
+    # Append any newly connected members (sorted for deterministic order).
     for slug in sorted(connected):
         if slug not in reconciled:
             reconciled.append(slug)
 
     room.talking_order = reconciled
+    if room.status == RoomStatus.WAITING_ROOM:
+        _sort_waiting_room_order(room, connected)
 
-    connected_order = [s for s in reconciled if s in connected]
+    connected_order = [s for s in room.talking_order if s in connected]
 
     # An active room must retain its speaker assignments while nobody is
     # connected. Clearing them would leave no reference point from which a
@@ -414,6 +453,8 @@ def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set
 
     remaining = [s for s in room.talking_order if s not in new_set]
     room.talking_order = [*new_order, *remaining]
+    if room.status == RoomStatus.WAITING_ROOM:
+        room.waiting_order_manually_set = True
 
     # Re-establish the keeper-first invariant via the canonical helper.
     _reconcile_talking_order(room, connected)

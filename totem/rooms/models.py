@@ -72,6 +72,8 @@ class Room(BaseModel):
     current_speaker = models.CharField(max_length=50, null=True)  # user slug
     next_speaker = models.CharField(max_length=50, null=True)  # user slug
     talking_order = ArrayField(models.CharField(max_length=50), default=list)  # user slugs
+    participant_arrivals = models.JSONField(default=dict)  # user slug -> ISO timestamp
+    waiting_order_manually_set = models.BooleanField(default=False)
     banned_participants = ArrayField(models.CharField(max_length=50), default=list)  # user slugs
     round_number = models.PositiveIntegerField(default=0)
     round_message = models.TextField(null=True, blank=True, default=None)

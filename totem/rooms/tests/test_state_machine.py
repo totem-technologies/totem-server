@@ -1,4 +1,7 @@
+import datetime
+
 import pytest
+from django.utils import timezone
 
 from totem.rooms.models import Room, RoomEventLog
 from totem.rooms.schemas import (
@@ -24,7 +27,7 @@ from totem.rooms.state_machine import (
     _require_keeper_in_room,
     apply_event,
 )
-from totem.spaces.tests.factories import SessionFactory
+from totem.spaces.tests.factories import SessionFactory, SpaceFactory
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
 
@@ -296,6 +299,34 @@ class TestStartRoom:
 
         assert state.current_speaker == keeper.slug
         assert state.next_speaker == keeper.slug
+
+    def test_orders_participants_by_previous_attendance(self):
+        keeper = UserFactory()
+        experienced = UserFactory()
+        first_timer = UserFactory()
+        space = SpaceFactory(author=keeper)
+        previous = SessionFactory(space=space, start=timezone.now() - datetime.timedelta(days=1))
+        previous.joined.add(experienced)
+        session = SessionFactory(space=space)
+        session.attendees.add(keeper, first_timer, experienced)
+        room = Room.objects.get_or_create_for_session(session)
+        room.talking_order = [keeper.slug, first_timer.slug, experienced.slug]
+        room.participant_arrivals = {
+            keeper.slug: "2026-01-01T00:00:00+00:00",
+            first_timer.slug: "2026-01-01T00:01:00+00:00",
+            experienced.slug: "2026-01-01T00:02:00+00:00",
+        }
+        room.save(update_fields=["talking_order", "participant_arrivals"])
+
+        state = apply_event(
+            session.slug,
+            keeper.slug,
+            StartRoomEvent(),
+            0,
+            {keeper.slug, first_timer.slug, experienced.slug},
+        )
+
+        assert state.talking_order == [keeper.slug, experienced.slug, first_timer.slug]
 
     def test_start_with_prompt(self):
         keeper = UserFactory()

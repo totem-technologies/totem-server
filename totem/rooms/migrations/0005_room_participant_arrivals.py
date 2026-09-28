@@ -1,0 +1,20 @@
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+    dependencies = [
+        ("rooms", "0004_room_round_message_room_round_number"),
+    ]
+
+    operations = [
+        migrations.AddField(
+            model_name="room",
+            name="participant_arrivals",
+            field=models.JSONField(default=dict),
+        ),
+        migrations.AddField(
+            model_name="room",
+            name="waiting_order_manually_set",
+            field=models.BooleanField(default=False),
+        ),
+    ]

@@ -266,6 +266,15 @@ def join_room(
     is_already_connected = bool(connected and user.slug in connected)
 
     session.joined.add(user)
+    if room.status == RoomStatus.WAITING_ROOM and user.slug not in room.participant_arrivals:
+        room.participant_arrivals = {
+            **room.participant_arrivals,
+            user.slug: timezone.now().isoformat(),
+        }
+        room.save(update_fields=["participant_arrivals"])
+    elif room.status == RoomStatus.ACTIVE and not is_already_connected:
+        room.talking_order = [slug for slug in room.talking_order if slug != user.slug] + [user.slug]
+        room.save(update_fields=["talking_order"])
     analytics.event_joined(user, session)
 
     return Status(200, JoinResponse(token=token, is_already_present=is_already_connected))
