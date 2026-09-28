@@ -14,7 +14,7 @@ from totem.rooms.models import Room
 from totem.users.models import User
 from totem.utils.admin import StaleDataCheckAdminMixin
 
-from .models import Session, SessionFeedback, Space, SpaceCategory
+from .models import Session, SessionFeedback, SessionPrompt, Space, SpaceCategory
 from .participants import participant_insights
 
 
@@ -157,6 +157,12 @@ class SessionFeedbackInline(admin.TabularInline):
     readonly_fields = ("user", "feedback", "message", "date_created")
 
 
+class SessionPromptInline(admin.TabularInline):
+    model = SessionPrompt
+    extra = 1
+    fields = ("prompt", "position")
+
+
 @final
 @admin.register(Session)
 class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
@@ -165,7 +171,7 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
     autocomplete_fields = ["attendees", "joined"]
     readonly_fields = ("attendee_email_list", "participants_link", "date_created", "date_modified", "room_link")
     actions = [copy_session]
-    inlines = [SessionFeedbackInline]
+    inlines = [SessionPromptInline, SessionFeedbackInline]
 
     @override
     def get_urls(self) -> list[URLPattern | URLResolver]:

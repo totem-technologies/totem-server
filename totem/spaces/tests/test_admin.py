@@ -4,6 +4,7 @@ import pytest
 from django.urls import reverse
 from django.utils import timezone
 
+from totem.spaces.models import SessionPrompt
 from totem.users.tests.factories import UserFactory
 
 from .factories import SessionFactory
@@ -30,6 +31,20 @@ class TestSessionAdmin:
     def test_add_page_renders(self, admin_client):
         # The participants link can't be built before the session has a pk.
         assert admin_client.get(reverse("admin:spaces_session_add")).status_code == 200
+
+    def test_add_page_allows_ordering_discussion_prompts(self, admin_client):
+        response = admin_client.get(reverse("admin:spaces_session_add"))
+
+        assert "Discussion Prompts" in response.content.decode()
+        assert 'name="discussion_prompts-0-prompt"' in response.content.decode()
+        assert 'name="discussion_prompts-0-position"' in response.content.decode()
+
+    def test_discussion_prompts_are_ordered_by_position(self):
+        session = SessionFactory()
+        SessionPrompt.objects.create(session=session, prompt="Second", position=2)
+        SessionPrompt.objects.create(session=session, prompt="First", position=1)
+
+        assert list(session.discussion_prompts.values_list("prompt", flat=True)) == ["First", "Second"]
 
 
 @pytest.mark.django_db

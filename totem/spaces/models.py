@@ -592,6 +592,17 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         return f"Session: {self.start}"
 
 
+class SessionPrompt(BaseModel):
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="discussion_prompts")
+    prompt = models.CharField(max_length=1000)
+    position = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
+
+    class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]
+        ordering = ["position", "pk"]
+        verbose_name = "discussion prompt"
+        verbose_name_plural = "Discussion Prompts"
+
+
 class SessionException(Exception):
     pass
 
