@@ -1,9 +1,9 @@
 from datetime import datetime
 from enum import Enum
 
-from ninja import ModelSchema, Schema
+from ninja import Field, ModelSchema, Schema
 
-from totem.spaces.models import Session, SessionFeedbackOptions, Space
+from totem.spaces.models import Session, SessionFeedbackOptions, SessionPrompt, Space
 from totem.users.schemas import PublicUserSchema
 
 
@@ -87,6 +87,29 @@ class SessionDetailSchema(Schema):
     subscribed: bool | None
     user_timezone: str | None
     meeting_provider: MeetingProviderEnum
+
+
+class SessionPromptSchema(ModelSchema):
+    class Meta:
+        model = SessionPrompt
+        fields = ["id", "prompt", "position"]
+
+
+class SessionPromptsSchema(Schema):
+    prompts: list[SessionPromptSchema]
+    previous_prompt: SessionPromptSchema | None
+    current_prompt: SessionPromptSchema | None
+    next_prompt: SessionPromptSchema | None
+
+
+class SessionPromptUpdateSchema(Schema):
+    id: int | None = None
+    prompt: str = Field(min_length=1, max_length=1000)
+
+
+class SessionPromptsUpdateSchema(Schema):
+    prompts: list[SessionPromptUpdateSchema]
+    current_prompt_id: int | None
 
 
 class SessionConflictSchema(Schema):

@@ -3,7 +3,7 @@ from django.db.models import Prefetch, prefetch_related_objects
 from django.http import Http404, HttpRequest
 from django.shortcuts import get_object_or_404
 from ninja import Query, Router, Status
-from ninja.errors import AuthorizationError
+from ninja.errors import AuthorizationError, HttpError
 from ninja.pagination import paginate
 
 from totem.spaces.filters import (
@@ -23,6 +23,8 @@ from totem.spaces.mobile_api.mobile_schemas import (
     SessionConflictSchema,
     SessionDetailSchema,
     SessionFeedbackSchema,
+    SessionPromptsSchema,
+    SessionPromptsUpdateSchema,
     SpaceSchema,
     SummarySpacesSchema,
 )
@@ -31,6 +33,7 @@ from totem.spaces.models import (
     SessionException,
     SessionFeedback,
     SessionFeedbackOptions,
+    SessionPrompt,
     SessionTimeConflict,
     Space,
 )
@@ -122,6 +125,77 @@ def get_session_detail(request: HttpRequest, event_slug: str):
     if not session.can_view(user):
         raise Http404
     return session_detail_schema(session, user)
+
+
+def _session_prompts_schema(session: Session) -> SessionPromptsSchema:
+    prompts = list(session.discussion_prompts.all())
+    current_prompt = session.current_prompt
+    current_index = next(
+        (index for index, prompt in enumerate(prompts) if prompt.pk == session.current_prompt_id), None
+    )
+
+    return SessionPromptsSchema(
+        prompts=prompts,
+        previous_prompt=prompts[current_index - 1] if current_index else None,
+        current_prompt=current_prompt if current_index is not None else None,
+        next_prompt=prompts[current_index + 1]
+        if current_index is not None and current_index + 1 < len(prompts)
+        else (prompts[0] if prompts else None),
+    )
+
+
+def _session_for_keeper(request: HttpRequest, event_slug: str, *, lock: bool = False) -> Session:
+    queryset = Session.objects.select_related("space", "current_prompt")
+    if lock:
+        queryset = queryset.select_for_update()
+    session = get_object_or_404(queryset, slug=event_slug)
+    if session.space.author_id != request.user.pk:
+        raise AuthorizationError(message="Only the keeper can manage session prompts.")
+    return session
+
+
+@spaces_router.get("/session/{event_slug}/prompts", response={200: SessionPromptsSchema}, url_name="session_prompts")
+def get_session_prompts(request: HttpRequest, event_slug: str):
+    return _session_prompts_schema(_session_for_keeper(request, event_slug))
+
+
+@spaces_router.put("/session/{event_slug}/prompts", response={200: SessionPromptsSchema})
+def update_session_prompts(request: HttpRequest, event_slug: str, payload: SessionPromptsUpdateSchema):
+    with transaction.atomic():
+        session = _session_for_keeper(request, event_slug, lock=True)
+        existing_prompts = {
+            prompt.pk: prompt for prompt in SessionPrompt.objects.select_for_update().filter(session=session)
+        }
+        prompts: list[SessionPrompt] = []
+        submitted_ids: set[int] = set()
+
+        for position, prompt_data in enumerate(payload.prompts, start=1):
+            if prompt_data.id is None:
+                prompt = SessionPrompt.objects.create(session=session, prompt=prompt_data.prompt, position=position)
+            else:
+                if prompt_data.id in submitted_ids:
+                    raise HttpError(422, "Prompts must not contain duplicate IDs.")
+                prompt = existing_prompts.pop(prompt_data.id, None)
+                if prompt is None:
+                    raise HttpError(422, "Prompt does not belong to this session.")
+                prompt.prompt = prompt_data.prompt
+                prompt.position = position
+                prompt.save(update_fields=["prompt", "position", "date_modified"])
+                submitted_ids.add(prompt_data.id)
+            prompts.append(prompt)
+
+        SessionPrompt.objects.filter(pk__in=existing_prompts).delete()
+
+        if payload.current_prompt_id is not None:
+            current_prompt = next((prompt for prompt in prompts if prompt.pk == payload.current_prompt_id), None)
+            if current_prompt is None:
+                raise HttpError(422, "Current prompt must belong to this session.")
+            session.current_prompt = current_prompt
+        else:
+            session.current_prompt = None
+        session.save(update_fields=["current_prompt", "date_modified"])
+
+    return _session_prompts_schema(session)
 
 
 @spaces_router.post("/session/{event_slug}/feedback", response={204: None}, url_name="session_feedback")

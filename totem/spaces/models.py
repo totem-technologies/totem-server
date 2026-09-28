@@ -280,6 +280,13 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         null=True,
         blank=True,
     )
+    current_prompt = models.ForeignKey(
+        "SessionPrompt",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="+",
+    )
     duration_minutes = models.IntegerField(
         _("Minutes"),
         default=60,

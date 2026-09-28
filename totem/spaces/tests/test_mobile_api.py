@@ -14,7 +14,15 @@ from totem.email.exceptions import EmailBounced
 from totem.onboard.tests.factories import OnboardModelFactory
 from totem.rooms.models import Room
 from totem.spaces.mobile_api.mobile_filters import space_detail_schema
-from totem.spaces.models import Session, SessionException, SessionFeedback, SessionFeedbackOptions, Space, SpaceCategory
+from totem.spaces.models import (
+    Session,
+    SessionException,
+    SessionFeedback,
+    SessionFeedbackOptions,
+    SessionPrompt,
+    Space,
+    SpaceCategory,
+)
 from totem.spaces.tests.factories import SessionFactory, SpaceCategoryFactory, SpaceFactory
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
@@ -197,6 +205,65 @@ class TestMobileApiSpaces:
         data = response.json()
         assert data["slug"] == event.slug
         assert data["space"]["slug"] == space.slug
+
+    def test_keeper_can_manage_and_navigate_session_prompts(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        url = reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug})
+
+        response = client.put(
+            url,
+            data={
+                "prompts": [{"prompt": "Opening"}, {"prompt": "Middle"}, {"prompt": "Closing"}],
+                "current_prompt_id": None,
+            },
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        prompts = response.json()["prompts"]
+        assert [prompt["prompt"] for prompt in prompts] == ["Opening", "Middle", "Closing"]
+        assert response.json()["previous_prompt"] is None
+        assert response.json()["current_prompt"] is None
+        assert response.json()["next_prompt"]["id"] == prompts[0]["id"]
+
+        response = client.put(
+            url,
+            data={
+                "prompts": [
+                    {"id": prompts[2]["id"], "prompt": "Closing"},
+                    {"id": prompts[0]["id"], "prompt": "Welcome"},
+                ],
+                "current_prompt_id": prompts[0]["id"],
+            },
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        assert [prompt["prompt"] for prompt in response.json()["prompts"]] == ["Closing", "Welcome"]
+        assert response.json()["previous_prompt"]["prompt"] == "Closing"
+        assert response.json()["current_prompt"]["prompt"] == "Welcome"
+        assert response.json()["next_prompt"] is None
+        assert not SessionPrompt.objects.filter(prompt="Middle").exists()
+
+        response = client.get(url)
+
+        assert response.status_code == 200
+        assert response.json()["current_prompt"]["prompt"] == "Welcome"
+        assert response.json()["previous_prompt"]["prompt"] == "Closing"
+
+    def test_non_keeper_cannot_manage_session_prompts(self, client_with_user: tuple[Client, User]):
+        client, _ = client_with_user
+        session = SessionFactory()
+        url = reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug})
+
+        response = client.put(
+            url,
+            data={"prompts": [], "current_prompt_id": None},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 403
 
     def test_get_session_detail_excludes_banned_from_next_events(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
