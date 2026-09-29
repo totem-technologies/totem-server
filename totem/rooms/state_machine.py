@@ -178,6 +178,38 @@ def _normalize_prompt(prompt: str | None) -> str | None:
     return (prompt or "").strip() or None
 
 
+def _round_prompt(room: Room, custom_prompt: str | None) -> str | None:
+    from totem.spaces.models import SessionPrompt
+
+    prompt = (
+        SessionPrompt.objects.select_for_update().filter(session=room.session, round_number=room.round_number).first()
+    )
+    custom_prompt = _normalize_prompt(custom_prompt)
+    if custom_prompt is not None:
+        if prompt is None:
+            SessionPrompt.objects.create(session=room.session, prompt=custom_prompt, round_number=room.round_number)
+        else:
+            prompt.prompt = custom_prompt
+            prompt.save(update_fields=["prompt", "date_modified"])
+        return custom_prompt
+
+    if prompt is not None:
+        return prompt.prompt
+
+    prompt = (
+        SessionPrompt.objects.select_for_update()
+        .filter(session=room.session, position__isnull=False, round_number__isnull=True)
+        .order_by("position", "pk")
+        .first()
+    )
+    if prompt is None:
+        return None
+
+    prompt.round_number = room.round_number
+    prompt.save(update_fields=["round_number", "date_modified"])
+    return prompt.prompt
+
+
 def _next_in_order(
     talking_order: list[str],
     after: str,
@@ -285,7 +317,7 @@ def _handle_start(room: Room, actor: str, connected: set[str], prompt: str | Non
     room.current_speaker = room.keeper
     room.next_speaker = next_slug or room.keeper
     room.round_number = 1
-    room.round_message = _normalize_prompt(prompt)
+    _round_prompt(room, prompt)
 
 
 def _handle_pass(room: Room, actor: str, connected: set[str], prompt: str | None) -> None:
@@ -330,8 +362,8 @@ def _handle_pass(room: Room, actor: str, connected: set[str], prompt: str | None
 
         room.next_speaker = next_slug
     else:
-        if keeper_passes_from_turn and prompt is not None:
-            room.round_message = prompt
+        if keeper_passes_from_turn:
+            _round_prompt(room, prompt)
         room.turn_state = TurnState.PASSING
 
 
@@ -356,7 +388,7 @@ def _handle_accept(room: Room, actor: str, connected: set[str]) -> None:
         # full lap completed and a new round begins. A solo keeper passing
         # to themselves is not a lap.
         room.round_number += 1
-        room.round_message = None
+        _round_prompt(room, None)
 
     next_slug = _next_in_order(room.talking_order, actor, connected)
 
@@ -386,7 +418,20 @@ def _handle_set_prompt(room: Room, actor: str, prompt: str) -> None:
     _require_keeper(room, actor)
     _require_active(room)
 
-    room.round_message = _normalize_prompt(prompt)
+    if _normalize_prompt(prompt) is not None:
+        _round_prompt(room, prompt)
+        return
+
+    from totem.spaces.models import SessionPrompt
+
+    current_prompt = (
+        SessionPrompt.objects.select_for_update().filter(session=room.session, round_number=room.round_number).first()
+    )
+    if current_prompt is None:
+        SessionPrompt.objects.create(session=room.session, prompt="", round_number=room.round_number)
+    else:
+        current_prompt.prompt = ""
+        current_prompt.save(update_fields=["prompt", "date_modified"])
 
 
 def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set[str]) -> None:

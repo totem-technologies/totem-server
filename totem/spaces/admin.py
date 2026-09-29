@@ -12,6 +12,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from totem.rooms.models import Room
+from totem.rooms.schemas import RoomStatus
 from totem.users.models import User
 from totem.utils.admin import StaleDataCheckAdminMixin, _make_stale_check_form
 
@@ -60,6 +61,13 @@ class SpaceCategoryAdmin(admin.ModelAdmin):
     search_fields = ("name", "description")
 
 
+def _session_started(session: Session) -> bool:
+    try:
+        return session.room.status != RoomStatus.WAITING_ROOM
+    except Room.DoesNotExist:
+        return False
+
+
 @final
 class SessionInlineForm(_make_stale_check_form("date_modified")):
     discussion_prompts = forms.CharField(
@@ -77,8 +85,9 @@ class SessionInlineForm(_make_stale_check_form("date_modified")):
         super().__init__(*args, **kwargs)
         if self.instance.pk:
             self.initial["discussion_prompts"] = "\n".join(
-                self.instance.discussion_prompts.values_list("prompt", flat=True)
+                self.instance.discussion_prompts.filter(position__isnull=False).values_list("prompt", flat=True)
             )
+            self.fields["discussion_prompts"].disabled = _session_started(self.instance)
 
 
 class SessionInline(StaleDataCheckAdminMixin, admin.StackedInline):
@@ -153,13 +162,18 @@ class SpaceAdmin(admin.ModelAdmin):
         super().save_formset(request, form, formset, change)
         if formset.model is Session:
             for inline_form in formset.forms:
-                if inline_form.instance.pk and inline_form not in formset.deleted_forms and inline_form.cleaned_data:
+                if (
+                    inline_form.instance.pk
+                    and inline_form not in formset.deleted_forms
+                    and inline_form.cleaned_data
+                    and not _session_started(inline_form.instance)
+                ):
                     _save_inline_session_prompts(inline_form.instance, inline_form.cleaned_data["discussion_prompts"])
 
 
 def _save_inline_session_prompts(session: Session, prompts_text: str) -> None:
     prompts = [line.strip() for line in prompts_text.splitlines() if line.strip()]
-    existing = list(session.discussion_prompts.all())
+    existing = list(session.discussion_prompts.filter(position__isnull=False))
     updates: list[SessionPrompt] = []
     creates: list[SessionPrompt] = []
 
@@ -199,7 +213,7 @@ def copy_session(modeladmin, request, queryset: QuerySet[Session]):
     SessionPrompt.objects.bulk_create(
         [
             SessionPrompt(session=obj, prompt=prompt.prompt, position=prompt.position)
-            for prompt in session.discussion_prompts.all()
+            for prompt in session.discussion_prompts.filter(position__isnull=False)
         ]
     )
     change_url = reverse(f"admin:{obj._meta.app_label}_{obj._meta.model_name}_change", args=[obj.pk])
@@ -224,11 +238,30 @@ class SessionPromptInline(admin.TabularInline):
     model = SessionPrompt
     form = SessionPromptInlineForm
     extra = 0
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(position__isnull=False)
+
     fields = ("prompt", "position")
 
     class Media:
         js = ("js/admin/session_prompt_order.js",)
         css = {"all": ("css/admin/session_prompt_order.css",)}
+
+    def get_formset(self, request, obj=None, **kwargs):
+        if obj is not None and _session_started(obj):
+            kwargs["extra"] = 0
+            kwargs["max_num"] = 0
+        return super().get_formset(request, obj, **kwargs)
+
+    def has_add_permission(self, request, obj=None):
+        return super().has_add_permission(request, obj) and (obj is None or not _session_started(obj))
+
+    def has_change_permission(self, request, obj=None):
+        return super().has_change_permission(request, obj) and (obj is None or not _session_started(obj))
+
+    def has_delete_permission(self, request, obj=None):
+        return super().has_delete_permission(request, obj) and (obj is None or not _session_started(obj))
 
 
 @final

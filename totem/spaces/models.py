@@ -280,13 +280,7 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         null=True,
         blank=True,
     )
-    current_prompt = models.ForeignKey(
-        "SessionPrompt",
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="+",
-    )
+
     duration_minutes = models.IntegerField(
         _("Minutes"),
         default=60,
@@ -602,7 +596,8 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
 class SessionPrompt(BaseModel):
     session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="discussion_prompts")
     prompt = models.CharField(max_length=1000)
-    position = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
+    position = models.PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(1)])
+    round_number = models.PositiveIntegerField(null=True, blank=True)
 
     class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]
         ordering = ["position", "pk"]

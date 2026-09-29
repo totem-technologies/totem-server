@@ -8,7 +8,7 @@ from django.utils import timezone
 from totem.rooms.livekit import LiveKitConfigurationError
 from totem.rooms.models import Room, RoomEventLog
 from totem.rooms.schemas import EndReason, RemoveReason, RoomStatus, TurnState
-from totem.spaces.models import Space
+from totem.spaces.models import SessionPrompt, Space
 from totem.spaces.tests.factories import SessionFactory
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
@@ -70,10 +70,30 @@ class TestPostEvent:
         assert data["current_speaker"] == user.slug
         assert data["version"] == 1
 
-    def test_start_room_with_prompt(self, client_with_user: tuple[Client, User]):
+    def test_start_room_assigns_first_session_prompt_to_round(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         session = SessionFactory(space__author=user)
         session.attendees.add(user)
+        prompt = SessionPrompt.objects.create(session=session, prompt="From the list", position=1)
+        Room.objects.get_or_create_for_session(session)
+
+        with (
+            patch("totem.rooms.api.get_connected_participants", return_value={user.slug}),
+            patch("totem.rooms.api.publish_state"),
+            patch("totem.rooms.api.mute_all_participants"),
+        ):
+            resp = _post_event(client, session.slug, {"type": "start_room"}, 0)
+
+        assert resp.status_code == 200
+        assert resp.json()["round_message"] == "From the list"
+        prompt.refresh_from_db()
+        assert prompt.round_number == 1
+
+    def test_start_room_with_prompt_does_not_assign_session_prompt(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        session = SessionFactory(space__author=user)
+        session.attendees.add(user)
+        prompt = SessionPrompt.objects.create(session=session, prompt="From the list", position=1)
         Room.objects.get_or_create_for_session(session)
 
         with (
@@ -95,6 +115,8 @@ class TestPostEvent:
         data = resp.json()
         assert data["round_number"] == 1
         assert data["round_message"] == "Welcome everyone"
+        prompt.refresh_from_db()
+        assert prompt.round_number is None
 
     def test_start_room_prompt_exceeds_max_length(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user

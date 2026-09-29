@@ -4,6 +4,8 @@ import pytest
 from django.urls import reverse
 from django.utils import timezone
 
+from totem.rooms.models import Room
+from totem.rooms.schemas import RoomStatus
 from totem.spaces.admin import _save_inline_session_prompts
 from totem.spaces.models import Session, SessionPrompt
 from totem.users.tests.factories import UserFactory
@@ -40,6 +42,20 @@ class TestSessionAdmin:
         assert 'name="discussion_prompts-0-prompt"' not in response.content.decode()
         assert "add another discussion prompt" in response.content.decode().lower()
         assert "js/admin/session_prompt_order.js" in response.content.decode()
+
+    @pytest.mark.django_db
+    def test_started_session_prompts_cannot_be_changed_in_admin(self, admin_client):
+        session = SessionFactory()
+        SessionPrompt.objects.create(session=session, prompt="Already prepared", position=1)
+        room = Room.objects.get_or_create_for_session(session)
+        room.status = RoomStatus.ACTIVE
+        room.save(update_fields=["status"])
+
+        response = admin_client.get(reverse("admin:spaces_session_change", args=[session.pk]))
+
+        assert response.status_code == 200
+        assert 'name="discussion_prompts-0-prompt"' not in response.content.decode()
+        assert 'class="add-row"' not in response.content.decode()
 
     @pytest.mark.django_db
     def test_space_admin_session_inline_allows_prompts(self, admin_client):

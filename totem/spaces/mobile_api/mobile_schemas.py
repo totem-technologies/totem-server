@@ -92,14 +92,11 @@ class SessionDetailSchema(Schema):
 class SessionPromptSchema(ModelSchema):
     class Meta:
         model = SessionPrompt
-        fields = ["id", "prompt", "position"]
+        fields = ["id", "prompt", "position", "round_number"]
 
 
 class SessionPromptsSchema(Schema):
     prompts: list[SessionPromptSchema]
-    previous_prompt: SessionPromptSchema | None
-    current_prompt: SessionPromptSchema | None
-    next_prompt: SessionPromptSchema | None
 
 
 class SessionPromptUpdateSchema(Schema):
@@ -109,10 +106,6 @@ class SessionPromptUpdateSchema(Schema):
 
 class SessionPromptsUpdateSchema(Schema):
     prompts: list[SessionPromptUpdateSchema]
-
-
-class SessionPromptSelectionSchema(Schema):
-    prompt_id: int | None
 
 
 class SessionConflictSchema(Schema):
