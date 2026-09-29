@@ -35,3 +35,16 @@ class TestUserAdmin:
         url = reverse("admin:users_user_change", kwargs={"object_id": user.pk})
         response = admin_client.get(url)
         assert response.status_code == 200
+
+    def test_changelist_can_add_user(self, admin_client):
+        response = admin_client.get(reverse("admin:users_user_changelist"))
+        assert reverse("admin:users_user_add") in response.content.decode()
+
+
+class TestUserRelatedWidgets:
+    def test_no_add_user_button_on_related_fields(self, admin_client):
+        response = admin_client.get(reverse("admin:spaces_session_add"))
+        content = response.content.decode()
+        assert response.status_code == 200
+        assert 'id="id_attendees"' in content
+        assert reverse("admin:users_user_add") not in content

@@ -2,6 +2,7 @@ from auditlog.admin import LogEntryAdmin
 from auditlog.models import LogEntry
 from django.contrib import admin
 from django.contrib.auth import admin as auth_admin
+from django.http import HttpRequest
 from django.utils.translation import gettext_lazy as _
 from impersonate.admin import UserAdminImpersonateMixin
 
@@ -54,6 +55,15 @@ class UserAdmin(UserAdminImpersonateMixin, ExportCsvMixin, auth_admin.UserAdmin)
             },
         ),
     )
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        # Other admins ask this when rendering user relation widgets (attendees,
+        # author, etc.) to decide whether to show a "+" create-user button, which
+        # confuses staff. Only allow adding users from the User admin itself.
+        match = request.resolver_match
+        if match is None or not (match.url_name or "").startswith("users_user_"):
+            return False
+        return super().has_add_permission(request)
 
 
 @admin.register(KeeperProfile)
