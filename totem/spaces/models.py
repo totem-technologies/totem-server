@@ -607,7 +607,7 @@ class SessionPrompt(BaseModel):
     class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]
         ordering = ["position", "pk"]
         verbose_name = "discussion prompt"
-        verbose_name_plural = "Discussion Prompts"
+        verbose_name_plural = "discussion prompts"
 
 
 class SessionException(Exception):

@@ -2,6 +2,7 @@ from django.db import transaction
 from django.db.models import Prefetch, prefetch_related_objects
 from django.http import Http404, HttpRequest
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from ninja import Query, Router, Status
 from ninja.errors import AuthorizationError, HttpError
 from ninja.pagination import paginate
@@ -23,6 +24,7 @@ from totem.spaces.mobile_api.mobile_schemas import (
     SessionConflictSchema,
     SessionDetailSchema,
     SessionFeedbackSchema,
+    SessionPromptSelectionSchema,
     SessionPromptsSchema,
     SessionPromptsUpdateSchema,
     SpaceSchema,
@@ -133,25 +135,49 @@ def _session_prompts_schema(session: Session) -> SessionPromptsSchema:
     current_index = next(
         (index for index, prompt in enumerate(prompts) if prompt.pk == session.current_prompt_id), None
     )
+    if current_index is None:
+        # With no selection, next_prompt starts the session at the first prompt.
+        next_prompt = prompts[0] if prompts else None
+    elif current_index + 1 < len(prompts):
+        next_prompt = prompts[current_index + 1]
+    else:
+        next_prompt = None
 
     return SessionPromptsSchema(
         prompts=prompts,
         previous_prompt=prompts[current_index - 1] if current_index else None,
         current_prompt=current_prompt if current_index is not None else None,
-        next_prompt=prompts[current_index + 1]
-        if current_index is not None and current_index + 1 < len(prompts)
-        else (prompts[0] if prompts else None),
+        next_prompt=next_prompt,
     )
 
 
 def _session_for_keeper(request: HttpRequest, event_slug: str, *, lock: bool = False) -> Session:
     queryset = Session.objects.select_related("space", "current_prompt")
     if lock:
-        queryset = queryset.select_for_update()
+        queryset = queryset.select_for_update(of=("self",))
     session = get_object_or_404(queryset, slug=event_slug)
     if session.space.author_id != request.user.pk:
         raise AuthorizationError(message="Only the keeper can manage session prompts.")
     return session
+
+
+def _publish_current_prompt(session: Session, prompt: SessionPrompt | None, actor_slug: str) -> None:
+    room = getattr(session, "room", None)
+    if not room or room.status != "active":
+        return
+
+    from totem.rooms.livekit import publish_state
+    from totem.rooms.schemas import SetPromptEvent
+    from totem.rooms.state_machine import apply_event
+
+    state = apply_event(
+        session_slug=session.slug,
+        actor=actor_slug,
+        event=SetPromptEvent(prompt=prompt.prompt if prompt else ""),
+        last_seen_version=None,
+        connected=set(),
+    )
+    transaction.on_commit(lambda: publish_state(session.slug, state))
 
 
 @spaces_router.get("/session/{event_slug}/prompts", response={200: SessionPromptsSchema}, url_name="session_prompts")
@@ -170,30 +196,46 @@ def update_session_prompts(request: HttpRequest, event_slug: str, payload: Sessi
         submitted_ids: set[int] = set()
 
         for position, prompt_data in enumerate(payload.prompts, start=1):
+            if prompt_data.id is not None and prompt_data.id in submitted_ids:
+                raise HttpError(422, "Prompts must not contain duplicate IDs.")
             if prompt_data.id is None:
                 prompt = SessionPrompt.objects.create(session=session, prompt=prompt_data.prompt, position=position)
             else:
-                if prompt_data.id in submitted_ids:
-                    raise HttpError(422, "Prompts must not contain duplicate IDs.")
                 prompt = existing_prompts.pop(prompt_data.id, None)
                 if prompt is None:
                     raise HttpError(422, "Prompt does not belong to this session.")
                 prompt.prompt = prompt_data.prompt
                 prompt.position = position
-                prompt.save(update_fields=["prompt", "position", "date_modified"])
+                prompt.date_modified = timezone.now()
                 submitted_ids.add(prompt_data.id)
             prompts.append(prompt)
 
         SessionPrompt.objects.filter(pk__in=existing_prompts).delete()
+        SessionPrompt.objects.bulk_update(prompts, ["prompt", "position", "date_modified"])
+        session.refresh_from_db(fields=["current_prompt"])
+        _publish_current_prompt(session, session.current_prompt, request.user.slug)
 
-        if payload.current_prompt_id is not None:
-            current_prompt = next((prompt for prompt in prompts if prompt.pk == payload.current_prompt_id), None)
-            if current_prompt is None:
-                raise HttpError(422, "Current prompt must belong to this session.")
-            session.current_prompt = current_prompt
-        else:
-            session.current_prompt = None
+    return _session_prompts_schema(session)
+
+
+@spaces_router.post(
+    "/session/{event_slug}/prompts/current",
+    response={200: SessionPromptsSchema},
+    url_name="session_current_prompt",
+)
+def set_current_session_prompt(request: HttpRequest, event_slug: str, payload: SessionPromptSelectionSchema):
+    with transaction.atomic():
+        session = _session_for_keeper(request, event_slug, lock=True)
+        prompt = None
+        if payload.prompt_id is not None:
+            prompt = SessionPrompt.objects.filter(session=session, pk=payload.prompt_id).first()
+            if prompt is None:
+                raise HttpError(422, "Prompt does not belong to this session.")
+
+        session.current_prompt = prompt
         session.save(update_fields=["current_prompt", "date_modified"])
+
+        _publish_current_prompt(session, prompt, request.user.slug)
 
     return _session_prompts_schema(session)
 

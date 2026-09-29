@@ -1,6 +1,7 @@
 import datetime
 from typing import Any, final, override
 
+from django import forms
 from django.contrib import admin, messages
 from django.db.models.query import QuerySet
 from django.forms import ModelForm
@@ -12,7 +13,7 @@ from django.utils.html import format_html
 
 from totem.rooms.models import Room
 from totem.users.models import User
-from totem.utils.admin import StaleDataCheckAdminMixin
+from totem.utils.admin import StaleDataCheckAdminMixin, _make_stale_check_form
 
 from .models import Session, SessionFeedback, SessionPrompt, Space, SpaceCategory
 from .participants import participant_insights
@@ -60,8 +61,29 @@ class SpaceCategoryAdmin(admin.ModelAdmin):
 
 
 @final
+class SessionInlineForm(_make_stale_check_form("date_modified")):
+    discussion_prompts = forms.CharField(
+        label="Discussion prompts",
+        required=False,
+        widget=forms.Textarea,
+        help_text="Enter one prompt per line. The line order determines the prompt order.",
+    )
+
+    class Meta:
+        model = Session
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk:
+            self.initial["discussion_prompts"] = "\n".join(
+                self.instance.discussion_prompts.values_list("prompt", flat=True)
+            )
+
+
 class SessionInline(StaleDataCheckAdminMixin, admin.StackedInline):
     model = Session
+    form = SessionInlineForm
     extra = 0
     autocomplete_fields = ["attendees", "joined"]
     fieldsets = [
@@ -77,6 +99,7 @@ class SessionInline(StaleDataCheckAdminMixin, admin.StackedInline):
                     "seats",
                     "attendees",
                     "joined",
+                    "discussion_prompts",
                 ]
             },
         ),
@@ -98,6 +121,7 @@ class SessionInline(StaleDataCheckAdminMixin, admin.StackedInline):
 
     @override
     def get_formset(self, request, obj=None, **kwargs):
+        kwargs["form"] = SessionInlineForm
         formset = super().get_formset(request, obj, **kwargs)
         formset.form.base_fields["attendees"].initial = [request.user]  # type: ignore
         return formset
@@ -127,6 +151,31 @@ class SpaceAdmin(admin.ModelAdmin):
                 if isinstance(obj, Session):
                     obj.save_to_calendar()
         super().save_formset(request, form, formset, change)
+        if formset.model is Session:
+            for inline_form in formset.forms:
+                if inline_form.instance.pk and inline_form not in formset.deleted_forms and inline_form.cleaned_data:
+                    _save_inline_session_prompts(inline_form.instance, inline_form.cleaned_data["discussion_prompts"])
+
+
+def _save_inline_session_prompts(session: Session, prompts_text: str) -> None:
+    prompts = [line.strip() for line in prompts_text.splitlines() if line.strip()]
+    existing = list(session.discussion_prompts.all())
+    updates: list[SessionPrompt] = []
+    creates: list[SessionPrompt] = []
+
+    for position, text in enumerate(prompts, start=1):
+        if position <= len(existing):
+            prompt = existing[position - 1]
+            prompt.prompt = text
+            prompt.position = position
+            prompt.date_modified = timezone.now()
+            updates.append(prompt)
+        else:
+            creates.append(SessionPrompt(session=session, prompt=text, position=position))
+
+    SessionPrompt.objects.bulk_update(updates, ["prompt", "position", "date_modified"])
+    SessionPrompt.objects.bulk_create(creates)
+    SessionPrompt.objects.filter(pk__in=[prompt.pk for prompt in existing[len(prompts) :]]).delete()
 
 
 def copy_session(modeladmin, request, queryset: QuerySet[Session]):
@@ -147,6 +196,12 @@ def copy_session(modeladmin, request, queryset: QuerySet[Session]):
         space=session.space,
         content=session.content,
     )
+    SessionPrompt.objects.bulk_create(
+        [
+            SessionPrompt(session=obj, prompt=prompt.prompt, position=prompt.position)
+            for prompt in session.discussion_prompts.all()
+        ]
+    )
     change_url = reverse(f"admin:{obj._meta.app_label}_{obj._meta.model_name}_change", args=[obj.pk])
     return redirect(change_url)
 
@@ -157,10 +212,23 @@ class SessionFeedbackInline(admin.TabularInline):
     readonly_fields = ("user", "feedback", "message", "date_created")
 
 
+class SessionPromptInlineForm(ModelForm):
+    position = forms.IntegerField(label="", widget=forms.HiddenInput)
+
+    class Meta:
+        model = SessionPrompt
+        fields = ("prompt", "position")
+
+
 class SessionPromptInline(admin.TabularInline):
     model = SessionPrompt
-    extra = 1
+    form = SessionPromptInlineForm
+    extra = 0
     fields = ("prompt", "position")
+
+    class Media:
+        js = ("js/admin/session_prompt_order.js",)
+        css = {"all": ("css/admin/session_prompt_order.css",)}
 
 
 @final

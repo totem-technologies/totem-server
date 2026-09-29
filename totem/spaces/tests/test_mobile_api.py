@@ -215,7 +215,6 @@ class TestMobileApiSpaces:
             url,
             data={
                 "prompts": [{"prompt": "Opening"}, {"prompt": "Middle"}, {"prompt": "Closing"}],
-                "current_prompt_id": None,
             },
             content_type="application/json",
         )
@@ -234,23 +233,64 @@ class TestMobileApiSpaces:
                     {"id": prompts[2]["id"], "prompt": "Closing"},
                     {"id": prompts[0]["id"], "prompt": "Welcome"},
                 ],
-                "current_prompt_id": prompts[0]["id"],
             },
             content_type="application/json",
         )
 
         assert response.status_code == 200
         assert [prompt["prompt"] for prompt in response.json()["prompts"]] == ["Closing", "Welcome"]
+        assert response.json()["current_prompt"] is None
+        assert response.json()["next_prompt"]["prompt"] == "Closing"
+        assert not SessionPrompt.objects.filter(prompt="Middle").exists()
+
+        response = client.post(
+            reverse("mobile-api:session_current_prompt", kwargs={"event_slug": session.slug}),
+            data={"prompt_id": prompts[0]["id"]},
+            content_type="application/json",
+        )
+        assert response.status_code == 200
         assert response.json()["previous_prompt"]["prompt"] == "Closing"
         assert response.json()["current_prompt"]["prompt"] == "Welcome"
         assert response.json()["next_prompt"] is None
-        assert not SessionPrompt.objects.filter(prompt="Middle").exists()
 
         response = client.get(url)
 
         assert response.status_code == 200
         assert response.json()["current_prompt"]["prompt"] == "Welcome"
         assert response.json()["previous_prompt"]["prompt"] == "Closing"
+
+    def test_selected_prompt_is_published_in_live_room_state(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        prompt = SessionPrompt.objects.create(session=session, prompt="Shared prompt", position=1)
+        room = Room.objects.get_or_create_for_session(session)
+        room.status = "active"
+        room.save(update_fields=["status"])
+
+        with (
+            patch("totem.rooms.livekit.publish_state") as publish,
+            patch("totem.spaces.mobile_api.mobile_api.transaction.on_commit", side_effect=lambda callback: callback()),
+        ):
+            response = client.post(
+                reverse("mobile-api:session_current_prompt", kwargs={"event_slug": session.slug}),
+                data={"prompt_id": prompt.pk},
+                content_type="application/json",
+            )
+
+        assert response.status_code == 200
+        room.refresh_from_db()
+        assert room.round_message == "Shared prompt"
+        assert publish.call_args.args[1].round_message == "Shared prompt"
+
+        response = client.put(
+            reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug}),
+            data={"prompts": [{"id": prompt.pk, "prompt": "Revised shared prompt"}]},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        room.refresh_from_db()
+        assert room.round_message == "Revised shared prompt"
 
     def test_non_keeper_cannot_manage_session_prompts(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
@@ -259,11 +299,77 @@ class TestMobileApiSpaces:
 
         response = client.put(
             url,
-            data={"prompts": [], "current_prompt_id": None},
+            data={"prompts": []},
             content_type="application/json",
         )
 
         assert response.status_code == 403
+        assert client.get(url).status_code == 403
+        assert (
+            client.post(
+                reverse("mobile-api:session_current_prompt", kwargs={"event_slug": session.slug}),
+                data={"prompt_id": None},
+                content_type="application/json",
+            ).status_code
+            == 403
+        )
+
+    def test_update_prompts_rejects_id_from_another_session(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        other_prompt = SessionPrompt.objects.create(session=SessionFactory(), prompt="Private", position=1)
+        url = reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug})
+
+        response = client.put(
+            url,
+            data={"prompts": [{"id": other_prompt.pk, "prompt": "Changed"}]},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 422
+        assert not session.discussion_prompts.exists()
+        assert other_prompt.prompt == "Private"
+
+    def test_update_prompts_rejects_duplicate_ids_without_partial_changes(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        prompt = SessionPrompt.objects.create(session=session, prompt="Original", position=1)
+        url = reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug})
+
+        response = client.put(
+            url,
+            data={
+                "prompts": [
+                    {"id": prompt.pk, "prompt": "First"},
+                    {"id": prompt.pk, "prompt": "Second"},
+                    {"prompt": "New"},
+                ],
+            },
+            content_type="application/json",
+        )
+
+        assert response.status_code == 422
+        assert list(session.discussion_prompts.values_list("prompt", flat=True)) == ["Original"]
+
+    def test_set_current_prompt_rejects_id_from_another_session(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        other_prompt = SessionPrompt.objects.create(session=SessionFactory(), prompt="Private", position=1)
+
+        response = client.post(
+            reverse("mobile-api:session_current_prompt", kwargs={"event_slug": session.slug}),
+            data={"prompt_id": other_prompt.pk},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 422
+        assert session.current_prompt is None
+
+    def test_unknown_session_prompts_returns_404(self, client_with_user: tuple[Client, User]):
+        client, _ = client_with_user
+        url = reverse("mobile-api:session_prompts", kwargs={"event_slug": "unknown-session"})
+
+        assert client.get(url).status_code == 404
 
     def test_get_session_detail_excludes_banned_from_next_events(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user

@@ -109,7 +109,10 @@ class SessionPromptUpdateSchema(Schema):
 
 class SessionPromptsUpdateSchema(Schema):
     prompts: list[SessionPromptUpdateSchema]
-    current_prompt_id: int | None
+
+
+class SessionPromptSelectionSchema(Schema):
+    prompt_id: int | None
 
 
 class SessionConflictSchema(Schema):
