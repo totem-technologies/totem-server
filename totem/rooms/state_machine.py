@@ -24,7 +24,6 @@ from .schemas import (
     EndRoomEvent,
     ErrorCode,
     ForcePassStickEvent,
-    ParticipantJoinedEvent,
     PassStickEvent,
     ReorderEvent,
     RoomEvent,
@@ -41,7 +40,7 @@ from .schemas import (
 def apply_event(
     session_slug: str,
     actor: str,  # user slug
-    event: RoomEvent | EmptyRoomEvent | ParticipantJoinedEvent,
+    event: RoomEvent | EmptyRoomEvent,
     last_seen_version: int | None,
     connected: set[str],  # user slugs currently in the LiveKit room
 ) -> RoomState:
@@ -84,20 +83,7 @@ def apply_event(
             case EmptyRoomEvent():
                 # reconciliation already happened above
                 pass
-            case ParticipantJoinedEvent():
-                if room.status == RoomStatus.ACTIVE and actor not in room.banned_participants:
-                    first_arrival = actor not in room.participant_arrivals
-                    if first_arrival:
-                        room.participant_arrivals = {
-                            **room.participant_arrivals,
-                            actor: timezone.now().isoformat(),
-                        }
-                    if first_arrival and actor not in {room.current_speaker, room.next_speaker}:
-                        room.talking_order = [slug for slug in room.talking_order if slug != actor] + [actor]
-                        if room.current_speaker and connected:
-                            next_speaker = _next_in_order(room.talking_order, room.current_speaker, connected)
-                            if next_speaker is not None:
-                                room.next_speaker = next_speaker
+
             case StartRoomEvent(prompt=prompt):
                 _handle_start(room, actor, connected, prompt)
             case PassStickEvent(prompt=prompt):
@@ -131,23 +117,7 @@ def apply_event(
             return state
 
         room.state_version += 1
-        room.save(
-            update_fields=[
-                "status",
-                "turn_state",
-                "current_speaker",
-                "next_speaker",
-                "talking_order",
-                "participant_arrivals",
-                "waiting_order_manually_set",
-                "banned_participants",
-                "round_number",
-                "round_message",
-                "state_version",
-                "end_reason",
-                "date_modified",
-            ]
-        )
+        room.save()
 
         state = room.to_state()
 
@@ -251,11 +221,7 @@ def _next_in_order(
     return None
 
 
-def _parse_arrival_time(value: str) -> datetime:
-    return datetime.fromisoformat(value)
-
-
-def _sort_waiting_room_order(room: Room, connected: set[str]) -> None:
+def _sort_waiting_room_order(room: Room) -> None:
     """Order waiting participants by prior attendance, then arrival time."""
     if room.waiting_order_manually_set:
         return
@@ -277,7 +243,7 @@ def _sort_waiting_room_order(room: Room, connected: set[str]) -> None:
         key=lambda slug: (
             -attendance_counts.get(slug, 0),
             slug not in arrivals,
-            _parse_arrival_time(arrivals[slug]) if slug in arrivals else None,
+            datetime.fromisoformat(arrivals[slug]) if slug in arrivals else None,
             positions[slug],
         )
     )
@@ -294,12 +260,11 @@ def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
       speaker disconnects
     - Repairs missing speaker assignments
     """
-    if room.status == RoomStatus.WAITING_ROOM:
-        arrivals = dict(room.participant_arrivals)
-        now = timezone.now().isoformat()
-        for slug in connected:
-            arrivals.setdefault(slug, now)
-        room.participant_arrivals = arrivals
+    arrivals = dict(room.participant_arrivals)
+    now = timezone.now().isoformat()
+    for slug in connected:
+        arrivals.setdefault(slug, now)
+    room.participant_arrivals = arrivals
 
     reconciled: list[str] = []
 
@@ -312,18 +277,14 @@ def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
         if slug not in reconciled:
             reconciled.append(slug)
 
-    # Append newly connected members in arrival order while waiting; otherwise
-    # use slug order for deterministic reconciliation.
+    # Append newly connected members in recorded arrival order.
     newly_connected = [slug for slug in connected if slug not in reconciled]
-    if room.status == RoomStatus.WAITING_ROOM:
-        newly_connected.sort(key=lambda slug: (_parse_arrival_time(room.participant_arrivals[slug]), slug))
-    else:
-        newly_connected.sort()
+    newly_connected.sort(key=lambda slug: (datetime.fromisoformat(room.participant_arrivals[slug]), slug))
     reconciled.extend(newly_connected)
 
     room.talking_order = reconciled
     if room.status == RoomStatus.WAITING_ROOM:
-        _sort_waiting_room_order(room, connected)
+        _sort_waiting_room_order(room)
 
     connected_order = [s for s in room.talking_order if s in connected]
 

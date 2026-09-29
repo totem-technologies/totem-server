@@ -800,7 +800,7 @@ class TestJoinRoom:
         room.refresh_from_db()
         assert room.participant_arrivals[user.slug] == first_arrival
 
-    def test_active_join_moves_newcomer_but_preserves_reconnecting_speaker(self, client_with_user: tuple[Client, User]):
+    def test_active_join_records_arrivals_without_changing_order(self, client_with_user: tuple[Client, User]):
         client, current_speaker = client_with_user
         keeper, next_speaker, newcomer = (UserFactory() for _ in range(3))
         session = _make_joinable_session(keeper, [current_speaker, next_speaker, newcomer])
@@ -818,7 +818,7 @@ class TestJoinRoom:
         with (
             patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),
             patch("totem.rooms.api.get_connected_participants", return_value=set()),
-            patch("totem.rooms.api.publish_state"),
+            patch("totem.rooms.api.publish_state") as publish_state,
             patch("totem.rooms.api.analytics"),
         ):
             reconnect_response = client.post(f"{BASE}/{session.slug}/join")
@@ -830,62 +830,28 @@ class TestJoinRoom:
 
         assert newcomer_response.status_code == 200
         room.refresh_from_db()
-        assert room.talking_order == [keeper.slug, current_speaker.slug, next_speaker.slug, newcomer.slug]
+        assert room.talking_order == [keeper.slug, current_speaker.slug, next_speaker.slug]
+        assert room.participant_arrivals.keys() >= {current_speaker.slug, newcomer.slug}
         assert room.current_speaker == current_speaker.slug
         assert room.next_speaker == next_speaker.slug
+        publish_state.assert_not_called()
 
-    def test_join_uses_status_locked_after_token_creation(self, client_with_user: tuple[Client, User]):
+    def test_join_records_arrival_after_room_starts(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         keeper = UserFactory()
-        other = UserFactory()
-        session = _make_joinable_session(keeper, [user, other])
+        session = _make_joinable_session(keeper, [user])
         room = Room.objects.get_or_create_for_session(session)
-        room.talking_order = [keeper.slug, user.slug, other.slug]
-        room.save(update_fields=["talking_order"])
 
         def start_room_before_token(*args):
             Room.objects.filter(pk=room.pk).update(status=RoomStatus.ACTIVE)
             return "fake-jwt-token"
 
-        with (
-            patch("totem.rooms.api.create_access_token", side_effect=start_room_before_token),
-            patch("totem.rooms.api.publish_state") as publish_state,
-        ):
+        with patch("totem.rooms.api.create_access_token", side_effect=start_room_before_token):
             response = client.post(f"{BASE}/{session.slug}/join")
 
         assert response.status_code == 200
         room.refresh_from_db()
-        assert room.talking_order == [keeper.slug, other.slug, user.slug]
-        assert room.state_version == 1
-        assert RoomEventLog.objects.filter(room=room, event_type="participant_joined").exists()
-        publish_state.assert_called_once()
-
-    def test_join_during_active_room_is_a_versioned_event(self, client_with_user: tuple[Client, User]):
-        _, keeper = client_with_user
-        participant = UserFactory()
-        participant_client = Client()
-        participant_client.force_login(participant)
-        session = _make_joinable_session(keeper, [participant])
-        room = Room.objects.get_or_create_for_session(session)
-        room.status = RoomStatus.ACTIVE
-        room.talking_order = [keeper.slug]
-        room.save()
-
-        with (
-            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),
-            patch("totem.rooms.api.get_connected_participants", return_value=set()),
-            patch("totem.rooms.api.publish_state") as publish_state,
-        ):
-            resp = participant_client.post(f"{BASE}/{session.slug}/join")
-
-        assert resp.status_code == 200
-        room.refresh_from_db()
-        assert room.talking_order == [keeper.slug, participant.slug]
-        assert room.state_version == 1
-        event = RoomEventLog.objects.get(room=room)
-        assert event.version == 1
-        assert event.event_type == "participant_joined"
-        publish_state.assert_called_once()
+        assert user.slug in room.participant_arrivals
 
     def test_join_not_joinable(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user

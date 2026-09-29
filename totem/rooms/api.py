@@ -39,7 +39,6 @@ from .schemas import (
     EventRequest,
     ForcePassStickEvent,
     JoinResponse,
-    ParticipantJoinedEvent,
     RemoveParticipantPayload,
     RemoveReason,
     RoomErrorResponse,
@@ -228,6 +227,7 @@ def join_room(
         ).as_http_response()
 
     room = Room.objects.get_or_create_for_session(session)
+    # Fast-path checks avoid issuing a LiveKit token; locked checks below enforce correctness.
     if room.status == RoomStatus.ENDED:
         return RoomErrorResponse(
             code=ErrorCode.ROOM_ALREADY_ENDED,
@@ -267,7 +267,6 @@ def join_room(
 
     is_already_connected = bool(connected and user.slug in connected)
 
-    state: RoomState | None = None
     with transaction.atomic():
         locked_room = Room.objects.select_for_update().get(pk=room.pk)
         if locked_room.status == RoomStatus.ENDED:
@@ -281,25 +280,14 @@ def join_room(
                 message="You have been banned from this session",
             ).as_http_response()
 
-        if locked_room.status == RoomStatus.WAITING_ROOM:
-            if user.slug not in locked_room.participant_arrivals:
-                locked_room.participant_arrivals = {
-                    **locked_room.participant_arrivals,
-                    user.slug: timezone.now().isoformat(),
-                }
-                locked_room.save(update_fields=["participant_arrivals"])
-        elif locked_room.status == RoomStatus.ACTIVE and not is_already_connected:
-            state = apply_event(
-                session_slug=session_slug,
-                actor=user.slug,
-                event=ParticipantJoinedEvent(),
-                last_seen_version=None,
-                connected=connected or set(),
-            )
+        if user.slug not in locked_room.participant_arrivals:
+            locked_room.participant_arrivals = {
+                **locked_room.participant_arrivals,
+                user.slug: timezone.now().isoformat(),
+            }
+            locked_room.save(update_fields=["participant_arrivals", "date_modified"])
 
     session.joined.add(user)
-    if state is not None:
-        publish_state(session_slug, state)
     analytics.event_joined(user, session)
 
     return Status(200, JoinResponse(token=token, is_already_present=is_already_connected))

@@ -12,7 +12,6 @@ from totem.rooms.schemas import (
     EndRoomEvent,
     ErrorCode,
     ForcePassStickEvent,
-    ParticipantJoinedEvent,
     PassStickEvent,
     ReorderEvent,
     RoomStatus,
@@ -104,7 +103,7 @@ class TestReconcileTalkingOrder:
         room.save(update_fields=["talking_order"])
 
         with django_assert_num_queries(1):
-            _sort_waiting_room_order(room, set())
+            _sort_waiting_room_order(room)
 
         assert room.talking_order == [keeper.slug, experienced.slug, first_timer.slug]
 
@@ -117,6 +116,21 @@ class TestReconcileTalkingOrder:
         room = self._make_room("a", ["a", "b", "c"], status=RoomStatus.ACTIVE)
         _reconcile_talking_order(room, {"a", "c"})
         assert room.talking_order == ["a", "b", "c"]
+
+    def test_active_room_appends_connected_participants_by_arrival_time(self):
+        room = self._make_room(
+            "keeper",
+            ["keeper"],
+            status=RoomStatus.ACTIVE,
+            participant_arrivals={
+                "later": "2026-01-01T00:01:00+00:00",
+                "earlier": "2026-01-01T00:00:00+00:00",
+            },
+        )
+
+        _reconcile_talking_order(room, {"keeper", "later", "earlier"})
+
+        assert room.talking_order == ["keeper", "earlier", "later"]
 
     def test_manual_order_appends_new_participants_by_arrival_time(self):
         keeper = UserFactory()
@@ -306,60 +320,6 @@ def _setup_room(keeper: User, attendees: list[User]):
     room.talking_order = [u.slug for u in attendees]
     room.save(update_fields=["talking_order"])
     return room, session.slug
-
-
-@pytest.mark.django_db
-class TestParticipantJoined:
-    def test_reconnecting_current_speaker_keeps_rotation(self):
-        keeper, current, next_speaker, participant = (UserFactory() for _ in range(4))
-        room, session_slug = _setup_room(keeper, [keeper, current, next_speaker, participant])
-        room.status = RoomStatus.ACTIVE
-        room.turn_state = TurnState.PASSING
-        room.current_speaker = current.slug
-        room.next_speaker = next_speaker.slug
-        room.save()
-
-        state = apply_event(session_slug, current.slug, ParticipantJoinedEvent(), None, set())
-
-        assert state.talking_order == [keeper.slug, current.slug, next_speaker.slug, participant.slug]
-        assert state.current_speaker == current.slug
-        assert state.next_speaker == next_speaker.slug
-
-    def test_reconnecting_next_speaker_keeps_rotation(self):
-        keeper, next_speaker, participant = (UserFactory() for _ in range(3))
-        room, session_slug = _setup_room(keeper, [keeper, next_speaker, participant])
-        room.status = RoomStatus.ACTIVE
-        room.turn_state = TurnState.PASSING
-        room.current_speaker = keeper.slug
-        room.next_speaker = next_speaker.slug
-        room.save()
-
-        state = apply_event(session_slug, next_speaker.slug, ParticipantJoinedEvent(), None, set())
-
-        assert state.talking_order == [keeper.slug, next_speaker.slug, participant.slug]
-        assert state.next_speaker == next_speaker.slug
-
-    def test_first_arrival_moves_to_end_and_recomputes_next_speaker(self):
-        keeper, first_arrival, next_speaker, participant = (UserFactory() for _ in range(4))
-        room, session_slug = _setup_room(keeper, [keeper, first_arrival, next_speaker, participant])
-        room.status = RoomStatus.ACTIVE
-        room.turn_state = TurnState.PASSING
-        room.current_speaker = keeper.slug
-        room.next_speaker = participant.slug
-        room.save()
-
-        state = apply_event(
-            session_slug,
-            first_arrival.slug,
-            ParticipantJoinedEvent(),
-            None,
-            {keeper.slug, next_speaker.slug, participant.slug},
-        )
-
-        assert state.talking_order == [keeper.slug, next_speaker.slug, participant.slug, first_arrival.slug]
-        assert state.next_speaker == next_speaker.slug
-        room.refresh_from_db()
-        assert first_arrival.slug in room.participant_arrivals
 
 
 @pytest.mark.django_db

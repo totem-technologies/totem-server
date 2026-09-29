@@ -215,12 +215,6 @@ class EmptyRoomEvent(Schema):
     type: Literal["empty"] = "empty"
 
 
-class ParticipantJoinedEvent(Schema):
-    """Server-internal event for adding a newly joined participant to an active room."""
-
-    type: Literal["participant_joined"] = "participant_joined"
-
-
 RoomEvent = Annotated[
     Union[
         StartRoomEvent,
