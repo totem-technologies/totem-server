@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 
+from django.db import transaction
 from django.http import HttpRequest
 from django.utils import timezone
 from ninja import Router, Status
@@ -38,6 +39,7 @@ from .schemas import (
     EventRequest,
     ForcePassStickEvent,
     JoinResponse,
+    ParticipantJoinedEvent,
     RemoveParticipantPayload,
     RemoveReason,
     RoomErrorResponse,
@@ -266,15 +268,24 @@ def join_room(
     is_already_connected = bool(connected and user.slug in connected)
 
     session.joined.add(user)
-    if room.status == RoomStatus.WAITING_ROOM and user.slug not in room.participant_arrivals:
-        room.participant_arrivals = {
-            **room.participant_arrivals,
-            user.slug: timezone.now().isoformat(),
-        }
-        room.save(update_fields=["participant_arrivals"])
+    if room.status == RoomStatus.WAITING_ROOM:
+        with transaction.atomic():
+            locked_room = Room.objects.select_for_update().get(pk=room.pk)
+            if user.slug not in locked_room.participant_arrivals:
+                locked_room.participant_arrivals = {
+                    **locked_room.participant_arrivals,
+                    user.slug: timezone.now().isoformat(),
+                }
+                locked_room.save(update_fields=["participant_arrivals"])
     elif room.status == RoomStatus.ACTIVE and not is_already_connected:
-        room.talking_order = [slug for slug in room.talking_order if slug != user.slug] + [user.slug]
-        room.save(update_fields=["talking_order"])
+        state = apply_event(
+            session_slug=session_slug,
+            actor=user.slug,
+            event=ParticipantJoinedEvent(),
+            last_seen_version=None,
+            connected=connected or set(),
+        )
+        publish_state(session_slug, state)
     analytics.event_joined(user, session)
 
     return Status(200, JoinResponse(token=token, is_already_present=is_already_connected))

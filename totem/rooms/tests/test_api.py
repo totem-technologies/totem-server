@@ -779,6 +779,86 @@ class TestJoinRoom:
         assert user in session.joined.all()
         assert Room.objects.filter(session=session).exists()
 
+    def test_join_records_arrival_once_across_rejoins(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        session = _make_joinable_session(user)
+        room = Room.objects.get_or_create_for_session(session)
+
+        with (
+            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.api.get_connected_participants", return_value=set()),
+            patch("totem.rooms.api.analytics"),
+        ):
+            first_response = client.post(f"{BASE}/{session.slug}/join")
+            assert first_response.status_code == 200
+            room.refresh_from_db()
+            first_arrival = room.participant_arrivals[user.slug]
+
+            second_response = client.post(f"{BASE}/{session.slug}/join")
+
+        assert second_response.status_code == 200
+        room.refresh_from_db()
+        assert room.participant_arrivals[user.slug] == first_arrival
+
+    def test_active_join_moves_newcomer_but_preserves_reconnecting_speaker(self, client_with_user: tuple[Client, User]):
+        client, current_speaker = client_with_user
+        keeper, next_speaker, newcomer = (UserFactory() for _ in range(3))
+        session = _make_joinable_session(keeper, [current_speaker, next_speaker, newcomer])
+        session.joined.add(current_speaker)
+        room = Room.objects.get_or_create_for_session(session)
+        room.status = RoomStatus.ACTIVE
+        room.turn_state = TurnState.PASSING
+        room.talking_order = [keeper.slug, current_speaker.slug, next_speaker.slug]
+        room.current_speaker = current_speaker.slug
+        room.next_speaker = next_speaker.slug
+        room.save()
+        newcomer_client = Client()
+        newcomer_client.force_login(newcomer)
+
+        with (
+            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.api.get_connected_participants", return_value=set()),
+            patch("totem.rooms.api.publish_state"),
+            patch("totem.rooms.api.analytics"),
+        ):
+            reconnect_response = client.post(f"{BASE}/{session.slug}/join")
+            assert reconnect_response.status_code == 200
+            room.refresh_from_db()
+            assert room.talking_order == [keeper.slug, current_speaker.slug, next_speaker.slug]
+
+            newcomer_response = newcomer_client.post(f"{BASE}/{session.slug}/join")
+
+        assert newcomer_response.status_code == 200
+        room.refresh_from_db()
+        assert room.talking_order == [keeper.slug, current_speaker.slug, next_speaker.slug, newcomer.slug]
+        assert room.current_speaker == current_speaker.slug
+        assert room.next_speaker == next_speaker.slug
+
+    def test_join_during_active_room_is_a_versioned_event(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        participant = UserFactory()
+        session = _make_joinable_session(keeper, [participant])
+        room = Room.objects.get_or_create_for_session(session)
+        room.status = RoomStatus.ACTIVE
+        room.talking_order = [keeper.slug]
+        room.save()
+
+        with (
+            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.api.get_connected_participants", return_value=set()),
+            patch("totem.rooms.api.publish_state") as publish_state,
+        ):
+            resp = client.post(f"{BASE}/{session.slug}/join")
+
+        assert resp.status_code == 200
+        room.refresh_from_db()
+        assert room.talking_order == [keeper.slug, participant.slug]
+        assert room.state_version == 1
+        event = RoomEventLog.objects.get(room=room)
+        assert event.version == 1
+        assert event.event_type == "participant_joined"
+        publish_state.assert_called_once()
+
     def test_join_not_joinable(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         # Session in the future — can_join returns False

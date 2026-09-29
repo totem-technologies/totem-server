@@ -7,8 +7,10 @@ No LiveKit calls, no HTTP concerns. Side effects are limited to the database.
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.utils import timezone
 
 from totem.users.models import User
@@ -22,6 +24,7 @@ from .schemas import (
     EndRoomEvent,
     ErrorCode,
     ForcePassStickEvent,
+    ParticipantJoinedEvent,
     PassStickEvent,
     ReorderEvent,
     RoomEvent,
@@ -38,7 +41,7 @@ from .schemas import (
 def apply_event(
     session_slug: str,
     actor: str,  # user slug
-    event: RoomEvent | EmptyRoomEvent,
+    event: RoomEvent | EmptyRoomEvent | ParticipantJoinedEvent,
     last_seen_version: int | None,
     connected: set[str],  # user slugs currently in the LiveKit room
 ) -> RoomState:
@@ -71,6 +74,8 @@ def apply_event(
             )
 
         state_before = room.to_state()
+        arrivals_before = room.participant_arrivals
+        waiting_order_manually_set_before = room.waiting_order_manually_set
 
         # Reconcile talking order with who's actually connected.
         _reconcile_talking_order(room, connected)
@@ -79,6 +84,20 @@ def apply_event(
             case EmptyRoomEvent():
                 # reconciliation already happened above
                 pass
+            case ParticipantJoinedEvent():
+                if room.status == RoomStatus.ACTIVE and actor not in room.banned_participants:
+                    first_arrival = actor not in room.participant_arrivals
+                    if first_arrival:
+                        room.participant_arrivals = {
+                            **room.participant_arrivals,
+                            actor: timezone.now().isoformat(),
+                        }
+                    if first_arrival and actor not in {room.current_speaker, room.next_speaker}:
+                        room.talking_order = [slug for slug in room.talking_order if slug != actor] + [actor]
+                        if room.current_speaker and connected:
+                            next_speaker = _next_in_order(room.talking_order, room.current_speaker, connected)
+                            if next_speaker is not None:
+                                room.next_speaker = next_speaker
             case StartRoomEvent(prompt=prompt):
                 _handle_start(room, actor, connected, prompt)
             case PassStickEvent(prompt=prompt):
@@ -102,10 +121,33 @@ def apply_event(
 
         state = room.to_state()
         if state == state_before:
+            metadata_fields = []
+            if room.participant_arrivals != arrivals_before:
+                metadata_fields.append("participant_arrivals")
+            if room.waiting_order_manually_set != waiting_order_manually_set_before:
+                metadata_fields.append("waiting_order_manually_set")
+            if metadata_fields:
+                room.save(update_fields=[*metadata_fields, "date_modified"])
             return state
 
         room.state_version += 1
-        room.save()
+        room.save(
+            update_fields=[
+                "status",
+                "turn_state",
+                "current_speaker",
+                "next_speaker",
+                "talking_order",
+                "participant_arrivals",
+                "waiting_order_manually_set",
+                "banned_participants",
+                "round_number",
+                "round_message",
+                "state_version",
+                "end_reason",
+                "date_modified",
+            ]
+        )
 
         state = room.to_state()
 
@@ -209,34 +251,33 @@ def _next_in_order(
     return None
 
 
+def _parse_arrival_time(value: str) -> datetime:
+    return datetime.fromisoformat(value)
+
+
 def _sort_waiting_room_order(room: Room, connected: set[str]) -> None:
     """Order waiting participants by prior attendance, then arrival time."""
     if room.waiting_order_manually_set:
         return
 
-    arrivals = dict(room.participant_arrivals)
-    now = timezone.now().isoformat()
-    for slug in connected:
-        arrivals.setdefault(slug, now)
-    room.participant_arrivals = arrivals
-
+    arrivals = room.participant_arrivals
     slugs = [slug for slug in room.talking_order if slug != room.keeper]
-    user_ids = dict(User.objects.filter(slug__in=slugs).values_list("slug", "id"))
     attendance_counts = dict(
-        room.session.joined.through.objects.filter(
-            user_id__in=user_ids.values(),
-            session__start__lt=room.session.start,
-            session__cancelled=False,
+        User.objects.filter(slug__in=slugs)
+        .annotate(
+            count=Count(
+                "sessions_joined",
+                filter=Q(sessions_joined__start__lt=room.session.start, sessions_joined__cancelled=False),
+            )
         )
-        .values("user_id")
-        .annotate(count=Count("session_id"))
-        .values_list("user_id", "count")
+        .values_list("slug", "count")
     )
     positions = {slug: index for index, slug in enumerate(slugs)}
     slugs.sort(
         key=lambda slug: (
-            -attendance_counts.get(user_ids.get(slug), 0),
-            arrivals.get(slug, ""),
+            -attendance_counts.get(slug, 0),
+            slug not in arrivals,
+            _parse_arrival_time(arrivals[slug]) if slug in arrivals else None,
             positions[slug],
         )
     )
@@ -253,6 +294,13 @@ def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
       speaker disconnects
     - Repairs missing speaker assignments
     """
+    if room.status == RoomStatus.WAITING_ROOM:
+        arrivals = dict(room.participant_arrivals)
+        now = timezone.now().isoformat()
+        for slug in connected:
+            arrivals.setdefault(slug, now)
+        room.participant_arrivals = arrivals
+
     reconciled: list[str] = []
 
     # Keeper always first
@@ -264,10 +312,14 @@ def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
         if slug not in reconciled:
             reconciled.append(slug)
 
-    # Append any newly connected members (sorted for deterministic order).
-    for slug in sorted(connected):
-        if slug not in reconciled:
-            reconciled.append(slug)
+    # Append newly connected members in arrival order while waiting; otherwise
+    # use slug order for deterministic reconciliation.
+    newly_connected = [slug for slug in connected if slug not in reconciled]
+    if room.status == RoomStatus.WAITING_ROOM:
+        newly_connected.sort(key=lambda slug: (_parse_arrival_time(room.participant_arrivals[slug]), slug))
+    else:
+        newly_connected.sort()
+    reconciled.extend(newly_connected)
 
     room.talking_order = reconciled
     if room.status == RoomStatus.WAITING_ROOM:
@@ -291,14 +343,16 @@ def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
     # the next speaker accepts.
     elif room.current_speaker not in connected:
         if room.next_speaker not in connected:
-            room.next_speaker = _next_in_order(reconciled, room.current_speaker, connected) or connected_order[0]
+            room.next_speaker = (
+                _next_in_order(room.talking_order, room.current_speaker, connected) or connected_order[0]
+            )
         room.turn_state = TurnState.PASSING
         return
 
     # Fix next_speaker if missing or absent from connected.
     if room.next_speaker not in connected:
         if room.current_speaker:
-            room.next_speaker = _next_in_order(reconciled, room.current_speaker, connected)
+            room.next_speaker = _next_in_order(room.talking_order, room.current_speaker, connected)
         else:
             room.next_speaker = connected_order[0]
 
