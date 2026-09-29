@@ -861,8 +861,10 @@ class TestJoinRoom:
         publish_state.assert_called_once()
 
     def test_join_during_active_room_is_a_versioned_event(self, client_with_user: tuple[Client, User]):
-        client, keeper = client_with_user
+        _, keeper = client_with_user
         participant = UserFactory()
+        participant_client = Client()
+        participant_client.force_login(participant)
         session = _make_joinable_session(keeper, [participant])
         room = Room.objects.get_or_create_for_session(session)
         room.status = RoomStatus.ACTIVE
@@ -874,7 +876,7 @@ class TestJoinRoom:
             patch("totem.rooms.api.get_connected_participants", return_value=set()),
             patch("totem.rooms.api.publish_state") as publish_state,
         ):
-            resp = client.post(f"{BASE}/{session.slug}/join")
+            resp = participant_client.post(f"{BASE}/{session.slug}/join")
 
         assert resp.status_code == 200
         room.refresh_from_db()

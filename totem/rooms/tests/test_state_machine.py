@@ -114,7 +114,7 @@ class TestReconcileTalkingOrder:
         assert room.talking_order == ["a", "b", "c"]
 
     def test_keeps_disconnected_in_order(self):
-        room = self._make_room("a", ["a", "b", "c"])
+        room = self._make_room("a", ["a", "b", "c"], status=RoomStatus.ACTIVE)
         _reconcile_talking_order(room, {"a", "c"})
         assert room.talking_order == ["a", "b", "c"]
 
