@@ -834,6 +834,32 @@ class TestJoinRoom:
         assert room.current_speaker == current_speaker.slug
         assert room.next_speaker == next_speaker.slug
 
+    def test_join_uses_status_locked_after_token_creation(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        keeper = UserFactory()
+        other = UserFactory()
+        session = _make_joinable_session(keeper, [user, other])
+        room = Room.objects.get_or_create_for_session(session)
+        room.talking_order = [keeper.slug, user.slug, other.slug]
+        room.save(update_fields=["talking_order"])
+
+        def start_room_before_token(*args):
+            Room.objects.filter(pk=room.pk).update(status=RoomStatus.ACTIVE)
+            return "fake-jwt-token"
+
+        with (
+            patch("totem.rooms.api.create_access_token", side_effect=start_room_before_token),
+            patch("totem.rooms.api.publish_state") as publish_state,
+        ):
+            response = client.post(f"{BASE}/{session.slug}/join")
+
+        assert response.status_code == 200
+        room.refresh_from_db()
+        assert room.talking_order == [keeper.slug, other.slug, user.slug]
+        assert room.state_version == 1
+        assert RoomEventLog.objects.filter(room=room, event_type="participant_joined").exists()
+        publish_state.assert_called_once()
+
     def test_join_during_active_room_is_a_versioned_event(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         participant = UserFactory()
