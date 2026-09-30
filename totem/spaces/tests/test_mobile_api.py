@@ -273,7 +273,9 @@ class TestMobileApiSpaces:
         )
 
         assert response.status_code == 200
-        assert response.json()["prompts"] == [{"id": second.pk, "prompt": "Updated second", "position": 1}]
+        assert response.json()["prompts"] == [
+            {"id": second.pk, "prompt": "Updated second", "position": 1, "consumed_round_numbers": []}
+        ]
         assert not SessionPrompt.objects.filter(pk=first.pk).exists()
 
     def test_non_keeper_cannot_manage_session_prompts(self, client_with_user: tuple[Client, User]):
