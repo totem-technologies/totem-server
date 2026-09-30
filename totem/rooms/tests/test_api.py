@@ -91,7 +91,7 @@ class TestPostEvent:
         assert SessionRound.objects.get(session=session, number=1).prompt == ""
         assert SessionRound.objects.get(session=session, number=1).state == "active"
 
-    def test_keeper_pass_without_prompt_clears_round_prompt(self, client_with_user: tuple[Client, User]):
+    def test_keeper_pass_without_prompt_preserves_round_prompt(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         participant = UserFactory()
         session = SessionFactory(space__author=keeper)
@@ -111,8 +111,8 @@ class TestPostEvent:
             response = _post_event(client, session.slug, {"type": "pass_stick"}, 2)
 
         assert response.status_code == 200
-        assert response.json()["round_message"] is None
-        assert SessionRound.objects.get(session=session, number=1).prompt == ""
+        assert response.json()["round_message"] == "For this round"
+        assert SessionRound.objects.get(session=session, number=1).prompt == "For this round"
 
     def test_start_room_with_prompt_does_not_assign_session_prompt(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user

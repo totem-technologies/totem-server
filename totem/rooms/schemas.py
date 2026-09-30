@@ -157,6 +157,7 @@ class StartRoomEvent(Schema):
 class PassStickEvent(Schema):
     type: Literal["pass_stick"] = "pass_stick"
     prompt: Optional[str] = Field(None, max_length=MAX_PROMPT_LENGTH)
+    session_prompt_id: int | None = Field(None, ge=1)
 
 
 class AcceptStickEvent(Schema):

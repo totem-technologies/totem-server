@@ -395,7 +395,7 @@ def _handle_pass(
 
         room.next_speaker = next_slug
     else:
-        if keeper_passes_from_turn:
+        if keeper_passes_from_turn and (prompt is not None or session_prompt_id is not None):
             _set_round_prompt(room, prompt, session_prompt_id)
         room.turn_state = TurnState.PASSING
 
