@@ -157,14 +157,16 @@ def update_session_prompts(request: HttpRequest, event_slug: str, payload: Sessi
             prompt.pk: prompt for prompt in SessionPrompt.objects.select_for_update().filter(session=session)
         }
 
-        prompts: list[SessionPrompt] = []
+        creates: list[SessionPrompt] = []
+        updates: list[SessionPrompt] = []
         submitted_ids: set[int] = set()
 
         for position, prompt_data in enumerate(payload.prompts, start=1):
             if prompt_data.id is not None and prompt_data.id in submitted_ids:
                 raise HttpError(422, "Prompts must not contain duplicate IDs.")
             if prompt_data.id is None:
-                prompt = SessionPrompt.objects.create(session=session, prompt=prompt_data.prompt, position=position)
+                prompt = SessionPrompt(session=session, prompt=prompt_data.prompt, position=position)
+                creates.append(prompt)
             else:
                 prompt = existing_prompts.pop(prompt_data.id, None)
                 if prompt is None:
@@ -177,10 +179,11 @@ def update_session_prompts(request: HttpRequest, event_slug: str, payload: Sessi
                     date_modified=prompt.date_modified,
                 )
                 submitted_ids.add(prompt_data.id)
-            prompts.append(prompt)
+                updates.append(prompt)
 
         SessionPrompt.objects.filter(pk__in=existing_prompts).delete()
-        SessionPrompt.objects.bulk_update(prompts, ["prompt", "position", "date_modified"])
+        SessionPrompt.objects.bulk_create(creates)
+        SessionPrompt.objects.bulk_update(updates, ["prompt", "position", "date_modified"])
 
     return _session_prompts_schema(session)
 

@@ -178,21 +178,6 @@ def _normalize_prompt(prompt: str | None) -> str | None:
     return (prompt or "").strip() or None
 
 
-def _round_prompt(room: Room, custom_prompt: str | None) -> str | None:
-    from totem.spaces.models import SessionRound
-
-    prompt = _normalize_prompt(custom_prompt)
-    round, created = SessionRound.objects.select_for_update().get_or_create(
-        session=room.session,
-        number=room.round_number,
-        defaults={"prompt": prompt or ""},
-    )
-    if prompt is not None and not created:
-        round.prompt = prompt
-        round.save(update_fields=["prompt", "date_modified"])
-    return round.prompt or None
-
-
 def _set_round_prompt(room: Room, prompt: str | None, session_prompt_id: int | None = None) -> None:
     from totem.spaces.models import SessionPrompt, SessionRound
 
@@ -333,7 +318,7 @@ def _handle_start(room: Room, actor: str, connected: set[str], prompt: str | Non
     room.current_speaker = room.keeper
     room.next_speaker = next_slug or room.keeper
     room.round_number = 1
-    _round_prompt(room, prompt)
+    _set_round_prompt(room, prompt)
 
 
 def _handle_pass(
@@ -411,13 +396,13 @@ def _handle_accept(room: Room, actor: str, connected: set[str]) -> None:
         # to themselves is not a lap.
         from totem.spaces.models import SessionRound, SessionRoundState
 
-        SessionRound.objects.select_for_update().filter(
+        SessionRound.objects.filter(
             session=room.session,
             number=room.round_number,
             state=SessionRoundState.ACTIVE,
         ).update(state=SessionRoundState.COMPLETED)
         room.round_number += 1
-        _round_prompt(room, None)
+        _set_round_prompt(room, None)
 
     next_slug = _next_in_order(room.talking_order, actor, connected)
 
@@ -489,7 +474,7 @@ def _handle_end(room: Room, actor: str, reason: EndReason) -> None:
 
     from totem.spaces.models import SessionRound, SessionRoundState
 
-    SessionRound.objects.select_for_update().filter(
+    SessionRound.objects.filter(
         session=room.session,
         number=room.round_number,
         state=SessionRoundState.ACTIVE,

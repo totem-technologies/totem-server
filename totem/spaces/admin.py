@@ -60,6 +60,7 @@ class SpaceCategoryAdmin(admin.ModelAdmin):
     search_fields = ("name", "description")
 
 
+@final
 class SessionInline(StaleDataCheckAdminMixin, admin.StackedInline):
     model = Session
     extra = 0
@@ -166,6 +167,11 @@ class SessionFeedbackInline(admin.TabularInline):
 class SessionPromptInlineForm(ModelForm):
     position = forms.IntegerField(label="", widget=forms.HiddenInput)
 
+    def has_changed(self) -> bool:
+        if not self.instance.pk and not self.data.get(self.add_prefix("prompt"), "").strip():
+            return False
+        return super().has_changed()
+
     class Meta:
         model = SessionPrompt
         fields = ("prompt", "position")
@@ -175,9 +181,6 @@ class SessionPromptInline(admin.TabularInline):
     model = SessionPrompt
     form = SessionPromptInlineForm
     extra = 0
-
-    def get_queryset(self, request):
-        return super().get_queryset(request)
 
     fields = ("prompt", "position")
 

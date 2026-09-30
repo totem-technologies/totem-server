@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from totem.rooms.models import Room
 from totem.rooms.schemas import RoomStatus
+from totem.spaces.admin import SessionPromptInlineForm
 from totem.spaces.models import Session, SessionPrompt
 from totem.users.tests.factories import UserFactory
 
@@ -13,6 +14,16 @@ from .factories import SessionFactory, SpaceFactory
 
 
 class TestSessionAdmin:
+    def test_blank_prompt_inline_row_is_ignored(self):
+        form = SessionPromptInlineForm(
+            data={"prompt": "", "position": "1"},
+            empty_permitted=True,
+            use_required_attribute=False,
+        )
+
+        assert not form.has_changed()
+        assert form.is_valid()
+
     def test_change_page_shows_attendee_emails(self, admin_client):
         session = SessionFactory()
         user1 = UserFactory()
