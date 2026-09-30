@@ -6,7 +6,6 @@ from django.utils import timezone
 
 from totem.rooms.models import Room
 from totem.rooms.schemas import RoomStatus
-from totem.spaces.admin import _save_inline_session_prompts
 from totem.spaces.models import Session, SessionPrompt
 from totem.users.tests.factories import UserFactory
 
@@ -38,7 +37,7 @@ class TestSessionAdmin:
     def test_add_page_allows_ordering_discussion_prompts(self, admin_client):
         response = admin_client.get(reverse("admin:spaces_session_add"))
 
-        assert "Discussion prompts" in response.content.decode()
+        assert response.status_code == 200
         assert 'name="discussion_prompts-0-prompt"' not in response.content.decode()
         assert "add another discussion prompt" in response.content.decode().lower()
         assert "js/admin/session_prompt_order.js" in response.content.decode()
@@ -64,17 +63,7 @@ class TestSessionAdmin:
         response = admin_client.get(reverse("admin:spaces_space_change", args=[space.pk]))
 
         assert response.status_code == 200
-        assert 'name="sessions-0-discussion_prompts"' in response.content.decode()
-
-    @pytest.mark.django_db
-    def test_space_admin_session_inline_saves_prompts_in_line_order(self):
-        session = SessionFactory()
-        _save_inline_session_prompts(session, "First prompt\nSecond prompt")
-
-        assert list(session.discussion_prompts.values_list("prompt", flat=True)) == [
-            "First prompt",
-            "Second prompt",
-        ]
+        assert 'name="sessions-0-discussion_prompts"' not in response.content.decode()
 
     def test_copy_session_copies_discussion_prompts(self, admin_client):
         session = SessionFactory()
