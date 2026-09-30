@@ -214,16 +214,7 @@ def _set_round_prompt(room: Room, prompt: str | None, session_prompt_id: int | N
                 code=ErrorCode.INVALID_TRANSITION,
                 message="Prepared prompt does not belong to this session",
             )
-        if (
-            SessionRound.objects.select_for_update()
-            .filter(prepared_prompt=prepared_prompt)
-            .exclude(session=room.session, number=room.round_number)
-            .exists()
-        ):
-            raise TransitionError(
-                code=ErrorCode.INVALID_TRANSITION,
-                message="Prepared prompt has already been consumed",
-            )
+
         prompt = prepared_prompt.prompt
 
     round, created = SessionRound.objects.select_for_update().get_or_create(

@@ -375,6 +375,9 @@ class TestPostEvent:
         prepared_prompt = SessionPrompt.objects.create(session=session, prompt="From the list", position=1)
         Room.objects.get_or_create_for_session(session)
 
+        participant_client = Client()
+        participant_client.force_login(participant)
+
         with (
             patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug, participant.slug}),
             patch("totem.rooms.api.publish_state"),
@@ -384,12 +387,21 @@ class TestPostEvent:
             response = _post_event(
                 client, session.slug, {"type": "pass_stick", "session_prompt_id": prepared_prompt.pk}, 1
             )
+            assert response.status_code == 200
+            assert _post_event(participant_client, session.slug, {"type": "accept_stick"}, 2).status_code == 200
+            assert _post_event(participant_client, session.slug, {"type": "pass_stick"}, 3).status_code == 200
+            assert _post_event(client, session.slug, {"type": "accept_stick"}, 4).status_code == 200
+            response = _post_event(
+                client, session.slug, {"type": "pass_stick", "session_prompt_id": prepared_prompt.pk}, 5
+            )
 
         assert response.status_code == 200
+        assert response.json()["round_number"] == 2
         assert response.json()["round_message"] == "From the list"
-        round = SessionRound.objects.get(session=session, number=1)
-        assert round.prompt == "From the list"
-        assert round.prepared_prompt == prepared_prompt
+        for round_number in [1, 2]:
+            round = SessionRound.objects.get(session=session, number=round_number)
+            assert round.prompt == "From the list"
+            assert round.prepared_prompt == prepared_prompt
 
     def test_set_prompt(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user

@@ -599,9 +599,8 @@ class SessionPrompt(BaseModel):
     position = models.PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(1)])
 
     @property
-    def consumed_round_number(self) -> int | None:
-        consumed_round = getattr(self, "consumed_round", None)
-        return consumed_round.number if consumed_round else None
+    def consumed_round_numbers(self) -> list[int]:
+        return [round.number for round in self.consumed_rounds.all()]
 
     class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]
         ordering = ["position", "pk"]
@@ -618,10 +617,10 @@ class SessionRound(BaseModel):
     session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="rounds")
     number = models.PositiveIntegerField()
     prompt = models.CharField(max_length=2000, blank=True)
-    prepared_prompt = models.OneToOneField(
+    prepared_prompt = models.ForeignKey(
         SessionPrompt,
         on_delete=models.SET_NULL,
-        related_name="consumed_round",
+        related_name="consumed_rounds",
         null=True,
         blank=True,
     )

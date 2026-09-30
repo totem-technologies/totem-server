@@ -130,7 +130,7 @@ def get_session_detail(request: HttpRequest, event_slug: str):
 
 def _session_prompts_schema(session: Session) -> SessionPromptsSchema:
     return SessionPromptsSchema(
-        prompts=list(session.discussion_prompts.filter(position__isnull=False).select_related("consumed_round"))
+        prompts=list(session.discussion_prompts.filter(position__isnull=False).prefetch_related("consumed_rounds"))
     )
 
 

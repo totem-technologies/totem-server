@@ -244,14 +244,15 @@ class TestMobileApiSpaces:
         session = SessionFactory(space__author=keeper)
         consumed = SessionPrompt.objects.create(session=session, prompt="Used", position=1)
         pending = SessionPrompt.objects.create(session=session, prompt="Pending", position=2)
+        SessionRound.objects.create(session=session, number=2, prepared_prompt=consumed)
         SessionRound.objects.create(session=session, number=3, prepared_prompt=consumed)
 
         response = client.get(reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug}))
 
         assert response.status_code == 200
         assert response.json()["prompts"] == [
-            {"id": consumed.pk, "prompt": "Used", "position": 1, "consumed_round_number": 3},
-            {"id": pending.pk, "prompt": "Pending", "position": 2, "consumed_round_number": None},
+            {"id": consumed.pk, "prompt": "Used", "position": 1, "consumed_round_numbers": [2, 3]},
+            {"id": pending.pk, "prompt": "Pending", "position": 2, "consumed_round_numbers": []},
         ]
 
     def test_keeper_can_edit_reorder_and_remove_prompts_during_live_session(
