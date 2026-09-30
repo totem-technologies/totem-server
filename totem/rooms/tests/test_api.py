@@ -365,6 +365,31 @@ class TestPostEvent:
         data = resp.json()
         assert data["round_number"] == 1
         assert data["round_message"] == "What are you carrying today?"
+        assert SessionRound.objects.get(session=session, number=1).prepared_prompt is None
+
+    def test_keeper_pass_can_consume_prepared_prompt(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        participant = UserFactory()
+        session = SessionFactory(space__author=keeper)
+        session.attendees.add(keeper, participant)
+        prepared_prompt = SessionPrompt.objects.create(session=session, prompt="From the list", position=1)
+        Room.objects.get_or_create_for_session(session)
+
+        with (
+            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug, participant.slug}),
+            patch("totem.rooms.api.publish_state"),
+            patch("totem.rooms.api.mute_all_participants"),
+        ):
+            assert _post_event(client, session.slug, {"type": "start_room"}, 0).status_code == 200
+            response = _post_event(
+                client, session.slug, {"type": "pass_stick", "session_prompt_id": prepared_prompt.pk}, 1
+            )
+
+        assert response.status_code == 200
+        assert response.json()["round_message"] == "From the list"
+        round = SessionRound.objects.get(session=session, number=1)
+        assert round.prompt == "From the list"
+        assert round.prepared_prompt == prepared_prompt
 
     def test_set_prompt(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user

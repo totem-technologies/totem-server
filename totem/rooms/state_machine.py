@@ -78,16 +78,16 @@ def apply_event(
                 pass
             case StartRoomEvent(prompt=prompt):
                 _handle_start(room, actor, connected, prompt)
-            case PassStickEvent(prompt=prompt):
-                _handle_pass(room, actor, connected, prompt)
+            case PassStickEvent(prompt=prompt, session_prompt_id=session_prompt_id):
+                _handle_pass(room, actor, connected, prompt, session_prompt_id)
             case AcceptStickEvent():
                 _handle_accept(room, actor, connected)
             case ForcePassStickEvent():
                 _handle_force_pass(room, actor, connected)
             case ReorderEvent(talking_order=new_order):
                 _handle_reorder(room, actor, new_order, connected)
-            case SetPromptEvent(prompt=prompt):
-                _handle_set_prompt(room, actor, prompt)
+            case SetPromptEvent(prompt=prompt, session_prompt_id=session_prompt_id):
+                _handle_set_prompt(room, actor, prompt, session_prompt_id)
             case EndRoomEvent(reason=reason):
                 _handle_end(room, actor, reason)
             case BanParticipantEvent(participant_slug=slug):
@@ -193,17 +193,48 @@ def _round_prompt(room: Room, custom_prompt: str | None) -> str | None:
     return round.prompt or None
 
 
-def _set_round_prompt(room: Room, prompt: str) -> None:
-    from totem.spaces.models import SessionRound
+def _set_round_prompt(room: Room, prompt: str | None, session_prompt_id: int | None = None) -> None:
+    from totem.spaces.models import SessionPrompt, SessionRound
+
+    prompt = _normalize_prompt(prompt)
+    prepared_prompt = None
+    if session_prompt_id is not None:
+        if prompt is not None:
+            raise TransitionError(
+                code=ErrorCode.INVALID_TRANSITION,
+                message="Choose either a prepared prompt or a custom prompt",
+            )
+        prepared_prompt = (
+            SessionPrompt.objects.select_for_update()
+            .filter(session=room.session, position__isnull=False, pk=session_prompt_id)
+            .first()
+        )
+        if prepared_prompt is None:
+            raise TransitionError(
+                code=ErrorCode.INVALID_TRANSITION,
+                message="Prepared prompt does not belong to this session",
+            )
+        if (
+            SessionRound.objects.select_for_update()
+            .filter(prepared_prompt=prepared_prompt)
+            .exclude(session=room.session, number=room.round_number)
+            .exists()
+        ):
+            raise TransitionError(
+                code=ErrorCode.INVALID_TRANSITION,
+                message="Prepared prompt has already been consumed",
+            )
+        prompt = prepared_prompt.prompt
 
     round, created = SessionRound.objects.select_for_update().get_or_create(
         session=room.session,
         number=room.round_number,
-        defaults={"prompt": prompt},
+        defaults={"prompt": prompt or "", "prepared_prompt": prepared_prompt},
     )
     if not created:
-        round.prompt = prompt
-        round.save(update_fields=["prompt", "date_modified"])
+        round.prompt = prompt or ""
+        round.prepared_prompt = prepared_prompt
+        round.save(update_fields=["prompt", "prepared_prompt", "date_modified"])
 
 
 def _next_in_order(
@@ -316,7 +347,13 @@ def _handle_start(room: Room, actor: str, connected: set[str], prompt: str | Non
     _round_prompt(room, prompt)
 
 
-def _handle_pass(room: Room, actor: str, connected: set[str], prompt: str | None) -> None:
+def _handle_pass(
+    room: Room,
+    actor: str,
+    connected: set[str],
+    prompt: str | None,
+    session_prompt_id: int | None,
+) -> None:
     _require_active(room)
     _require_keeper_in_room(room)
 
@@ -328,7 +365,7 @@ def _handle_pass(room: Room, actor: str, connected: set[str], prompt: str | None
             message="Only the current speaker or keeper can pass the stick",
         )
 
-    if prompt is not None and actor != room.keeper:
+    if (prompt is not None or session_prompt_id is not None) and actor != room.keeper:
         raise TransitionError(
             code=ErrorCode.NOT_KEEPER,
             message="Only the keeper can set a round prompt",
@@ -338,7 +375,7 @@ def _handle_pass(room: Room, actor: str, connected: set[str], prompt: str | None
         actor == room.keeper and room.current_speaker == room.keeper and room.turn_state == TurnState.SPEAKING
     )
 
-    if prompt is not None and not keeper_passes_from_turn:
+    if (prompt is not None or session_prompt_id is not None) and not keeper_passes_from_turn:
         raise TransitionError(
             code=ErrorCode.INVALID_TRANSITION,
             message="Round prompt can only be set when keeper passes from their own turn",
@@ -359,7 +396,7 @@ def _handle_pass(room: Room, actor: str, connected: set[str], prompt: str | None
         room.next_speaker = next_slug
     else:
         if keeper_passes_from_turn:
-            _set_round_prompt(room, prompt or "")
+            _set_round_prompt(room, prompt, session_prompt_id)
         room.turn_state = TurnState.PASSING
 
 
@@ -417,11 +454,11 @@ def _handle_force_pass(room: Room, actor: str, connected: set[str]) -> None:
     room.turn_state = TurnState.PASSING
 
 
-def _handle_set_prompt(room: Room, actor: str, prompt: str) -> None:
+def _handle_set_prompt(room: Room, actor: str, prompt: str | None, session_prompt_id: int | None) -> None:
     _require_keeper(room, actor)
     _require_active(room)
 
-    _set_round_prompt(room, _normalize_prompt(prompt) or "")
+    _set_round_prompt(room, prompt, session_prompt_id)
 
 
 def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set[str]) -> None:

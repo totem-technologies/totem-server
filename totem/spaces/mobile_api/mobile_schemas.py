@@ -3,7 +3,7 @@ from enum import Enum
 
 from ninja import Field, ModelSchema, Schema
 
-from totem.spaces.models import Session, SessionFeedbackOptions, SessionPrompt, Space
+from totem.spaces.models import Session, SessionFeedbackOptions, Space
 from totem.users.schemas import PublicUserSchema
 
 
@@ -89,10 +89,11 @@ class SessionDetailSchema(Schema):
     meeting_provider: MeetingProviderEnum
 
 
-class SessionPromptSchema(ModelSchema):
-    class Meta:
-        model = SessionPrompt
-        fields = ["id", "prompt", "position"]
+class SessionPromptSchema(Schema):
+    id: int
+    prompt: str
+    position: int | None
+    consumed_round_number: int | None
 
 
 class SessionPromptsSchema(Schema):

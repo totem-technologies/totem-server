@@ -598,6 +598,11 @@ class SessionPrompt(BaseModel):
     prompt = models.CharField(max_length=1000)
     position = models.PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(1)])
 
+    @property
+    def consumed_round_number(self) -> int | None:
+        consumed_round = getattr(self, "consumed_round", None)
+        return consumed_round.number if consumed_round else None
+
     class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]
         ordering = ["position", "pk"]
         verbose_name = "discussion prompt"
@@ -613,6 +618,13 @@ class SessionRound(BaseModel):
     session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="rounds")
     number = models.PositiveIntegerField()
     prompt = models.CharField(max_length=2000, blank=True)
+    prepared_prompt = models.OneToOneField(
+        SessionPrompt,
+        on_delete=models.SET_NULL,
+        related_name="consumed_round",
+        null=True,
+        blank=True,
+    )
     state = models.CharField(max_length=20, choices=SessionRoundState.choices, default=SessionRoundState.ACTIVE)
 
     class Meta(BaseModel.Meta):

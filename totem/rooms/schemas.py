@@ -183,7 +183,8 @@ class SetPromptEvent(Schema):
     """Keeper sets or replaces the active round prompt during a live session."""
 
     type: Literal["set_prompt"] = "set_prompt"
-    prompt: str = Field(max_length=MAX_PROMPT_LENGTH)
+    prompt: Optional[str] = Field(None, max_length=MAX_PROMPT_LENGTH)
+    session_prompt_id: int | None = Field(None, ge=1)
 
 
 class EndRoomEvent(Schema):

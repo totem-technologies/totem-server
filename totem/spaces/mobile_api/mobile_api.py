@@ -129,7 +129,9 @@ def get_session_detail(request: HttpRequest, event_slug: str):
 
 
 def _session_prompts_schema(session: Session) -> SessionPromptsSchema:
-    return SessionPromptsSchema(prompts=list(session.discussion_prompts.filter(position__isnull=False)))
+    return SessionPromptsSchema(
+        prompts=list(session.discussion_prompts.filter(position__isnull=False).select_related("consumed_round"))
+    )
 
 
 def _session_for_keeper(request: HttpRequest, event_slug: str, *, lock: bool = False) -> Session:

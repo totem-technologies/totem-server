@@ -20,6 +20,7 @@ from totem.spaces.models import (
     SessionFeedback,
     SessionFeedbackOptions,
     SessionPrompt,
+    SessionRound,
     Space,
     SpaceCategory,
 )
@@ -237,6 +238,21 @@ class TestMobileApiSpaces:
         assert response.status_code == 200
         assert [prompt["prompt"] for prompt in response.json()["prompts"]] == ["Closing", "Welcome"]
         assert not SessionPrompt.objects.filter(prompt="Middle").exists()
+
+    def test_session_prompts_include_consumed_round_number(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        consumed = SessionPrompt.objects.create(session=session, prompt="Used", position=1)
+        pending = SessionPrompt.objects.create(session=session, prompt="Pending", position=2)
+        SessionRound.objects.create(session=session, number=3, prepared_prompt=consumed)
+
+        response = client.get(reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug}))
+
+        assert response.status_code == 200
+        assert response.json()["prompts"] == [
+            {"id": consumed.pk, "prompt": "Used", "position": 1, "consumed_round_number": 3},
+            {"id": pending.pk, "prompt": "Pending", "position": 2, "consumed_round_number": None},
+        ]
 
     def test_keeper_can_edit_reorder_and_remove_prompts_during_live_session(
         self, client_with_user: tuple[Client, User]
