@@ -6,7 +6,7 @@ from django.test import Client
 from django.utils import timezone
 
 from totem.rooms.livekit import LiveKitConfigurationError
-from totem.rooms.models import Room, RoomEventLog
+from totem.rooms.models import Room, RoomEventLog, RoomParticipant
 from totem.rooms.schemas import EndReason, RemoveReason, RoomStatus, TurnState
 from totem.spaces.models import Space
 from totem.spaces.tests.factories import SessionFactory
@@ -779,28 +779,18 @@ class TestJoinRoom:
         assert user in session.joined.all()
         assert Room.objects.filter(session=session).exists()
 
-    def test_join_records_arrival_once_across_rejoins(self, client_with_user: tuple[Client, User]):
+    def test_join_issues_token_without_recording_arrival(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         session = _make_joinable_session(user)
         room = Room.objects.get_or_create_for_session(session)
 
-        with (
-            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),
-            patch("totem.rooms.api.get_connected_participants", return_value=set()),
-            patch("totem.rooms.api.analytics"),
-        ):
-            first_response = client.post(f"{BASE}/{session.slug}/join")
-            assert first_response.status_code == 200
-            room.refresh_from_db()
-            first_arrival = room.participant_arrivals[user.slug]
+        with patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"):
+            response = client.post(f"{BASE}/{session.slug}/join")
 
-            second_response = client.post(f"{BASE}/{session.slug}/join")
+        assert response.status_code == 200
+        assert not RoomParticipant.objects.filter(room=room, user=user).exists()
 
-        assert second_response.status_code == 200
-        room.refresh_from_db()
-        assert room.participant_arrivals[user.slug] == first_arrival
-
-    def test_active_join_records_arrivals_without_changing_order(self, client_with_user: tuple[Client, User]):
+    def test_active_join_does_not_change_order_or_record_arrival(self, client_with_user: tuple[Client, User]):
         client, current_speaker = client_with_user
         keeper, next_speaker, newcomer = (UserFactory() for _ in range(3))
         session = _make_joinable_session(keeper, [current_speaker, next_speaker, newcomer])
@@ -831,27 +821,10 @@ class TestJoinRoom:
         assert newcomer_response.status_code == 200
         room.refresh_from_db()
         assert room.talking_order == [keeper.slug, current_speaker.slug, next_speaker.slug]
-        assert room.participant_arrivals.keys() >= {current_speaker.slug, newcomer.slug}
+        assert not RoomParticipant.objects.filter(room=room).exists()
         assert room.current_speaker == current_speaker.slug
         assert room.next_speaker == next_speaker.slug
         publish_state.assert_not_called()
-
-    def test_join_records_arrival_after_room_starts(self, client_with_user: tuple[Client, User]):
-        client, user = client_with_user
-        keeper = UserFactory()
-        session = _make_joinable_session(keeper, [user])
-        room = Room.objects.get_or_create_for_session(session)
-
-        def start_room_before_token(*args):
-            Room.objects.filter(pk=room.pk).update(status=RoomStatus.ACTIVE)
-            return "fake-jwt-token"
-
-        with patch("totem.rooms.api.create_access_token", side_effect=start_room_before_token):
-            response = client.post(f"{BASE}/{session.slug}/join")
-
-        assert response.status_code == 200
-        room.refresh_from_db()
-        assert user.slug in room.participant_arrivals
 
     def test_join_not_joinable(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user

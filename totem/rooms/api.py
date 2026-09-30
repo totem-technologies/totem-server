@@ -10,7 +10,6 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable
 
-from django.db import transaction
 from django.http import HttpRequest
 from django.utils import timezone
 from ninja import Router, Status
@@ -227,7 +226,6 @@ def join_room(
         ).as_http_response()
 
     room = Room.objects.get_or_create_for_session(session)
-    # Fast-path checks avoid issuing a LiveKit token; locked checks below enforce correctness.
     if room.status == RoomStatus.ENDED:
         return RoomErrorResponse(
             code=ErrorCode.ROOM_ALREADY_ENDED,
@@ -266,26 +264,6 @@ def join_room(
         ).as_http_response()
 
     is_already_connected = bool(connected and user.slug in connected)
-
-    with transaction.atomic():
-        locked_room = Room.objects.select_for_update().get(pk=room.pk)
-        if locked_room.status == RoomStatus.ENDED:
-            return RoomErrorResponse(
-                code=ErrorCode.ROOM_ALREADY_ENDED,
-                message="This session has ended",
-            ).as_http_response()
-        if user.slug in locked_room.banned_participants:
-            return RoomErrorResponse(
-                code=ErrorCode.BANNED,
-                message="You have been banned from this session",
-            ).as_http_response()
-
-        if user.slug not in locked_room.participant_arrivals:
-            locked_room.participant_arrivals = {
-                **locked_room.participant_arrivals,
-                user.slug: timezone.now().isoformat(),
-            }
-            locked_room.save(update_fields=["participant_arrivals", "date_modified"])
 
     session.joined.add(user)
     analytics.event_joined(user, session)

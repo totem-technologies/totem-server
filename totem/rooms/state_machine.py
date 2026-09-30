@@ -15,7 +15,7 @@ from django.utils import timezone
 
 from totem.users.models import User
 
-from .models import Room, RoomEventLog
+from .models import Room, RoomEventLog, RoomParticipant
 from .schemas import (
     AcceptStickEvent,
     BanParticipantEvent,
@@ -73,7 +73,6 @@ def apply_event(
             )
 
         state_before = room.to_state()
-        arrivals_before = room.participant_arrivals
         waiting_order_manually_set_before = room.waiting_order_manually_set
 
         # Reconcile talking order with who's actually connected.
@@ -107,13 +106,8 @@ def apply_event(
 
         state = room.to_state()
         if state == state_before:
-            metadata_fields = []
-            if room.participant_arrivals != arrivals_before:
-                metadata_fields.append("participant_arrivals")
             if room.waiting_order_manually_set != waiting_order_manually_set_before:
-                metadata_fields.append("waiting_order_manually_set")
-            if metadata_fields:
-                room.save(update_fields=[*metadata_fields, "date_modified"])
+                room.save(update_fields=["waiting_order_manually_set", "date_modified"])
             return state
 
         room.state_version += 1
@@ -221,12 +215,25 @@ def _next_in_order(
     return None
 
 
-def _sort_waiting_room_order(room: Room) -> None:
+def _record_connected_participants(room: Room, connected: set[str]) -> dict[str, datetime]:
+    arrivals = dict(RoomParticipant.objects.filter(room=room).values_list("user__slug", "first_seen_at"))
+    missing = connected - arrivals.keys()
+    if not missing:
+        return arrivals
+
+    now = timezone.now()
+    RoomParticipant.objects.bulk_create(
+        [RoomParticipant(room=room, user=user, first_seen_at=now) for user in User.objects.filter(slug__in=missing)],
+        ignore_conflicts=True,
+    )
+    return dict(RoomParticipant.objects.filter(room=room).values_list("user__slug", "first_seen_at"))
+
+
+def _sort_waiting_room_order(room: Room, arrivals: dict[str, datetime]) -> None:
     """Order waiting participants by prior attendance, then arrival time."""
     if room.waiting_order_manually_set:
         return
 
-    arrivals = room.participant_arrivals
     slugs = [slug for slug in room.talking_order if slug != room.keeper]
     attendance_counts = dict(
         User.objects.filter(slug__in=slugs)
@@ -241,9 +248,9 @@ def _sort_waiting_room_order(room: Room) -> None:
     positions = {slug: index for index, slug in enumerate(slugs)}
     slugs.sort(
         key=lambda slug: (
-            -attendance_counts.get(slug, 0),
             slug not in arrivals,
-            datetime.fromisoformat(arrivals[slug]) if slug in arrivals else None,
+            -attendance_counts.get(slug, 0),
+            arrivals.get(slug),
             positions[slug],
         )
     )
@@ -260,11 +267,7 @@ def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
       speaker disconnects
     - Repairs missing speaker assignments
     """
-    arrivals = dict(room.participant_arrivals)
-    now = timezone.now().isoformat()
-    for slug in connected:
-        arrivals.setdefault(slug, now)
-    room.participant_arrivals = arrivals
+    arrivals = _record_connected_participants(room, connected)
 
     reconciled: list[str] = []
 
@@ -272,19 +275,19 @@ def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
     if room.keeper in set(room.talking_order) | connected:
         reconciled.append(room.keeper)
 
-    # Preserve full existing order (connected and disconnected)
+    # Preserve the existing order once active; waiting rooms are sorted below.
     for slug in room.talking_order:
         if slug not in reconciled:
             reconciled.append(slug)
 
-    # Append newly connected members in recorded arrival order.
+    # The only automatic active-room order change is appending late joiners.
     newly_connected = [slug for slug in connected if slug not in reconciled]
-    newly_connected.sort(key=lambda slug: (datetime.fromisoformat(room.participant_arrivals[slug]), slug))
+    newly_connected.sort(key=lambda slug: (slug not in arrivals, arrivals.get(slug), slug))
     reconciled.extend(newly_connected)
 
     room.talking_order = reconciled
     if room.status == RoomStatus.WAITING_ROOM:
-        _sort_waiting_room_order(room)
+        _sort_waiting_room_order(room, arrivals)
 
     connected_order = [s for s in room.talking_order if s in connected]
 
