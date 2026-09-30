@@ -398,10 +398,40 @@ class TestPostEvent:
         assert response.status_code == 200
         assert response.json()["round_number"] == 2
         assert response.json()["round_message"] == "From the list"
+        assert response.json()["round_prompt_id"] == prepared_prompt.pk
         for round_number in [1, 2]:
             round = SessionRound.objects.get(session=session, number=round_number)
             assert round.prompt == "From the list"
             assert round.prepared_prompt == prepared_prompt
+
+    def test_selecting_same_text_prepared_prompt_changes_room_state(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        participant = UserFactory()
+        session = SessionFactory(space__author=keeper)
+        session.attendees.add(keeper, participant)
+        prepared_prompt = SessionPrompt.objects.create(session=session, prompt="Same prompt", position=1)
+        Room.objects.get_or_create_for_session(session)
+
+        with (
+            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug, participant.slug}),
+            patch("totem.rooms.api.publish_state"),
+            patch("totem.rooms.api.mute_all_participants"),
+        ):
+            started = _post_event(client, session.slug, {"type": "start_room", "prompt": "Same prompt"}, 0)
+            assert started.status_code == 200
+            assert started.json()["round_prompt_id"] is None
+
+            response = _post_event(
+                client,
+                session.slug,
+                {"type": "set_prompt", "session_prompt_id": prepared_prompt.pk},
+                1,
+            )
+
+        assert response.status_code == 200
+        assert response.json()["round_message"] == "Same prompt"
+        assert response.json()["round_prompt_id"] == prepared_prompt.pk
+        assert response.json()["version"] == 2
 
     def test_set_prompt(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user

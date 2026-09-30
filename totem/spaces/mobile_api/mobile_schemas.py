@@ -92,7 +92,7 @@ class SessionDetailSchema(Schema):
 class SessionPromptSchema(Schema):
     id: int
     prompt: str
-    position: int | None
+    position: int
     consumed_round_numbers: list[int]
 
 

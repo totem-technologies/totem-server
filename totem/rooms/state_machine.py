@@ -205,9 +205,7 @@ def _set_round_prompt(room: Room, prompt: str | None, session_prompt_id: int | N
                 message="Choose either a prepared prompt or a custom prompt",
             )
         prepared_prompt = (
-            SessionPrompt.objects.select_for_update()
-            .filter(session=room.session, position__isnull=False, pk=session_prompt_id)
-            .first()
+            SessionPrompt.objects.select_for_update().filter(session=room.session, pk=session_prompt_id).first()
         )
         if prepared_prompt is None:
             raise TransitionError(

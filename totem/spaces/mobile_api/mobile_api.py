@@ -35,6 +35,8 @@ from totem.spaces.models import (
     SessionFeedback,
     SessionFeedbackOptions,
     SessionPrompt,
+    SessionRound,
+    SessionRoundState,
     SessionTimeConflict,
     Space,
 )
@@ -129,9 +131,7 @@ def get_session_detail(request: HttpRequest, event_slug: str):
 
 
 def _session_prompts_schema(session: Session) -> SessionPromptsSchema:
-    return SessionPromptsSchema(
-        prompts=list(session.discussion_prompts.filter(position__isnull=False).prefetch_related("consumed_rounds"))
-    )
+    return SessionPromptsSchema(prompts=list(session.discussion_prompts.prefetch_related("consumed_rounds")))
 
 
 def _session_for_keeper(request: HttpRequest, event_slug: str, *, lock: bool = False) -> Session:
@@ -154,8 +154,7 @@ def update_session_prompts(request: HttpRequest, event_slug: str, payload: Sessi
     with transaction.atomic():
         session = _session_for_keeper(request, event_slug, lock=True)
         existing_prompts = {
-            prompt.pk: prompt
-            for prompt in SessionPrompt.objects.select_for_update().filter(session=session, position__isnull=False)
+            prompt.pk: prompt for prompt in SessionPrompt.objects.select_for_update().filter(session=session)
         }
 
         prompts: list[SessionPrompt] = []
@@ -173,6 +172,10 @@ def update_session_prompts(request: HttpRequest, event_slug: str, payload: Sessi
                 prompt.prompt = prompt_data.prompt
                 prompt.position = position
                 prompt.date_modified = timezone.now()
+                SessionRound.objects.filter(prepared_prompt=prompt, state=SessionRoundState.ACTIVE).update(
+                    prompt=prompt.prompt,
+                    date_modified=prompt.date_modified,
+                )
                 submitted_ids.add(prompt_data.id)
             prompts.append(prompt)
 

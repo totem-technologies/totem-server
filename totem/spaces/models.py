@@ -596,7 +596,7 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
 class SessionPrompt(BaseModel):
     session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="discussion_prompts")
     prompt = models.CharField(max_length=1000)
-    position = models.PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(1)])
+    position = models.PositiveIntegerField(validators=[MinValueValidator(1)])
 
     @property
     def consumed_round_numbers(self) -> list[int]:

@@ -91,16 +91,20 @@ class Room(BaseModel):
             case _:
                 return WaitingRoomDetail()
 
-    @property
-    def round_message(self) -> str | None:
+    def _session_round(self):
         from totem.spaces.models import SessionRound
 
-        return (
-            SessionRound.objects.filter(session_id=self.session_id, number=self.round_number)
-            .values_list("prompt", flat=True)
-            .first()
-            or None
-        )
+        return SessionRound.objects.filter(session_id=self.session_id, number=self.round_number).first()
+
+    @property
+    def round_message(self) -> str | None:
+        round = self._session_round()
+        return round.prompt or None if round else None
+
+    @property
+    def round_prompt_id(self) -> int | None:
+        round = self._session_round()
+        return round.prepared_prompt_id if round else None
 
     def to_state(self) -> RoomState:
         return RoomState(
@@ -116,6 +120,7 @@ class Room(BaseModel):
             banned_participants=self.banned_participants,
             round_number=self.round_number,
             round_message=self.round_message,
+            round_prompt_id=self.round_prompt_id,
         )
 
 

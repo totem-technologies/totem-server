@@ -150,7 +150,7 @@ def copy_session(modeladmin, request, queryset: QuerySet[Session]):
     SessionPrompt.objects.bulk_create(
         [
             SessionPrompt(session=obj, prompt=prompt.prompt, position=prompt.position)
-            for prompt in session.discussion_prompts.filter(position__isnull=False)
+            for prompt in session.discussion_prompts.all()
         ]
     )
     change_url = reverse(f"admin:{obj._meta.app_label}_{obj._meta.model_name}_change", args=[obj.pk])
@@ -177,7 +177,7 @@ class SessionPromptInline(admin.TabularInline):
     extra = 0
 
     def get_queryset(self, request):
-        return super().get_queryset(request).filter(position__isnull=False)
+        return super().get_queryset(request)
 
     fields = ("prompt", "position")
 

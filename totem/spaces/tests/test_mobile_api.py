@@ -265,6 +265,12 @@ class TestMobileApiSpaces:
         room = Room.objects.get_or_create_for_session(session)
         room.status = "active"
         room.save(update_fields=["status"])
+        active_round = SessionRound.objects.create(
+            session=session,
+            number=1,
+            prompt=second.prompt,
+            prepared_prompt=second,
+        )
 
         response = client.put(
             reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug}),
@@ -274,8 +280,10 @@ class TestMobileApiSpaces:
 
         assert response.status_code == 200
         assert response.json()["prompts"] == [
-            {"id": second.pk, "prompt": "Updated second", "position": 1, "consumed_round_numbers": []}
+            {"id": second.pk, "prompt": "Updated second", "position": 1, "consumed_round_numbers": [1]}
         ]
+        active_round.refresh_from_db()
+        assert active_round.prompt == "Updated second"
         assert not SessionPrompt.objects.filter(pk=first.pk).exists()
 
     def test_non_keeper_cannot_manage_session_prompts(self, client_with_user: tuple[Client, User]):
