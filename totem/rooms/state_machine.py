@@ -25,7 +25,6 @@ from .schemas import (
     RoomState,
     RoomStatus,
     SetPromptEvent,
-    SkipPromptEvent,
     StartRoomEvent,
     TransitionError,
     TurnState,
@@ -89,8 +88,6 @@ def apply_event(
                 _handle_reorder(room, actor, new_order, connected)
             case SetPromptEvent(prompt=prompt):
                 _handle_set_prompt(room, actor, prompt)
-            case SkipPromptEvent():
-                _handle_skip_prompt(room, actor)
             case EndRoomEvent(reason=reason):
                 _handle_end(room, actor, reason)
             case BanParticipantEvent(participant_slug=slug):
@@ -362,7 +359,7 @@ def _handle_pass(room: Room, actor: str, connected: set[str], prompt: str | None
         room.next_speaker = next_slug
     else:
         if keeper_passes_from_turn:
-            _round_prompt(room, prompt)
+            _set_round_prompt(room, prompt or "")
         room.turn_state = TurnState.PASSING
 
 
@@ -425,13 +422,6 @@ def _handle_set_prompt(room: Room, actor: str, prompt: str) -> None:
     _require_active(room)
 
     _set_round_prompt(room, _normalize_prompt(prompt) or "")
-
-
-def _handle_skip_prompt(room: Room, actor: str) -> None:
-    _require_keeper(room, actor)
-    _require_active(room)
-
-    _set_round_prompt(room, "")
 
 
 def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set[str]) -> None:

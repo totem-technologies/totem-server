@@ -186,12 +186,6 @@ class SetPromptEvent(Schema):
     prompt: str = Field(max_length=MAX_PROMPT_LENGTH)
 
 
-class SkipPromptEvent(Schema):
-    """Keeper clears the active round prompt."""
-
-    type: Literal["skip_prompt"] = "skip_prompt"
-
-
 class EndRoomEvent(Schema):
     type: Literal["end_room"] = "end_room"
     reason: EndReason
@@ -229,7 +223,6 @@ RoomEvent = Annotated[
         ForcePassStickEvent,
         ReorderEvent,
         SetPromptEvent,
-        SkipPromptEvent,
         EndRoomEvent,
         BanParticipantEvent,
         UnbanParticipantEvent,

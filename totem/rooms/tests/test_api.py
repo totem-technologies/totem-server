@@ -91,17 +91,15 @@ class TestPostEvent:
         assert SessionRound.objects.get(session=session, number=1).prompt == ""
         assert SessionRound.objects.get(session=session, number=1).state == "active"
 
-    def test_skip_prompt_clears_round_prompt_without_changing_prepared_prompt(
-        self, client_with_user: tuple[Client, User]
-    ):
+    def test_keeper_pass_without_prompt_clears_round_prompt(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
+        participant = UserFactory()
         session = SessionFactory(space__author=keeper)
-        session.attendees.add(keeper)
-        prepared_prompt = SessionPrompt.objects.create(session=session, prompt="Prepared prompt", position=1)
+        session.attendees.add(keeper, participant)
         Room.objects.get_or_create_for_session(session)
 
         with (
-            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug}),
+            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug, participant.slug}),
             patch("totem.rooms.api.publish_state"),
             patch("totem.rooms.api.mute_all_participants"),
         ):
@@ -110,12 +108,10 @@ class TestPostEvent:
                 _post_event(client, session.slug, {"type": "set_prompt", "prompt": "For this round"}, 1).status_code
                 == 200
             )
-            response = _post_event(client, session.slug, {"type": "skip_prompt"}, 2)
+            response = _post_event(client, session.slug, {"type": "pass_stick"}, 2)
 
         assert response.status_code == 200
         assert response.json()["round_message"] is None
-        prepared_prompt.refresh_from_db()
-        assert prepared_prompt.position == 1
         assert SessionRound.objects.get(session=session, number=1).prompt == ""
 
     def test_start_room_with_prompt_does_not_assign_session_prompt(self, client_with_user: tuple[Client, User]):
