@@ -8,7 +8,7 @@ from django.utils import timezone
 from totem.rooms.livekit import LiveKitConfigurationError
 from totem.rooms.models import Room, RoomEventLog
 from totem.rooms.schemas import EndReason, RemoveReason, RoomStatus, TurnState
-from totem.spaces.models import SessionPrompt, Space
+from totem.spaces.models import SessionPrompt, SessionRound, SessionRoundState, Space
 from totem.spaces.tests.factories import SessionFactory
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
@@ -70,7 +70,7 @@ class TestPostEvent:
         assert data["current_speaker"] == user.slug
         assert data["version"] == 1
 
-    def test_start_room_assigns_first_session_prompt_to_round(self, client_with_user: tuple[Client, User]):
+    def test_start_room_does_not_assign_prepared_prompt_to_round(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         session = SessionFactory(space__author=user)
         session.attendees.add(user)
@@ -85,9 +85,38 @@ class TestPostEvent:
             resp = _post_event(client, session.slug, {"type": "start_room"}, 0)
 
         assert resp.status_code == 200
-        assert resp.json()["round_message"] == "From the list"
+        assert resp.json()["round_message"] is None
         prompt.refresh_from_db()
-        assert prompt.round_number == 1
+        assert prompt.position == 1
+        assert SessionRound.objects.get(session=session, number=1).prompt == ""
+        assert SessionRound.objects.get(session=session, number=1).state == "active"
+
+    def test_skip_prompt_clears_round_prompt_without_changing_prepared_prompt(
+        self, client_with_user: tuple[Client, User]
+    ):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        session.attendees.add(keeper)
+        prepared_prompt = SessionPrompt.objects.create(session=session, prompt="Prepared prompt", position=1)
+        Room.objects.get_or_create_for_session(session)
+
+        with (
+            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug}),
+            patch("totem.rooms.api.publish_state"),
+            patch("totem.rooms.api.mute_all_participants"),
+        ):
+            assert _post_event(client, session.slug, {"type": "start_room"}, 0).status_code == 200
+            assert (
+                _post_event(client, session.slug, {"type": "set_prompt", "prompt": "For this round"}, 1).status_code
+                == 200
+            )
+            response = _post_event(client, session.slug, {"type": "skip_prompt"}, 2)
+
+        assert response.status_code == 200
+        assert response.json()["round_message"] is None
+        prepared_prompt.refresh_from_db()
+        assert prepared_prompt.position == 1
+        assert SessionRound.objects.get(session=session, number=1).prompt == ""
 
     def test_start_room_with_prompt_does_not_assign_session_prompt(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -116,7 +145,10 @@ class TestPostEvent:
         assert data["round_number"] == 1
         assert data["round_message"] == "Welcome everyone"
         prompt.refresh_from_db()
-        assert prompt.round_number is None
+        assert prompt.position == 1
+        round = SessionRound.objects.get(session=session, number=1)
+        assert round.prompt == "Welcome everyone"
+        assert round.state == SessionRoundState.ACTIVE
 
     def test_start_room_prompt_exceeds_max_length(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -260,6 +292,7 @@ class TestPostEvent:
 
         assert resp.status_code == 200
         assert resp.json()["status"] == "ended"
+        assert SessionRound.objects.get(session=session, number=1).state == SessionRoundState.COMPLETED
 
     def test_end_room_sets_ended_at(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -365,6 +398,7 @@ class TestPostEvent:
         data = resp.json()
         assert data["round_message"] == "Updated mid-round"
         assert data["round_number"] == 1  # round doesn't change
+        assert SessionRound.objects.get(session=session, number=1).prompt == "Updated mid-round"
 
     def test_set_prompt_non_keeper_rejected(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user

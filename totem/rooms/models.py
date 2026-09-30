@@ -93,10 +93,10 @@ class Room(BaseModel):
 
     @property
     def round_message(self) -> str | None:
-        from totem.spaces.models import SessionPrompt
+        from totem.spaces.models import SessionRound
 
         return (
-            SessionPrompt.objects.filter(session_id=self.session_id, round_number=self.round_number)
+            SessionRound.objects.filter(session_id=self.session_id, number=self.round_number)
             .values_list("prompt", flat=True)
             .first()
             or None

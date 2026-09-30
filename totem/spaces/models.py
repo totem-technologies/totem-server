@@ -597,12 +597,27 @@ class SessionPrompt(BaseModel):
     session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="discussion_prompts")
     prompt = models.CharField(max_length=1000)
     position = models.PositiveIntegerField(null=True, blank=True, validators=[MinValueValidator(1)])
-    round_number = models.PositiveIntegerField(null=True, blank=True)
 
     class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]
         ordering = ["position", "pk"]
         verbose_name = "discussion prompt"
         verbose_name_plural = "discussion prompts"
+
+
+class SessionRoundState(models.TextChoices):
+    ACTIVE = "active", _("Active")
+    COMPLETED = "completed", _("Completed")
+
+
+class SessionRound(BaseModel):
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="rounds")
+    number = models.PositiveIntegerField()
+    prompt = models.CharField(max_length=2000, blank=True)
+    state = models.CharField(max_length=20, choices=SessionRoundState.choices, default=SessionRoundState.ACTIVE)
+
+    class Meta(BaseModel.Meta):
+        ordering = ["number"]
+        constraints = [models.UniqueConstraint(fields=["session", "number"], name="unique_session_round_number")]
 
 
 class SessionException(Exception):

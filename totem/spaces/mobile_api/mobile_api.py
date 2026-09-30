@@ -155,14 +155,6 @@ def update_session_prompts(request: HttpRequest, event_slug: str, payload: Sessi
             prompt.pk: prompt
             for prompt in SessionPrompt.objects.select_for_update().filter(session=session, position__isnull=False)
         }
-        displayed_prompts = [prompt for prompt in existing_prompts.values() if prompt.round_number is not None]
-        for position, prompt in enumerate(displayed_prompts, start=1):
-            if (
-                len(payload.prompts) < position
-                or payload.prompts[position - 1].id != prompt.pk
-                or payload.prompts[position - 1].prompt != prompt.prompt
-            ):
-                raise HttpError(422, "Displayed prompts cannot be edited, removed, or reordered.")
 
         prompts: list[SessionPrompt] = []
         submitted_ids: set[int] = set()

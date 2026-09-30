@@ -222,7 +222,6 @@ class TestMobileApiSpaces:
         assert response.status_code == 200
         prompts = response.json()["prompts"]
         assert [prompt["prompt"] for prompt in prompts] == ["Opening", "Middle", "Closing"]
-        assert all(prompt["round_number"] is None for prompt in prompts)
 
         response = client.put(
             url,
@@ -239,21 +238,26 @@ class TestMobileApiSpaces:
         assert [prompt["prompt"] for prompt in response.json()["prompts"]] == ["Closing", "Welcome"]
         assert not SessionPrompt.objects.filter(prompt="Middle").exists()
 
-    def test_update_prompts_rejects_changes_to_displayed_prompts(self, client_with_user: tuple[Client, User]):
+    def test_keeper_can_edit_reorder_and_remove_prompts_during_live_session(
+        self, client_with_user: tuple[Client, User]
+    ):
         client, keeper = client_with_user
         session = SessionFactory(space__author=keeper)
-        displayed = SessionPrompt.objects.create(session=session, prompt="Already shared", position=1, round_number=1)
-        upcoming = SessionPrompt.objects.create(session=session, prompt="Upcoming", position=2)
+        first = SessionPrompt.objects.create(session=session, prompt="First", position=1)
+        second = SessionPrompt.objects.create(session=session, prompt="Second", position=2)
+        room = Room.objects.get_or_create_for_session(session)
+        room.status = "active"
+        room.save(update_fields=["status"])
 
         response = client.put(
             reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug}),
-            data={"prompts": [{"id": upcoming.pk, "prompt": "Upcoming"}, {"id": displayed.pk, "prompt": "Changed"}]},
+            data={"prompts": [{"id": second.pk, "prompt": "Updated second"}]},
             content_type="application/json",
         )
 
-        assert response.status_code == 422
-        displayed.refresh_from_db()
-        assert displayed.prompt == "Already shared"
+        assert response.status_code == 200
+        assert response.json()["prompts"] == [{"id": second.pk, "prompt": "Updated second", "position": 1}]
+        assert not SessionPrompt.objects.filter(pk=first.pk).exists()
 
     def test_non_keeper_cannot_manage_session_prompts(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user

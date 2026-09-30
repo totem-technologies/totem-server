@@ -92,7 +92,7 @@ class SessionDetailSchema(Schema):
 class SessionPromptSchema(ModelSchema):
     class Meta:
         model = SessionPrompt
-        fields = ["id", "prompt", "position", "round_number"]
+        fields = ["id", "prompt", "position"]
 
 
 class SessionPromptsSchema(Schema):

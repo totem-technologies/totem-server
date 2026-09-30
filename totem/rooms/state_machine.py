@@ -25,6 +25,7 @@ from .schemas import (
     RoomState,
     RoomStatus,
     SetPromptEvent,
+    SkipPromptEvent,
     StartRoomEvent,
     TransitionError,
     TurnState,
@@ -88,6 +89,8 @@ def apply_event(
                 _handle_reorder(room, actor, new_order, connected)
             case SetPromptEvent(prompt=prompt):
                 _handle_set_prompt(room, actor, prompt)
+            case SkipPromptEvent():
+                _handle_skip_prompt(room, actor)
             case EndRoomEvent(reason=reason):
                 _handle_end(room, actor, reason)
             case BanParticipantEvent(participant_slug=slug):
@@ -179,35 +182,31 @@ def _normalize_prompt(prompt: str | None) -> str | None:
 
 
 def _round_prompt(room: Room, custom_prompt: str | None) -> str | None:
-    from totem.spaces.models import SessionPrompt
+    from totem.spaces.models import SessionRound
 
-    prompt = (
-        SessionPrompt.objects.select_for_update().filter(session=room.session, round_number=room.round_number).first()
+    prompt = _normalize_prompt(custom_prompt)
+    round, created = SessionRound.objects.select_for_update().get_or_create(
+        session=room.session,
+        number=room.round_number,
+        defaults={"prompt": prompt or ""},
     )
-    custom_prompt = _normalize_prompt(custom_prompt)
-    if custom_prompt is not None:
-        if prompt is None:
-            SessionPrompt.objects.create(session=room.session, prompt=custom_prompt, round_number=room.round_number)
-        else:
-            prompt.prompt = custom_prompt
-            prompt.save(update_fields=["prompt", "date_modified"])
-        return custom_prompt
+    if prompt is not None and not created:
+        round.prompt = prompt
+        round.save(update_fields=["prompt", "date_modified"])
+    return round.prompt or None
 
-    if prompt is not None:
-        return prompt.prompt
 
-    prompt = (
-        SessionPrompt.objects.select_for_update()
-        .filter(session=room.session, position__isnull=False, round_number__isnull=True)
-        .order_by("position", "pk")
-        .first()
+def _set_round_prompt(room: Room, prompt: str) -> None:
+    from totem.spaces.models import SessionRound
+
+    round, created = SessionRound.objects.select_for_update().get_or_create(
+        session=room.session,
+        number=room.round_number,
+        defaults={"prompt": prompt},
     )
-    if prompt is None:
-        return None
-
-    prompt.round_number = room.round_number
-    prompt.save(update_fields=["round_number", "date_modified"])
-    return prompt.prompt
+    if not created:
+        round.prompt = prompt
+        round.save(update_fields=["prompt", "date_modified"])
 
 
 def _next_in_order(
@@ -387,6 +386,13 @@ def _handle_accept(room: Room, actor: str, connected: set[str]) -> None:
         # The stick returned to the keeper from another participant, so a
         # full lap completed and a new round begins. A solo keeper passing
         # to themselves is not a lap.
+        from totem.spaces.models import SessionRound, SessionRoundState
+
+        SessionRound.objects.select_for_update().filter(
+            session=room.session,
+            number=room.round_number,
+            state=SessionRoundState.ACTIVE,
+        ).update(state=SessionRoundState.COMPLETED)
         room.round_number += 1
         _round_prompt(room, None)
 
@@ -418,20 +424,14 @@ def _handle_set_prompt(room: Room, actor: str, prompt: str) -> None:
     _require_keeper(room, actor)
     _require_active(room)
 
-    if _normalize_prompt(prompt) is not None:
-        _round_prompt(room, prompt)
-        return
+    _set_round_prompt(room, _normalize_prompt(prompt) or "")
 
-    from totem.spaces.models import SessionPrompt
 
-    current_prompt = (
-        SessionPrompt.objects.select_for_update().filter(session=room.session, round_number=room.round_number).first()
-    )
-    if current_prompt is None:
-        SessionPrompt.objects.create(session=room.session, prompt="", round_number=room.round_number)
-    else:
-        current_prompt.prompt = ""
-        current_prompt.save(update_fields=["prompt", "date_modified"])
+def _handle_skip_prompt(room: Room, actor: str) -> None:
+    _require_keeper(room, actor)
+    _require_active(room)
+
+    _set_round_prompt(room, "")
 
 
 def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set[str]) -> None:
@@ -470,6 +470,14 @@ def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set
 def _handle_end(room: Room, actor: str, reason: EndReason) -> None:
     _require_keeper(room, actor)
     _require_not_ended(room)
+
+    from totem.spaces.models import SessionRound, SessionRoundState
+
+    SessionRound.objects.select_for_update().filter(
+        session=room.session,
+        number=room.round_number,
+        state=SessionRoundState.ACTIVE,
+    ).update(state=SessionRoundState.COMPLETED)
 
     room.status = RoomStatus.ENDED
     room.turn_state = TurnState.IDLE
