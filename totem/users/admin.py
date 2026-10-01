@@ -1,10 +1,16 @@
+from typing import override
+
 from auditlog.admin import LogEntryAdmin
 from auditlog.models import LogEntry
 from django.contrib import admin
 from django.contrib.auth import admin as auth_admin
+from django.http import Http404, HttpRequest, HttpResponse
+from django.shortcuts import render
+from django.urls import URLPattern, URLResolver, path, reverse
 from django.utils.translation import gettext_lazy as _
 from impersonate.admin import UserAdminImpersonateMixin
 
+from totem.spaces.history import session_history
 from totem.users.forms import UserAdminChangeForm, UserAdminCreationForm
 from totem.utils.admin import ExportCsvMixin
 
@@ -54,6 +60,40 @@ class UserAdmin(UserAdminImpersonateMixin, ExportCsvMixin, auth_admin.UserAdmin)
             },
         ),
     )
+
+    @override
+    def get_urls(self) -> list[URLPattern | URLResolver]:
+        custom_urls = [
+            path(
+                "<int:object_id>/sessions/",
+                self.admin_site.admin_view(self.session_history_view),
+                name="users_user_sessions",
+            ),
+        ]
+        return custom_urls + super().get_urls()
+
+    def session_history_view(self, request: HttpRequest, object_id: int) -> HttpResponse:
+        user = self.get_object(request, str(object_id))
+        if user is None or not self.has_view_permission(request, user):
+            raise Http404("User not found")
+        context = {
+            **self.admin_site.each_context(request),
+            "title": f"Session history: {user.name or user.email}",
+            "opts": self.model._meta,
+            "subject": user,
+            "history": session_history(user),
+            "user_change_url": reverse("admin:users_user_change", args=[user.pk]),
+        }
+        return render(request, "admin/users/user_sessions.html", context)
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        # Other admins ask this when rendering user relation widgets (attendees,
+        # author, etc.) to decide whether to show a "+" create-user button, which
+        # confuses staff. Only allow adding users from the User admin itself.
+        match = request.resolver_match
+        if match is None or not (match.url_name or "").startswith("users_user_"):
+            return False
+        return super().has_add_permission(request)
 
 
 @admin.register(KeeperProfile)

@@ -52,6 +52,7 @@
             <th scope="row">
               {% if perms.users.change_user %}
                 <a href="{% url 'admin:users_user_change' participant.pk %}">{{ participant.name|default:participant.email }}</a>
+                <a class="participant-ratio" href="{% url 'admin:users_user_sessions' participant.pk %}">History</a>
               {% else %}
                 {{ participant.name|default:participant.email }}
               {% endif %}
