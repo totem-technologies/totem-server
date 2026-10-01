@@ -1,6 +1,9 @@
-import pytest
+import datetime
 
-from totem.rooms.models import Room, RoomEventLog
+import pytest
+from django.utils import timezone
+
+from totem.rooms.models import Room, RoomEventLog, RoomParticipant
 from totem.rooms.schemas import (
     AcceptStickEvent,
     BanParticipantEvent,
@@ -22,9 +25,10 @@ from totem.rooms.state_machine import (
     _next_in_order,
     _reconcile_talking_order,
     _require_keeper_in_room,
+    _sort_waiting_room_order,
     apply_event,
 )
-from totem.spaces.tests.factories import SessionFactory
+from totem.spaces.tests.factories import SessionFactory, SpaceFactory
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
 
@@ -86,15 +90,115 @@ class TestReconcileTalkingOrder:
         room.save()
         return room
 
+    def test_attendance_count_uses_one_query(self, django_assert_num_queries):
+        keeper = UserFactory()
+        experienced = UserFactory()
+        first_timer = UserFactory()
+        space = SpaceFactory(author=keeper)
+        previous = SessionFactory(space=space, start=timezone.now() - datetime.timedelta(days=1))
+        previous.joined.add(experienced)
+        session = SessionFactory(space=space)
+        room = Room.objects.get_or_create_for_session(session)
+        room.talking_order = [keeper.slug, first_timer.slug, experienced.slug]
+        room.save(update_fields=["talking_order"])
+
+        with django_assert_num_queries(1):
+            _sort_waiting_room_order(room, {})
+
+        assert room.talking_order == [keeper.slug, experienced.slug, first_timer.slug]
+
     def test_preserves_existing_order(self):
         room = self._make_room("a", ["a", "b", "c"])
         _reconcile_talking_order(room, {"a", "b", "c"})
         assert room.talking_order == ["a", "b", "c"]
 
     def test_keeps_disconnected_in_order(self):
-        room = self._make_room("a", ["a", "b", "c"])
+        room = self._make_room("a", ["a", "b", "c"], status=RoomStatus.ACTIVE)
         _reconcile_talking_order(room, {"a", "c"})
         assert room.talking_order == ["a", "b", "c"]
+
+    def test_active_room_preserves_manual_order_despite_experience(self):
+        keeper = UserFactory()
+        experienced = UserFactory()
+        first_timer = UserFactory()
+        space = SpaceFactory(author=keeper)
+        previous = SessionFactory(space=space, start=timezone.now() - datetime.timedelta(days=1))
+        previous.joined.add(experienced)
+        session = SessionFactory(space=space)
+        session.attendees.add(keeper, experienced, first_timer)
+        room = Room.objects.get_or_create_for_session(session)
+        room.status = RoomStatus.ACTIVE
+        room.talking_order = [keeper.slug, first_timer.slug, experienced.slug]
+        room.save(update_fields=["status", "talking_order"])
+
+        _reconcile_talking_order(room, {keeper.slug, experienced.slug, first_timer.slug})
+
+        assert room.talking_order == [keeper.slug, first_timer.slug, experienced.slug]
+
+    def test_active_room_appends_connected_participants_by_arrival_time(self):
+        keeper, later, earlier = (UserFactory() for _ in range(3))
+        room = self._make_room(keeper.slug, [keeper.slug], status=RoomStatus.ACTIVE)
+        RoomParticipant.objects.create(
+            room=room,
+            user=later,
+            first_seen_at=datetime.datetime.fromisoformat("2026-01-01T00:01:00+00:00"),
+        )
+        RoomParticipant.objects.create(
+            room=room,
+            user=earlier,
+            first_seen_at=datetime.datetime.fromisoformat("2026-01-01T00:00:00+00:00"),
+        )
+
+        _reconcile_talking_order(room, {keeper.slug, later.slug, earlier.slug})
+
+        assert room.talking_order == [keeper.slug, earlier.slug, later.slug]
+
+    def test_manual_order_appends_new_participants_by_arrival_time(self):
+        keeper = UserFactory()
+        first_arrival, second_arrival = sorted((UserFactory(), UserFactory()), key=lambda user: user.slug, reverse=True)
+        room = self._make_room(
+            keeper.slug,
+            [keeper.slug],
+            waiting_order_manually_set=True,
+        )
+        RoomParticipant.objects.create(
+            room=room,
+            user=first_arrival,
+            first_seen_at=datetime.datetime.fromisoformat("2026-01-01T00:00:00+00:00"),
+        )
+        RoomParticipant.objects.create(
+            room=room,
+            user=second_arrival,
+            first_seen_at=datetime.datetime.fromisoformat("2026-01-01T00:01:00+00:00"),
+        )
+
+        _reconcile_talking_order(room, {keeper.slug, first_arrival.slug, second_arrival.slug})
+
+        assert room.talking_order == [keeper.slug, first_arrival.slug, second_arrival.slug]
+
+    def test_manual_order_compares_arrival_timestamps_by_instant(self):
+        keeper = UserFactory()
+        later_arrival = UserFactory()
+        earlier_arrival = UserFactory()
+        room = self._make_room(
+            keeper.slug,
+            [keeper.slug],
+            waiting_order_manually_set=True,
+        )
+        RoomParticipant.objects.create(
+            room=room,
+            user=later_arrival,
+            first_seen_at=datetime.datetime.fromisoformat("2026-01-01T09:00:00-02:00"),
+        )
+        RoomParticipant.objects.create(
+            room=room,
+            user=earlier_arrival,
+            first_seen_at=datetime.datetime.fromisoformat("2026-01-01T10:00:00+00:00"),
+        )
+
+        _reconcile_talking_order(room, {keeper.slug, later_arrival.slug, earlier_arrival.slug})
+
+        assert room.talking_order == [keeper.slug, earlier_arrival.slug, later_arrival.slug]
 
     def test_adds_new_at_end(self):
         room = self._make_room("a", ["a", "b"])
@@ -296,6 +400,94 @@ class TestStartRoom:
 
         assert state.current_speaker == keeper.slug
         assert state.next_speaker == keeper.slug
+
+    def test_participants_without_arrival_time_sort_after_arrived_participants(self):
+        keeper = UserFactory()
+        arrived = UserFactory()
+        not_arrived = UserFactory()
+        session = SessionFactory(space__author=keeper)
+        session.attendees.add(keeper, arrived, not_arrived)
+        room = Room.objects.get_or_create_for_session(session)
+        room.talking_order = [keeper.slug, not_arrived.slug, arrived.slug]
+        room.save(update_fields=["talking_order"])
+        RoomParticipant.objects.create(
+            room=room,
+            user=arrived,
+            first_seen_at=datetime.datetime.fromisoformat("2026-01-01T00:00:00+00:00"),
+        )
+
+        state = apply_event(
+            session.slug,
+            keeper.slug,
+            StartRoomEvent(),
+            0,
+            {keeper.slug, arrived.slug},
+        )
+
+        assert state.talking_order == [keeper.slug, arrived.slug, not_arrived.slug]
+
+    def test_orders_participants_by_arrival_instant_across_timezones(self):
+        keeper = UserFactory()
+        later_arrival = UserFactory()
+        earlier_arrival = UserFactory()
+        session = SessionFactory(space__author=keeper)
+        session.attendees.add(keeper, later_arrival, earlier_arrival)
+        room = Room.objects.get_or_create_for_session(session)
+        room.talking_order = [keeper.slug, later_arrival.slug, earlier_arrival.slug]
+        room.save(update_fields=["talking_order"])
+        RoomParticipant.objects.create(
+            room=room,
+            user=later_arrival,
+            first_seen_at=datetime.datetime.fromisoformat("2026-01-01T09:00:00-02:00"),
+        )
+        RoomParticipant.objects.create(
+            room=room,
+            user=earlier_arrival,
+            first_seen_at=datetime.datetime.fromisoformat("2026-01-01T10:00:00+00:00"),
+        )
+
+        state = apply_event(
+            session.slug,
+            keeper.slug,
+            StartRoomEvent(),
+            0,
+            {keeper.slug, later_arrival.slug, earlier_arrival.slug},
+        )
+
+        assert state.talking_order == [keeper.slug, earlier_arrival.slug, later_arrival.slug]
+
+    def test_orders_participants_by_previous_attendance(self):
+        keeper = UserFactory()
+        experienced = UserFactory()
+        first_timer = UserFactory()
+        space = SpaceFactory(author=keeper)
+        previous = SessionFactory(space=space, start=timezone.now() - datetime.timedelta(days=1))
+        previous.joined.add(experienced)
+        session = SessionFactory(space=space)
+        session.attendees.add(keeper, first_timer, experienced)
+        room = Room.objects.get_or_create_for_session(session)
+        room.talking_order = [keeper.slug, first_timer.slug, experienced.slug]
+        room.save(update_fields=["talking_order"])
+        for user, first_seen_at in (
+            (keeper, "2026-01-01T00:00:00+00:00"),
+            (first_timer, "2026-01-01T00:01:00+00:00"),
+            (experienced, "2026-01-01T00:02:00+00:00"),
+        ):
+            RoomParticipant.objects.create(
+                room=room,
+                user=user,
+                first_seen_at=datetime.datetime.fromisoformat(first_seen_at),
+            )
+
+        state = apply_event(
+            session.slug,
+            keeper.slug,
+            StartRoomEvent(),
+            0,
+            {keeper.slug, first_timer.slug, experienced.slug},
+        )
+
+        assert state.talking_order == [keeper.slug, experienced.slug, first_timer.slug]
 
     def test_start_with_prompt(self):
         keeper = UserFactory()
@@ -841,6 +1033,47 @@ class TestSetPrompt:
 
 @pytest.mark.django_db
 class TestReorder:
+    def test_matching_order_still_persists_manual_order_flag(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        room, slug = _setup_room(keeper, [keeper, user1])
+
+        state = apply_event(
+            slug, keeper.slug, ReorderEvent(talking_order=room.talking_order), 0, {keeper.slug, user1.slug}
+        )
+
+        assert state.talking_order == room.talking_order
+        room.refresh_from_db()
+        assert room.waiting_order_manually_set
+        assert room.state_version == 0
+
+    def test_waiting_room_manual_order_survives_later_events_and_new_arrivals(self):
+        keeper = UserFactory()
+        first = UserFactory()
+        second = UserFactory()
+        newcomer = UserFactory()
+        room, slug = _setup_room(keeper, [keeper, first, second])
+        room.session.attendees.add(newcomer)
+        connected = {keeper.slug, first.slug, second.slug}
+
+        reordered = apply_event(
+            slug,
+            keeper.slug,
+            ReorderEvent(talking_order=[keeper.slug, second.slug, first.slug]),
+            0,
+            connected,
+        )
+        assert reordered.talking_order == [keeper.slug, second.slug, first.slug]
+
+        connected.add(newcomer.slug)
+        with_new_arrival = apply_event(slug, keeper.slug, EmptyRoomEvent(), 1, connected)
+        assert with_new_arrival.talking_order == [keeper.slug, second.slug, first.slug, newcomer.slug]
+
+        later_event = apply_event(slug, keeper.slug, EmptyRoomEvent(), 2, connected)
+        assert later_event.talking_order == [keeper.slug, second.slug, first.slug, newcomer.slug]
+        room.refresh_from_db()
+        assert room.waiting_order_manually_set
+
     def test_keeper_reorders(self):
         keeper = UserFactory()
         user1 = UserFactory()
@@ -1286,6 +1519,63 @@ class TestUnbanParticipant:
 
 @pytest.mark.django_db
 class TestEmptyRoomEvent:
+    def test_waiting_room_reorders_as_participants_arrive(self):
+        keeper = UserFactory()
+        first_timer = UserFactory()
+        experienced = UserFactory()
+        space = SpaceFactory(author=keeper)
+        previous = SessionFactory(space=space, start=timezone.now() - datetime.timedelta(days=1))
+        previous.joined.add(experienced)
+        session = SessionFactory(space=space)
+        session.attendees.add(keeper, first_timer, experienced)
+        room = Room.objects.get_or_create_for_session(session)
+        room.talking_order = [keeper.slug, first_timer.slug, experienced.slug]
+        room.save(update_fields=["talking_order"])
+
+        first_arrival = apply_event(
+            session.slug,
+            keeper.slug,
+            EmptyRoomEvent(),
+            0,
+            {keeper.slug, first_timer.slug},
+        )
+        assert first_arrival.talking_order == [keeper.slug, first_timer.slug, experienced.slug]
+
+        experienced_arrival = apply_event(
+            session.slug,
+            keeper.slug,
+            EmptyRoomEvent(),
+            0,
+            {keeper.slug, first_timer.slug, experienced.slug},
+        )
+        assert experienced_arrival.talking_order == [keeper.slug, experienced.slug, first_timer.slug]
+
+    def test_active_room_appends_experienced_late_joiner(self):
+        keeper = UserFactory()
+        first_timer = UserFactory()
+        experienced = UserFactory()
+        space = SpaceFactory(author=keeper)
+        previous = SessionFactory(space=space, start=timezone.now() - datetime.timedelta(days=1))
+        previous.joined.add(experienced)
+        session = SessionFactory(space=space)
+        session.attendees.add(keeper, first_timer, experienced)
+        room = Room.objects.get_or_create_for_session(session)
+        room.status = RoomStatus.ACTIVE
+        room.talking_order = [keeper.slug, first_timer.slug]
+        room.current_speaker = keeper.slug
+        room.next_speaker = first_timer.slug
+        room.save()
+
+        state = apply_event(
+            session.slug,
+            keeper.slug,
+            EmptyRoomEvent(),
+            0,
+            {keeper.slug, first_timer.slug, experienced.slug},
+        )
+
+        assert state.talking_order == [keeper.slug, first_timer.slug, experienced.slug]
+
     def test_requires_keeper(self):
         keeper = UserFactory()
         participant = UserFactory()
@@ -1324,13 +1614,15 @@ class TestEmptyRoomEvent:
 
     def test_noop_reconciliation_is_not_versioned_or_logged(self):
         keeper = UserFactory()
-        room, slug = _setup_room(keeper, [keeper])
+        participant = UserFactory()
+        room, slug = _setup_room(keeper, [keeper, participant])
 
-        state = apply_event(slug, keeper.slug, EmptyRoomEvent(), 0, {keeper.slug})
+        state = apply_event(slug, keeper.slug, EmptyRoomEvent(), 0, {keeper.slug, participant.slug})
 
         assert state.version == 0
         room.refresh_from_db()
         assert room.state_version == 0
+        assert RoomParticipant.objects.filter(room=room, user=participant).exists()
         assert not RoomEventLog.objects.filter(room=room).exists()
 
     def test_changed_reconciliation_invalidates_previous_client_version(self):
