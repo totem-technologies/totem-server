@@ -215,7 +215,11 @@ def update_session_prompts(request: HttpRequest, event_slug: str, payload: Sessi
             for round in rounds:
                 if round.prepared_prompt_id in deleted_prompt_ids:
                     round.prepared_prompt_id = None
-                    round.save(update_fields=["prepared_prompt", "date_modified"])
+                    fields = ["prepared_prompt", "date_modified"]
+                    if round.state == SessionRoundState.ACTIVE:
+                        round.prompt = ""
+                        fields.append("prompt")
+                    round.save(update_fields=fields)
             SessionPrompt.objects.filter(pk__in=deleted_prompt_ids).delete()
         if creates:
             SessionPrompt.objects.bulk_create(creates)

@@ -227,6 +227,9 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
                 if prompt and round.state == SessionRoundState.ACTIVE and round.prompt != prompt.prompt:
                     round.prompt = prompt.prompt
                     round.save(update_fields=["prompt", "date_modified"])
+                elif round.prepared_prompt_id is not None and round.state == SessionRoundState.ACTIVE:
+                    round.prompt = ""
+                    round.save(update_fields=["prompt", "date_modified"])
 
             after = list(session.discussion_prompts.values_list("pk", "prompt", "position"))
             if after != before:

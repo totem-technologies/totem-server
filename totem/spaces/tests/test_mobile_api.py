@@ -445,9 +445,7 @@ class TestMobileApiSpaces:
         assert completed_round.prompt == "Historical"
         assert completed_round.prepared_prompt_id == prompt.pk
 
-    def test_deleting_active_prompt_preserves_round_snapshot_and_unlinks_identity(
-        self, client_with_user: tuple[Client, User]
-    ):
+    def test_deleting_active_prompt_clears_round_and_unlinks_identity(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         session = SessionFactory(space__author=keeper)
         prompt = SessionPrompt.objects.create(session=session, prompt="Keep the text", position=1)
@@ -472,10 +470,10 @@ class TestMobileApiSpaces:
         assert response.status_code == 200
         active_round.refresh_from_db()
         room.refresh_from_db()
-        assert active_round.prompt == "Keep the text"
+        assert active_round.prompt == ""
         assert active_round.prepared_prompt_id is None
         assert room.state_version == 1
-        assert room.to_state().round_message == "Keep the text"
+        assert room.to_state().round_message is None
         assert room.to_state().round_prompt_id is None
 
     @pytest.mark.django_db(transaction=True)
