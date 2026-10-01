@@ -7,6 +7,8 @@ from ninja import Query, Router, Status
 from ninja.errors import AuthorizationError, HttpError
 from ninja.pagination import paginate
 
+from totem.rooms.models import Room
+from totem.rooms.state_machine import persist_room_state_change
 from totem.spaces.filters import (
     author_circle_count_prefetch,
     get_upcoming_spaces_list,
@@ -25,6 +27,7 @@ from totem.spaces.mobile_api.mobile_schemas import (
     SessionDetailSchema,
     SessionFeedbackSchema,
     SessionPromptsSchema,
+    SessionPromptsStaleRevisionSchema,
     SessionPromptsUpdateSchema,
     SpaceSchema,
     SummarySpacesSchema,
@@ -131,7 +134,10 @@ def get_session_detail(request: HttpRequest, event_slug: str):
 
 
 def _session_prompts_schema(session: Session) -> SessionPromptsSchema:
-    return SessionPromptsSchema(prompts=list(session.discussion_prompts.prefetch_related("consumed_rounds")))
+    return SessionPromptsSchema(
+        revision=session.prompts_revision,
+        prompts=list(session.discussion_prompts.prefetch_related("consumed_rounds")),
+    )
 
 
 def _session_for_keeper(request: HttpRequest, event_slug: str, *, lock: bool = False) -> Session:
@@ -149,13 +155,31 @@ def get_session_prompts(request: HttpRequest, event_slug: str):
     return _session_prompts_schema(_session_for_keeper(request, event_slug))
 
 
-@spaces_router.put("/session/{event_slug}/prompts", response={200: SessionPromptsSchema})
+@spaces_router.put(
+    "/session/{event_slug}/prompts",
+    response={200: SessionPromptsSchema, 409: SessionPromptsStaleRevisionSchema},
+)
 def update_session_prompts(request: HttpRequest, event_slug: str, payload: SessionPromptsUpdateSchema):
     with transaction.atomic():
+        # Lock order for prompt and room mutations is Session, Room,
+        # SessionPrompt, then SessionRound.
         session = _session_for_keeper(request, event_slug, lock=True)
+        if payload.expected_revision != session.prompts_revision:
+            current = _session_prompts_schema(session)
+            return Status(
+                409,
+                SessionPromptsStaleRevisionSchema(
+                    revision=current.revision,
+                    prompts=current.prompts,
+                ),
+            )
+
+        room = Room.objects.select_related("session").select_for_update(of=("self",)).filter(session=session).first()
+        state_before = room.to_state() if room else None
         existing_prompts = {
             prompt.pk: prompt for prompt in SessionPrompt.objects.select_for_update().filter(session=session)
         }
+        rounds = list(SessionRound.objects.select_for_update().filter(session=session))
 
         creates: list[SessionPrompt] = []
         updates: list[SessionPrompt] = []
@@ -165,25 +189,51 @@ def update_session_prompts(request: HttpRequest, event_slug: str, payload: Sessi
             if prompt_data.id is not None and prompt_data.id in submitted_ids:
                 raise HttpError(422, "Prompts must not contain duplicate IDs.")
             if prompt_data.id is None:
-                prompt = SessionPrompt(session=session, prompt=prompt_data.prompt, position=position)
-                creates.append(prompt)
-            else:
-                prompt = existing_prompts.pop(prompt_data.id, None)
-                if prompt is None:
-                    raise HttpError(422, "Prompt does not belong to this session.")
+                creates.append(SessionPrompt(session=session, prompt=prompt_data.prompt, position=position))
+                continue
+
+            prompt = existing_prompts.pop(prompt_data.id, None)
+            if prompt is None:
+                raise HttpError(422, "Prompt does not belong to this session.")
+
+            prompt_changed = prompt.prompt != prompt_data.prompt
+            position_changed = prompt.position != position
+            if prompt_changed or position_changed:
                 prompt.prompt = prompt_data.prompt
                 prompt.position = position
                 prompt.date_modified = timezone.now()
-                SessionRound.objects.filter(prepared_prompt=prompt, state=SessionRoundState.ACTIVE).update(
-                    prompt=prompt.prompt,
-                    date_modified=prompt.date_modified,
-                )
-                submitted_ids.add(prompt_data.id)
                 updates.append(prompt)
+                if prompt_changed:
+                    for round in rounds:
+                        if round.prepared_prompt_id == prompt.pk and round.state == SessionRoundState.ACTIVE:
+                            round.prompt = prompt.prompt
+                            round.save(update_fields=["prompt", "date_modified"])
+            submitted_ids.add(prompt_data.id)
 
-        SessionPrompt.objects.filter(pk__in=existing_prompts).delete()
-        SessionPrompt.objects.bulk_create(creates)
-        SessionPrompt.objects.bulk_update(updates, ["prompt", "position", "date_modified"])
+        deleted_prompt_ids = set(existing_prompts)
+        if deleted_prompt_ids:
+            for round in rounds:
+                if round.prepared_prompt_id in deleted_prompt_ids:
+                    round.prepared_prompt_id = None
+                    round.save(update_fields=["prepared_prompt", "date_modified"])
+            SessionPrompt.objects.filter(pk__in=deleted_prompt_ids).delete()
+        if creates:
+            SessionPrompt.objects.bulk_create(creates)
+        if updates:
+            SessionPrompt.objects.bulk_update(updates, ["prompt", "position", "date_modified"])
+
+        if creates or updates or deleted_prompt_ids:
+            session.prompts_revision += 1
+            session.save(update_fields=["prompts_revision", "date_modified"])
+
+        if room and state_before:
+            persist_room_state_change(
+                room,
+                state_before,
+                "update_session_prompts",
+                request.user.slug,
+                publish=True,
+            )
 
     return _session_prompts_schema(session)
 

@@ -65,6 +65,13 @@ ERROR_RESPONSES = {
 logger = logging.getLogger(__name__)
 
 
+def _publish_state_best_effort(session_slug: str, state: RoomState) -> None:
+    try:
+        publish_state(session_slug, state)
+    except Exception:
+        logger.exception("Failed to publish room state for session %s", session_slug)
+
+
 @router.post(
     "/{session_slug}/event",
     response={200: RoomState, **ERROR_RESPONSES},
@@ -101,7 +108,7 @@ def post_event(
 
     # Side effects outside the DB transaction — best-effort.
     # If these fail, clients will catch up via polling.
-    publish_state(session_slug, state)
+    _publish_state_best_effort(session_slug, state)
 
     match body.event:
         case StartRoomEvent() | ForcePassStickEvent():
@@ -188,7 +195,7 @@ def reconcile_room(request: HttpRequest, session_slug: str):
         ).as_http_response()
 
     # Side effect outside the DB transaction — best-effort.
-    publish_state(session_slug, state)
+    _publish_state_best_effort(session_slug, state)
     return Status(200, state)
 
 

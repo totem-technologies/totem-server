@@ -1,5 +1,6 @@
 from datetime import datetime
 from enum import Enum
+from typing import Literal
 
 from ninja import Field, ModelSchema, Schema
 
@@ -97,7 +98,13 @@ class SessionPromptSchema(Schema):
 
 
 class SessionPromptsSchema(Schema):
+    revision: int
     prompts: list[SessionPromptSchema]
+
+
+class SessionPromptsStaleRevisionSchema(SessionPromptsSchema):
+    code: Literal["stale_prompt_revision"] = "stale_prompt_revision"
+    message: str = "Prepared prompts have changed. Re-fetch them and try again."
 
 
 class SessionPromptUpdateSchema(Schema):
@@ -106,6 +113,7 @@ class SessionPromptUpdateSchema(Schema):
 
 
 class SessionPromptsUpdateSchema(Schema):
+    expected_revision: int = Field(ge=0)
     prompts: list[SessionPromptUpdateSchema]
 
 

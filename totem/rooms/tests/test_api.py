@@ -96,6 +96,7 @@ class TestPostEvent:
         participant = UserFactory()
         session = SessionFactory(space__author=keeper)
         session.attendees.add(keeper, participant)
+        prompt = SessionPrompt.objects.create(session=session, prompt="For this round", position=1)
         Room.objects.get_or_create_for_session(session)
 
         with (
@@ -105,14 +106,17 @@ class TestPostEvent:
         ):
             assert _post_event(client, session.slug, {"type": "start_room"}, 0).status_code == 200
             assert (
-                _post_event(client, session.slug, {"type": "set_prompt", "prompt": "For this round"}, 1).status_code
+                _post_event(client, session.slug, {"type": "set_prompt", "session_prompt_id": prompt.pk}, 1).status_code
                 == 200
             )
             response = _post_event(client, session.slug, {"type": "pass_stick"}, 2)
 
         assert response.status_code == 200
         assert response.json()["round_message"] == "For this round"
-        assert SessionRound.objects.get(session=session, number=1).prompt == "For this round"
+        assert response.json()["round_prompt_id"] == prompt.pk
+        round = SessionRound.objects.get(session=session, number=1)
+        assert round.prompt == "For this round"
+        assert round.prepared_prompt_id == prompt.pk
 
     def test_start_room_with_prompt_does_not_assign_session_prompt(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -399,6 +403,8 @@ class TestPostEvent:
         assert response.json()["round_number"] == 2
         assert response.json()["round_message"] == "From the list"
         assert response.json()["round_prompt_id"] == prepared_prompt.pk
+        session.refresh_from_db()
+        assert session.prompts_revision == 2
         for round_number in [1, 2]:
             round = SessionRound.objects.get(session=session, number=round_number)
             assert round.prompt == "From the list"

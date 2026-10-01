@@ -28,6 +28,11 @@ class Migration(migrations.Migration):
                 'ordering': ['position', 'pk'],
             },
         ),
+        migrations.AddField(
+            model_name='session',
+            name='prompts_revision',
+            field=models.PositiveIntegerField(default=0),
+        ),
         migrations.CreateModel(
             name='SessionRound',
             fields=[

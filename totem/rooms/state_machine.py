@@ -1,15 +1,19 @@
 """
 Room state machine.
 
-Pure function of (DB state + event + connected participants) → new state.
-No LiveKit calls, no HTTP concerns. Side effects are limited to the database.
+State transitions are derived from DB state, events, and connected participants.
+HTTP remains outside this module; prompt CRUD may schedule best-effort LiveKit publication after commit.
 """
 
 from __future__ import annotations
 
+import logging
+from functools import partial
+
 from django.db import transaction
 from django.utils import timezone
 
+from .livekit import publish_state
 from .models import Room, RoomEventLog
 from .schemas import (
     AcceptStickEvent,
@@ -31,6 +35,8 @@ from .schemas import (
     UnbanParticipantEvent,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def apply_event(
     session_slug: str,
@@ -47,8 +53,16 @@ def apply_event(
     Raises TransitionError on any invalid transition.
     """
     with transaction.atomic():
-        room = Room.objects.for_session(session_slug).select_for_update().first()  # type: ignore
+        # All prompt and room mutations lock rows in this order to avoid
+        # deadlocks: Session, Room, SessionPrompt, then SessionRound.
+        from totem.spaces.models import Session, SessionRound
 
+        session = Session.objects.select_related("space").select_for_update().filter(slug=session_slug).first()
+        room = (
+            Room.objects.select_related("session").select_for_update(of=("self",)).filter(session=session).first()
+            if session
+            else None
+        )
         if not room:
             raise TransitionError(
                 code=ErrorCode.NOT_FOUND,
@@ -68,6 +82,11 @@ def apply_event(
             )
 
         state_before = room.to_state()
+        consumed_prompt_ids_before = list(
+            SessionRound.objects.filter(session=session, prepared_prompt__isnull=False)
+            .order_by("number")
+            .values_list("prepared_prompt_id", flat=True)
+        )
 
         # Reconcile talking order with who's actually connected.
         _reconcile_talking_order(room, connected)
@@ -97,24 +116,52 @@ def apply_event(
             case _:
                 raise AssertionError(f"Unhandled event type: {type(event).__name__}")
 
-        state = room.to_state()
-        if state == state_before:
-            return state
-
-        room.state_version += 1
-        room.save()
-
-        state = room.to_state()
-
-        RoomEventLog.objects.create(
-            room=room,
-            version=room.state_version,
-            event_type=event.type,
-            actor=actor,
-            snapshot=state.dict(),
+        state = persist_room_state_change(room, state_before, event.type, actor)
+        consumed_prompt_ids_after = list(
+            SessionRound.objects.filter(session=session, prepared_prompt__isnull=False)
+            .order_by("number")
+            .values_list("prepared_prompt_id", flat=True)
         )
+        if consumed_prompt_ids_after != consumed_prompt_ids_before:
+            session.prompts_revision += 1
+            session.save(update_fields=["prompts_revision", "date_modified"])
 
     return state
+
+
+def persist_room_state_change(
+    room: Room,
+    state_before: RoomState,
+    event_type: str,
+    actor: str,
+    *,
+    publish: bool = False,
+) -> RoomState:
+    """Persist a versioned RoomState transition while the caller holds its row lock."""
+    state = room.to_state()
+    if state == state_before:
+        return state
+
+    room.state_version += 1
+    room.save()
+    state = room.to_state()
+    RoomEventLog.objects.create(
+        room=room,
+        version=room.state_version,
+        event_type=event_type,
+        actor=actor,
+        snapshot=state.dict(),
+    )
+    if publish:
+        transaction.on_commit(partial(_publish_state_best_effort, room.session.slug, state))
+    return state
+
+
+def _publish_state_best_effort(session_slug: str, state: RoomState) -> None:
+    try:
+        publish_state(session_slug, state)
+    except Exception:
+        logger.exception("Failed to publish room state for session %s", session_slug)
 
 
 # ---------------------------------------------------------------------------

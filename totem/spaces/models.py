@@ -297,6 +297,7 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
     open = models.BooleanField(default=True, help_text="Is this session open for more attendees?")
     seats = models.IntegerField(default=8, validators=[MinValueValidator(1)])
     start = models.DateTimeField(default=timezone.now)
+    prompts_revision = models.PositiveIntegerField(default=0)
 
     objects: "SessionQuerySet" = PeersManager.from_queryset(SessionQuerySet)()  # pyright: ignore [reportAssignmentType]
 
