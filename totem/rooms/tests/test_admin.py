@@ -39,11 +39,12 @@ class TestRoomAdmin:
             def coordinate_event(
                 execute: Callable[..., Any], sql: str, params: Any, many: bool, context: dict[str, Any]
             ) -> Any:
-                if '"rooms_room"' in sql and "FOR UPDATE" in sql:
+                result = execute(sql, params, many, context)
+                if '"spaces_session"' in sql and "FOR UPDATE" in sql:
                     # The event holds Session; let the admin reach its own Session lock.
                     session_locked.set()
                     assert admin_lock_requested.wait(10), "Admin did not request the Session lock"
-                return execute(sql, params, many, context)
+                return result
 
             try:
                 with connection.execute_wrapper(coordinate_event):

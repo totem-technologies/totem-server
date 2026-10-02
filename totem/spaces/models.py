@@ -30,6 +30,7 @@ from totem.notifications.notifications import (
     session_advertisement_notification,
     session_starting_notification,
 )
+from totem.rooms.schemas import MAX_PROMPT_LENGTH
 from totem.spaces import jsonld
 from totem.utils.fields import MaxLengthTextField
 from totem.utils.hash import basic_hash, hmac
@@ -280,7 +281,6 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         null=True,
         blank=True,
     )
-
     duration_minutes = models.IntegerField(
         _("Minutes"),
         default=60,
@@ -594,9 +594,12 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         return f"Session: {self.start}"
 
 
+MAX_PREPARED_PROMPT_LENGTH = 1000
+
+
 class SessionPrompt(BaseModel):
     session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="discussion_prompts")
-    prompt = models.CharField(max_length=1000)
+    prompt = models.CharField(max_length=MAX_PREPARED_PROMPT_LENGTH)
     position = models.PositiveIntegerField(validators=[MinValueValidator(1)])
 
     @property
@@ -617,7 +620,7 @@ class SessionRoundState(models.TextChoices):
 class SessionRound(BaseModel):
     session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="rounds")
     number = models.PositiveIntegerField()
-    prompt = models.CharField(max_length=2000, blank=True)
+    prompt = models.CharField(max_length=MAX_PROMPT_LENGTH, blank=True)
     prepared_prompt = models.ForeignKey(
         SessionPrompt,
         on_delete=models.SET_NULL,

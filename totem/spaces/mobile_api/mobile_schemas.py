@@ -1,10 +1,11 @@
 from datetime import datetime
 from enum import Enum
-from typing import Literal
+from typing import Annotated, Literal
 
 from ninja import Field, ModelSchema, Schema
+from pydantic import StringConstraints
 
-from totem.spaces.models import Session, SessionFeedbackOptions, Space
+from totem.spaces.models import MAX_PREPARED_PROMPT_LENGTH, Session, SessionFeedbackOptions, Space
 from totem.users.schemas import PublicUserSchema
 
 
@@ -109,7 +110,9 @@ class SessionPromptsStaleRevisionSchema(SessionPromptsSchema):
 
 class SessionPromptUpdateSchema(Schema):
     id: int | None = None
-    prompt: str = Field(min_length=1, max_length=1000)
+    prompt: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=MAX_PREPARED_PROMPT_LENGTH)
+    ]
 
 
 class SessionPromptsUpdateSchema(Schema):

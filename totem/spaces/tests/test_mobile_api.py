@@ -336,6 +336,34 @@ class TestMobileApiSpaces:
         assert not session.discussion_prompts.exists()
         assert other_prompt.prompt == "Private"
 
+    def test_update_prompts_rejects_whitespace_only_prompt(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        url = reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug})
+
+        response = client.put(
+            url,
+            data={"expected_revision": 0, "prompts": [{"prompt": "   "}]},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 422
+        assert not session.discussion_prompts.exists()
+
+    def test_update_prompts_trims_whitespace(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        url = reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug})
+
+        response = client.put(
+            url,
+            data={"expected_revision": 0, "prompts": [{"prompt": "  What brought you here?  "}]},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        assert list(session.discussion_prompts.values_list("prompt", flat=True)) == ["What brought you here?"]
+
     def test_update_prompts_rejects_duplicate_ids_without_partial_changes(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         session = SessionFactory(space__author=keeper)
@@ -492,7 +520,7 @@ class TestMobileApiSpaces:
         url = reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug})
 
         with patch(
-            "totem.rooms.state_machine.publish_state", side_effect=RuntimeError("LiveKit unavailable")
+            "totem.rooms.livekit._publish_state", side_effect=RuntimeError("LiveKit unavailable")
         ) as mock_publish:
             response = client.put(
                 url,

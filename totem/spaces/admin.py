@@ -13,11 +13,11 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from totem.rooms.models import Room
-from totem.rooms.state_machine import persist_room_state_change
+from totem.rooms.state_machine import syncing_session_prompts
 from totem.users.models import User
 from totem.utils.admin import StaleDataCheckAdminMixin
 
-from .models import Session, SessionFeedback, SessionPrompt, SessionRound, SessionRoundState, Space, SpaceCategory
+from .models import Session, SessionFeedback, SessionPrompt, Space, SpaceCategory
 from .participants import participant_insights
 
 
@@ -184,8 +184,6 @@ class SessionPromptInline(admin.TabularInline):
     form = SessionPromptInlineForm
     extra = 0
 
-    fields = ("prompt", "position")
-
     class Media:
         js = ("js/admin/session_prompt_order.js",)
         css = {"all": ("css/admin/session_prompt_order.css",)}
@@ -207,45 +205,10 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
             return super().save_formset(request, form, formset, change)
 
         with transaction.atomic():
-            # Keep the same ordering as mobile prompt writes and room events:
-            # Session, Room, SessionPrompt, then SessionRound.
             session = Session.objects.select_for_update().get(pk=form.instance.pk)
-            room = (
-                Room.objects.select_related("session").select_for_update(of=("self",)).filter(session=session).first()
-            )
-            state_before = room.to_state() if room else None
-            before = list(session.discussion_prompts.values_list("pk", "prompt", "position"))
-            list(SessionPrompt.objects.select_for_update().filter(session=session))
-            rounds = list(SessionRound.objects.select_for_update().filter(session=session))
-
             formset.instance = session
-            super().save_formset(request, form, formset, change)
-
-            current_prompts = {prompt.pk: prompt for prompt in SessionPrompt.objects.filter(session=session)}
-            for round in rounds:
-                prompt = current_prompts.get(round.prepared_prompt_id)
-                if prompt and round.state == SessionRoundState.ACTIVE and round.prompt != prompt.prompt:
-                    round.prompt = prompt.prompt
-                    round.save(update_fields=["prompt", "date_modified"])
-                elif (
-                    prompt is None and round.prepared_prompt_id is not None and round.state == SessionRoundState.ACTIVE
-                ):
-                    round.prompt = ""
-                    round.save(update_fields=["prompt", "date_modified"])
-
-            after = list(session.discussion_prompts.values_list("pk", "prompt", "position"))
-            if after != before:
-                session.prompts_revision += 1
-                session.save(update_fields=["prompts_revision", "date_modified"])
-
-            if room and state_before:
-                persist_room_state_change(
-                    room,
-                    state_before,
-                    "update_session_prompts",
-                    request.user.slug,
-                    publish=True,
-                )
+            with syncing_session_prompts(session, request.user.slug):
+                super().save_formset(request, form, formset, change)
 
     @override
     def get_urls(self) -> list[URLPattern | URLResolver]:

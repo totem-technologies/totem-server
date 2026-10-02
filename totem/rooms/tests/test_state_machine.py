@@ -1,4 +1,8 @@
+from concurrent.futures import ThreadPoolExecutor
+from threading import Event
+
 import pytest
+from django.db import connections, transaction
 
 from totem.rooms.models import Room, RoomEventLog
 from totem.rooms.schemas import (
@@ -24,6 +28,7 @@ from totem.rooms.state_machine import (
     _require_keeper_in_room,
     apply_event,
 )
+from totem.spaces.models import SessionPrompt, SessionRound, SessionRoundState
 from totem.spaces.tests.factories import SessionFactory
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
@@ -614,6 +619,24 @@ class TestPassStick:
 
 
 @pytest.mark.django_db
+class TestPassStickPreparedPrompt:
+    def test_non_keeper_cannot_pass_with_prepared_prompt(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        room, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+        prompt = SessionPrompt.objects.create(session=room.session, prompt="Prepared", position=1)
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        apply_event(slug, keeper.slug, PassStickEvent(), 1, connected)
+        apply_event(slug, user1.slug, AcceptStickEvent(), 2, connected)
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(slug, user1.slug, PassStickEvent(session_prompt_id=prompt.pk), 3, connected)
+
+        assert exc_info.value.code == ErrorCode.NOT_KEEPER
+
+
+@pytest.mark.django_db
 class TestAcceptStick:
     def test_next_speaker_accepts(self):
         keeper = UserFactory()
@@ -837,6 +860,65 @@ class TestSetPrompt:
         with pytest.raises(TransitionError) as exc_info:
             apply_event(slug, keeper.slug, SetPromptEvent(prompt="Too late"), 2, connected)
         assert exc_info.value.code == ErrorCode.ROOM_NOT_ACTIVE
+
+    def test_set_prompt_without_fields_clears_message(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(prompt="Some prompt"), 0, connected)
+        state = apply_event(slug, keeper.slug, SetPromptEvent(), 1, connected)
+
+        assert state.round_message is None
+        assert state.round_prompt_id is None
+
+    def test_prepared_prompt_from_another_session_is_rejected(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        _, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+        other_prompt = SessionPrompt.objects.create(session=SessionFactory(), prompt="Private", position=1)
+
+        apply_event(slug, keeper.slug, StartRoomEvent(prompt="Mine"), 0, connected)
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(slug, keeper.slug, SetPromptEvent(session_prompt_id=other_prompt.pk), 1, connected)
+
+        assert exc_info.value.code == ErrorCode.INVALID_TRANSITION
+        round = SessionRound.objects.get(session__slug=slug, number=1)
+        assert round.prompt == "Mine"
+        assert round.prepared_prompt is None
+
+    def test_cannot_set_both_custom_and_prepared_prompt(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        room, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+        prompt = SessionPrompt.objects.create(session=room.session, prompt="Prepared", position=1)
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(slug, keeper.slug, SetPromptEvent(prompt="Custom", session_prompt_id=prompt.pk), 1, connected)
+
+        assert exc_info.value.code == ErrorCode.INVALID_TRANSITION
+
+    def test_restarted_room_reactivates_reused_round(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        room, slug = _setup_room(keeper, [keeper, user1])
+        connected = {keeper.slug, user1.slug}
+        prompt = SessionPrompt.objects.create(session=room.session, prompt="Prepared", position=1)
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        apply_event(slug, keeper.slug, EndRoomEvent(reason=EndReason.KEEPER_ENDED), 1, connected)
+        # An admin can move an ended room back to the waiting room.
+        Room.objects.filter(pk=room.pk).update(status=RoomStatus.WAITING_ROOM)
+        apply_event(slug, keeper.slug, StartRoomEvent(), 2, connected)
+        apply_event(slug, keeper.slug, SetPromptEvent(session_prompt_id=prompt.pk), 3, connected)
+
+        round = SessionRound.objects.get(session=room.session, number=1)
+        assert round.state == SessionRoundState.ACTIVE
+        assert round.prepared_prompt == prompt
 
 
 @pytest.mark.django_db
@@ -1476,3 +1558,44 @@ class TestEventLog:
         assert log.event_type == "start_room"
         assert log.actor == keeper.slug
         assert log.version == 1
+
+
+# ---------------------------------------------------------------------------
+# Locking
+# ---------------------------------------------------------------------------
+
+
+class TestSessionLocking:
+    @pytest.mark.django_db(transaction=True)
+    def test_room_event_does_not_wait_on_uncommitted_rsvp(self) -> None:
+        session = SessionFactory()
+        room = Room.objects.get_or_create_for_session(session)
+        attendee = UserFactory()
+        rsvp_inserted = Event()
+        release_rsvp = Event()
+
+        def hold_rsvp_open() -> None:
+            try:
+                with transaction.atomic():
+                    # The M2M insert takes FOR KEY SHARE on the Session row.
+                    session.attendees.add(attendee)
+                    rsvp_inserted.set()
+                    assert release_rsvp.wait(20), "Test did not release the RSVP transaction"
+            finally:
+                connections.close_all()
+
+        def run_event() -> None:
+            try:
+                apply_event(session.slug, room.keeper, EmptyRoomEvent(), None, set())
+            finally:
+                connections.close_all()
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            rsvp_future = pool.submit(hold_rsvp_open)
+            assert rsvp_inserted.wait(10), "RSVP transaction did not start"
+            event_future = pool.submit(run_event)
+            try:
+                event_future.result(timeout=5)
+            finally:
+                release_rsvp.set()
+                rsvp_future.result(timeout=20)

@@ -3,12 +3,18 @@ Room state machine.
 
 State transitions are derived from DB state, events, and connected participants.
 HTTP remains outside this module; prompt CRUD may schedule best-effort LiveKit publication after commit.
+
+Locking: every write to a session's Room, SessionPrompts and SessionRounds
+happens while holding the Session row lock (select_for_update). That single
+lock serializes the writers, so the child rows are never locked themselves.
 """
 
 from __future__ import annotations
 
-import logging
+from collections.abc import Iterator
+from contextlib import contextmanager
 from functools import partial
+from typing import TYPE_CHECKING
 
 from django.db import transaction
 from django.utils import timezone
@@ -35,7 +41,8 @@ from .schemas import (
     UnbanParticipantEvent,
 )
 
-logger = logging.getLogger(__name__)
+if TYPE_CHECKING:
+    from totem.spaces.models import Session
 
 
 def apply_event(
@@ -46,23 +53,17 @@ def apply_event(
     connected: set[str],  # user slugs currently in the LiveKit room
 ) -> RoomState:
     """
-    The state machine entry point. Acquires a row lock on the room,
+    The state machine entry point. Acquires the Session row lock,
     validates the transition, applies it, and appends to the event log.
 
     Returns the new RoomState on success.
     Raises TransitionError on any invalid transition.
     """
     with transaction.atomic():
-        # All prompt and room mutations lock rows in this order to avoid
-        # deadlocks: Session, Room, SessionPrompt, then SessionRound.
-        from totem.spaces.models import Session, SessionRound
+        from totem.spaces.models import Session
 
-        session = Session.objects.select_related("space").select_for_update().filter(slug=session_slug).first()
-        room = (
-            Room.objects.select_related("session").select_for_update(of=("self",)).filter(session=session).first()
-            if session
-            else None
-        )
+        session = Session.objects.select_for_update().filter(slug=session_slug).first()
+        room = _get_room(session) if session else None
         if not room:
             raise TransitionError(
                 code=ErrorCode.NOT_FOUND,
@@ -82,11 +83,6 @@ def apply_event(
             )
 
         state_before = room.to_state()
-        consumed_prompt_ids_before = list(
-            SessionRound.objects.filter(session=session, prepared_prompt__isnull=False)
-            .order_by("number")
-            .values_list("prepared_prompt_id", flat=True)
-        )
 
         # Reconcile talking order with who's actually connected.
         _reconcile_talking_order(room, connected)
@@ -117,16 +113,60 @@ def apply_event(
                 raise AssertionError(f"Unhandled event type: {type(event).__name__}")
 
         state = persist_room_state_change(room, state_before, event.type, actor)
-        consumed_prompt_ids_after = list(
-            SessionRound.objects.filter(session=session, prepared_prompt__isnull=False)
-            .order_by("number")
-            .values_list("prepared_prompt_id", flat=True)
-        )
-        if consumed_prompt_ids_after != consumed_prompt_ids_before:
-            session.prompts_revision += 1
-            session.save(update_fields=["prompts_revision", "date_modified"])
 
     return state
+
+
+def _get_room(session: Session) -> Room | None:
+    room = Room.objects.filter(session=session).first()
+    if room:
+        room.session = session
+    return room
+
+
+@contextmanager
+def syncing_session_prompts(session: Session, actor: str) -> Iterator[None]:
+    """
+    Wrap writes to a session's prepared prompts. The caller must hold the
+    Session row lock inside a transaction.
+
+    Afterwards, active rounds pick up edited prompt text (or lose it when the
+    prompt was deleted), prompts_revision is bumped if anything changed, and
+    the new room state is published after commit.
+    """
+    from totem.spaces.models import SessionRound, SessionRoundState
+
+    room = _get_room(session)
+    state_before = room.to_state() if room else None
+    prompts_before = list(session.discussion_prompts.values_list("pk", "prompt", "position"))
+    active_rounds = list(
+        SessionRound.objects.filter(session=session, state=SessionRoundState.ACTIVE, prepared_prompt__isnull=False)
+    )
+
+    yield
+
+    prompts_after = list(session.discussion_prompts.values_list("pk", "prompt", "position"))
+    if prompts_after == prompts_before:
+        return
+
+    prompt_text = {pk: prompt for pk, prompt, _ in prompts_after}
+    changed_rounds = []
+    for round in active_rounds:
+        text = prompt_text.get(round.prepared_prompt_id, "")
+        if round.prompt != text:
+            round.prompt = text
+            round.date_modified = timezone.now()
+            changed_rounds.append(round)
+    SessionRound.objects.bulk_update(changed_rounds, ["prompt", "date_modified"])
+
+    _bump_prompts_revision(session)
+    if room and state_before:
+        persist_room_state_change(room, state_before, "update_session_prompts", actor, publish=True)
+
+
+def _bump_prompts_revision(session: Session) -> None:
+    session.prompts_revision += 1
+    session.save(update_fields=["prompts_revision", "date_modified"])
 
 
 def persist_room_state_change(
@@ -137,14 +177,14 @@ def persist_room_state_change(
     *,
     publish: bool = False,
 ) -> RoomState:
-    """Persist a versioned RoomState transition while the caller holds its row lock."""
+    """Persist a versioned RoomState transition while the caller holds the Session row lock."""
     state = room.to_state()
     if state == state_before:
         return state
 
     room.state_version += 1
     room.save()
-    state = room.to_state()
+    state = state.model_copy(update={"version": room.state_version})
     RoomEventLog.objects.create(
         room=room,
         version=room.state_version,
@@ -153,15 +193,8 @@ def persist_room_state_change(
         snapshot=state.dict(),
     )
     if publish:
-        transaction.on_commit(partial(_publish_state_best_effort, room.session.slug, state))
+        transaction.on_commit(partial(publish_state, room.session.slug, state))
     return state
-
-
-def _publish_state_best_effort(session_slug: str, state: RoomState) -> None:
-    try:
-        publish_state(session_slug, state)
-    except Exception:
-        logger.exception("Failed to publish room state for session %s", session_slug)
 
 
 # ---------------------------------------------------------------------------
@@ -226,7 +259,7 @@ def _normalize_prompt(prompt: str | None) -> str | None:
 
 
 def _set_round_prompt(room: Room, prompt: str | None, session_prompt_id: int | None = None) -> None:
-    from totem.spaces.models import SessionPrompt, SessionRound
+    from totem.spaces.models import SessionPrompt, SessionRound, SessionRoundState
 
     prompt = _normalize_prompt(prompt)
     prepared_prompt = None
@@ -236,9 +269,7 @@ def _set_round_prompt(room: Room, prompt: str | None, session_prompt_id: int | N
                 code=ErrorCode.INVALID_TRANSITION,
                 message="Choose either a prepared prompt or a custom prompt",
             )
-        prepared_prompt = (
-            SessionPrompt.objects.select_for_update().filter(session=room.session, pk=session_prompt_id).first()
-        )
+        prepared_prompt = SessionPrompt.objects.filter(session=room.session, pk=session_prompt_id).first()
         if prepared_prompt is None:
             raise TransitionError(
                 code=ErrorCode.INVALID_TRANSITION,
@@ -247,15 +278,32 @@ def _set_round_prompt(room: Room, prompt: str | None, session_prompt_id: int | N
 
         prompt = prepared_prompt.prompt
 
-    round, created = SessionRound.objects.select_for_update().get_or_create(
+    round, created = SessionRound.objects.get_or_create(
         session=room.session,
         number=room.round_number,
         defaults={"prompt": prompt or "", "prepared_prompt": prepared_prompt},
     )
+    previous_prepared_prompt_id = None if created else round.prepared_prompt_id
     if not created:
         round.prompt = prompt or ""
         round.prepared_prompt = prepared_prompt
-        round.save(update_fields=["prompt", "prepared_prompt", "date_modified"])
+        # A room restarted from the admin reuses round numbers from its earlier run.
+        round.state = SessionRoundState.ACTIVE
+        round.save(update_fields=["prompt", "prepared_prompt", "state", "date_modified"])
+    # Prepared prompts report which rounds consumed them, so changing a
+    # round's prepared prompt changes the prompt list clients cache.
+    if round.prepared_prompt_id != previous_prepared_prompt_id:
+        _bump_prompts_revision(room.session)
+
+
+def _complete_current_round(room: Room) -> None:
+    from totem.spaces.models import SessionRound, SessionRoundState
+
+    SessionRound.objects.filter(
+        session=room.session,
+        number=room.round_number,
+        state=SessionRoundState.ACTIVE,
+    ).update(state=SessionRoundState.COMPLETED)
 
 
 def _next_in_order(
@@ -379,6 +427,7 @@ def _handle_pass(
     _require_keeper_in_room(room)
 
     prompt = _normalize_prompt(prompt)
+    sets_prompt = prompt is not None or session_prompt_id is not None
 
     if actor != room.current_speaker and actor != room.keeper:
         raise TransitionError(
@@ -386,7 +435,7 @@ def _handle_pass(
             message="Only the current speaker or keeper can pass the stick",
         )
 
-    if (prompt is not None or session_prompt_id is not None) and actor != room.keeper:
+    if sets_prompt and actor != room.keeper:
         raise TransitionError(
             code=ErrorCode.NOT_KEEPER,
             message="Only the keeper can set a round prompt",
@@ -396,7 +445,7 @@ def _handle_pass(
         actor == room.keeper and room.current_speaker == room.keeper and room.turn_state == TurnState.SPEAKING
     )
 
-    if (prompt is not None or session_prompt_id is not None) and not keeper_passes_from_turn:
+    if sets_prompt and not keeper_passes_from_turn:
         raise TransitionError(
             code=ErrorCode.INVALID_TRANSITION,
             message="Round prompt can only be set when keeper passes from their own turn",
@@ -416,7 +465,7 @@ def _handle_pass(
 
         room.next_speaker = next_slug
     else:
-        if keeper_passes_from_turn and (prompt is not None or session_prompt_id is not None):
+        if sets_prompt:
             _set_round_prompt(room, prompt, session_prompt_id)
         room.turn_state = TurnState.PASSING
 
@@ -441,13 +490,7 @@ def _handle_accept(room: Room, actor: str, connected: set[str]) -> None:
         # The stick returned to the keeper from another participant, so a
         # full lap completed and a new round begins. A solo keeper passing
         # to themselves is not a lap.
-        from totem.spaces.models import SessionRound, SessionRoundState
-
-        SessionRound.objects.filter(
-            session=room.session,
-            number=room.round_number,
-            state=SessionRoundState.ACTIVE,
-        ).update(state=SessionRoundState.COMPLETED)
+        _complete_current_round(room)
         room.round_number += 1
         _set_round_prompt(room, None)
 
@@ -519,14 +562,7 @@ def _handle_end(room: Room, actor: str, reason: EndReason) -> None:
     _require_keeper(room, actor)
     _require_not_ended(room)
 
-    from totem.spaces.models import SessionRound, SessionRoundState
-
-    SessionRound.objects.filter(
-        session=room.session,
-        number=room.round_number,
-        state=SessionRoundState.ACTIVE,
-    ).update(state=SessionRoundState.COMPLETED)
-
+    _complete_current_round(room)
     room.status = RoomStatus.ENDED
     room.turn_state = TurnState.IDLE
     room.current_speaker = None

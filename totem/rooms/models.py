@@ -19,7 +19,7 @@ from .schemas import (
 )
 
 if TYPE_CHECKING:
-    from totem.spaces.models import Session
+    from totem.spaces.models import Session, SessionRound
 
 
 class RoomManager(models.Manager["Room"]):
@@ -91,7 +91,7 @@ class Room(BaseModel):
             case _:
                 return WaitingRoomDetail()
 
-    def _session_round(self):
+    def _session_round(self) -> SessionRound | None:
         from totem.spaces.models import SessionRound
 
         return SessionRound.objects.filter(session_id=self.session_id, number=self.round_number).first()
@@ -101,12 +101,8 @@ class Room(BaseModel):
         round = self._session_round()
         return round.prompt or None if round else None
 
-    @property
-    def round_prompt_id(self) -> int | None:
-        round = self._session_round()
-        return round.prepared_prompt_id if round else None
-
     def to_state(self) -> RoomState:
+        round = self._session_round()
         return RoomState(
             session_slug=self.session.slug,
             version=self.state_version,
@@ -119,8 +115,8 @@ class Room(BaseModel):
             keeper=self.keeper,
             banned_participants=self.banned_participants,
             round_number=self.round_number,
-            round_message=self.round_message,
-            round_prompt_id=self.round_prompt_id,
+            round_message=round.prompt or None if round else None,
+            round_prompt_id=round.prepared_prompt_id if round else None,
         )
 
 

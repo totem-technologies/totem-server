@@ -114,7 +114,7 @@ class RoomAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
     @override
     def save_model(self, request, obj, form, change):
         with transaction.atomic():
-            # Lock Session before saving Room, matching room events and prompt updates.
+            # The Session lock serializes this save with room events and prompt edits.
             session = Session.objects.select_for_update().get(pk=obj.session_id)
             super().save_model(request, obj, form, change)
             # Sync session.ended_at when room status changes
