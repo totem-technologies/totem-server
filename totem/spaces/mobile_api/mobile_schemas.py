@@ -1,9 +1,11 @@
 from datetime import datetime
 from enum import Enum
+from typing import Annotated, Literal
 
-from ninja import ModelSchema, Schema
+from ninja import Field, ModelSchema, Schema
+from pydantic import StringConstraints
 
-from totem.spaces.models import Session, SessionFeedbackOptions, Space
+from totem.spaces.models import MAX_PREPARED_PROMPT_LENGTH, Session, SessionFeedbackOptions, Space
 from totem.users.schemas import PublicUserSchema
 
 
@@ -87,6 +89,35 @@ class SessionDetailSchema(Schema):
     subscribed: bool | None
     user_timezone: str | None
     meeting_provider: MeetingProviderEnum
+
+
+class SessionPromptSchema(Schema):
+    id: int
+    prompt: str
+    position: int
+    consumed_round_numbers: list[int]
+
+
+class SessionPromptsSchema(Schema):
+    revision: int
+    prompts: list[SessionPromptSchema]
+
+
+class SessionPromptsStaleRevisionSchema(SessionPromptsSchema):
+    code: Literal["stale_prompt_revision"] = "stale_prompt_revision"
+    message: str = "Prepared prompts have changed. Re-fetch them and try again."
+
+
+class SessionPromptUpdateSchema(Schema):
+    id: int | None = None
+    prompt: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=1, max_length=MAX_PREPARED_PROMPT_LENGTH)
+    ]
+
+
+class SessionPromptsUpdateSchema(Schema):
+    expected_revision: int = Field(ge=0)
+    prompts: list[SessionPromptUpdateSchema]
 
 
 class SessionConflictSchema(Schema):

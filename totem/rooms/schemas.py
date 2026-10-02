@@ -142,6 +142,7 @@ class RoomState(Schema):
     banned_participants: list[str] = []  # user slugs
     round_number: int
     round_message: Optional[str] = None
+    round_prompt_id: int | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -157,6 +158,7 @@ class StartRoomEvent(Schema):
 class PassStickEvent(Schema):
     type: Literal["pass_stick"] = "pass_stick"
     prompt: Optional[str] = Field(None, max_length=MAX_PROMPT_LENGTH)
+    session_prompt_id: int | None = Field(None, ge=1)
 
 
 class AcceptStickEvent(Schema):
@@ -183,7 +185,8 @@ class SetPromptEvent(Schema):
     """Keeper sets or replaces the active round prompt during a live session."""
 
     type: Literal["set_prompt"] = "set_prompt"
-    prompt: str = Field(max_length=MAX_PROMPT_LENGTH)
+    prompt: Optional[str] = Field(None, max_length=MAX_PROMPT_LENGTH)
+    session_prompt_id: int | None = Field(None, ge=1)
 
 
 class EndRoomEvent(Schema):

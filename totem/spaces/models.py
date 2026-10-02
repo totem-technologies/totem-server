@@ -30,6 +30,7 @@ from totem.notifications.notifications import (
     session_advertisement_notification,
     session_starting_notification,
 )
+from totem.rooms.schemas import MAX_PROMPT_LENGTH
 from totem.spaces import jsonld
 from totem.utils.fields import MaxLengthTextField
 from totem.utils.hash import basic_hash, hmac
@@ -296,6 +297,7 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
     open = models.BooleanField(default=True, help_text="Is this session open for more attendees?")
     seats = models.IntegerField(default=8, validators=[MinValueValidator(1)])
     start = models.DateTimeField(default=timezone.now)
+    prompts_revision = models.PositiveIntegerField(default=0)
 
     objects: "SessionQuerySet" = PeersManager.from_queryset(SessionQuerySet)()  # pyright: ignore [reportAssignmentType]
 
@@ -590,6 +592,47 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
 
     def __str__(self):
         return f"Session: {self.start}"
+
+
+MAX_PREPARED_PROMPT_LENGTH = 1000
+
+
+class SessionPrompt(BaseModel):
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="discussion_prompts")
+    prompt = models.CharField(max_length=MAX_PREPARED_PROMPT_LENGTH)
+    position = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+
+    @property
+    def consumed_round_numbers(self) -> list[int]:
+        return [round.number for round in self.consumed_rounds.all()]
+
+    class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]
+        ordering = ["position", "pk"]
+        verbose_name = "discussion prompt"
+        verbose_name_plural = "discussion prompts"
+
+
+class SessionRoundState(models.TextChoices):
+    ACTIVE = "active", _("Active")
+    COMPLETED = "completed", _("Completed")
+
+
+class SessionRound(BaseModel):
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name="rounds")
+    number = models.PositiveIntegerField()
+    prompt = models.CharField(max_length=MAX_PROMPT_LENGTH, blank=True)
+    prepared_prompt = models.ForeignKey(
+        SessionPrompt,
+        on_delete=models.SET_NULL,
+        related_name="consumed_rounds",
+        null=True,
+        blank=True,
+    )
+    state = models.CharField(max_length=20, choices=SessionRoundState.choices, default=SessionRoundState.ACTIVE)
+
+    class Meta(BaseModel.Meta):
+        ordering = ["number"]
+        constraints = [models.UniqueConstraint(fields=["session", "number"], name="unique_session_round_number")]
 
 
 class SessionException(Exception):
