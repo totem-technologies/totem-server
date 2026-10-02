@@ -90,7 +90,7 @@ def send_notification(tokens: list[str], title: str, body: str, data: dict[str, 
     successful_tokens = []
 
     for token in tokens:
-        message = messaging.Message(notification=notification, data=data_payload, token=token)
+        message = messaging.Message(notification=notification, data=data_payload, fid=token)
 
         try:
             messaging.send(message)

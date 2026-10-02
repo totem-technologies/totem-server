@@ -7,6 +7,7 @@ from ninja.errors import ValidationError
 from ninja.security import HttpBearer, django_auth
 
 from totem.blog.mobile_api import blog_router
+from totem.messages.mobile_api import messages_router
 from totem.notifications.models import FCMDevice
 from totem.notifications.schemas import FCMTokenRegisterSchema, FCMTokenResponseSchema
 from totem.notifications.validators import validate_fcm_token
@@ -50,6 +51,7 @@ class JWTAuth(HttpBearer):
 # at /room/ — same endpoints, same shapes, just a different credential.
 router = Router(auth=[JWTAuth(), django_auth])
 router.add_router("/users", user_router)
+router.add_router("/messages", messages_router)
 router.add_router("/onboard", onboard_router)
 router.add_router("/spaces", spaces_router)
 router.add_router("/blog", blog_router)
