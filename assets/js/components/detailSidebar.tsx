@@ -11,6 +11,7 @@ import {
   Suspense,
   Switch,
 } from "solid-js"
+import { trackSessionRegistration } from "@/libs/analytics"
 import { getCsrfToken } from "@/libs/csrf"
 import { postData, postErrorMessage } from "@/libs/postData"
 import {
@@ -442,6 +443,10 @@ export function EventInfo(props: {
         headers: { "X-CSRFToken": getCsrfToken() },
       })
       if (response.data) {
+        trackSessionRegistration(
+          props.eventStore.slug,
+          props.eventStore.space.slug
+        )
         setConflict(undefined)
         props.refetchEvent()
         setShowAttendingPopup(true)
@@ -491,6 +496,10 @@ export function EventInfo(props: {
       return
     }
     if (response.ok) {
+      trackSessionRegistration(
+        props.eventStore.slug,
+        props.eventStore.space.slug
+      )
       props.refetchEvent()
       setShowAttendingPopup(true)
       setError("")

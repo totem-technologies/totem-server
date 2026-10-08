@@ -19,10 +19,14 @@ vi.mock("@/libs/postData", async (importOriginal) => ({
     (postData as (...a: unknown[]) => Promise<Response>)(...args),
 }))
 
+const gtag = vi.fn()
+
 const user = userEvent.setup()
 
 beforeEach(() => {
   postData.mockClear()
+  gtag.mockReset()
+  globalThis.gtag = gtag
 })
 
 // A fixed reference time, noon local so day-offsets never cross midnight.
@@ -300,6 +304,7 @@ test("failed attend on a recommendation shows the error and stays attendable", a
   )
   await user.click(result.getByRole("button", { name: "Attend" }))
   expect(result.getByText("This session is full.")).toBeTruthy()
+  expect(gtag).not.toHaveBeenCalled()
   const attend = result.getByRole("button", { name: "Attend" })
   expect(attend).toBeTruthy()
   expect((attend as HTMLButtonElement).disabled).toBe(false)
@@ -331,6 +336,12 @@ test("attending a recommendation updates my sessions and flips the card to give 
   await user.click(result.getByRole("button", { name: "Attend" }))
   expect(postData).toHaveBeenCalledWith("/spaces/rsvp/rec-session/")
   expect(refetch).toHaveBeenCalledOnce()
+  expect(gtag).toHaveBeenCalledOnce()
+  expect(gtag).toHaveBeenCalledWith(
+    "event",
+    "session_registration_complete",
+    { totem_session_id: "rec-session", space_id: "rec-space" }
+  )
 
   // the top of the page now shows the new session
   expect(result.getByText(/signed up for 2 upcoming sessions/)).toBeTruthy()

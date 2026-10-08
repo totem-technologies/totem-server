@@ -1,4 +1,5 @@
 import datetime
+from unittest.mock import patch
 
 from django.contrib.messages import get_messages
 from django.core import mail
@@ -8,6 +9,7 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
+from totem.email.exceptions import EmailBounced
 from totem.users.tests.factories import UserFactory
 
 from ..actions import JoinSessionAction
@@ -407,6 +409,24 @@ class TestRSVPView:
         assert response.status_code == 302
         assert event.slug in response.url
         assert user in event.attendees.all()
+
+    def test_rsvp_ajax_email_bounced_is_not_success(self, client, db):
+        """The client reports a registration to analytics on success, so a
+        signup undone by a bounced email must not answer ok."""
+        event = SessionFactory(start=timezone.now() + datetime.timedelta(days=1))
+        user = UserFactory()
+        client.force_login(user)
+        with patch("totem.spaces.models.notify_session_signup") as mock_email:
+            mock_email.return_value.send.side_effect = EmailBounced()
+            response = client.post(
+                reverse("spaces:rsvp", kwargs={"session_slug": event.slug}),
+                data={"action": "yes"},
+                headers={"Accept": "application/json"},
+            )
+        assert response.status_code == 400
+        assert "error" in response.json()
+        assert user not in event.attendees.all()
+        assert user not in event.space.subscribed.all()
 
     def test_rsvp_ajax_returns_conflicting_sessions(self, client, db):
         start = timezone.now() + datetime.timedelta(days=1)

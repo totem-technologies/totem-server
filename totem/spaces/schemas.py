@@ -59,6 +59,8 @@ class FilterOptionsSchema(Schema):
 
 class SessionSpaceSchema(ModelSchema):
     author: PublicUserSchema
+    # The model field has a generated default, which Ninja would otherwise mark optional.
+    slug: str
 
     def description(self, obj: Space):
         return obj.content_html

@@ -7,6 +7,7 @@ import {
   Show,
   Suspense,
 } from "solid-js"
+import { trackSessionRegistration } from "@/libs/analytics"
 import { postData, postErrorMessage } from "@/libs/postData"
 import { timestampToDateString, timestampToTimeString } from "@/libs/time"
 import {
@@ -378,11 +379,11 @@ function RecommendationActions(props: {
 
   async function attend(e: Event) {
     e.preventDefault()
-    const rsvpUrl = next()?.rsvp_url
-    if (!rsvpUrl) return
+    const session = next()
+    if (!session) return
     setBusy(true)
     setError("")
-    const response = await postData(rsvpUrl)
+    const response = await postData(session.rsvp_url)
     if (!response.ok) {
       setBusy(false)
       setError(
@@ -393,6 +394,7 @@ function RecommendationActions(props: {
       )
       return
     }
+    trackSessionRegistration(session.slug, props.space.slug)
     // stay disabled until the refetched summary flips this card to give-up
     props.onChange()
   }

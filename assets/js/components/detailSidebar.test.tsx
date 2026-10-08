@@ -25,6 +25,8 @@ vi.mock("../client", async (importOriginal) => ({
     (resolveConflicts as (...a: unknown[]) => Promise<unknown>)(...args),
 }))
 
+const gtag = vi.fn()
+
 const user = userEvent.setup()
 const atcbAction = vi.fn<typeof atcb_action>(() => Promise.resolve(""))
 
@@ -38,6 +40,8 @@ beforeAll(() => {
 })
 
 beforeEach(() => {
+  gtag.mockReset()
+  globalThis.gtag = gtag
   atcbAction.mockClear()
   postData.mockReset()
   postData.mockResolvedValue(
@@ -322,4 +326,58 @@ test("a non-conflict resolution failure shows the server message", async () => {
 
   expect(result.getByText("There are no spots left")).toBeTruthy()
   expect(result.getByRole("heading", { name: CONFLICT_HEADING })).toBeTruthy()
+})
+
+const REGISTRATION_EVENT = [
+  "event",
+  "session_registration_complete",
+  { totem_session_id: "new-session", space_id: "test-space" },
+]
+
+test("a successful RSVP reports one registration to analytics", async () => {
+  const result = renderEventInfo(makeEvent({ slug: "new-session" }))
+
+  await user.click(result.getByRole("button", { name: "Attend this session" }))
+
+  expect(gtag).toHaveBeenCalledOnce()
+  expect(gtag).toHaveBeenCalledWith(...REGISTRATION_EVENT)
+})
+
+test("a failed RSVP does not report a registration", async () => {
+  postData.mockResolvedValueOnce(
+    new Response(JSON.stringify({ error: "There are no spots left" }), {
+      status: 400,
+    })
+  )
+  const result = renderEventInfo(makeEvent({ slug: "new-session" }))
+
+  await user.click(result.getByRole("button", { name: "Attend this session" }))
+
+  expect(result.getByText("There are no spots left")).toBeTruthy()
+  expect(gtag).not.toHaveBeenCalled()
+})
+
+test("a registration is reported only once the conflict switch succeeds", async () => {
+  const conflict = makeEvent({ slug: "existing-session", attending: true })
+  postData.mockResolvedValueOnce(
+    new Response(JSON.stringify(conflictResponse([conflict])), { status: 409 })
+  )
+  const result = renderEventInfo(makeEvent({ slug: "new-session" }))
+
+  await user.click(result.getByRole("button", { name: "Attend this session" }))
+  expect(gtag).not.toHaveBeenCalled()
+
+  await user.click(result.getByRole("button", { name: "Switch Sessions" }))
+  expect(gtag).toHaveBeenCalledOnce()
+  expect(gtag).toHaveBeenCalledWith(...REGISTRATION_EVENT)
+})
+
+test("an RSVP succeeds when analytics is not loaded", async () => {
+  globalThis.gtag = undefined
+  const refetch = vi.fn()
+  const result = renderEventInfo(makeEvent({ slug: "new-session" }), refetch)
+
+  await user.click(result.getByRole("button", { name: "Attend this session" }))
+
+  expect(refetch).toHaveBeenCalledOnce()
 })
