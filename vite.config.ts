@@ -1,6 +1,6 @@
 import tailwindcss from "@tailwindcss/vite"
 import solid from "vite-plugin-solid"
-import { defineConfig } from "vitest/config"
+import { configDefaults, defineConfig } from "vitest/config"
 
 export default defineConfig(({ mode }) => ({
   plugins: [solid(), tailwindcss()],
@@ -32,6 +32,7 @@ export default defineConfig(({ mode }) => ({
     globals: true,
     environment: "jsdom",
     setupFiles: ["./assets/js/testSetup.ts"],
+    exclude: [...configDefaults.exclude, "scratch/**"],
     alias: {
       "tippy.js/headless": "tippy.js/headless/dist/tippy-headless.cjs.js",
     },
