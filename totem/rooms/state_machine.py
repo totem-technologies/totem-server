@@ -87,7 +87,6 @@ def apply_event(
             )
 
         state_before = room.to_state()
-        waiting_order_manually_set_before = room.waiting_order_manually_set
 
         # Reconcile talking order with who's actually connected.
         _reconcile_talking_order(room, connected)
@@ -116,12 +115,6 @@ def apply_event(
                 _handle_unban(room, actor, slug)
             case _:
                 raise AssertionError(f"Unhandled event type: {type(event).__name__}")
-
-        state = room.to_state()
-        if state == state_before:
-            if room.waiting_order_manually_set != waiting_order_manually_set_before:
-                room.save(update_fields=["waiting_order_manually_set", "date_modified"])
-            return state
 
         state = persist_room_state_change(room, state_before, event.type, actor)
 
@@ -379,13 +372,11 @@ def _sort_waiting_room_order(room: Room, arrivals: dict[str, datetime]) -> None:
         )
         .values_list("slug", "count")
     )
-    positions = {slug: index for index, slug in enumerate(slugs)}
     slugs.sort(
         key=lambda slug: (
             slug not in arrivals,
             -attendance_counts.get(slug, 0),
             arrivals.get(slug),
-            positions[slug],
         )
     )
     room.talking_order = ([room.keeper] if room.keeper in room.talking_order else []) + slugs
@@ -617,8 +608,9 @@ def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set
 
     remaining = [s for s in room.talking_order if s not in new_set]
     room.talking_order = [*new_order, *remaining]
-    if room.status == RoomStatus.WAITING_ROOM:
+    if room.status == RoomStatus.WAITING_ROOM and not room.waiting_order_manually_set:
         room.waiting_order_manually_set = True
+        room.save(update_fields=["waiting_order_manually_set", "date_modified"])
 
     # Re-establish the keeper-first invariant via the canonical helper.
     _reconcile_talking_order(room, connected)
