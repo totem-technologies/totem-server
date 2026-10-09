@@ -27,6 +27,7 @@ from totem.rooms.schemas import (
 from totem.rooms.state_machine import (
     _next_in_order,
     _reconcile_talking_order,
+    _record_connected_participants,
     _require_keeper_in_room,
     _sort_waiting_room_order,
     apply_event,
@@ -93,6 +94,22 @@ class TestReconcileTalkingOrder:
         )
         room.save()
         return room
+
+    def test_non_user_identity_does_not_trigger_arrival_write_or_reread(self, django_assert_num_queries):
+        room = self._make_room("keeper", ["keeper"])
+
+        with django_assert_num_queries(2):
+            arrivals = _record_connected_participants(room, {"egress-recorder"})
+
+        assert arrivals == {}
+
+    @pytest.mark.parametrize("status", [RoomStatus.ACTIVE, RoomStatus.ENDED])
+    def test_non_waiting_room_without_late_joiner_does_not_query_arrivals(self, django_assert_num_queries, status):
+        keeper = UserFactory()
+        room = self._make_room(keeper.slug, [keeper.slug], status=status)
+
+        with django_assert_num_queries(0):
+            _reconcile_talking_order(room, {keeper.slug})
 
     def test_attendance_count_uses_one_query(self, django_assert_num_queries):
         keeper = UserFactory()

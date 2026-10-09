@@ -96,7 +96,6 @@ def apply_event(
             case EmptyRoomEvent():
                 # reconciliation already happened above
                 pass
-
             case StartRoomEvent(prompt=prompt):
                 _handle_start(room, actor, connected, prompt)
             case PassStickEvent(prompt=prompt, session_prompt_id=session_prompt_id):
@@ -352,9 +351,13 @@ def _record_connected_participants(room: Room, connected: set[str]) -> dict[str,
     if not missing:
         return arrivals
 
+    users = list(User.objects.filter(slug__in=missing))
+    if not users:
+        return arrivals
+
     now = timezone.now()
     RoomParticipant.objects.bulk_create(
-        [RoomParticipant(room=room, user=user, first_seen_at=now) for user in User.objects.filter(slug__in=missing)],
+        [RoomParticipant(room=room, user=user, first_seen_at=now) for user in users],
         ignore_conflicts=True,
     )
     return dict(RoomParticipant.objects.filter(room=room).values_list("user__slug", "first_seen_at"))
@@ -398,7 +401,9 @@ def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
       speaker disconnects
     - Repairs missing speaker assignments
     """
-    arrivals = _record_connected_participants(room, connected)
+    arrivals: dict[str, datetime] = {}
+    if room.status == RoomStatus.WAITING_ROOM:
+        arrivals = _record_connected_participants(room, connected)
 
     reconciled: list[str] = []
 
@@ -413,6 +418,8 @@ def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
 
     # The only automatic active-room order change is appending late joiners.
     newly_connected = [slug for slug in connected if slug not in reconciled]
+    if room.status == RoomStatus.ACTIVE and newly_connected:
+        arrivals = _record_connected_participants(room, set(newly_connected))
     newly_connected.sort(key=lambda slug: (slug not in arrivals, arrivals.get(slug), slug))
     reconciled.extend(newly_connected)
 
