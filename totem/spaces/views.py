@@ -98,7 +98,8 @@ def ics_hash(slug, user_ics_key):
 
 def _add_or_remove_attendee(user, session: Session, add: bool):
     if add:
-        session.add_attendee(user)
+        if not session.add_attendee(user):
+            raise SessionException("Unable to save your spot")
         session.space.subscribe(user)
     else:
         session.remove_attendee(user)

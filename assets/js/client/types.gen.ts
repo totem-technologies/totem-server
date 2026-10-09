@@ -335,13 +335,13 @@ export type SessionDetailSchema = {
 export type SessionSpaceSchema = {
     author: PublicUserSchema;
     /**
+     * Slug
+     */
+    slug: string;
+    /**
      * Title
      */
     title: string;
-    /**
-     * Slug
-     */
-    slug?: string | null;
     /**
      * Date Created
      */

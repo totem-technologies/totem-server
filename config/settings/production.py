@@ -1,9 +1,11 @@
 import socket
 
+import sentry_sdk
 from django.utils.csp import CSP
+from sentry_sdk.integrations.django import DjangoIntegration
 
 from .base import *  # noqa
-from .base import MAILERSEND_API_TOKEN, env
+from .base import MAILERSEND_API_TOKEN, SENTRY_ENVIRONMENT, env
 
 STATIC_HOST = STATIC_HOST or None  # noqa: F405
 
@@ -205,6 +207,21 @@ LOGGING = {
         },
     },
 }
+
+# sentry
+# ------------------------------------------------------------------------------
+sentry_sdk.init(
+    dsn="https://fc28dfc40b014a8fa120aa1d9c279112@o1324443.ingest.sentry.io/4505270983065600",
+    integrations=[
+        DjangoIntegration(),
+    ],
+    environment=SENTRY_ENVIRONMENT,
+    traces_sample_rate=0.1,
+    profiles_sample_rate=0.1,
+    send_default_pii=True,
+    profile_lifecycle="trace",
+    enable_logs=True,
+)
 
 
 # Your stuff...

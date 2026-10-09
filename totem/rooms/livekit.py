@@ -65,7 +65,10 @@ async def publish_state(room_name: str, state: RoomState) -> None:
     Publishes the state snapshot to LiveKit room metadata.
     Fire-and-forget — failures are logged but don't raise.
     """
-    await _publish_state(room_name, state)
+    try:
+        await _publish_state(room_name, state)
+    except Exception:
+        logger.exception("Failed to publish room state for session %s", room_name)
 
 
 # ---------------------------------------------------------------------------

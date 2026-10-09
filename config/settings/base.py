@@ -400,22 +400,6 @@ TAGGIT_TAGS_FROM_STRING = "totem.utils.tag_utils.parse_tags"
 # sentry
 # ------------------------------------------------------------------------------
 SENTRY_ENVIRONMENT = env("SENTRY_ENVIRONMENT", default="development")
-if not DEBUG:
-    import sentry_sdk
-    from sentry_sdk.integrations.django import DjangoIntegration
-
-    sentry_sdk.init(
-        dsn="https://fc28dfc40b014a8fa120aa1d9c279112@o1324443.ingest.sentry.io/4505270983065600",
-        integrations=[
-            DjangoIntegration(),
-        ],
-        environment=SENTRY_ENVIRONMENT,
-        traces_sample_rate=0.1,
-        profiles_sample_rate=0.1,
-        send_default_pii=True,
-        profile_lifecycle="trace",
-        enable_logs=True,
-    )
 
 # posthog
 # ------------------------------------------------------------------------------

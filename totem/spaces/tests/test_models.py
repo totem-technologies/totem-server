@@ -13,7 +13,7 @@ from totem.users.models import User
 from totem.users.tests.factories import UserFactory
 from totem.utils.testing import email_text
 
-from ..models import Session, SessionException, SessionTimeConflict, Space
+from ..models import Session, SessionException, SessionPrompt, SessionTimeConflict, Space
 from ..views import ics_hash
 from .factories import SessionFactory, SpaceFactory
 
@@ -22,6 +22,15 @@ def _ban_user(session: Session, user: User) -> None:
     room = Room.objects.get_or_create_for_session(session)
     room.banned_participants = [user.slug]
     room.save()
+
+
+@pytest.mark.django_db
+def test_discussion_prompts_are_ordered_by_position():
+    session = SessionFactory()
+    SessionPrompt.objects.create(session=session, prompt="Second", position=2)
+    SessionPrompt.objects.create(session=session, prompt="First", position=1)
+
+    assert list(session.discussion_prompts.values_list("prompt", flat=True)) == ["First", "Second"]
 
 
 def test_ics_hash():

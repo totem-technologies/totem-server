@@ -1,0 +1,9 @@
+.session-prompt-drag-handle {
+  cursor: grab;
+  margin-right: 0.5rem;
+  touch-action: none;
+}
+
+.session-prompt-dragging {
+  opacity: 0.5;
+}

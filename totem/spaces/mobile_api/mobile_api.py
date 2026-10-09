@@ -2,10 +2,12 @@ from django.db import transaction
 from django.db.models import Prefetch, prefetch_related_objects
 from django.http import Http404, HttpRequest
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from ninja import Query, Router, Status
-from ninja.errors import AuthorizationError
+from ninja.errors import AuthorizationError, HttpError
 from ninja.pagination import paginate
 
+from totem.rooms.state_machine import syncing_session_prompts
 from totem.spaces.filters import (
     author_circle_count_prefetch,
     get_upcoming_spaces_list,
@@ -23,6 +25,9 @@ from totem.spaces.mobile_api.mobile_schemas import (
     SessionConflictSchema,
     SessionDetailSchema,
     SessionFeedbackSchema,
+    SessionPromptsSchema,
+    SessionPromptsStaleRevisionSchema,
+    SessionPromptsUpdateSchema,
     SpaceSchema,
     SummarySpacesSchema,
 )
@@ -31,6 +36,7 @@ from totem.spaces.models import (
     SessionException,
     SessionFeedback,
     SessionFeedbackOptions,
+    SessionPrompt,
     SessionTimeConflict,
     Space,
 )
@@ -122,6 +128,68 @@ def get_session_detail(request: HttpRequest, event_slug: str):
     if not session.can_view(user):
         raise Http404
     return session_detail_schema(session, user)
+
+
+def _session_prompts_schema(
+    session: Session, schema: type[SessionPromptsSchema] = SessionPromptsSchema
+) -> SessionPromptsSchema:
+    return schema(
+        revision=session.prompts_revision,
+        prompts=list(session.discussion_prompts.prefetch_related("consumed_rounds")),
+    )
+
+
+def _session_for_keeper(request: HttpRequest, event_slug: str, *, lock: bool = False) -> Session:
+    queryset = Session.objects.select_related("space")
+    if lock:
+        queryset = queryset.select_for_update(of=("self",))
+    session = get_object_or_404(queryset, slug=event_slug)
+    if session.space.author_id != request.user.pk:
+        raise AuthorizationError(message="Only the keeper can manage session prompts.")
+    return session
+
+
+@spaces_router.get("/session/{event_slug}/prompts", response={200: SessionPromptsSchema}, url_name="session_prompts")
+def get_session_prompts(request: HttpRequest, event_slug: str):
+    return _session_prompts_schema(_session_for_keeper(request, event_slug))
+
+
+@spaces_router.put(
+    "/session/{event_slug}/prompts",
+    response={200: SessionPromptsSchema, 409: SessionPromptsStaleRevisionSchema},
+)
+def update_session_prompts(request: HttpRequest, event_slug: str, payload: SessionPromptsUpdateSchema):
+    with transaction.atomic():
+        session = _session_for_keeper(request, event_slug, lock=True)
+        if payload.expected_revision != session.prompts_revision:
+            return Status(409, _session_prompts_schema(session, SessionPromptsStaleRevisionSchema))
+
+        with syncing_session_prompts(session, request.user.slug):
+            existing_prompts = {prompt.pk: prompt for prompt in session.discussion_prompts.all()}
+            creates: list[SessionPrompt] = []
+            updates: list[SessionPrompt] = []
+
+            for position, prompt_data in enumerate(payload.prompts, start=1):
+                if prompt_data.id is None:
+                    creates.append(SessionPrompt(session=session, prompt=prompt_data.prompt, position=position))
+                    continue
+
+                # pop() also rejects an ID submitted twice.
+                prompt = existing_prompts.pop(prompt_data.id, None)
+                if prompt is None:
+                    raise HttpError(422, "Prompt does not belong to this session.")
+
+                if prompt.prompt != prompt_data.prompt or prompt.position != position:
+                    prompt.prompt = prompt_data.prompt
+                    prompt.position = position
+                    prompt.date_modified = timezone.now()
+                    updates.append(prompt)
+
+            SessionPrompt.objects.filter(pk__in=existing_prompts).delete()
+            SessionPrompt.objects.bulk_create(creates)
+            SessionPrompt.objects.bulk_update(updates, ["prompt", "position", "date_modified"])
+
+    return _session_prompts_schema(session)
 
 
 @spaces_router.post("/session/{event_slug}/feedback", response={204: None}, url_name="session_feedback")

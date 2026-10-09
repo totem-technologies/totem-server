@@ -1,13 +1,21 @@
 """
 Room state machine.
 
-Pure function of (DB state + event + connected participants) → new state.
-No LiveKit calls, no HTTP concerns. Side effects are limited to the database.
+State transitions are derived from DB state, events, and connected participants.
+HTTP remains outside this module; prompt CRUD may schedule best-effort LiveKit publication after commit.
+
+Locking: every write to a session's Room, SessionPrompts and SessionRounds
+happens while holding the Session row lock (select_for_update). That single
+lock serializes the writers, so the child rows are never locked themselves.
 """
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime
+from functools import partial
+from typing import TYPE_CHECKING
 
 from django.db import transaction
 from django.db.models import Count, Q
@@ -15,6 +23,7 @@ from django.utils import timezone
 
 from totem.users.models import User
 
+from .livekit import publish_state
 from .models import Room, RoomEventLog, RoomParticipant
 from .schemas import (
     AcceptStickEvent,
@@ -36,6 +45,9 @@ from .schemas import (
     UnbanParticipantEvent,
 )
 
+if TYPE_CHECKING:
+    from totem.spaces.models import Session
+
 
 def apply_event(
     session_slug: str,
@@ -45,15 +57,17 @@ def apply_event(
     connected: set[str],  # user slugs currently in the LiveKit room
 ) -> RoomState:
     """
-    The state machine entry point. Acquires a row lock on the room,
+    The state machine entry point. Acquires the Session row lock,
     validates the transition, applies it, and appends to the event log.
 
     Returns the new RoomState on success.
     Raises TransitionError on any invalid transition.
     """
     with transaction.atomic():
-        room = Room.objects.for_session(session_slug).select_for_update().first()  # type: ignore
+        from totem.spaces.models import Session
 
+        session = Session.objects.select_for_update().filter(slug=session_slug).first()
+        room = _get_room(session) if session else None
         if not room:
             raise TransitionError(
                 code=ErrorCode.NOT_FOUND,
@@ -85,16 +99,16 @@ def apply_event(
 
             case StartRoomEvent(prompt=prompt):
                 _handle_start(room, actor, connected, prompt)
-            case PassStickEvent(prompt=prompt):
-                _handle_pass(room, actor, connected, prompt)
+            case PassStickEvent(prompt=prompt, session_prompt_id=session_prompt_id):
+                _handle_pass(room, actor, connected, prompt, session_prompt_id)
             case AcceptStickEvent():
                 _handle_accept(room, actor, connected)
             case ForcePassStickEvent():
                 _handle_force_pass(room, actor, connected)
             case ReorderEvent(talking_order=new_order):
                 _handle_reorder(room, actor, new_order, connected)
-            case SetPromptEvent(prompt=prompt):
-                _handle_set_prompt(room, actor, prompt)
+            case SetPromptEvent(prompt=prompt, session_prompt_id=session_prompt_id):
+                _handle_set_prompt(room, actor, prompt, session_prompt_id)
             case EndRoomEvent(reason=reason):
                 _handle_end(room, actor, reason)
             case BanParticipantEvent(participant_slug=slug):
@@ -110,19 +124,88 @@ def apply_event(
                 room.save(update_fields=["waiting_order_manually_set", "date_modified"])
             return state
 
-        room.state_version += 1
-        room.save()
+        state = persist_room_state_change(room, state_before, event.type, actor)
 
-        state = room.to_state()
+    return state
 
-        RoomEventLog.objects.create(
-            room=room,
-            version=room.state_version,
-            event_type=event.type,
-            actor=actor,
-            snapshot=state.dict(),
-        )
 
+def _get_room(session: Session) -> Room | None:
+    room = Room.objects.filter(session=session).first()
+    if room:
+        room.session = session
+    return room
+
+
+@contextmanager
+def syncing_session_prompts(session: Session, actor: str) -> Iterator[None]:
+    """
+    Wrap writes to a session's prepared prompts. The caller must hold the
+    Session row lock inside a transaction.
+
+    Afterwards, active rounds pick up edited prompt text (or lose it when the
+    prompt was deleted), prompts_revision is bumped if anything changed, and
+    the new room state is published after commit.
+    """
+    from totem.spaces.models import SessionRound, SessionRoundState
+
+    room = _get_room(session)
+    state_before = room.to_state() if room else None
+    prompts_before = list(session.discussion_prompts.values_list("pk", "prompt", "position"))
+    active_rounds = list(
+        SessionRound.objects.filter(session=session, state=SessionRoundState.ACTIVE, prepared_prompt__isnull=False)
+    )
+
+    yield
+
+    prompts_after = list(session.discussion_prompts.values_list("pk", "prompt", "position"))
+    if prompts_after == prompts_before:
+        return
+
+    prompt_text = {pk: prompt for pk, prompt, _ in prompts_after}
+    changed_rounds = []
+    for round in active_rounds:
+        text = prompt_text.get(round.prepared_prompt_id, "")
+        if round.prompt != text:
+            round.prompt = text
+            round.date_modified = timezone.now()
+            changed_rounds.append(round)
+    SessionRound.objects.bulk_update(changed_rounds, ["prompt", "date_modified"])
+
+    _bump_prompts_revision(session)
+    if room and state_before:
+        persist_room_state_change(room, state_before, "update_session_prompts", actor, publish=True)
+
+
+def _bump_prompts_revision(session: Session) -> None:
+    session.prompts_revision += 1
+    session.save(update_fields=["prompts_revision", "date_modified"])
+
+
+def persist_room_state_change(
+    room: Room,
+    state_before: RoomState,
+    event_type: str,
+    actor: str,
+    *,
+    publish: bool = False,
+) -> RoomState:
+    """Persist a versioned RoomState transition while the caller holds the Session row lock."""
+    state = room.to_state()
+    if state == state_before:
+        return state
+
+    room.state_version += 1
+    room.save()
+    state = state.model_copy(update={"version": room.state_version})
+    RoomEventLog.objects.create(
+        room=room,
+        version=room.state_version,
+        event_type=event_type,
+        actor=actor,
+        snapshot=state.dict(),
+    )
+    if publish:
+        transaction.on_commit(partial(publish_state, room.session.slug, state))
     return state
 
 
@@ -185,6 +268,54 @@ def _require_attendee(room: Room, actor: str) -> None:
 
 def _normalize_prompt(prompt: str | None) -> str | None:
     return (prompt or "").strip() or None
+
+
+def _set_round_prompt(room: Room, prompt: str | None, session_prompt_id: int | None = None) -> None:
+    from totem.spaces.models import SessionPrompt, SessionRound, SessionRoundState
+
+    prompt = _normalize_prompt(prompt)
+    prepared_prompt = None
+    if session_prompt_id is not None:
+        if prompt is not None:
+            raise TransitionError(
+                code=ErrorCode.INVALID_TRANSITION,
+                message="Choose either a prepared prompt or a custom prompt",
+            )
+        prepared_prompt = SessionPrompt.objects.filter(session=room.session, pk=session_prompt_id).first()
+        if prepared_prompt is None:
+            raise TransitionError(
+                code=ErrorCode.INVALID_TRANSITION,
+                message="Prepared prompt does not belong to this session",
+            )
+
+        prompt = prepared_prompt.prompt
+
+    round, created = SessionRound.objects.get_or_create(
+        session=room.session,
+        number=room.round_number,
+        defaults={"prompt": prompt or "", "prepared_prompt": prepared_prompt},
+    )
+    previous_prepared_prompt_id = None if created else round.prepared_prompt_id
+    if not created:
+        round.prompt = prompt or ""
+        round.prepared_prompt = prepared_prompt
+        # A room restarted from the admin reuses round numbers from its earlier run.
+        round.state = SessionRoundState.ACTIVE
+        round.save(update_fields=["prompt", "prepared_prompt", "state", "date_modified"])
+    # Prepared prompts report which rounds consumed them, so changing a
+    # round's prepared prompt changes the prompt list clients cache.
+    if round.prepared_prompt_id != previous_prepared_prompt_id:
+        _bump_prompts_revision(room.session)
+
+
+def _complete_current_round(room: Room) -> None:
+    from totem.spaces.models import SessionRound, SessionRoundState
+
+    SessionRound.objects.filter(
+        session=room.session,
+        number=room.round_number,
+        state=SessionRoundState.ACTIVE,
+    ).update(state=SessionRoundState.COMPLETED)
 
 
 def _next_in_order(
@@ -342,14 +473,21 @@ def _handle_start(room: Room, actor: str, connected: set[str], prompt: str | Non
     room.current_speaker = room.keeper
     room.next_speaker = next_slug or room.keeper
     room.round_number = 1
-    room.round_message = _normalize_prompt(prompt)
+    _set_round_prompt(room, prompt)
 
 
-def _handle_pass(room: Room, actor: str, connected: set[str], prompt: str | None) -> None:
+def _handle_pass(
+    room: Room,
+    actor: str,
+    connected: set[str],
+    prompt: str | None,
+    session_prompt_id: int | None,
+) -> None:
     _require_active(room)
     _require_keeper_in_room(room)
 
     prompt = _normalize_prompt(prompt)
+    sets_prompt = prompt is not None or session_prompt_id is not None
 
     if actor != room.current_speaker and actor != room.keeper:
         raise TransitionError(
@@ -357,7 +495,7 @@ def _handle_pass(room: Room, actor: str, connected: set[str], prompt: str | None
             message="Only the current speaker or keeper can pass the stick",
         )
 
-    if prompt is not None and actor != room.keeper:
+    if sets_prompt and actor != room.keeper:
         raise TransitionError(
             code=ErrorCode.NOT_KEEPER,
             message="Only the keeper can set a round prompt",
@@ -367,7 +505,7 @@ def _handle_pass(room: Room, actor: str, connected: set[str], prompt: str | None
         actor == room.keeper and room.current_speaker == room.keeper and room.turn_state == TurnState.SPEAKING
     )
 
-    if prompt is not None and not keeper_passes_from_turn:
+    if sets_prompt and not keeper_passes_from_turn:
         raise TransitionError(
             code=ErrorCode.INVALID_TRANSITION,
             message="Round prompt can only be set when keeper passes from their own turn",
@@ -387,8 +525,8 @@ def _handle_pass(room: Room, actor: str, connected: set[str], prompt: str | None
 
         room.next_speaker = next_slug
     else:
-        if keeper_passes_from_turn and prompt is not None:
-            room.round_message = prompt
+        if sets_prompt:
+            _set_round_prompt(room, prompt, session_prompt_id)
         room.turn_state = TurnState.PASSING
 
 
@@ -412,8 +550,9 @@ def _handle_accept(room: Room, actor: str, connected: set[str]) -> None:
         # The stick returned to the keeper from another participant, so a
         # full lap completed and a new round begins. A solo keeper passing
         # to themselves is not a lap.
+        _complete_current_round(room)
         room.round_number += 1
-        room.round_message = None
+        _set_round_prompt(room, None)
 
     next_slug = _next_in_order(room.talking_order, actor, connected)
 
@@ -439,11 +578,11 @@ def _handle_force_pass(room: Room, actor: str, connected: set[str]) -> None:
     room.turn_state = TurnState.PASSING
 
 
-def _handle_set_prompt(room: Room, actor: str, prompt: str) -> None:
+def _handle_set_prompt(room: Room, actor: str, prompt: str | None, session_prompt_id: int | None) -> None:
     _require_keeper(room, actor)
     _require_active(room)
 
-    room.round_message = _normalize_prompt(prompt)
+    _set_round_prompt(room, prompt, session_prompt_id)
 
 
 def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set[str]) -> None:
@@ -485,6 +624,7 @@ def _handle_end(room: Room, actor: str, reason: EndReason) -> None:
     _require_keeper(room, actor)
     _require_not_ended(room)
 
+    _complete_current_round(room)
     room.status = RoomStatus.ENDED
     room.turn_state = TurnState.IDLE
     room.current_speaker = None

@@ -13,8 +13,18 @@ from totem.api.auth import generate_jwt_token
 from totem.email.exceptions import EmailBounced
 from totem.onboard.tests.factories import OnboardModelFactory
 from totem.rooms.models import Room
+from totem.rooms.schemas import RoomStatus
 from totem.spaces.mobile_api.mobile_filters import space_detail_schema
-from totem.spaces.models import Session, SessionException, SessionFeedback, SessionFeedbackOptions, Space, SpaceCategory
+from totem.spaces.models import (
+    Session,
+    SessionException,
+    SessionFeedback,
+    SessionFeedbackOptions,
+    SessionPrompt,
+    SessionRound,
+    Space,
+    SpaceCategory,
+)
 from totem.spaces.tests.factories import SessionFactory, SpaceCategoryFactory, SpaceFactory
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
@@ -197,6 +207,370 @@ class TestMobileApiSpaces:
         data = response.json()
         assert data["slug"] == event.slug
         assert data["space"]["slug"] == space.slug
+
+    def test_keeper_can_manage_and_navigate_session_prompts(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        url = reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug})
+
+        assert client.get(url).json()["revision"] == 0
+
+        response = client.put(
+            url,
+            data={
+                "expected_revision": 0,
+                "prompts": [{"prompt": "Opening"}, {"prompt": "Middle"}, {"prompt": "Closing"}],
+            },
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        assert response.json()["revision"] == 1
+        prompts = response.json()["prompts"]
+        assert [prompt["prompt"] for prompt in prompts] == ["Opening", "Middle", "Closing"]
+
+        response = client.put(
+            url,
+            data={
+                "expected_revision": 1,
+                "prompts": [
+                    {"id": prompts[2]["id"], "prompt": "Closing"},
+                    {"id": prompts[0]["id"], "prompt": "Welcome"},
+                ],
+            },
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        assert response.json()["revision"] == 2
+        assert [prompt["prompt"] for prompt in response.json()["prompts"]] == ["Closing", "Welcome"]
+        assert not SessionPrompt.objects.filter(prompt="Middle").exists()
+
+    def test_session_prompts_include_consumed_round_number(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        consumed = SessionPrompt.objects.create(session=session, prompt="Used", position=1)
+        pending = SessionPrompt.objects.create(session=session, prompt="Pending", position=2)
+        SessionRound.objects.create(session=session, number=2, prepared_prompt=consumed)
+        SessionRound.objects.create(session=session, number=3, prepared_prompt=consumed)
+
+        response = client.get(reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug}))
+
+        assert response.status_code == 200
+        assert response.json() == {
+            "revision": 0,
+            "prompts": [
+                {"id": consumed.pk, "prompt": "Used", "position": 1, "consumed_round_numbers": [2, 3]},
+                {"id": pending.pk, "prompt": "Pending", "position": 2, "consumed_round_numbers": []},
+            ],
+        }
+
+    @pytest.mark.django_db(transaction=True)
+    def test_keeper_can_edit_reorder_and_remove_prompts_during_live_session(
+        self, client_with_user: tuple[Client, User]
+    ):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        first = SessionPrompt.objects.create(session=session, prompt="First", position=1)
+        second = SessionPrompt.objects.create(session=session, prompt="Second", position=2)
+        room = Room.objects.get_or_create_for_session(session)
+        room.status = RoomStatus.ACTIVE
+        room.round_number = 1
+        room.save(update_fields=["status", "round_number"])
+        active_round = SessionRound.objects.create(
+            session=session,
+            number=1,
+            prompt=second.prompt,
+            prepared_prompt=second,
+        )
+
+        with patch("totem.rooms.state_machine.publish_state") as mock_publish:
+            response = client.put(
+                reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug}),
+                data={"expected_revision": 0, "prompts": [{"id": second.pk, "prompt": "Updated second"}]},
+                content_type="application/json",
+            )
+
+        assert response.status_code == 200
+        assert response.json() == {
+            "revision": 1,
+            "prompts": [{"id": second.pk, "prompt": "Updated second", "position": 1, "consumed_round_numbers": [1]}],
+        }
+        active_round.refresh_from_db()
+        room.refresh_from_db()
+        assert active_round.prompt == "Updated second"
+        assert active_round.prepared_prompt_id == second.pk
+        assert room.state_version == 1
+        assert room.to_state().round_message == "Updated second"
+        assert room.to_state().round_prompt_id == second.pk
+        assert mock_publish.called
+        assert not SessionPrompt.objects.filter(pk=first.pk).exists()
+
+    def test_non_keeper_cannot_manage_session_prompts(self, client_with_user: tuple[Client, User]):
+        client, _ = client_with_user
+        session = SessionFactory()
+        url = reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug})
+
+        response = client.put(
+            url,
+            data={"expected_revision": 0, "prompts": []},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 403
+        assert client.get(url).status_code == 403
+
+    def test_update_prompts_rejects_id_from_another_session(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        other_prompt = SessionPrompt.objects.create(session=SessionFactory(), prompt="Private", position=1)
+        url = reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug})
+
+        response = client.put(
+            url,
+            data={"expected_revision": 0, "prompts": [{"id": other_prompt.pk, "prompt": "Changed"}]},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 422
+        assert not session.discussion_prompts.exists()
+        assert other_prompt.prompt == "Private"
+
+    def test_update_prompts_rejects_whitespace_only_prompt(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        url = reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug})
+
+        response = client.put(
+            url,
+            data={"expected_revision": 0, "prompts": [{"prompt": "   "}]},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 422
+        assert not session.discussion_prompts.exists()
+
+    def test_update_prompts_trims_whitespace(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        url = reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug})
+
+        response = client.put(
+            url,
+            data={"expected_revision": 0, "prompts": [{"prompt": "  What brought you here?  "}]},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        assert list(session.discussion_prompts.values_list("prompt", flat=True)) == ["What brought you here?"]
+
+    def test_update_prompts_rejects_duplicate_ids_without_partial_changes(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        prompt = SessionPrompt.objects.create(session=session, prompt="Original", position=1)
+        url = reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug})
+
+        response = client.put(
+            url,
+            data={
+                "expected_revision": 0,
+                "prompts": [
+                    {"id": prompt.pk, "prompt": "First"},
+                    {"id": prompt.pk, "prompt": "Second"},
+                    {"prompt": "New"},
+                ],
+            },
+            content_type="application/json",
+        )
+
+        assert response.status_code == 422
+        assert list(session.discussion_prompts.values_list("prompt", flat=True)) == ["Original"]
+
+    def test_stale_prompt_revision_rejects_full_list_delete(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        url = reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug})
+
+        first_update = client.put(
+            url,
+            data={"expected_revision": 0, "prompts": [{"prompt": "Added after snapshot"}]},
+            content_type="application/json",
+        )
+        stale_update = client.put(
+            url,
+            data={"expected_revision": 0, "prompts": []},
+            content_type="application/json",
+        )
+
+        assert first_update.status_code == 200
+        assert stale_update.status_code == 409
+        assert stale_update.json() == {
+            "code": "stale_prompt_revision",
+            "message": "Prepared prompts have changed. Re-fetch them and try again.",
+            "revision": 1,
+            "prompts": [
+                {
+                    "id": first_update.json()["prompts"][0]["id"],
+                    "prompt": "Added after snapshot",
+                    "position": 1,
+                    "consumed_round_numbers": [],
+                }
+            ],
+        }
+        assert SessionPrompt.objects.filter(session=session, prompt="Added after snapshot").exists()
+
+    def test_stale_prompt_revision_cannot_undo_a_newer_edit(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        first = SessionPrompt.objects.create(session=session, prompt="First", position=1)
+        second = SessionPrompt.objects.create(session=session, prompt="Second", position=2)
+        url = reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug})
+
+        updated = client.put(
+            url,
+            data={
+                "expected_revision": 0,
+                "prompts": [{"id": first.pk, "prompt": "Edited"}, {"id": second.pk, "prompt": "Second"}],
+            },
+            content_type="application/json",
+        )
+        stale_reorder = client.put(
+            url,
+            data={
+                "expected_revision": 0,
+                "prompts": [{"id": second.pk, "prompt": "Second"}, {"id": first.pk, "prompt": "First"}],
+            },
+            content_type="application/json",
+        )
+
+        assert updated.status_code == 200
+        assert stale_reorder.status_code == 409
+        first.refresh_from_db()
+        assert first.prompt == "Edited"
+        assert list(session.discussion_prompts.values_list("prompt", flat=True)) == ["Edited", "Second"]
+
+    def test_editing_completed_prompt_preserves_round_snapshot(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        prompt = SessionPrompt.objects.create(session=session, prompt="Historical", position=1)
+        completed_round = SessionRound.objects.create(
+            session=session,
+            number=1,
+            prompt="Historical",
+            prepared_prompt=prompt,
+            state="completed",
+        )
+        url = reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug})
+
+        response = client.put(
+            url,
+            data={"expected_revision": 0, "prompts": [{"id": prompt.pk, "prompt": "Edited"}]},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        completed_round.refresh_from_db()
+        assert completed_round.prompt == "Historical"
+        assert completed_round.prepared_prompt_id == prompt.pk
+
+    def test_deleting_active_prompt_clears_round_and_unlinks_identity(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        prompt = SessionPrompt.objects.create(session=session, prompt="Keep the text", position=1)
+        room = Room.objects.get_or_create_for_session(session)
+        room.status = RoomStatus.ACTIVE
+        room.round_number = 1
+        room.save(update_fields=["status", "round_number"])
+        active_round = SessionRound.objects.create(
+            session=session,
+            number=1,
+            prompt=prompt.prompt,
+            prepared_prompt=prompt,
+        )
+        url = reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug})
+
+        response = client.put(
+            url,
+            data={"expected_revision": 0, "prompts": []},
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        active_round.refresh_from_db()
+        room.refresh_from_db()
+        assert active_round.prompt == ""
+        assert active_round.prepared_prompt_id is None
+        assert room.state_version == 1
+        assert room.to_state().round_message is None
+        assert room.to_state().round_prompt_id is None
+
+    @pytest.mark.django_db(transaction=True)
+    def test_prompt_publication_failure_keeps_newer_room_state_available_to_polling(
+        self, client_with_user: tuple[Client, User]
+    ):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        session.attendees.add(keeper)
+        prompt = SessionPrompt.objects.create(session=session, prompt="Original", position=1)
+        room = Room.objects.get_or_create_for_session(session)
+        room.status = RoomStatus.ACTIVE
+        room.round_number = 1
+        room.save(update_fields=["status", "round_number"])
+        SessionRound.objects.create(session=session, number=1, prompt="Original", prepared_prompt=prompt)
+        url = reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug})
+
+        with patch(
+            "totem.rooms.livekit._publish_state", side_effect=RuntimeError("LiveKit unavailable")
+        ) as mock_publish:
+            response = client.put(
+                url,
+                data={"expected_revision": 0, "prompts": [{"id": prompt.pk, "prompt": "Updated"}]},
+                content_type="application/json",
+            )
+
+        assert response.status_code == 200
+        assert mock_publish.called
+        state_response = client.get(f"/api/mobile/protected/rooms/{session.slug}/state")
+        assert state_response.status_code == 200
+        assert state_response.json()["version"] == 1
+        assert state_response.json()["round_message"] == "Updated"
+        assert state_response.json()["round_prompt_id"] == prompt.pk
+
+    def test_unrelated_prompt_edit_does_not_change_active_round(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        session = SessionFactory(space__author=keeper)
+        unrelated = SessionPrompt.objects.create(session=session, prompt="Unrelated", position=1)
+        active_prompt = SessionPrompt.objects.create(session=session, prompt="Active", position=2)
+        room = Room.objects.get_or_create_for_session(session)
+        room.status = RoomStatus.ACTIVE
+        room.round_number = 1
+        room.save(update_fields=["status", "round_number"])
+        SessionRound.objects.create(session=session, number=1, prompt="Active", prepared_prompt=active_prompt)
+        url = reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug})
+
+        response = client.put(
+            url,
+            data={
+                "expected_revision": 0,
+                "prompts": [
+                    {"id": unrelated.pk, "prompt": "Edited unrelated"},
+                    {"id": active_prompt.pk, "prompt": "Active"},
+                ],
+            },
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+        room.refresh_from_db()
+        assert room.state_version == 0
+        assert room.to_state().round_message == "Active"
+        assert room.to_state().round_prompt_id == active_prompt.pk
+
+    def test_unknown_session_prompts_returns_404(self, client_with_user: tuple[Client, User]):
+        client, _ = client_with_user
+        url = reverse("mobile-api:session_prompts", kwargs={"event_slug": "unknown-session"})
+
+        assert client.get(url).status_code == 404
 
     def test_get_session_detail_excludes_banned_from_next_events(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user

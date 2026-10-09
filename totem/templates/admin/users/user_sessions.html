@@ -1,0 +1,113 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Home</a>
+    &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+    &rsaquo; <a href="{% url 'admin:users_user_changelist' %}">{{ opts.verbose_name_plural|capfirst }}</a>
+    &rsaquo; <a href="{{ user_change_url }}">{{ subject.name|default:subject.email }}</a>
+    &rsaquo; Session history
+  </div>
+{% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <style>
+    .history-badge {
+      display: inline-block;
+      padding: 1px 8px;
+      margin-right: 4px;
+      border-radius: 10px;
+      font-size: 11px;
+      white-space: nowrap;
+      border: 1px solid var(--border-color);
+      color: var(--body-fg);
+    }
+    .history-badge.attended { border-color: var(--primary); }
+    .history-badge.no_show,
+    .history-badge.banned { border-color: var(--error-fg); color: var(--error-fg); }
+    .history-quiet { color: var(--body-quiet-color); }
+    .history-meta { margin-bottom: 12px; color: var(--body-quiet-color); }
+    .history-section { margin-bottom: 24px; }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <p class="history-meta">
+    {{ subject.email }} &middot;
+    {{ history.attended }} attended, {{ history.no_shows }} no-show{{ history.no_shows|pluralize }}
+    {% if history.attended or history.no_shows %}&middot; {{ history.attendance_percent }}% attendance{% endif %}
+  </p>
+  <p class="history-meta">
+    Built from current signups and joins. Signups that were withdrawn before the session aren't recorded.
+  </p>
+
+  {% if history.keepers %}
+    <div class="results history-section">
+      <h2>By Keeper</h2>
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Keeper</th>
+            <th scope="col">Attended</th>
+            <th scope="col">No-shows</th>
+            <th scope="col">Cancelled</th>
+            <th scope="col">Upcoming</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for summary in history.keepers %}
+            <tr>
+              <th scope="row">{{ summary.keeper.name|default:summary.keeper.email }}</th>
+              <td>{{ summary.attended }}</td>
+              <td>{{ summary.no_shows }}</td>
+              <td>{{ summary.cancelled }}</td>
+              <td>{{ summary.upcoming }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
+  <div class="results history-section">
+    <h2>Sessions</h2>
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Date</th>
+          <th scope="col">Session</th>
+          <th scope="col">Keeper</th>
+          <th scope="col">Status</th>
+          <th scope="col">Feedback</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in history.entries %}
+          <tr>
+            <td>{{ entry.session.start|date:"M j, Y, P e" }}</td>
+            <th scope="row">
+              <a href="{% url 'admin:spaces_session_change' entry.session.pk %}">{{ entry.session.session_title_or_title }}</a>
+            </th>
+            <td>{{ entry.session.space.author.name|default:entry.session.space.author.email }}</td>
+            <td>
+              <span class="history-badge {{ entry.status.name|lower }}">{{ entry.status }}</span>
+              {% if entry.banned %}<span class="history-badge banned">Banned</span>{% endif %}
+              {% if entry.joined and not entry.signed_up %}<span class="history-quiet">Joined without a signup</span>{% endif %}
+            </td>
+            <td>
+              {% if entry.feedback %}
+                {{ entry.feedback.get_feedback_display }}{% if entry.feedback.message %}
+                  <span class="history-quiet">&middot; {{ entry.feedback.message }}</span>{% endif %}
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5">No sessions yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <p><a href="{{ user_change_url }}">&larr; Back to user</a></p>
+{% endblock %}

@@ -1,7 +1,9 @@
 import datetime
 from typing import Any, final, override
 
+from django import forms
 from django.contrib import admin, messages
+from django.db import transaction
 from django.db.models.query import QuerySet
 from django.forms import ModelForm
 from django.http import Http404, HttpRequest, HttpResponse
@@ -11,10 +13,11 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from totem.rooms.models import Room
+from totem.rooms.state_machine import syncing_session_prompts
 from totem.users.models import User
 from totem.utils.admin import StaleDataCheckAdminMixin
 
-from .models import Session, SessionFeedback, Space, SpaceCategory
+from .models import Session, SessionFeedback, SessionPrompt, Space, SpaceCategory
 from .participants import participant_insights
 
 
@@ -147,6 +150,12 @@ def copy_session(modeladmin, request, queryset: QuerySet[Session]):
         space=session.space,
         content=session.content,
     )
+    SessionPrompt.objects.bulk_create(
+        [
+            SessionPrompt(session=obj, prompt=prompt.prompt, position=prompt.position)
+            for prompt in session.discussion_prompts.all()
+        ]
+    )
     change_url = reverse(f"admin:{obj._meta.app_label}_{obj._meta.model_name}_change", args=[obj.pk])
     return redirect(change_url)
 
@@ -157,6 +166,29 @@ class SessionFeedbackInline(admin.TabularInline):
     readonly_fields = ("user", "feedback", "message", "date_created")
 
 
+class SessionPromptInlineForm(ModelForm):
+    position = forms.IntegerField(label="", widget=forms.HiddenInput)
+
+    def has_changed(self) -> bool:
+        if not self.instance.pk and not self.data.get(self.add_prefix("prompt"), "").strip():
+            return False
+        return super().has_changed()
+
+    class Meta:
+        model = SessionPrompt
+        fields = ("prompt", "position")
+
+
+class SessionPromptInline(admin.TabularInline):
+    model = SessionPrompt
+    form = SessionPromptInlineForm
+    extra = 0
+
+    class Media:
+        js = ("js/admin/session_prompt_order.js",)
+        css = {"all": ("css/admin/session_prompt_order.css",)}
+
+
 @final
 @admin.register(Session)
 class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
@@ -165,7 +197,18 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
     autocomplete_fields = ["attendees", "joined"]
     readonly_fields = ("attendee_email_list", "participants_link", "date_created", "date_modified", "room_link")
     actions = [copy_session]
-    inlines = [SessionFeedbackInline]
+    inlines = [SessionPromptInline, SessionFeedbackInline]
+
+    @override
+    def save_formset(self, request: HttpRequest, form: Any, formset: Any, change: bool) -> None:
+        if formset.model is not SessionPrompt:
+            return super().save_formset(request, form, formset, change)
+
+        with transaction.atomic():
+            session = Session.objects.select_for_update().get(pk=form.instance.pk)
+            formset.instance = session
+            with syncing_session_prompts(session, request.user.slug):
+                super().save_formset(request, form, formset, change)
 
     @override
     def get_urls(self) -> list[URLPattern | URLResolver]:

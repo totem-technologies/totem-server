@@ -1,5 +1,5 @@
 import csv
-from datetime import datetime, timedelta
+from datetime import datetime
 from datetime import timezone as dt_timezone
 from io import StringIO
 
@@ -66,20 +66,21 @@ def test_exports_a_year_as_aggregate_only_csv():
 
 
 def test_exports_a_slug_filtered_quarter():
-    as_of = datetime.now(tz=dt_timezone.utc)
+    # Mid-quarter in a quarter that has already ended, so the session counts as
+    # elapsed and can't fall across a quarter boundary.
+    start = datetime(2025, 5, 15, 12, tzinfo=dt_timezone.utc)
     category = SpaceCategoryFactory(slug="grief-support")
     included_space = SpaceFactory(slug="included-space", categories=[category])
     excluded_space = SpaceFactory(slug="excluded-space")
-    included = SessionFactory(space=included_space, start=as_of - timedelta(days=1))
-    excluded = SessionFactory(space=excluded_space, start=as_of - timedelta(days=1))
+    included = SessionFactory(space=included_space, start=start)
+    excluded = SessionFactory(space=excluded_space, start=start)
     participant = UserFactory()
     included.joined.add(participant)
     excluded.joined.add(participant)
 
-    quarter = (as_of.month - 1) // 3 + 1
     _, metrics = _read_stdout(
         "--quarter",
-        f"{as_of.year}-Q{quarter}",
+        "2025-Q2",
         "--timezone",
         "UTC",
         "--category",
