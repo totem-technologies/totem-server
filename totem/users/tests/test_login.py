@@ -23,7 +23,7 @@ class TestLogInView:
 
         # Check that an email with PIN was sent
         assert len(mail.outbox) == 1  # Just PIN email in test mode
-        assert "PIN" in mail.outbox[0].body
+        assert "Your code is:" in mail.outbox[0].body
         # Get the PIN from the most recent LoginPin object
         pin = LoginPin.objects.get(user__email=normalized_email).pin
         assert pin in mail.outbox[0].body
@@ -55,7 +55,7 @@ class TestLogInView:
 
         # Check emails sent (just PIN in test mode)
         assert len(mail.outbox) == 1
-        assert "PIN" in mail.outbox[0].body
+        assert "Your code is:" in mail.outbox[0].body
 
         # Verify user created with consent
         user = User.objects.get(email=email)
@@ -92,7 +92,7 @@ class TestLogInView:
         # Check that PIN email was sent
         assert len(mail.outbox) == 1
         assert mail.outbox[0].to == [user.email]
-        assert "PIN" in mail.outbox[0].body
+        assert "Your code is:" in mail.outbox[0].body
 
         # Check that no new user was created
         assert User.objects.count() == count
