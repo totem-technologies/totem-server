@@ -98,9 +98,9 @@ class ButtonEmail(Email):
 
 class LoginPinEmail(Email):
     template: str = "pin"
-    subject: str = "Your Totem login PIN"
-    title: str = "Here's your login PIN"
-    message: str = "Use this 6-digit PIN to sign in. It expires in 15 minutes and can only be used once."
+    subject: str = "Your Totem verification code"
+    title: str = "Sign in to Totem"
+    message: str = "Enter this one-time code to finish signing in. It expires in 15 minutes."
     pin: str
 
 

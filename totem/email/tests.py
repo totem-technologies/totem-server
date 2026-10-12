@@ -1,3 +1,5 @@
+import re
+
 from django.core import mail
 from django.test import Client, override_settings
 from django.urls import reverse
@@ -114,7 +116,12 @@ class TestAuthEmails:
         assert email.to == [user.email]
         message = _get_email_content(email)
         assert pin.pin in message
-        assert "PIN" in message
+        # Gmail only offers its "Copy code" shortcut when the email reads like a
+        # verification code email: "code" in the subject, and a label in the same
+        # HTML element as the PIN.
+        assert "verification code" in email.subject.lower()
+        html = email.alternatives[0][0]
+        assert re.search(rf"Your code is:\s*<span[^>]*>\s*{pin.pin}", html)
 
 
 class TestMissedSessionEmail:
