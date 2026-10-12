@@ -149,7 +149,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/dev/ref/settings/#middleware
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "django.middleware.csp.ContentSecurityPolicyMiddleware",
+    # "django.middleware.csp.ContentSecurityPolicyMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -249,7 +249,7 @@ TEMPLATES = [
                 "django.template.context_processors.static",
                 "django.template.context_processors.tz",
                 "django.contrib.messages.context_processors.messages",
-                "django.template.context_processors.csp",
+                # "django.template.context_processors.csp",
                 "totem.users.context_processors.allauth_settings",
             ],
             "loaders": default_loaders if DEBUG else cached_loaders,

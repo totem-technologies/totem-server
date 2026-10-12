@@ -1,7 +1,6 @@
 import socket
 
 import sentry_sdk
-from django.utils.csp import CSP
 from sentry_sdk.integrations.django import DjangoIntegration
 
 from .base import *  # noqa
@@ -68,82 +67,83 @@ SECURE_CONTENT_TYPE_NOSNIFF = env.bool("DJANGO_SECURE_CONTENT_TYPE_NOSNIFF", def
 # https://docs.djangoproject.com/en/dev/ref/settings/#secure-referrer-policy
 SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 
-# CSP (Content Security Policy)
+# CSP (Content Security Policy) -- disabled until fully implemented
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/6.0/ref/csp/
 # Starting in report-only mode to collect violations without breaking the site.
 # Once reports are clean, move this to SECURE_CSP to enforce.
-_DO_CDN = f"*.{env('DO_STORAGE_BUCKET_REGION', default='nyc3')}.cdn.digitaloceanspaces.com"
-_PROXIED_SITE = PROXIED_SITE_BASE_URL.rstrip("/")  # noqa: F405
-_CSP_SCRIPT_SRC = [
-    CSP.SELF,
-    CSP.UNSAFE_INLINE,
-    "https://js.sentry-cdn.com",
-    "https://browser.sentry-cdn.com",
-    "https://www.googletagmanager.com",
-    "https://googleads.g.doubleclick.net",
-    "https://static.cloudflareinsights.com",
-    "https://us-assets.i.posthog.com",
-    "https://app.posthog.com",
-    "https://e.totem.org",
-    _PROXIED_SITE,
-]
-_CSP_STYLE_SRC = [
-    CSP.SELF,
-    CSP.UNSAFE_INLINE,
-    _PROXIED_SITE,
-]
-_CSP_IMG_SRC = [
-    CSP.SELF,
-    _DO_CDN,
-    "data:",
-    "https://googleads.g.doubleclick.net",
-    "https://www.googleadservices.com",
-    "https://www.google.com",
-    "https://www.google.ca",
-    "https://www.google.co.uk",
-    "https://www.google.com.au",
-    "https://www.google.com.do",
-    _PROXIED_SITE,
-]
-_CSP_CONNECT_SRC = [
-    CSP.SELF,
-    "https://o1324443.ingest.sentry.io",
-    "https://o1324443.ingest.us.sentry.io",
-    "https://e.totem.org",
-    "https://www.google-analytics.com",
-    "https://www.googletagmanager.com",
-    "https://analytics.google.com",
-    "https://www.google.com",
-    "https://static.cloudflareinsights.com",
-    "https://us.i.posthog.com",
-    "https://us-assets.i.posthog.com",
-    "https://*.google-analytics.com",
-    _DO_CDN,
-]
-if STATIC_HOST:
-    _CSP_SCRIPT_SRC.append(f"https://{STATIC_HOST}")
-    _CSP_STYLE_SRC.append(f"https://{STATIC_HOST}")
-    _CSP_IMG_SRC.append(f"https://{STATIC_HOST}")
-    _CSP_CONNECT_SRC.append(f"https://{STATIC_HOST}")
+# from django.utils.csp import CSP
+# _DO_CDN = f"*.{env('DO_STORAGE_BUCKET_REGION', default='nyc3')}.cdn.digitaloceanspaces.com"
+# _PROXIED_SITE = PROXIED_SITE_BASE_URL.rstrip("/")  # noqa: F405
+# _CSP_SCRIPT_SRC = [
+#     CSP.SELF,
+#     CSP.UNSAFE_INLINE,
+#     "https://js.sentry-cdn.com",
+#     "https://browser.sentry-cdn.com",
+#     "https://www.googletagmanager.com",
+#     "https://googleads.g.doubleclick.net",
+#     "https://static.cloudflareinsights.com",
+#     "https://us-assets.i.posthog.com",
+#     "https://app.posthog.com",
+#     "https://e.totem.org",
+#     _PROXIED_SITE,
+# ]
+# _CSP_STYLE_SRC = [
+#     CSP.SELF,
+#     CSP.UNSAFE_INLINE,
+#     _PROXIED_SITE,
+# ]
+# _CSP_IMG_SRC = [
+#     CSP.SELF,
+#     _DO_CDN,
+#     "data:",
+#     "https://googleads.g.doubleclick.net",
+#     "https://www.googleadservices.com",
+#     "https://www.google.com",
+#     "https://www.google.ca",
+#     "https://www.google.co.uk",
+#     "https://www.google.com.au",
+#     "https://www.google.com.do",
+#     _PROXIED_SITE,
+# ]
+# _CSP_CONNECT_SRC = [
+#     CSP.SELF,
+#     "https://o1324443.ingest.sentry.io",
+#     "https://o1324443.ingest.us.sentry.io",
+#     "https://e.totem.org",
+#     "https://www.google-analytics.com",
+#     "https://www.googletagmanager.com",
+#     "https://analytics.google.com",
+#     "https://www.google.com",
+#     "https://static.cloudflareinsights.com",
+#     "https://us.i.posthog.com",
+#     "https://us-assets.i.posthog.com",
+#     "https://*.google-analytics.com",
+#     _DO_CDN,
+# ]
+# if STATIC_HOST:
+#     _CSP_SCRIPT_SRC.append(f"https://{STATIC_HOST}")
+#     _CSP_STYLE_SRC.append(f"https://{STATIC_HOST}")
+#     _CSP_IMG_SRC.append(f"https://{STATIC_HOST}")
+#     _CSP_CONNECT_SRC.append(f"https://{STATIC_HOST}")
 
-SECURE_CSP_REPORT_ONLY = {
-    "default-src": [CSP.SELF],
-    "script-src": _CSP_SCRIPT_SRC,
-    "style-src": _CSP_STYLE_SRC,
-    "img-src": _CSP_IMG_SRC,
-    "font-src": [CSP.SELF, _PROXIED_SITE] + ([f"https://{STATIC_HOST}"] if STATIC_HOST else []),
-    "connect-src": _CSP_CONNECT_SRC,
-    "frame-src": ["https://e.totem.org", "https://www.googletagmanager.com"],
-    "worker-src": [CSP.SELF, "blob:"],  # blob: needed for GTM web workers
-    "object-src": [CSP.NONE],
-    "base-uri": [CSP.SELF],
-    "form-action": [CSP.SELF],
-    "frame-ancestors": [CSP.NONE],
-    "report-uri": [
-        "https://o1324443.ingest.sentry.io/api/4505270983065600/security/?sentry_key=fc28dfc40b014a8fa120aa1d9c279112"
-    ],
-}
+# SECURE_CSP_REPORT_ONLY = {
+#     "default-src": [CSP.SELF],
+#     "script-src": _CSP_SCRIPT_SRC,
+#     "style-src": _CSP_STYLE_SRC,
+#     "img-src": _CSP_IMG_SRC,
+#     "font-src": [CSP.SELF, _PROXIED_SITE] + ([f"https://{STATIC_HOST}"] if STATIC_HOST else []),
+#     "connect-src": _CSP_CONNECT_SRC,
+#     "frame-src": ["https://e.totem.org", "https://www.googletagmanager.com"],
+#     "worker-src": [CSP.SELF, "blob:"],  # blob: needed for GTM web workers
+#     "object-src": [CSP.NONE],
+#     "base-uri": [CSP.SELF],
+#     "form-action": [CSP.SELF],
+#     "frame-ancestors": [CSP.NONE],
+#     "report-uri": [
+#         "https://o1324443.ingest.sentry.io/api/4505270983065600/security/?sentry_key=fc28dfc40b014a8fa120aa1d9c279112"
+#     ],
+# }
 
 # MEDIA
 # ------------------------------------------------------------------------------
@@ -153,13 +153,13 @@ SECURE_CSP_REPORT_ONLY = {
 # Django Admin URL regex.
 ADMIN_URL = env("DJANGO_ADMIN_URL")
 
-# # Anymail
-# # ------------------------------------------------------------------------------
-# # https://anymail.readthedocs.io/en/stable/installation/#installing-anymail
+# Anymail
+# ------------------------------------------------------------------------------
+# https://anymail.readthedocs.io/en/stable/installation/#installing-anymail
 INSTALLED_APPS += ["anymail"]  # noqa: F405
-# # https://docs.djangoproject.com/en/dev/ref/settings/#mailers
-# # https://anymail.readthedocs.io/en/stable/installation/#anymail-settings-reference
-# # https://anymail.readthedocs.io/en/stable/esps/mailersend/
+# https://docs.djangoproject.com/en/dev/ref/settings/#mailers
+# https://anymail.readthedocs.io/en/stable/installation/#anymail-settings-reference
+# https://anymail.readthedocs.io/en/stable/esps/mailersend/
 MAILERS = {"default": {"BACKEND": "anymail.backends.mailersend.EmailBackend"}}
 ANYMAIL = {"MAILERSEND_API_TOKEN": MAILERSEND_API_TOKEN, "MAILERSEND_BATCH_SEND_MODE": "use-bulk-email"}
 
