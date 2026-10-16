@@ -72,6 +72,7 @@ class Room(BaseModel):
     current_speaker = models.CharField(max_length=50, null=True)  # user slug
     next_speaker = models.CharField(max_length=50, null=True)  # user slug
     talking_order = ArrayField(models.CharField(max_length=50), default=list)  # user slugs
+    waiting_order_manually_set = models.BooleanField(default=False)
     banned_participants = ArrayField(models.CharField(max_length=50), default=list)  # user slugs
     round_number = models.PositiveIntegerField(default=0)
     state_version = models.PositiveIntegerField(default=0)
@@ -118,6 +119,17 @@ class Room(BaseModel):
             round_message=round.prompt or None if round else None,
             round_prompt_id=round.prepared_prompt_id if round else None,
         )
+
+
+class RoomParticipant(BaseModel):
+    """A participant first observed in a LiveKit room."""
+
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name="participants")
+    user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="room_participations")
+    first_seen_at = models.DateTimeField()
+
+    class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]
+        constraints = [models.UniqueConstraint(fields=["room", "user"], name="unique_room_participant")]
 
 
 class RoomEventLog(BaseModel):
