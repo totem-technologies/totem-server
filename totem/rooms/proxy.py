@@ -30,12 +30,24 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse, StreamingHttpResponse
 from django.utils.cache import add_never_cache_headers
 from django.views.decorators.csrf import csrf_exempt
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
 
 from .preview import PREVIEW_KEY, preview_hostname, selected_alias
 
+_ALLOWED_METHODS = ("GET", "HEAD")
+
 # Single shared session so HTTP keep-alive to the upstream is reused
-# across requests.
+# across requests. The upstream may close an idle pooled connection, which
+# surfaces as ECONNRESET on the next request that reuses it. Only GET/HEAD
+# reach the upstream, so retrying on a fresh connection is safe. Status codes
+# are not retried; 5xx still propagates to Sentry.
 _session = requests.Session()
+_session.mount(
+    "https://",
+    HTTPAdapter(max_retries=Retry(total=2, connect=2, read=2, status=0, allowed_methods=_ALLOWED_METHODS)),
+)
+_session.mount("http://", _session.get_adapter("https://"))
 
 
 # Response headers we forward from upstream to the client. Allow-list
@@ -125,9 +137,6 @@ def _rewrite_dev_base_href(body: bytes) -> bytes:
         .replace(b'<base href="$FLUTTER_BASE_HREF">', b'<base href="/room/">')
         .replace(b'<base href="/" />', b'<base href="/room/" />')
     )
-
-
-_ALLOWED_METHODS = ("GET", "HEAD")
 
 
 @csrf_exempt

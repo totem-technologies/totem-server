@@ -16,8 +16,9 @@ import requests
 from django.middleware.security import SecurityMiddleware
 from django.test import Client, override_settings
 from django.urls import reverse
+from urllib3.exceptions import MaxRetryError, ProtocolError
 
-from totem.rooms.proxy import room_app_proxy
+from totem.rooms.proxy import _session, room_app_proxy
 from totem.users.tests.factories import UserFactory
 
 
@@ -333,3 +334,21 @@ class TestRoomPreviewProxy:
             response = client.get("/room/lobby", HTTP_SEC_FETCH_MODE="navigate")
         assert upstream.call_args.args[1] == "https://normal.lopkerk.workers.dev/"
         assert self.alias.encode() not in response.content
+
+
+def test_session_retries_reset_connections_for_safe_methods():
+    """Upstreams drop idle keep-alive connections, so the first read on a
+    pooled socket can hit ECONNRESET. GET/HEAD are idempotent, so the shared
+    session retries them on a fresh connection instead of raising a 500."""
+    retry = _session.get_adapter("https://upstream.example").max_retries
+    reset = ProtocolError("Connection aborted.", ConnectionResetError(104, "Connection reset by peer"))
+
+    for method in ("GET", "HEAD"):
+        retry.increment(method, "/", error=reset).increment(method, "/", error=reset)
+        with pytest.raises(MaxRetryError):
+            retry.increment(method, "/", error=reset).increment(method, "/", error=reset).increment(
+                method, "/", error=reset
+            )
+
+    with pytest.raises(ProtocolError):
+        retry.increment("POST", "/", error=reset)
