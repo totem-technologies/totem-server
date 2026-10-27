@@ -42,9 +42,10 @@ class TestPinRequestEndpoint:
         # Check PIN was created and email sent
         pin = LoginPin.objects.get(user=user)
         assert pin.is_valid()
-        assert len(mail.outbox) == 1  # PIN email
+        assert len(mail.outbox) == 2  # PIN and welcome emails
         assert mail.outbox[0].to == [normalized_email]
         assert pin.pin in mail.outbox[0].body
+        assert mail.outbox[1].subject == "Welcome to Totem!"
 
     def test_request_pin_existing_user_preserves_password(self, client: Client, db):
         """Existing user requesting a PIN should not change their password."""

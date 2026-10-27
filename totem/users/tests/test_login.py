@@ -22,8 +22,9 @@ class TestLogInView:
         assert response.url.startswith(reverse("users:verify-pin"))
 
         # Check that an email with PIN was sent
-        assert len(mail.outbox) == 1  # Just PIN email in test mode
+        assert len(mail.outbox) == 2  # PIN and welcome emails
         assert "Your code is:" in mail.outbox[0].body
+        assert mail.outbox[1].subject == "Welcome to Totem!"
         # Get the PIN from the most recent LoginPin object
         pin = LoginPin.objects.get(user__email=normalized_email).pin
         assert pin in mail.outbox[0].body
@@ -53,8 +54,8 @@ class TestLogInView:
         assert response.status_code == 302
         assert response.url.startswith(reverse("users:verify-pin"))
 
-        # Check emails sent (just PIN in test mode)
-        assert len(mail.outbox) == 1
+        # Check emails sent (PIN and welcome)
+        assert len(mail.outbox) == 2
         assert "Your code is:" in mail.outbox[0].body
 
         # Verify user created with consent

@@ -84,8 +84,15 @@ class BrevoEmail(BaseModel):
         )
 
 
-class WelcomeEmail(BrevoEmail):
-    template_id: int = 3
+class WelcomeEmail(Email):
+    template: str = "welcome"
+    subject: str = "Welcome to Totem!"
+    title: str = "Welcome to Totem!"
+    preview: str = "At Totem we believe we heal, grow, and thrive through our shared experiences."
+    home_link: AnyHttpUrl
+    spaces_link: AnyHttpUrl
+    how_it_works_link: AnyHttpUrl
+    guidelines_link: AnyHttpUrl
 
 
 class ButtonEmail(Email):
@@ -153,16 +160,6 @@ class SessionSignupEmail(Email):
     title: str = "Spot Saved"
 
 
-class TestEmail(Email):
-    template: str = "test"
-    start: str
-    event_title: str
-    link: AnyHttpUrl
-    button_text: str = "Add to calendar"
-    subject: str = "Your spot is saved"
-    title: str = "Spot Saved"
-
-
 class MissedSessionEmail(Email):
     template: str = "missed_event"
     start: str
@@ -185,12 +182,18 @@ def login_pin_email(email: str, pin: str) -> Email:
     )
 
 
-def welcome_email(user: User) -> BrevoEmail:
+def welcome_email(user: User) -> Email:
     if settings.DEBUG:
         print("------------------------------------------")
         print(f"Sending welcome email to {user.email}")
         print("------------------------------------------")
-    return WelcomeEmail(recipient=user.email)
+    return WelcomeEmail(
+        recipient=user.email,
+        home_link=_make_email_url("/"),
+        spaces_link=_make_email_url(reverse("spaces:list")),
+        how_it_works_link=_make_email_url(reverse("pages:how-it-works")),
+        guidelines_link=_make_email_url(reverse("pages:guidelines")),
+    )
 
 
 def notify_session_starting(event: Session, user: User) -> Email:

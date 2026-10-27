@@ -41,5 +41,8 @@
       "WebFetch(domain:gist.github.com)",
       "WebSearch"
     ]
+  },
+  "skillOverrides": {
+    "frontend-design": "off"
   }
 }

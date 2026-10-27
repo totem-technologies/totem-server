@@ -1,13 +1,18 @@
 {% load static %}
 <mjml>
   <mj-head>
+    <mj-raw>
+      <meta name="color-scheme" content="light dark">
+      <meta name="supported-color-schemes" content="light dark">
+    </mj-raw>
     <mj-attributes>
       <mj-all font-family="Montserrat, Helvetica, Arial, sans-serif"></mj-all>
       <mj-button background-color="#987AA5" color="#FFF" border-radius="40px" font-size="20px" line-height="1.75" padding="0px"></mj-button>
-      <mj-class name="h1" color="#262F37" font-size="24px" font-weight="bold" line-height="1.6" padding="0px" />
-      <mj-class name="p" color="#262F37" font-size="16px" line-height="1.6" padding="0px" />
-      <mj-class name="sub" color="#7a7a7a" font-size="14px" line-height="1.6" padding="0px" />
-      <mj-class name="section" background-color="#F3F1E9" border-radius="24px" padding="40px" />
+      <mj-class name="h1" css-class="dm-text" color="#262F37" font-size="24px" font-weight="bold" line-height="1.6" padding="0px" />
+      <mj-class name="p" css-class="dm-text" color="#262F37" font-size="16px" line-height="1.6" padding="0px" />
+      <mj-class name="sub" css-class="dm-sub" color="#7a7a7a" font-size="14px" line-height="1.6" padding="0px" />
+      <mj-class name="eyebrow" css-class="dm-accent" color="#987AA5" font-size="12px" letter-spacing="1.5px" line-height="1.6" text-transform="uppercase" padding="0px" />
+      <mj-class name="section" css-class="dm-card" background-color="#F3F1E9" border-radius="24px" padding="40px" />
       <mj-text color="#2B2B2B" font-size="16px" line-height="1.6" padding="0px"></mj-text>
     </mj-attributes>
     <mj-font href="https://fonts.googleapis.com/css?family=Montserrat:normal,italic,bold&display=swap" name="Montserrat"></mj-font>
@@ -16,8 +21,22 @@
         color: inherit;
       }
     </mj-style>
+    <mj-style>
+      :root {
+        color-scheme: light dark;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background-color: #262f37 !important;
+        }
+        {% include 'email/emails/_dark_mode.css' with p='' %}
+      }
+      {% comment %}Outlook.com and the Outlook apps ignore the media query and add these attributes in dark mode.{% endcomment %}
+      {% include 'email/emails/_dark_mode.css' with p='[data-ogsc] ' %}
+      {% include 'email/emails/_dark_mode.css' with p='[data-ogsb] ' %}
+    </mj-style>
   </mj-head>
-  <mj-body>
+  <mj-body background-color="#ffffff" css-class="dm-body">
     {% if show_env_banner %}
     <mj-section background-color="#f02323" border-radius="24px">
       <mj-column>
@@ -32,7 +51,14 @@
     {% endif %}
     <mj-section>
       <mj-column>
-        <mj-image align="left" href="https://www.totem.org" padding="5px" src="{% static 'images/totem-logo.png' %}" width="70px"></mj-image>
+        {% comment %}
+        The outlined logo stays visible when Gmail and Outlook force dark mode on their own;
+        clients that honor our dark styles swap in the cream logo. MSO never shows the cream one.
+        {% endcomment %}
+        <mj-text font-size="0px" line-height="0px" padding="5px">
+          <a href="https://www.totem.org"><img class="dm-light-only" src="{% static 'images/email/totem-logo-outlined.png' %}" width="75" alt="Totem" style="display:block;width:75px;height:auto;border:0"></a>
+          <!--[if !mso]><!--><a href="https://www.totem.org"><img class="dm-dark-only" src="{% static 'images/totem-logo-creme.png' %}" width="70" alt="Totem" style="display:none;max-height:0;overflow:hidden;width:70px;height:auto;border:0;margin:2px 0 0 2px"></a><!--<![endif]-->
+        </mj-text>
       </mj-column>
     </mj-section>
     {% block content %} {% endblock content %}

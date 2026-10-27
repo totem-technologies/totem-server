@@ -1,0 +1,89 @@
+{% extends 'email/emails/_base.mjml' %} {% load static %} {% block content %}
+<mj-raw>
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0">{{ preview }}</div>
+</mj-raw>
+<mj-section mj-class="section">
+  <mj-column padding="0">
+    <mj-text mj-class="h1" font-size="32px" line-height="1.3">
+      {{ title }}
+    </mj-text>
+    <mj-spacer height="14px"></mj-spacer>
+    <mj-text mj-class="p" font-size="17px">
+      {{ preview }}
+    </mj-text>
+    <mj-spacer height="10px"></mj-spacer>
+    <mj-text mj-class="p" font-size="17px">
+      <strong>We're so glad you're here.</strong>
+    </mj-text>
+    <mj-spacer height="28px"></mj-spacer>
+    <mj-image border-radius="20px" padding="0" href="{{ home_link }}" src="{% static 'images/email/welcome.jpg' %}" alt="Five people sitting together in conversation in a pink room" />
+    <mj-spacer height="48px"></mj-spacer>
+    <mj-text mj-class="h1" font-size="22px">
+      Haven't found your first Space yet?
+    </mj-text>
+    <mj-spacer height="8px"></mj-spacer>
+    <mj-text mj-class="p">
+      Explore our upcoming sessions and find a conversation that speaks to you.
+    </mj-text>
+    <mj-spacer height="28px"></mj-spacer>
+    <mj-button href="{{ spaces_link }}" align="center">
+      <strong>Explore Sessions</strong>
+    </mj-button>
+    <mj-spacer height="48px"></mj-spacer>
+    <mj-text mj-class="p">
+      Already signed up? Keep reading to learn what to expect during your first session!
+    </mj-text>
+    <mj-spacer height="28px"></mj-spacer>
+    <mj-text mj-class="eyebrow">
+      Your first session
+    </mj-text>
+    <mj-text mj-class="h1" font-size="22px">
+      What to Expect
+    </mj-text>
+    <mj-spacer height="8px"></mj-spacer>
+    <mj-text mj-class="p">
+      <ul style="margin:0;padding-left:20px">
+        <li style="padding:6px 0"><strong>Cameras are optional.</strong> You're welcome to keep yours off.</li>
+        <li style="padding:6px 0"><strong>Our Keepers guide the conversation</strong> with thoughtful questions. No preparation needed!</li>
+        <li style="padding:6px 0"><strong>We pass a digital talking piece</strong> so everyone gets a chance to share without interruption. You can always pass.</li>
+        <li style="padding:6px 0"><strong>Share as much or as little as you'd like.</strong> There's no pressure to open up more than you're comfortable with.</li>
+        <li style="padding:6px 0"><strong>No advice or fixing.</strong> We're here to listen and learn from one another.</li>
+        <li style="padding:6px 0"><strong>Confidentiality makes room for authenticity.</strong> We ask everyone to respect each other's privacy and keep personal stories within the Space.</li>
+      </ul>
+    </mj-text>
+    <mj-spacer height="10px"></mj-spacer>
+    <mj-text mj-class="p">
+      <a href="{{ how_it_works_link }}" class="dm-accent" style="color:#987AA5"><strong>How it Works →</strong></a>
+    </mj-text>
+    <mj-spacer height="48px"></mj-spacer>
+    <mj-text mj-class="eyebrow">
+      Before you join
+    </mj-text>
+    <mj-text mj-class="h1" font-size="22px">
+      Community Guidelines
+    </mj-text>
+    <mj-spacer height="8px"></mj-spacer>
+    <mj-text mj-class="p">
+      Before joining your first session, please take a moment to review our Community Guidelines.
+    </mj-text>
+    <mj-spacer height="28px"></mj-spacer>
+    <mj-button href="{{ guidelines_link }}" align="center">
+      <strong>Read the Guidelines</strong>
+    </mj-button>
+    <mj-spacer height="40px"></mj-spacer>
+    <mj-divider css-class="dm-divider" border-color="#DDD5C5" border-width="1px" padding="0" />
+    <mj-spacer height="40px"></mj-spacer>
+    <mj-text mj-class="p" font-size="17px">
+      <strong>Questions? We're here to help.</strong>
+    </mj-text>
+    <mj-spacer height="6px"></mj-spacer>
+    <mj-text mj-class="p">
+      For technical issues, questions, or accessibility accommodations, reach us at <a href="mailto:{{ support_email }}" class="dm-accent" style="color:#987AA5">{{ support_email }}</a>.
+    </mj-text>
+    <mj-spacer height="28px"></mj-spacer>
+    <mj-text mj-class="sub">
+      You received this email because you signed up on our website. If you didn't sign up, you can ignore this email.
+    </mj-text>
+  </mj-column>
+</mj-section>
+{% endblock %}
