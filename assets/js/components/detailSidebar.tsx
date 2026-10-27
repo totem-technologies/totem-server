@@ -588,12 +588,12 @@ export function EventInfo(props: {
                 Enter Session
               </a>
               <details class="group mt-4">
-                <summary class="flex cursor-pointer list-none items-center justify-center gap-2 text-gray-600 [&::-webkit-details-marker]:hidden">
+                <summary class="text-tslate/70 hover:text-tslate flex cursor-pointer list-none items-center justify-center gap-2 [&::-webkit-details-marker]:hidden">
                   <FiHelpCircle aria-hidden="true" />
                   Trouble joining?
                   <FiChevronDown
                     aria-hidden="true"
-                    class="group-open:rotate-180"
+                    class="transition-transform group-open:rotate-180"
                   />
                 </summary>
                 <div class="bg-tmauve/10 mt-4 rounded-2xl p-4">
@@ -602,9 +602,9 @@ export function EventInfo(props: {
                   </p>
                   <a
                     class="btn btn-outline w-full"
-                    href="mailto:help@totem.org">
+                    href={`mailto:${globalThis.TOTEM_DATA.support_email}`}>
                     <FiMail aria-hidden="true" />
-                    Email help@totem.org
+                    Email {globalThis.TOTEM_DATA.support_email}
                   </a>
                 </div>
               </details>

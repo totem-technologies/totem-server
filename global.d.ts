@@ -23,6 +23,7 @@ declare global {
     debug: boolean
     is_authenticated: boolean
     reload_on_login: boolean
+    support_email: string
   }
 }
 

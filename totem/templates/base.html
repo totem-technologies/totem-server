@@ -1,4 +1,4 @@
-{% load static i18n absurl %}
+{% load static i18n absurl settings_value %}
 <!doctype html>
 {% get_current_language as LANGUAGE_CODE %}
 <html lang="{{ LANGUAGE_CODE }}">
@@ -72,6 +72,7 @@
             debug: {{ debug | yesno:"true,false" }},
             is_authenticated: {{ request.user.is_authenticated | yesno:"true,false" }},
             reload_on_login: false,
+            support_email: "{% settings_value 'EMAIL_SUPPORT_ADDRESS' %}",
         }
     </script>
     <!-- prettier-ignore-end -->

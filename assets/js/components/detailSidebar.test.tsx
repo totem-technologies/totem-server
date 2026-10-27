@@ -35,6 +35,7 @@ beforeAll(() => {
     debug: false,
     is_authenticated: false,
     reload_on_login: false,
+    support_email: "help@totem.org",
   }
   globalThis.atcb_action = atcbAction
 })
@@ -116,6 +117,7 @@ test("joinable session invites you in", () => {
 })
 
 test("joinable session offers collapsible email support", async () => {
+  globalThis.TOTEM_DATA.support_email = "support@example.org"
   const result = renderEventInfo(makeEvent({ joinable: true }))
   const disclosure = result.getByText("Trouble joining?")
   const details = disclosure.closest("details")!
@@ -126,11 +128,10 @@ test("joinable session offers collapsible email support", async () => {
   expect(
     result.getByText("Having tech issues? Email us and we'll help you get in.")
   ).toBeTruthy()
-  expect(
-    result
-      .getByRole("link", { name: "Email help@totem.org" })
-      .getAttribute("href")
-  ).toBe("mailto:help@totem.org")
+  const emailLink = result.getByRole("link", {
+    name: "Email support@example.org",
+  })
+  expect(emailLink.getAttribute("href")).toBe("mailto:support@example.org")
 
   await user.click(disclosure)
   expect(details.open).toBe(false)

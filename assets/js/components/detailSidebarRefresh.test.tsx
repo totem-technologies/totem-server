@@ -16,6 +16,7 @@ beforeEach(() => {
     debug: false,
     is_authenticated: false,
     reload_on_login: false,
+    support_email: "help@totem.org",
   }
   vi.useFakeTimers()
   vi.setSystemTime(NOW)
