@@ -115,6 +115,27 @@ test("joinable session invites you in", () => {
   expect(result.getByText("You can enter this session now.")).toBeTruthy()
 })
 
+test("joinable session offers collapsible email support", async () => {
+  const result = renderEventInfo(makeEvent({ joinable: true }))
+  const disclosure = result.getByText("Trouble joining?")
+  const details = disclosure.closest("details")!
+  expect(details.open).toBe(false)
+
+  await user.click(disclosure)
+  expect(details.open).toBe(true)
+  expect(
+    result.getByText("Having tech issues? Email us and we'll help you get in.")
+  ).toBeTruthy()
+  expect(
+    result
+      .getByRole("link", { name: "Email help@totem.org" })
+      .getAttribute("href")
+  ).toBe("mailto:help@totem.org")
+
+  await user.click(disclosure)
+  expect(details.open).toBe(false)
+})
+
 test("started session links to the space's next session", () => {
   const result = renderEventInfo(
     makeEvent({
