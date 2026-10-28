@@ -6,6 +6,7 @@ globalThis.TOTEM_DATA = {
   debug: false,
   is_authenticated: true,
   reload_on_login: false,
+  support_email: "help@totem.org",
 }
 globalThis.atcb_action = vi.fn(() => Promise.resolve(""))
 

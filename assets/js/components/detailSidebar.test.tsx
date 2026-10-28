@@ -35,6 +35,7 @@ beforeAll(() => {
     debug: false,
     is_authenticated: false,
     reload_on_login: false,
+    support_email: "help@totem.org",
   }
   globalThis.atcb_action = atcbAction
 })
@@ -113,6 +114,27 @@ test("joinable session invites you in", () => {
     makeEvent({ joinable: true, join_url: "/spaces/join/test-session/" })
   )
   expect(result.getByText("You can enter this session now.")).toBeTruthy()
+})
+
+test("joinable session offers collapsible email support", async () => {
+  globalThis.TOTEM_DATA.support_email = "support@example.org"
+  const result = renderEventInfo(makeEvent({ joinable: true }))
+  const disclosure = result.getByText("Trouble joining?")
+  const details = disclosure.closest("details")!
+  expect(details.open).toBe(false)
+
+  await user.click(disclosure)
+  expect(details.open).toBe(true)
+  expect(
+    result.getByText("Having tech issues? Email us and we'll help you get in.")
+  ).toBeTruthy()
+  const emailLink = result.getByRole("link", {
+    name: "Email support@example.org",
+  })
+  expect(emailLink.getAttribute("href")).toBe("mailto:support@example.org")
+
+  await user.click(disclosure)
+  expect(details.open).toBe(false)
 })
 
 test("started session links to the space's next session", () => {

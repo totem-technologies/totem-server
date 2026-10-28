@@ -1,5 +1,6 @@
 import { useKeyDownEvent } from "@solid-primitives/keyboard"
 import { useQuery } from "@tanstack/solid-query"
+import { FiChevronDown, FiHelpCircle, FiMail } from "solid-icons/fi"
 import {
   createEffect,
   createSignal,
@@ -586,6 +587,27 @@ export function EventInfo(props: {
                 rel="noreferrer">
                 Enter Session
               </a>
+              <details class="group mt-4">
+                <summary class="text-tslate/70 hover:text-tslate flex cursor-pointer list-none items-center justify-center gap-2 [&::-webkit-details-marker]:hidden">
+                  <FiHelpCircle aria-hidden="true" />
+                  Trouble joining?
+                  <FiChevronDown
+                    aria-hidden="true"
+                    class="transition-transform group-open:rotate-180"
+                  />
+                </summary>
+                <div class="bg-tmauve/10 mt-4 rounded-2xl p-4">
+                  <p class="pb-3">
+                    Having tech issues? Email us and we'll help you get in.
+                  </p>
+                  <a
+                    class="btn btn-outline w-full"
+                    href={`mailto:${globalThis.TOTEM_DATA.support_email}`}>
+                    <FiMail aria-hidden="true" />
+                    Email {globalThis.TOTEM_DATA.support_email}
+                  </a>
+                </div>
+              </details>
             </Match>
             <Match when={props.eventStore.ended}>
               <div>This session has ended.</div>
