@@ -16,7 +16,7 @@ from django.template.loader import render_to_string
 from pydantic import AnyHttpUrl, BaseModel, TypeAdapter
 
 from .models import EmailLog
-from .utils import send_brevo_email, send_mail
+from .utils import mjml_to_text, send_mail
 
 
 def type_url(url: str):
@@ -35,17 +35,22 @@ def _to_human_time(user: User, dt: datetime):
 class Email(BaseModel):
     template: str
     subject: str
+    title: str
+    # Inbox preview line, shown after the subject.
+    preview: str
     recipient: str
     support_email: str = settings.EMAIL_SUPPORT_ADDRESS
     show_env_banner: bool = settings.EMAIL_SHOW_ENV_BANNER
     environment: str = settings.ENVIRONMENT_NAME
 
+    def render_mjml(self) -> str:
+        return render_to_string(f"email/emails/{self.template}.mjml", context=self.model_dump())
+
     def render_html(self) -> str:
-        s = render_to_string(f"email/emails/{self.template}.mjml", context=self.model_dump())
-        return mrml.to_html(s).content
+        return mrml.to_html(self.render_mjml()).content
 
     def render_text(self) -> str:
-        return render_to_string(f"email/emails/{self.template}.txt", context=self.model_dump())
+        return mjml_to_text(self.render_mjml())
 
     def send(self):
         # if blocking:
@@ -71,19 +76,6 @@ class Email(BaseModel):
         )
 
 
-class BrevoEmail(BaseModel):
-    template_id: int
-    recipient: str
-    show_env_banner: bool = settings.EMAIL_SHOW_ENV_BANNER
-    environment: str = settings.ENVIRONMENT_NAME
-
-    def send(self):
-        send_brevo_email(
-            template_id=self.template_id,
-            recipient=self.recipient,
-        )
-
-
 class WelcomeEmail(Email):
     template: str = "welcome"
     subject: str = "Welcome to Totem!"
@@ -95,19 +87,12 @@ class WelcomeEmail(Email):
     guidelines_link: AnyHttpUrl
 
 
-class ButtonEmail(Email):
-    template: str = "button"
-    button_text: str
-    link: AnyHttpUrl
-    title: str
-    message: str
-
-
 class LoginPinEmail(Email):
     template: str = "pin"
     subject: str = "Your Totem verification code"
     title: str = "Sign in to Totem"
     message: str = "Enter this one-time code to finish signing in. It expires in 15 minutes."
+    preview: str = "Enter this one-time code to finish signing in."
     pin: str
 
 
@@ -169,6 +154,7 @@ class MissedSessionEmail(Email):
     button_text: str = "Let us know how we can help"
     subject: str = "We missed you!"
     title: str = "We missed you!"
+    preview: str = "Your story and presence are valued. Let us know how we can help."
 
 
 def login_pin_email(email: str, pin: str) -> Email:
@@ -204,6 +190,7 @@ def notify_session_starting(event: Session, user: User) -> Email:
         event_title=event.space.title,
         event_link=_make_email_url(event.get_absolute_url()),
         link=type_url(event.email_join_url(user)),
+        preview=f"{event.space.title} starts at {start}. Join with the link inside.",
     )
 
 
@@ -217,6 +204,7 @@ def notify_session_tomorrow(event: Session, user: User) -> Email:
         start=start,
         event_title=event.space.title,
         link=_make_email_url(event.get_absolute_url()),
+        preview=f"Your Space starts tomorrow at {start}.",
     )
 
 
@@ -247,6 +235,7 @@ def notify_session_advertisement(event: Session, user: User) -> Email:
         image_url=image_url,
         author_image_url=author_image_url,
         unsubscribe_url=type_url(event.space.subscribe_url(user, subscribe=False)),
+        preview=f"{subtitle}, by {event.space.author.name}. Starts at {start}.",
     )
 
 
@@ -257,6 +246,7 @@ def notify_session_signup(event: Session, user: User) -> Email:
         link=_make_email_url(reverse("spaces:calendar", kwargs={"session_slug": event.slug})),
         start=start,
         event_title=event.space.title,
+        preview=f"You're all set for {event.space.title} at {start}.",
     )
 
 

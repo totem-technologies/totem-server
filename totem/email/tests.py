@@ -6,11 +6,19 @@ from django.core import mail
 from django.test import Client, override_settings
 from django.urls import reverse
 
-from totem.email.emails import login_pin_email, missed_session_email, notify_session_advertisement, welcome_email
+from totem.email.emails import (
+    login_pin_email,
+    missed_session_email,
+    notify_session_advertisement,
+    notify_session_starting,
+    notify_session_tomorrow,
+    welcome_email,
+)
 from totem.spaces.tests.factories import SessionFactory
 from totem.users.models import LoginPin
 from totem.users.tests.factories import UserFactory
 
+from .utils import mjml_to_text
 from .views import get_templates
 
 
@@ -101,6 +109,94 @@ class TestDarkMode:
             assert not re.search(r'<iframe[^>]*\sstyle="[^"]*color-scheme', content)
 
 
+class TestPlainText:
+    def test_mjml_to_text(self):
+        mjml = """
+        <mjml>
+          <mj-head><mj-style>.dm-text { color: red; }</mj-style></mj-head>
+          <mj-body>
+            <mj-raw><div style="display:none">Hidden preview</div></mj-raw>
+            <mj-section><mj-column>
+              <mj-text><a href="https://totem.org"><img src="logo.png" alt="Totem"></a></mj-text>
+            </mj-column></mj-section>
+            <mj-section><mj-column>
+              <mj-text mj-class="h1">
+                Welcome   to <strong>Totem</strong>!
+              </mj-text>
+              <mj-spacer height="10px" />
+              <mj-text>
+                Read <a href="https://totem.org/guide/">the guide</a>.<br>
+                Mail <a href="mailto:help@totem.org">help@totem.org</a>
+                or <a href="https://totem.org/">https://totem.org/</a>.
+              </mj-text>
+              <!-- a comment -->
+              <mj-text><ul><li>One</li><li><strong>Two</strong> too</li></ul><p>After</p></mj-text>
+              <mj-image src="hero.jpg" />
+              <mj-button href="https://totem.org/spaces/"><strong>Explore</strong></mj-button>
+              <mj-social><mj-social-element href="https://x.org" alt="X"></mj-social-element></mj-social>
+            </mj-column></mj-section>
+          </mj-body>
+        </mjml>
+        """
+        assert mjml_to_text(mjml) == (
+            "Welcome to Totem!\n"
+            "\n"
+            "Read the guide (https://totem.org/guide/).\n"
+            "Mail help@totem.org or https://totem.org/.\n"
+            "\n"
+            "- One\n"
+            "- Two too\n"
+            "\n"
+            "After\n"
+            "\n"
+            "Explore: https://totem.org/spaces/"
+        )
+
+    def test_all_emails_have_plain_text(self, db):
+        UserFactory()
+        SessionFactory()
+        for name, make_email in get_templates().items():
+            email = make_email()
+            text = email.render_text()
+            assert " ".join(email.title.split()) in text, name
+            assert "Totem Technologies" in text, name
+            assert not re.search(r"<[a-z/!]", text), f"{name} has markup: {text}"
+
+
+class TestEmailBestPractices:
+    def test_every_email_has_metadata(self, db):
+        UserFactory()
+        SessionFactory()
+        for name, make_email in get_templates().items():
+            email = make_email()
+            html = email.render_html()
+            assert '<html lang="en"' in html, name
+            assert re.search(r"<title>[^<]+</title>", html), name
+            assert email.preview, name
+            assert " ".join(email.preview.split()) in html, name
+            assert 'alt="Bluesky"' in html, name
+            # iOS Mail links dates and times; keep them styled like the text around them.
+            assert "a[x-apple-data-detectors]" in html, name
+
+    def test_links_use_brand_color(self, db):
+        user = UserFactory()
+        session = SessionFactory()
+        html = notify_session_tomorrow(session, user).render_html()
+        cancel_link = re.search(r"<a [^>]*>\s*cancel your attendance", html)
+        assert cancel_link and "color: #987aa5" in cancel_link.group(0).lower()
+        # Links styled to blend in with their text keep doing so.
+        html = notify_session_starting(session, user).render_html()
+        title_link = re.search(r'<a class="link-nostyle"[^>]*>', html)
+        assert title_link and "color: inherit" in title_link.group(0)
+
+    def test_plain_text_never_mentions_buttons(self, db):
+        # Plain text renders buttons as links, so copy should say "link".
+        UserFactory()
+        SessionFactory()
+        for name, make_email in get_templates().items():
+            assert "button" not in make_email().render_text().lower(), name
+
+
 class TestAdvertEmail:
     def test_advert_email(self, client, db):
         user = UserFactory()
@@ -177,6 +273,7 @@ class TestWelcomeEmail:
         assert "http://testserver/guidelines/" in message
         html = email.alternatives[0][0]
         assert "We pass a digital talking piece" in html
+        assert "Explore Sessions: http://testserver/spaces/" in email.body
 
 
 class TestMissedSessionEmail:

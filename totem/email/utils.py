@@ -1,14 +1,73 @@
-import requests
+import re
+from collections.abc import Iterator
+
+import lxml.html
 from anymail.exceptions import AnymailRecipientsRefused
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail as django_send_mail
-from pydantic import BaseModel
 
 from totem.email.data import EMAIL_BLOCKLIST
 from totem.email.exceptions import EmailBounced
 
-session = requests.Session()
+# MJML elements with nothing to say in plain text: the head (styles, title,
+# inbox preview), raw HTML, images, icons, and layout spacing.
+_TEXT_SKIP = {"mj-head", "mj-raw", "mj-image", "mj-social", "mj-spacer", "mj-divider"}
+_TEXT_BLOCKS = {"p", "div", "ul", "ol", "table", "tr", "blockquote", "h1", "h2", "h3", "h4", "h5", "h6"}
+
+
+def mjml_to_text(mjml: str) -> str:
+    """Plain-text version of an email, read from its MJML source rather than the
+    rendered HTML, which is layout tables, hidden elements, and duplicate logos."""
+    blocks = _text_blocks(lxml.html.fromstring(mjml))
+    lines = (" ".join(line.split()) for line in "\n\n".join(blocks).split("\n"))
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
+
+
+def _text_blocks(el: lxml.html.HtmlElement) -> Iterator[str]:
+    if not isinstance(el.tag, str) or el.tag in _TEXT_SKIP:
+        return
+    if el.tag == "mj-text":
+        yield _inline_text(el)
+    elif el.tag == "mj-button":
+        yield f"{_inline_text(el).strip()}: {el.get('href')}"
+    else:
+        for child in el:
+            yield from _text_blocks(child)
+
+
+def _inline_text(el: lxml.html.HtmlElement) -> str:
+    """Text of an element's HTML content, with "\\n" for line breaks. Source
+    whitespace collapses the way a browser would collapse it."""
+    parts = [_collapse(el.text)]
+    for child in el:
+        if isinstance(child.tag, str):
+            parts.append(_inline_child(child))
+        parts.append(_collapse(child.tail))
+    return "".join(parts)
+
+
+def _inline_child(el: lxml.html.HtmlElement) -> str:
+    if el.tag == "br":
+        return "\n"
+    if el.tag == "img":
+        return ""
+    text = _inline_text(el)
+    if el.tag == "a":
+        text = text.strip()
+        href = el.get("href", "")
+        if not text or text == href.removeprefix("mailto:"):
+            return text
+        return f"{text} ({href})"
+    if el.tag == "li":
+        return f"\n- {text.strip()}"
+    if el.tag in _TEXT_BLOCKS:
+        return f"\n\n{text}\n\n"
+    return text
+
+
+def _collapse(text: str | None) -> str:
+    return re.sub(r"\s+", " ", text or "")
 
 
 def send_mail(
@@ -30,44 +89,6 @@ def send_mail(
         )
     except AnymailRecipientsRefused:
         raise EmailBounced(f"Email to {recipient_list} with subject {subject} was blocked.")
-
-
-class Recipient(BaseModel):
-    email: str
-
-
-class EmailData(BaseModel):
-    templateId: int
-    to: list[Recipient]
-    replyTo: Recipient
-
-
-def send_brevo_email(
-    template_id: int,
-    recipient: str,
-    fail_silently: bool = False,
-) -> int:
-    api_url = "https://api.brevo.com/v3/smtp/email"
-    key = settings.BREVO_API_KEY
-    if not settings.SEND_BREVO_EMAILS:
-        print("Not sending email because SEND_BREVO_EMAILS is False.")
-        return 200
-    if not key:
-        raise Exception("No BREVO_API_KEY set, not sending email.")
-    headers = {
-        "api-key": key,
-        "Content-Type": "application/json",
-        "accept": "application/json",
-    }
-    data = EmailData(
-        templateId=template_id,
-        to=[Recipient(email=recipient)],
-        replyTo=Recipient(email=settings.EMAIL_SUPPORT_ADDRESS),
-    )
-    response = session.post(api_url, headers=headers, json=data.model_dump(), timeout=10)
-    if not fail_silently:
-        response.raise_for_status()
-    return response.status_code
 
 
 def validate_email_blocked(value):

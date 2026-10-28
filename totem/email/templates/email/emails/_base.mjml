@@ -1,29 +1,53 @@
 {% load static %}
-<mjml>
+{% load settings_value %}
+<mjml lang="en">
   <mj-head>
+    <mj-title>{{ subject }}</mj-title>
+    <mj-preview>{{ preview }}</mj-preview>
     <mj-raw>
       <meta name="color-scheme" content="light dark">
       <meta name="supported-color-schemes" content="light dark">
     </mj-raw>
     <mj-attributes>
       <mj-all font-family="Montserrat, Helvetica, Arial, sans-serif"></mj-all>
-      <mj-button background-color="#987AA5" color="#FFF" border-radius="40px" font-size="20px" line-height="1.75" padding="0px"></mj-button>
-      <mj-class name="h1" css-class="dm-text" color="#262F37" font-size="24px" font-weight="bold" line-height="1.6" padding="0px" />
-      <mj-class name="p" css-class="dm-text" color="#262F37" font-size="16px" line-height="1.6" padding="0px" />
-      <mj-class name="sub" css-class="dm-sub" color="#7a7a7a" font-size="14px" line-height="1.6" padding="0px" />
-      <mj-class name="eyebrow" css-class="dm-accent" color="#987AA5" font-size="12px" letter-spacing="1.5px" line-height="1.6" text-transform="uppercase" padding="0px" />
+      <mj-button background-color="#987AA5" color="#FFF" border-radius="40px" font-size="20px" font-weight="bold" line-height="1.75" padding="0px"></mj-button>
+      {% comment %}
+      Every mj-text is body copy unless an mj-class says otherwise. Setting css-class
+      on an element replaces the one from its mj-class instead of adding to it.
+      {% endcomment %}
+      <mj-text css-class="dm-text" color="#262F37" font-size="16px" line-height="1.6" padding="0px"></mj-text>
+      <mj-class name="h1" font-size="24px" font-weight="bold" />
+      <mj-class name="sub" css-class="dm-sub" color="#7a7a7a" font-size="14px" />
+      <mj-class name="eyebrow" css-class="dm-accent" color="#987AA5" font-size="12px" letter-spacing="1.5px" text-transform="uppercase" />
       <mj-class name="section" css-class="dm-card" background-color="#F3F1E9" border-radius="24px" padding="40px" />
-      <mj-text color="#2B2B2B" font-size="16px" line-height="1.6" padding="0px"></mj-text>
     </mj-attributes>
     <mj-font href="https://fonts.googleapis.com/css?family=Montserrat:normal,italic,bold&display=swap" name="Montserrat"></mj-font>
     <mj-style inline="inline">
-      .link-nostyle {
+      .dm-text a {
+        color: #987aa5;
+      }
+      .dm-text a.link-nostyle, .dm-sub a.link-nostyle {
         color: inherit;
       }
     </mj-style>
     <mj-style>
       :root {
         color-scheme: light dark;
+      }
+      {% comment %}iOS Mail turns dates and times into links; keep them tappable but styled like the text.{% endcomment %}
+      a[x-apple-data-detectors] {
+        color: inherit !important;
+        text-decoration: none !important;
+        font-size: inherit !important;
+        font-family: inherit !important;
+        font-weight: inherit !important;
+        line-height: inherit !important;
+      }
+      {% comment %}Below MJML's 480px breakpoint the card spans the screen, so it needs less padding.{% endcomment %}
+      @media only screen and (max-width: 479px) {
+        .dm-card > table > tbody > tr > td {
+          padding: 24px !important;
+        }
       }
       @media (prefers-color-scheme: dark) {
         body {
@@ -44,7 +68,7 @@
           Test Email
         </mj-text>
         <mj-text align="center" color="#000" font-size="12px" font-weight="bold" line-height="16px" padding="10px 25px">
-          This email is intented for internal use only. Environment: {{ environment }}
+          This email is intended for internal use only. Environment: {{ environment }}
         </mj-text>
       </mj-column>
     </mj-section>
@@ -56,8 +80,8 @@
         clients that honor our dark styles swap in the cream logo. MSO never shows the cream one.
         {% endcomment %}
         <mj-text font-size="0px" line-height="0px" padding="5px">
-          <a href="https://www.totem.org"><img class="dm-light-only" src="{% static 'images/email/totem-logo-outlined.png' %}" width="75" alt="Totem" style="display:block;width:75px;height:auto;border:0"></a>
-          <!--[if !mso]><!--><a href="https://www.totem.org"><img class="dm-dark-only" src="{% static 'images/totem-logo-creme.png' %}" width="70" alt="Totem" style="display:none;max-height:0;overflow:hidden;width:70px;height:auto;border:0;margin:2px 0 0 2px"></a><!--<![endif]-->
+          <a href="{% settings_value 'SITE_BASE_URL' %}"><img class="dm-light-only" src="{% static 'images/email/totem-logo-outlined.png' %}" width="75" alt="Totem" style="display:block;width:75px;height:auto;border:0"></a>
+          <!--[if !mso]><!--><a href="{% settings_value 'SITE_BASE_URL' %}"><img class="dm-dark-only" src="{% static 'images/totem-logo-creme.png' %}" width="70" alt="Totem" style="display:none;max-height:0;overflow:hidden;width:70px;height:auto;border:0;margin:2px 0 0 2px"></a><!--<![endif]-->
         </mj-text>
       </mj-column>
     </mj-section>

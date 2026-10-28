@@ -1,4 +1,0 @@
-{% extends 'email/emails/button.txt' %}
-{% block message %}
-Your session is starting soon. Click the button below to join. This link expires 5 minutes after the session starts.
-{% endblock message %}

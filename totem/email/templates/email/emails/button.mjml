@@ -1,30 +1,15 @@
-{% extends 'email/emails/_base.mjml' %} {% load static %} {% block content %}
+{% extends 'email/emails/_base.mjml' %} {% block content %}
 <mj-section mj-class="section">
   <mj-column padding="0">
     <mj-text mj-class="h1">
-      <strong>{{title}}</strong>
+      {{ title }}
     </mj-text>
     <mj-spacer height="10px"></mj-spacer>
-    {% block message %}
-    <mj-text mj-class="p">
-      {{message}}
-    </mj-text>
-    {% endblock message %}
+    {% block message %}{% endblock message %}
     <mj-spacer height="40px"></mj-spacer>
     <mj-button href="{{link}}" align="center">
-      <strong>{{button_text}}</strong>
+      {{button_text}}
     </mj-button>
-    <mj-spacer height="48px"></mj-spacer>
-    <mj-text mj-class="sub">
-      Didn't request this email? You can safely ignore it. If the
-      button doesn't work, copy and paste the link below into your browser:
-    </mj-text>
-    <mj-spacer height="10px"></mj-spacer>
-    <mj-text mj-class="sub" align="center">
-      <a class="link-nostyle" href="{{link}}">{{link}}</a>
-    </mj-text>
-    {% block unsubscribe_message %}
-    {% endblock unsubscribe_message %}
   </mj-column>
 </mj-section>
 {% endblock %}
