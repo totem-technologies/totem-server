@@ -116,8 +116,8 @@ def request_pin(request, data: PinRequestSchema):
         return Status(401, ErrorResponse(error=AuthErrors.INVALID_EMAIL.value))
 
     if created:
-        emails.welcome_email(user).send()
         analytics.user_signed_up(user)
+        emails.send_welcome_email(user)
 
     return {"message": "PIN sent to your email"}
 

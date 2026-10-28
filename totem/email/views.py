@@ -43,10 +43,15 @@ def template_view(request, name=None):
     if name not in templates:
         raise Http404
     email = templates[name]()
+    mode = request.GET.get("mode")
     return render(
         request,
         "email/email_viewer.html",
-        context={"html": email.render_html(), "text": email.render_text()},
+        context={
+            "html": email.render_html(),
+            "text": email.render_text(),
+            "mode": mode if mode in ("light", "dark") else None,
+        },
     )
 
 
@@ -56,6 +61,12 @@ def get_templates():
             email="test@totem.org",
             pin="223412",
         )
+
+    def welcome():
+        user = User.objects.first()
+        if user is None:
+            raise Exception("Need user in DB")
+        return emails.welcome_email(user)
 
     # def change_email():
     #     return emails.change_email(
@@ -92,14 +103,6 @@ def get_templates():
             raise Exception("Need user or event in DB")
         return emails.notify_session_signup(session, user)
 
-    def test():
-        return emails.TestEmail(
-            recipient="bo@totem.org",
-            link=emails.type_url("https://totem.org"),
-            start="2021-01-01",
-            event_title="Test Event",
-        )
-
     def missed_session():
         user = User.objects.first()
         session = Session.objects.last()
@@ -108,12 +111,12 @@ def get_templates():
         return emails.missed_session_email(session, user)
 
     return {
-        "login_pin": login_pin,  # Updated key
+        "login_pin": login_pin,
+        "welcome": welcome,
         # "change_email": change_email,
         "session_starting": session_starting,
         "session_advertisement": session_advertisement,
         "session_tomorrow_reminder": session_tomorrow_reminder,
         "session_signup": session_signup,
-        "test": test,
         "missed_session": missed_session,
     }

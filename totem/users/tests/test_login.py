@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 from django.core import mail
 from django.urls import reverse
@@ -8,6 +10,17 @@ from totem.users.tests.factories import UserFactory
 
 @pytest.mark.django_db
 class TestLogInView:
+    def test_signup_survives_welcome_email_failure(self, client):
+        with (
+            patch("totem.email.emails.WelcomeEmail.send", side_effect=RuntimeError("mail provider down")),
+            patch("totem.users.analytics.user_signed_up") as signed_up,
+        ):
+            response = client.post(reverse("users:login"), {"email": "new@totem.org"})
+        assert response.status_code == 302
+        assert response.url.startswith(reverse("users:verify-pin"))
+        assert "Your code is:" in mail.outbox[0].body
+        signed_up.assert_called_once()
+
     def test_login_new_user(self, client):
         email = "testuseR@totem.ORG"
         normalized_email = User.objects.normalize_email(email)
@@ -22,8 +35,9 @@ class TestLogInView:
         assert response.url.startswith(reverse("users:verify-pin"))
 
         # Check that an email with PIN was sent
-        assert len(mail.outbox) == 1  # Just PIN email in test mode
+        assert len(mail.outbox) == 2  # PIN and welcome emails
         assert "Your code is:" in mail.outbox[0].body
+        assert mail.outbox[1].subject == "Welcome to Totem!"
         # Get the PIN from the most recent LoginPin object
         pin = LoginPin.objects.get(user__email=normalized_email).pin
         assert pin in mail.outbox[0].body
@@ -53,8 +67,8 @@ class TestLogInView:
         assert response.status_code == 302
         assert response.url.startswith(reverse("users:verify-pin"))
 
-        # Check emails sent (just PIN in test mode)
-        assert len(mail.outbox) == 1
+        # Check emails sent (PIN and welcome)
+        assert len(mail.outbox) == 2
         assert "Your code is:" in mail.outbox[0].body
 
         # Verify user created with consent

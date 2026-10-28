@@ -32,7 +32,7 @@ class TestHoneypotProtection:
         # Check user was created with consent
         user = User.objects.get(email=email)
         assert user.newsletter_consent is True
-        assert len(mail.outbox) == 1
+        assert len(mail.outbox) == 2  # PIN and welcome emails
 
     @patch("totem.users.views.logger")
     def test_bot_login_honeypot_filled(self, mock_logger, client):

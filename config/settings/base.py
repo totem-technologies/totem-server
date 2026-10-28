@@ -305,8 +305,6 @@ MAILERLITE_API_KEY = env("MAILERLITE_API_KEY", default="")
 MAILERSEND_API_TOKEN = env("MAILERSEND_API_TOKEN", default="")
 MAILERSEND_COLLECT_ACTIVITY = env.bool("MAILERSEND_COLLECT_ACTIVITY", default=False)
 MAILERSEND_DOMAIN_ID = env("MAILERSEND_DOMAIN_ID", default="")
-BREVO_API_KEY = env("BREVO_API_KEY", default="")
-SEND_BREVO_EMAILS = env.bool("SEND_BREVO_EMAILS", default=False)
 
 # DEEP LINKING
 # ------------------------------------------------------------------------------

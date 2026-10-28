@@ -1,0 +1,15 @@
+{% comment %}
+Dark palette for the dm-* classes set in _base.mjml. Included once per way a
+client signals dark mode, with `p` as the selector prefix. Inline styles carry
+the light palette, so every rule needs !important to win.
+{% endcomment %}
+{{ p }}.dm-body { background-color: #262f37 !important; }
+{{ p }}.dm-card, {{ p }}.dm-card > table { background: #323c46 !important; background-color: #323c46 !important; }
+{{ p }}.dm-text, {{ p }}.dm-text div { color: #f3f1e9 !important; }
+{{ p }}.dm-sub, {{ p }}.dm-sub div { color: #a9adb2 !important; }
+{{ p }}.dm-accent, {{ p }}.dm-accent div, {{ p }}.dm-text a, {{ p }}.dm-sub a { color: #c3a9cf !important; }
+{{ p }}.dm-text a.link-nostyle, {{ p }}.dm-sub a.link-nostyle { color: inherit !important; }
+{{ p }}.dm-divider p, {{ p }}.dm-divider table { border-top-color: #46515c !important; }
+{{ p }}.dm-pin-box { background-color: #262f37 !important; }
+{{ p }}.dm-light-only { display: none !important; }
+{{ p }}.dm-dark-only { display: block !important; max-height: none !important; overflow: visible !important; }

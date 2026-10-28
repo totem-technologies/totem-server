@@ -1,0 +1,15 @@
+{% extends 'email/emails/_base.mjml' %} {% block content %}
+<mj-section mj-class="section">
+  <mj-column padding="0">
+    <mj-text mj-class="h1">
+      {{ title }}
+    </mj-text>
+    <mj-spacer height="10px"></mj-spacer>
+    {% block message %}{% endblock message %}
+    <mj-spacer height="40px"></mj-spacer>
+    <mj-button href="{{link}}" align="center">
+      {{button_text}}
+    </mj-button>
+  </mj-column>
+</mj-section>
+{% endblock %}

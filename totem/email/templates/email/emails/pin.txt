@@ -1,7 +1,0 @@
-{{ title }}
-
-{{ message }}
-
-Your code is: {{ pin }}
-
-Didn't request this code? You can safely ignore this email.

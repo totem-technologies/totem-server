@@ -2,13 +2,16 @@
 {% load settings_value %}
 <mj-section padding-bottom="72px" padding-left="0px" padding-right="0px" padding-top="30px">
   <mj-column>
-    <mj-image align="center" href="{% settings_value 'SITE_BASE_URL' %}" padding-bottom="0px" padding-left="10px" padding-right="10px" padding-top="0px" padding="0px" src="{% static 'images/totem-symbol.png' %}" width="30px"></mj-image>
-    <mj-social align="center" font-size="15px" icon-padding="0px" icon-size="20px" inner-padding="5px" mode="horizontal">
-      <mj-social-element src="{% static 'images/email/bluesky.png' %}" alt="{% settings_value 'SOCIAL_LINKS.bluesky' %}" href="{% settings_value 'SOCIAL_LINKS.bluesky' %}" title="{% settings_value 'SOCIAL_LINKS.bluesky' %}"></mj-social-element>
-      <mj-social-element src="{% static 'images/email/instagram.png' %}" alt="{% settings_value 'SOCIAL_LINKS.instagram' %}" href="{% settings_value 'SOCIAL_LINKS.instagram' %}" title="{% settings_value 'SOCIAL_LINKS.instagram' %}"></mj-social-element>
-      <mj-social-element src="{% static 'images/email/github.png' %}" alt="{% settings_value 'SOCIAL_LINKS.github' %}" href="{% settings_value 'SOCIAL_LINKS.github' %}" title="{% settings_value 'SOCIAL_LINKS.github' %}"></mj-social-element>
-      <mj-social-element src="{% static 'images/email/linkedin.png' %}" alt="{% settings_value 'SOCIAL_LINKS.linkedin' %}" href="{% settings_value 'SOCIAL_LINKS.linkedin' %}" title="{% settings_value 'SOCIAL_LINKS.linkedin' %}"></mj-social-element>
-      <mj-social-element src="{% static 'images/email/email.png' %}" alt="mailto:{% settings_value 'EMAIL_SUPPORT_ADDRESS' %}" href="mailto:{% settings_value 'EMAIL_SUPPORT_ADDRESS' %}" title="mailto:{% settings_value 'EMAIL_SUPPORT_ADDRESS' %}"></mj-social-element>
+    <mj-text align="center" font-size="0px" line-height="0px" padding="0px 10px">
+      <a href="{% settings_value 'SITE_BASE_URL' %}"><img class="dm-light-only" src="{% static 'images/email/totem-symbol-outlined.png' %}" width="34" alt="Totem" style="display:block;margin:0 auto;width:34px;height:auto;border:0"></a>
+      <!--[if !mso]><!--><a href="{% settings_value 'SITE_BASE_URL' %}"><img class="dm-dark-only" src="{% static 'images/email/totem-symbol-creme.png' %}" width="30" alt="Totem" style="display:none;max-height:0;overflow:hidden;margin:2px auto;width:30px;height:auto;border:0"></a><!--<![endif]-->
+    </mj-text>
+    <mj-social align="center" font-size="15px" icon-padding="0px" icon-size="24px" inner-padding="8px" mode="horizontal">
+      <mj-social-element src="{% static 'images/email/bluesky.png' %}" alt="Bluesky" href="{% settings_value 'SOCIAL_LINKS.bluesky' %}" title="Bluesky"></mj-social-element>
+      <mj-social-element src="{% static 'images/email/instagram.png' %}" alt="Instagram" href="{% settings_value 'SOCIAL_LINKS.instagram' %}" title="Instagram"></mj-social-element>
+      <mj-social-element src="{% static 'images/email/github.png' %}" alt="GitHub" href="{% settings_value 'SOCIAL_LINKS.github' %}" title="GitHub"></mj-social-element>
+      <mj-social-element src="{% static 'images/email/linkedin.png' %}" alt="LinkedIn" href="{% settings_value 'SOCIAL_LINKS.linkedin' %}" title="LinkedIn"></mj-social-element>
+      <mj-social-element src="{% static 'images/email/email.png' %}" alt="Email us" href="mailto:{% settings_value 'EMAIL_SUPPORT_ADDRESS' %}" title="Email us"></mj-social-element>
     </mj-social>
     <mj-spacer height="5px"></mj-spacer>
     <mj-text align="center" mj-class="sub">

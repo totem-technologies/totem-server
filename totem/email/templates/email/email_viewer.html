@@ -1,7 +1,23 @@
-{{ html|safe }}
+<nav style="font-family: sans-serif; padding: 8px 0 16px">
+  Mode:
+  <a href="?"{% if not mode %} style="font-weight: bold"{% endif %}>System</a> |
+  <a href="?mode=light"{% if mode == "light" %} style="font-weight: bold"{% endif %}>Light</a> |
+  <a href="?mode=dark"{% if mode == "dark" %} style="font-weight: bold"{% endif %}>Dark</a>
+</nav>
+{% comment %}
+An iframe's prefers-color-scheme follows its own color-scheme property, so the
+email's dark mode styles can be toggled without changing the OS setting.
+{% endcomment %}
+<iframe
+  title="Email preview"
+  srcdoc="{{ html }}"
+  style="display: block; width: 100%; height: 100vh; border: 0;{% if mode %} color-scheme: {{ mode }};{% endif %}"
+  scrolling="no"
+  onload="const doc = this.contentDocument; new ResizeObserver(() => { this.style.height = doc.documentElement.scrollHeight + 'px' }).observe(doc.body)"
+></iframe>
 <hr />
 <h2>Text</h2>
-{{ text }}
+<pre style="white-space: pre-wrap">{{ text }}</pre>
 {% if debug %}
 <script>
   document.write(

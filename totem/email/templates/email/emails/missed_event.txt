@@ -1,8 +1,0 @@
-{% extends 'email/emails/button.txt' %}
-{% block message %}
-We missed you in <a href="{{event_link}}">{{event_title}}</a>. Due to the limited reserved spots in each Space, your absence is noticed if you do not attend.
-
-Did you know that you can choose to cancel online at any time <a href="{{event_link}}">here</a>? Just select "Give up spot" on the side bar. We encourage you to do this at least 12 hours before your Space, so your spot can be offered to someone else.
-
-Your story and presence are truly valued, so if there's something pressing in your life or if there's anything we can do better on our end, <a href="{{link}}">please let us know</a>.
-{% endblock message %}

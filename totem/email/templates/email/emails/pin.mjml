@@ -1,18 +1,18 @@
-{% extends 'email/emails/_base.mjml' %} {% load static %} {% block content %}
+{% extends 'email/emails/_base.mjml' %} {% block content %}
 <mj-section mj-class="section">
   <mj-column padding="0">
     <mj-text mj-class="h1">
-      <strong>{{title}}</strong>
+      {{ title }}
     </mj-text>
     <mj-spacer height="10px"></mj-spacer>
-    <mj-text mj-class="p">
+    <mj-text>
       {{message}}
     </mj-text>
     <mj-spacer height="24px"></mj-spacer>
     <!-- Gmail's "Copy code" detection needs the label and the PIN in the same element. -->
-    <mj-text mj-class="p" align="center">
-      <div style="background-color: #ffffff; border-radius: 16px; padding: 24px 16px;">
-        <span style="color: #987aa5; font-size: 14px; font-weight: bold; letter-spacing: 1px;">Your code is: <span style="display: block; color: #262f37; font-size: 36px; letter-spacing: 8px; line-height: 1.4; padding: 4px 0 0 8px;">{{pin}}</span></span>
+    <mj-text align="center">
+      <div class="dm-pin-box" style="background-color: #ffffff; border-radius: 16px; padding: 24px 16px;">
+        <span class="dm-accent" style="color: #987aa5; font-size: 14px; font-weight: bold; letter-spacing: 1px;">Your code is: <span class="dm-text" style="display: block; color: #262f37; font-size: 36px; letter-spacing: 8px; line-height: 1.4; padding: 4px 0 0 8px;">{{pin}}</span></span>
       </div>
     </mj-text>
     <mj-spacer height="24px"></mj-spacer>
