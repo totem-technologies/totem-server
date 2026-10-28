@@ -240,8 +240,8 @@ def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name
             emails.login_pin_email(user.email, login_pin.pin).send()
 
             if created:
-                emails.welcome_email(user).send()
                 analytics.user_signed_up(user)
+                emails.send_welcome_email(user)
 
             user.identify()
             return redirect(f"{reverse('users:verify-pin')}?email={quote(email)}")

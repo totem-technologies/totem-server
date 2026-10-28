@@ -1,4 +1,4 @@
-{% extends 'email/emails/button.mjml' %}
+{% extends 'email/emails/_button.mjml' %}
 {% block message %}
 <mj-text>
   We missed you in <a href="{{event_link}}">{{event_title}}</a>. Due to the limited reserved spots in each Space, your absence is noticed if you do not attend.

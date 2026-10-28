@@ -111,7 +111,7 @@ def get_templates():
         return emails.missed_session_email(session, user)
 
     return {
-        "login_pin": login_pin,  # Updated key
+        "login_pin": login_pin,
         "welcome": welcome,
         # "change_email": change_email,
         "session_starting": session_starting,

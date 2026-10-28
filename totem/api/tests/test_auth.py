@@ -1,4 +1,5 @@
 from datetime import timedelta
+from unittest.mock import patch
 
 import jwt
 import pytest
@@ -46,6 +47,21 @@ class TestPinRequestEndpoint:
         assert mail.outbox[0].to == [normalized_email]
         assert pin.pin in mail.outbox[0].body
         assert mail.outbox[1].subject == "Welcome to Totem!"
+
+    def test_request_pin_survives_welcome_email_failure(self, client: Client, db):
+        with (
+            patch("totem.email.emails.WelcomeEmail.send", side_effect=RuntimeError("mail provider down")),
+            patch("totem.users.analytics.user_signed_up") as signed_up,
+        ):
+            response = client.post(
+                reverse("mobile-api:auth_request_pin"),
+                data={"email": "new@example.com", "newsletter_consent": True},
+                content_type="application/json",
+            )
+        assert response.status_code == 200
+        assert response.json() == {"message": "PIN sent to your email"}
+        assert len(mail.outbox) == 1
+        signed_up.assert_called_once()
 
     def test_request_pin_existing_user_preserves_password(self, client: Client, db):
         """Existing user requesting a PIN should not change their password."""

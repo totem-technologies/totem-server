@@ -3,7 +3,8 @@
 <mjml lang="en">
   <mj-head>
     <mj-title>{{ subject }}</mj-title>
-    <mj-preview>{{ preview }}</mj-preview>
+    {% comment %}Invisible padding stops inboxes from filling the preview line with the start of the body.{% endcomment %}
+    <mj-preview>{{ preview }}{% for _ in "x"|rjust:"90" %}&#847;&zwnj;&nbsp;{% endfor %}</mj-preview>
     <mj-raw>
       <meta name="color-scheme" content="light dark">
       <meta name="supported-color-schemes" content="light dark">
@@ -30,10 +31,19 @@
         color: inherit;
       }
     </mj-style>
+    {% comment %}
+    One concern per mj-style: each becomes its own <style> tag, and Gmail drops a
+    whole tag when it rejects any rule in it.
+    {% endcomment %}
     <mj-style>
-      :root {
-        color-scheme: light dark;
+      {% comment %}Below MJML's 480px breakpoint the card spans the screen, so it needs less padding.{% endcomment %}
+      @media only screen and (max-width: 479px) {
+        .dm-card > table > tbody > tr > td {
+          padding: 24px !important;
+        }
       }
+    </mj-style>
+    <mj-style>
       {% comment %}iOS Mail turns dates and times into links; keep them tappable but styled like the text.{% endcomment %}
       a[x-apple-data-detectors] {
         color: inherit !important;
@@ -43,11 +53,10 @@
         font-weight: inherit !important;
         line-height: inherit !important;
       }
-      {% comment %}Below MJML's 480px breakpoint the card spans the screen, so it needs less padding.{% endcomment %}
-      @media only screen and (max-width: 479px) {
-        .dm-card > table > tbody > tr > td {
-          padding: 24px !important;
-        }
+    </mj-style>
+    <mj-style>
+      :root {
+        color-scheme: light dark;
       }
       @media (prefers-color-scheme: dark) {
         body {
@@ -55,6 +64,8 @@
         }
         {% include 'email/emails/_dark_mode.css' with p='' %}
       }
+    </mj-style>
+    <mj-style>
       {% comment %}Outlook.com and the Outlook apps ignore the media query and add these attributes in dark mode.{% endcomment %}
       {% include 'email/emails/_dark_mode.css' with p='[data-ogsc] ' %}
       {% include 'email/emails/_dark_mode.css' with p='[data-ogsb] ' %}

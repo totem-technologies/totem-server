@@ -1,4 +1,4 @@
-{% extends 'email/emails/button.mjml' %}
+{% extends 'email/emails/_button.mjml' %}
 {% block message %}
 <mj-text>
   You have successfully saved your spot for this session! We're excited to see you there. Use the link below to add this session to your calendar.

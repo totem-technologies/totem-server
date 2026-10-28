@@ -1,4 +1,4 @@
-{% extends 'email/emails/button.mjml' %}
+{% extends 'email/emails/_button.mjml' %}
 {% block message %}
 <mj-text>
   Your Space is starting tomorrow at <strong>{{start}}</strong>!

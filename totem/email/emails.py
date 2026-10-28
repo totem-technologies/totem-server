@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import urllib.parse
 from datetime import datetime
 from typing import TYPE_CHECKING
@@ -17,6 +18,8 @@ from pydantic import AnyHttpUrl, BaseModel, TypeAdapter
 
 from .models import EmailLog
 from .utils import mjml_to_text, send_mail
+
+logger = logging.getLogger(__name__)
 
 
 def type_url(url: str):
@@ -169,10 +172,6 @@ def login_pin_email(email: str, pin: str) -> Email:
 
 
 def welcome_email(user: User) -> Email:
-    if settings.DEBUG:
-        print("------------------------------------------")
-        print(f"Sending welcome email to {user.email}")
-        print("------------------------------------------")
     return WelcomeEmail(
         recipient=user.email,
         home_link=_make_email_url("/"),
@@ -180,6 +179,14 @@ def welcome_email(user: User) -> Email:
         how_it_works_link=_make_email_url(reverse("pages:how-it-works")),
         guidelines_link=_make_email_url(reverse("pages:guidelines")),
     )
+
+
+def send_welcome_email(user: User) -> None:
+    """Signup must not fail because the welcome email did; the PIN email has already gone out."""
+    try:
+        welcome_email(user).send()
+    except Exception:
+        logger.exception("Failed to send welcome email")
 
 
 def notify_session_starting(event: Session, user: User) -> Email:
