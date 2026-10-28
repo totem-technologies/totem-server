@@ -84,7 +84,7 @@ class TestDarkMode:
             # Outlook.com and Outlook mobile ignore the media query and mark dark mode with these attributes instead.
             assert "[data-ogsc]" in html, name
             assert "[data-ogsb]" in html, name
-            assert "totem-logo-creme.png" in html, name
+            assert "images/email/totem-logo-creme.png" in html, name
 
     def test_template_colors_have_dark_mode_classes(self):
         # Any color set directly in a template overrides the base styles, so it
@@ -99,6 +99,11 @@ class TestDarkMode:
         client.force_login(UserFactory(is_staff=True))
         response = client.get(reverse("email:template", kwargs={"name": "login_pin"}), {"mode": mode})
         assert re.search(rf'<iframe[^>]*\sstyle="[^"]*color-scheme: {mode};', response.content.decode())
+
+    def test_preview_page_renders_in_standards_mode(self, client: Client, db):
+        client.force_login(UserFactory(is_staff=True))
+        response = client.get(reverse("email:template", kwargs={"name": "login_pin"}))
+        assert response.content.decode().lstrip().lower().startswith("<!doctype html>")
 
     def test_preview_defaults_to_system_mode(self, client: Client, db):
         client.force_login(UserFactory(is_staff=True))

@@ -91,8 +91,8 @@
         clients that honor our dark styles swap in the cream logo. MSO never shows the cream one.
         {% endcomment %}
         <mj-text font-size="0px" line-height="0px" padding="5px">
-          <a href="{% settings_value 'SITE_BASE_URL' %}"><img class="dm-light-only" src="{% static 'images/email/totem-logo-outlined.png' %}" width="75" alt="Totem" style="display:block;width:75px;height:auto;border:0"></a>
-          <!--[if !mso]><!--><a href="{% settings_value 'SITE_BASE_URL' %}"><img class="dm-dark-only" src="{% static 'images/totem-logo-creme.png' %}" width="70" alt="Totem" style="display:none;max-height:0;overflow:hidden;width:70px;height:auto;border:0;margin:2px 0 0 2px"></a><!--<![endif]-->
+          <a href="{% settings_value 'SITE_BASE_URL' %}"><img class="dm-light-only" src="{% static 'images/email/totem-logo-outlined.png' %}" width="70" alt="Totem" style="display:block;width:70px;height:auto;border:0"></a>
+          <!--[if !mso]><!--><a href="{% settings_value 'SITE_BASE_URL' %}"><img class="dm-dark-only" src="{% static 'images/email/totem-logo-creme.png' %}" width="70" alt="Totem" style="display:none;max-height:0;overflow:hidden;width:70px;height:auto;border:0"></a><!--<![endif]-->
         </mj-text>
       </mj-column>
     </mj-section>
