@@ -165,6 +165,17 @@ class TestMobileUserAPI:
         data = response.json()
         assert data["detail"][0]["profile_image"] == "Image too large. Max 5MB."
 
+    def test_update_user_profile_image_invalid(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        url = reverse("mobile-api:user_update_image")
+        image = SimpleUploadedFile("photo.heic", b"not an image", content_type="application/octet-stream")
+        response = client.post(url, data={"profile_image": image})
+        assert response.status_code == 422
+        data = response.json()
+        assert data["detail"][0]["profile_image"] == "Unsupported image format. Please upload a JPEG or PNG."
+        user.refresh_from_db()
+        assert not user.profile_image
+
     def test_update_user_all_fields_simultaneously(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         url = reverse("mobile-api:user_update")

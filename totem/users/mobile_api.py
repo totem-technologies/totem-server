@@ -2,6 +2,8 @@ import pytz
 from auditlog.context import disable_auditlog
 from auditlog.models import LogEntry
 from django.conf import settings
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.forms import ImageField
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
 from ninja import File, Router
@@ -82,6 +84,10 @@ def update_current_user_image(
     user: User = request.user  # type: ignore
     if profile_image.size is not None and profile_image.size > 5 * 1024 * 1024:  # 5MB limit
         raise ValidationError([{"profile_image": "Image too large. Max 5MB."}])
+    try:
+        ImageField().to_python(profile_image)
+    except DjangoValidationError:
+        raise ValidationError([{"profile_image": "Unsupported image format. Please upload a JPEG or PNG."}])
     user.profile_image.save(profile_image.name, profile_image)
     # If user had a tie-dye avatar, switch to image
     if user.profile_avatar_type == User.ProfileChoices.TIEDYE:
