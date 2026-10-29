@@ -1,3 +1,4 @@
+import traceback
 from collections.abc import Callable
 
 import sentry_sdk
@@ -32,16 +33,19 @@ class TasksFailed(Exception):
     pass
 
 
-def run_tasks_impl():
+ALL_TASKS: list[list[Callable]] = [space_tasks, email_tasks, notification_tasks, user_tasks, room_tasks]
+
+
+def run_tasks_impl(tasks: list[list[Callable]] = ALL_TASKS):
     """Run every task, even if an earlier one fails. Failures are reported to
     Sentry individually, then re-raised together so the cron check-in errors."""
-    tasks: list[list[Callable]] = [space_tasks, email_tasks, notification_tasks, user_tasks, room_tasks]
     failed: list[str] = []
     for task_list in tasks:
         for task in task_list:
             try:
                 task()
             except Exception as e:
+                traceback.print_exc()
                 sentry_sdk.capture_exception(e)
                 failed.append(getattr(task, "__qualname__", repr(task)))
     if failed:

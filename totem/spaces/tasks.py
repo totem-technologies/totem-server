@@ -41,7 +41,8 @@ def advertise_session():
 def notify_missed_session():
     now = timezone.now()
     # LiveKit sessions can overrun their scheduled end by up to the backstop,
-    # so look back far enough to catch them once they actually end.
+    # so look back far enough to catch them once they actually end. The window
+    # applies to every provider; notified_missed keeps it to one email each.
     recently_ended_sessions = (
         Session.objects.alias(end_time=SESSION_END_TIME)
         .filter(
