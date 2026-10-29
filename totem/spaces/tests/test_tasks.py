@@ -5,6 +5,8 @@ from django.core import mail
 from django.utils import timezone
 
 from totem.email.exceptions import EmailBounced
+from totem.rooms.models import Room
+from totem.spaces.models import Session, Space
 from totem.spaces.tasks import notify_missed_session
 from totem.spaces.tests.factories import SessionFactory, SpaceFactory
 from totem.users.tests.factories import UserFactory
@@ -29,7 +31,7 @@ class TestMissedSessionTask:
         author = UserFactory()
         space = SpaceFactory(author=author)
         event = SessionFactory(space=space, start=timezone.now() - timedelta(hours=1, minutes=30))
-        SessionFactory(start=timezone.now() - timedelta(hours=3))  # past event
+        SessionFactory(start=timezone.now() - timedelta(hours=6))  # past event, outside the lookback
         user = UserFactory()
         joined_user = UserFactory()
         event.attendees.add(user)
@@ -98,6 +100,46 @@ class TestMissedSessionTask:
         event.refresh_from_db()
         assert event.notified_missed is True
         assert len(mail.outbox) == 1
+
+    def _overrunning_livekit_session(self, scheduled_end_ago: timedelta) -> Session:
+        session = SessionFactory(
+            space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+            start=timezone.now() - scheduled_end_ago - timedelta(minutes=60),
+            duration_minutes=60,
+        )
+        session.attendees.add(UserFactory())
+        room = Room.objects.get_or_create_for_session(session)
+        room.date_created = session.start
+        room.save(update_fields=["date_created"])
+        return session
+
+    def test_notify_missed_session_skips_livekit_overrun(self, db):
+        """A LiveKit room opened in time keeps the session live past its scheduled end."""
+        session = self._overrunning_livekit_session(scheduled_end_ago=timedelta(minutes=30))
+        assert session.ended() is False
+        assert notify_missed_session() == 0
+        session.refresh_from_db()
+        assert session.notified_missed is False
+        assert mail.outbox == []
+
+    def test_notify_missed_session_livekit_ended_late(self, db):
+        """An overrunning LiveKit session is notified once ended_at is set, even
+        if that's more than an hour past the scheduled end."""
+        session = self._overrunning_livekit_session(scheduled_end_ago=timedelta(minutes=90))
+        session.ended_at = timezone.now() - timedelta(minutes=5)
+        session.save()
+        assert notify_missed_session() == 1
+        session.refresh_from_db()
+        assert session.notified_missed is True
+        assert len(mail.outbox) == 1
+
+    def test_notify_missed_session_livekit_backstop(self, db):
+        """If ended_at is never set, the backstop still ends the session and notifies."""
+        session = self._overrunning_livekit_session(scheduled_end_ago=timedelta(hours=3, minutes=10))
+        assert session.ended() is True
+        assert notify_missed_session() == 1
+        session.refresh_from_db()
+        assert session.notified_missed is True
 
 
 class TestNotifyBounceHandling:
