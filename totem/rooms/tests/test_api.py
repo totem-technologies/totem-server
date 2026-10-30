@@ -937,6 +937,30 @@ class TestJoinRoom:
             room.refresh_from_db()
             assert room.talking_order == [keeper.slug, novice.slug, experienced.slug, late.slug]
 
+    def test_join_publishes_changed_order_after_commit(
+        self, client_with_user: tuple[Client, User], django_capture_on_commit_callbacks
+    ):
+        client, keeper = client_with_user
+        participant = UserFactory()
+        session = _make_joinable_session(keeper, [participant])
+        room = Room.objects.get_or_create_for_session(session)
+        room.talking_order = [participant.slug, keeper.slug]
+        room.save()
+
+        with (
+            patch("totem.rooms.api.create_access_token", return_value="token"),
+            patch("totem.rooms.api.publish_state") as api_publish,
+            patch("totem.rooms.state_machine.publish_state") as state_publish,
+            django_capture_on_commit_callbacks(execute=True) as callbacks,
+        ):
+            assert client.post(f"{BASE}/{session.slug}/join").status_code == 200
+            api_publish.assert_not_called()
+            state_publish.assert_not_called()
+
+        assert len(callbacks) == 1
+        state_publish.assert_called_once()
+        assert state_publish.call_args.args[1].talking_order == [keeper.slug, participant.slug]
+
     def test_join_not_joinable(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         # Session in the future — can_join returns False

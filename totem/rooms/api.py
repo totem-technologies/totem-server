@@ -46,8 +46,7 @@ from .schemas import (
     StartRoomEvent,
     TransitionError,
 )
-from .state_machine import apply_event
-from .state_machine import join_room as record_room_join
+from .state_machine import apply_event, record_join
 
 router = Router(tags=["rooms"])
 
@@ -267,12 +266,10 @@ def join_room(
     is_already_connected = bool(connected and user.slug in connected)
 
     try:
-        state = record_room_join(session, user)
+        record_join(session, user)
     except TransitionError as e:
         return RoomErrorResponse(code=e.code, message=e.message, detail=e.detail).as_http_response()
 
-    if state is not None:
-        publish_state(session_slug, state)
     analytics.event_joined(user, session)
 
     return Status(200, JoinResponse(token=token, is_already_present=is_already_connected))

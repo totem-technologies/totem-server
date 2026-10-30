@@ -119,7 +119,7 @@ def apply_event(
     return state
 
 
-def join_room(session: Session, user: User) -> RoomState | None:
+def record_join(session: Session, user: User) -> None:
     """Record a join and update the talking order under the session lock."""
     from totem.spaces.models import Session
     from totem.users.models import User
@@ -151,9 +151,7 @@ def join_room(session: Session, user: User) -> RoomState | None:
         elif not already_joined:
             room.talking_order = [slug for slug in room.talking_order if slug != user.slug] + [user.slug]
         session.joined.add(user)
-        state = persist_room_state_change(room, state_before, "join", user.slug)
-
-    return state if state != state_before else None
+        persist_room_state_change(room, state_before, "join", user.slug, publish=True)
 
 
 def _get_room(session: Session) -> Room | None:
