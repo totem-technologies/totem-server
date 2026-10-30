@@ -17,6 +17,7 @@ from functools import partial
 from typing import TYPE_CHECKING
 
 from django.db import transaction
+from django.db.models import Count, Q
 from django.utils import timezone
 
 from .livekit import publish_state
@@ -43,6 +44,7 @@ from .schemas import (
 
 if TYPE_CHECKING:
     from totem.spaces.models import Session
+    from totem.users.models import User
 
 
 def apply_event(
@@ -115,6 +117,51 @@ def apply_event(
         state = persist_room_state_change(room, state_before, event.type, actor)
 
     return state
+
+
+def record_join(session: Session, user: User) -> None:
+    """Record a join and update the talking order under the session lock."""
+    from totem.spaces.models import Session
+
+    with transaction.atomic():
+        session = Session.objects.select_for_update().get(pk=session.pk)
+        room = _get_room(session)
+        if not room:
+            raise TransitionError(code=ErrorCode.NOT_FOUND, message="Room not found")
+        if room.status == RoomStatus.ENDED:
+            raise TransitionError(code=ErrorCode.ROOM_ALREADY_ENDED, message="This session has ended")
+        if user.slug in room.banned_participants:
+            raise TransitionError(code=ErrorCode.BANNED, message="You have been banned from this session")
+
+        already_joined = session.joined.filter(pk=user.pk).exists()
+        state_before = room.to_state()
+        if room.status == RoomStatus.WAITING_ROOM:
+            if user.slug not in room.talking_order:
+                room.talking_order.append(user.slug)
+            # A keeper's explicit order takes precedence over automatic sorting.
+            manually_ordered = RoomEventLog.objects.filter(room=room, event_type="reorder").exists()
+            if not manually_ordered:
+                _sort_by_experience(room, session)
+        elif not already_joined:
+            room.talking_order = [slug for slug in room.talking_order if slug != user.slug] + [user.slug]
+        session.joined.add(user)
+        persist_room_state_change(room, state_before, "join", user.slug, publish=True)
+
+
+def _sort_by_experience(room: Room, session: Session) -> None:
+    from totem.users.models import User
+
+    counts = dict(
+        User.objects.filter(slug__in=room.talking_order)
+        .annotate(
+            experience=Count(
+                "sessions_joined",
+                filter=Q(sessions_joined__start__lt=timezone.now()) & ~Q(sessions_joined=session),
+            )
+        )
+        .values_list("slug", "experience")
+    )
+    room.talking_order.sort(key=lambda slug: (slug != room.keeper, -counts.get(slug, 0)))
 
 
 def _get_room(session: Session) -> Room | None:
