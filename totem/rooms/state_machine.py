@@ -137,17 +137,20 @@ def record_join(session: Session, user: User) -> None:
         if room.status == RoomStatus.WAITING_ROOM:
             if user.slug not in room.talking_order:
                 room.talking_order.append(user.slug)
-            counts = dict(
-                User.objects.filter(slug__in=room.talking_order)
-                .annotate(
-                    experience=Count(
-                        "sessions_joined",
-                        filter=Q(sessions_joined__start__lt=timezone.now()) & ~Q(sessions_joined=session),
+            # A keeper's explicit order takes precedence over automatic sorting.
+            manually_ordered = RoomEventLog.objects.filter(room=room, event_type="reorder").exists()
+            if not manually_ordered:
+                counts = dict(
+                    User.objects.filter(slug__in=room.talking_order)
+                    .annotate(
+                        experience=Count(
+                            "sessions_joined",
+                            filter=Q(sessions_joined__start__lt=timezone.now()) & ~Q(sessions_joined=session),
+                        )
                     )
+                    .values_list("slug", "experience")
                 )
-                .values_list("slug", "experience")
-            )
-            room.talking_order.sort(key=lambda slug: (slug != room.keeper, -counts.get(slug, 0)))
+                room.talking_order.sort(key=lambda slug: (slug != room.keeper, -counts.get(slug, 0)))
         elif not already_joined:
             room.talking_order = [slug for slug in room.talking_order if slug != user.slug] + [user.slug]
         session.joined.add(user)

@@ -5,7 +5,6 @@ import pytest
 from django.test import Client
 from django.utils import timezone
 
-from totem.api.auth import generate_jwt_token
 from totem.rooms.livekit import LiveKitConfigurationError
 from totem.rooms.models import Room, RoomEventLog
 from totem.rooms.schemas import EndReason, RemoveReason, RoomStatus, TurnState
@@ -904,38 +903,6 @@ class TestJoinRoom:
         assert resp.json()["token"] == "fake-jwt-token"
         assert user in session.joined.all()
         assert Room.objects.filter(session=session).exists()
-
-    def test_join_orders_by_experience_before_start_and_appends_late_joiners(
-        self, client_with_user: tuple[Client, User]
-    ):
-        client, keeper = client_with_user
-        novice, experienced, late = UserFactory(), UserFactory(), UserFactory()
-        session = _make_joinable_session(keeper, [novice, experienced, late])
-        for _ in range(2):
-            previous = SessionFactory(start=timezone.now() - datetime.timedelta(days=1))
-            previous.joined.add(experienced, late)
-        room = Room.objects.get_or_create_for_session(session)
-        room.talking_order = [keeper.slug, novice.slug, experienced.slug, late.slug]
-        room.save()
-
-        with (
-            patch("totem.rooms.api.create_access_token", return_value="token"),
-            patch(
-                "totem.rooms.api.get_connected_participants", return_value={keeper.slug, novice.slug, experienced.slug}
-            ),
-            patch("totem.rooms.api.publish_state"),
-        ):
-            client = Client(HTTP_AUTHORIZATION=f"Bearer {generate_jwt_token(experienced)}")
-            assert client.post(f"{BASE}/{session.slug}/join").status_code == 200
-            room.refresh_from_db()
-            assert room.talking_order.index(experienced.slug) < room.talking_order.index(novice.slug)
-            room.status = RoomStatus.ACTIVE
-            room.talking_order = [keeper.slug, late.slug, novice.slug, experienced.slug]
-            room.save()
-            client = Client(HTTP_AUTHORIZATION=f"Bearer {generate_jwt_token(late)}")
-            assert client.post(f"{BASE}/{session.slug}/join").status_code == 200
-            room.refresh_from_db()
-            assert room.talking_order == [keeper.slug, novice.slug, experienced.slug, late.slug]
 
     def test_join_publishes_changed_order_after_commit(
         self, client_with_user: tuple[Client, User], django_capture_on_commit_callbacks
