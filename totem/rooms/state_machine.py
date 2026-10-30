@@ -122,11 +122,12 @@ def apply_event(
 def record_join(session: Session, user: User) -> None:
     """Record a join and update the talking order under the session lock."""
     from totem.spaces.models import Session
-    from totem.users.models import User
 
     with transaction.atomic():
         session = Session.objects.select_for_update().get(pk=session.pk)
-        room = Room.objects.get(session=session)
+        room = _get_room(session)
+        if not room:
+            raise TransitionError(code=ErrorCode.NOT_FOUND, message="Room not found")
         if room.status == RoomStatus.ENDED:
             raise TransitionError(code=ErrorCode.ROOM_ALREADY_ENDED, message="This session has ended")
         if user.slug in room.banned_participants:
@@ -140,21 +141,27 @@ def record_join(session: Session, user: User) -> None:
             # A keeper's explicit order takes precedence over automatic sorting.
             manually_ordered = RoomEventLog.objects.filter(room=room, event_type="reorder").exists()
             if not manually_ordered:
-                counts = dict(
-                    User.objects.filter(slug__in=room.talking_order)
-                    .annotate(
-                        experience=Count(
-                            "sessions_joined",
-                            filter=Q(sessions_joined__start__lt=timezone.now()) & ~Q(sessions_joined=session),
-                        )
-                    )
-                    .values_list("slug", "experience")
-                )
-                room.talking_order.sort(key=lambda slug: (slug != room.keeper, -counts.get(slug, 0)))
+                _sort_by_experience(room, session)
         elif not already_joined:
             room.talking_order = [slug for slug in room.talking_order if slug != user.slug] + [user.slug]
         session.joined.add(user)
         persist_room_state_change(room, state_before, "join", user.slug, publish=True)
+
+
+def _sort_by_experience(room: Room, session: Session) -> None:
+    from totem.users.models import User
+
+    counts = dict(
+        User.objects.filter(slug__in=room.talking_order)
+        .annotate(
+            experience=Count(
+                "sessions_joined",
+                filter=Q(sessions_joined__start__lt=timezone.now()) & ~Q(sessions_joined=session),
+            )
+        )
+        .values_list("slug", "experience")
+    )
+    room.talking_order.sort(key=lambda slug: (slug != room.keeper, -counts.get(slug, 0)))
 
 
 def _get_room(session: Session) -> Room | None:
