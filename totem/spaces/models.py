@@ -61,7 +61,7 @@ _default_grace_period = datetime.timedelta(minutes=10)
 # scheduled end can overrun: they end when ended_at is set by the keeper or
 # the disconnect watchdog. The backstop covers watchdog failures so a session
 # can't stay listed forever.
-_livekit_ended_backstop = datetime.timedelta(hours=3)
+LIVEKIT_ENDED_BACKSTOP = datetime.timedelta(hours=3)
 
 # The scheduled end of a session, as a SQL expression. Mirrors Session.end().
 SESSION_END_TIME = models.ExpressionWrapper(
@@ -118,10 +118,14 @@ class SessionQuerySet(models.QuerySet["Session"]):
                 | models.Q(
                     space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
                     room__date_created__lt=models.F("session_end_time"),
-                    session_end_time__gt=now - _livekit_ended_backstop,
+                    session_end_time__gt=now - LIVEKIT_ENDED_BACKSTOP,
                 )
             )
         )
+
+    def ended(self) -> "SessionQuerySet":
+        """Sessions that have ended, the inverse of not_ended. Mirrors Session.ended()."""
+        return self.exclude(pk__in=self.model.objects.not_ended().values("pk"))
 
     def removable_attendance_for(self, user: "User") -> "SessionQuerySet":
         """Visible sessions this user attends and can still give up."""
@@ -461,7 +465,7 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
             return True
         end = self.end()
         if self._livekit_room_opened_in_time():
-            return end + _livekit_ended_backstop < timezone.now()
+            return end + LIVEKIT_ENDED_BACKSTOP < timezone.now()
         return end < timezone.now()
 
     def remove_attendee(self, user):

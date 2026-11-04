@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from django.utils import timezone
 
-from .models import SESSION_END_TIME, Session
+from .models import LIVEKIT_ENDED_BACKSTOP, SESSION_END_TIME, Session
 
 
 def notify_session_ready():
@@ -40,13 +40,17 @@ def advertise_session():
 
 def notify_missed_session():
     now = timezone.now()
-    recently_ended_sessions = Session.objects.alias(
-        end_time=SESSION_END_TIME,
-    ).filter(
-        end_time__gte=now - timedelta(hours=1),
-        end_time__lt=now,
-        cancelled=False,
-        notified_missed=False,
+    # LiveKit sessions can overrun their scheduled end by up to the backstop,
+    # so look back far enough to catch them once they actually end. The window
+    # applies to every provider; notified_missed keeps it to one email each.
+    recently_ended_sessions = (
+        Session.objects.alias(end_time=SESSION_END_TIME)
+        .filter(
+            end_time__gte=now - timedelta(hours=1) - LIVEKIT_ENDED_BACKSTOP,
+            cancelled=False,
+            notified_missed=False,
+        )
+        .ended()
     )
     print(f"Notifying {len(recently_ended_sessions)} missed sessions")
     for session in recently_ended_sessions:
