@@ -5,6 +5,7 @@ from django.core.management.base import BaseCommand
 from sentry_sdk.crons.decorator import monitor
 
 from totem.email.tasks import tasks as email_tasks
+from totem.messages.tasks import tasks as message_tasks
 from totem.notifications.tasks import tasks as notification_tasks
 from totem.rooms.tasks import tasks as room_tasks
 from totem.spaces.tasks import tasks as space_tasks
@@ -28,7 +29,7 @@ class Command(BaseCommand):
 
 
 def run_tasks_impl():
-    tasks: list[list[Callable]] = [space_tasks, email_tasks, notification_tasks, user_tasks, room_tasks]
+    tasks: list[list[Callable]] = [space_tasks, message_tasks, email_tasks, notification_tasks, user_tasks, room_tasks]
     for task_list in tasks:
         for task in task_list:
             task()
