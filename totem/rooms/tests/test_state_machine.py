@@ -1,8 +1,10 @@
 from concurrent.futures import ThreadPoolExecutor
+from datetime import timedelta
 from threading import Event
 
 import pytest
 from django.db import connections, transaction
+from django.utils import timezone
 
 from totem.rooms.models import Room, RoomEventLog
 from totem.rooms.schemas import (
@@ -27,6 +29,7 @@ from totem.rooms.state_machine import (
     _reconcile_talking_order,
     _require_keeper_in_room,
     apply_event,
+    record_join,
 )
 from totem.spaces.models import SessionPrompt, SessionRound, SessionRoundState
 from totem.spaces.tests.factories import SessionFactory
@@ -256,6 +259,122 @@ def _setup_room(keeper: User, attendees: list[User]):
     return room, session.slug
 
 
+# ---------------------------------------------------------------------------
+# Joins
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestRecordJoin:
+    def test_waiting_room_sorts_keeper_first_and_experienced_participants_before_novice(self):
+        keeper = UserFactory()
+        novice = UserFactory()
+        experienced1 = UserFactory()
+        experienced2 = UserFactory()
+        room, _ = _setup_room(keeper, [keeper, novice, experienced1, experienced2])
+
+        for _ in range(2):
+            previous = SessionFactory(start=timezone.now() - timedelta(days=1))
+            previous.joined.add(experienced1, experienced2)
+
+        record_join(room.session, novice)
+
+        room.refresh_from_db()
+        assert room.talking_order == [keeper.slug, experienced1.slug, experienced2.slug, novice.slug]
+
+    def test_active_late_join_is_added_to_end_of_order(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        late = UserFactory()
+        room, slug = _setup_room(keeper, [keeper, user1])
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, {keeper.slug, user1.slug})
+        record_join(room.session, late)
+
+        room.refresh_from_db()
+        assert room.talking_order == [keeper.slug, user1.slug, late.slug]
+
+    def test_active_rejoin_preserves_existing_position(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        user2 = UserFactory()
+        room, _ = _setup_room(keeper, [keeper, user1, user2])
+        room.status = RoomStatus.ACTIVE
+        room.talking_order = [keeper.slug, user2.slug, user1.slug]
+        room.save(update_fields=["status", "talking_order"])
+        room.session.joined.add(user1)
+
+        record_join(room.session, user1)
+
+        room.refresh_from_db()
+        assert room.talking_order == [keeper.slug, user2.slug, user1.slug]
+
+    def test_manual_reorder_survives_subsequent_active_join(self):
+        keeper = UserFactory()
+        user1 = UserFactory()
+        user2 = UserFactory()
+        late = UserFactory()
+        room, slug = _setup_room(keeper, [keeper, user1, user2])
+        connected = {keeper.slug, user1.slug, user2.slug}
+
+        apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
+        apply_event(
+            slug,
+            keeper.slug,
+            ReorderEvent(talking_order=[keeper.slug, user2.slug, user1.slug]),
+            1,
+            connected,
+        )
+        record_join(room.session, late)
+
+        room.refresh_from_db()
+        assert room.talking_order == [keeper.slug, user2.slug, user1.slug, late.slug]
+
+    def test_manual_waiting_room_reorder_survives_subsequent_join(self):
+        keeper, novice, experienced, late = UserFactory(), UserFactory(), UserFactory(), UserFactory()
+        room, slug = _setup_room(keeper, [keeper, experienced, novice, late])
+        previous = SessionFactory(start=timezone.now() - timedelta(days=1))
+        previous.joined.add(experienced, late)
+        connected = {keeper.slug, novice.slug, experienced.slug}
+        apply_event(
+            slug, keeper.slug, ReorderEvent(talking_order=[keeper.slug, novice.slug, experienced.slug]), 0, connected
+        )
+
+        record_join(room.session, late)
+
+        room.refresh_from_db()
+        assert room.talking_order == [keeper.slug, novice.slug, experienced.slug, late.slug]
+
+    def test_rejects_join_when_room_ended_after_joinability_check(self):
+        keeper = UserFactory()
+        participant = UserFactory()
+        room, _ = _setup_room(keeper, [keeper, participant])
+        room.status = RoomStatus.ENDED
+        room.save(update_fields=["status"])
+
+        with pytest.raises(TransitionError) as exc_info:
+            record_join(room.session, participant)
+
+        assert exc_info.value.code == ErrorCode.ROOM_ALREADY_ENDED
+        assert not room.session.joined.filter(pk=participant.pk).exists()
+
+    def test_rejects_join_when_participant_banned_after_joinability_check(self):
+        keeper = UserFactory()
+        participant = UserFactory()
+        room, _ = _setup_room(keeper, [keeper, participant])
+        room.banned_participants = [participant.slug]
+        room.save(update_fields=["banned_participants"])
+
+        with pytest.raises(TransitionError) as exc_info:
+            record_join(room.session, participant)
+
+        assert exc_info.value.code == ErrorCode.BANNED
+        assert not room.session.joined.filter(pk=participant.pk).exists()
+
+
+# ---------------------------------------------------------------------------
+# Start room
+# ---------------------------------------------------------------------------
 @pytest.mark.django_db
 class TestStartRoom:
     def test_keeper_starts_room(self):
