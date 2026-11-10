@@ -1,7 +1,6 @@
 import socket
 
-import sentry_sdk
-from sentry_sdk.integrations.django import DjangoIntegration
+from config.sentry import init_sentry
 
 from .base import *  # noqa
 from .base import MAILERSEND_API_TOKEN, SENTRY_ENVIRONMENT, env
@@ -141,7 +140,6 @@ SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 #     "form-action": [CSP.SELF],
 #     "frame-ancestors": [CSP.NONE],
 #     "report-uri": [
-#         "https://o1324443.ingest.sentry.io/api/4505270983065600/security/?sentry_key=fc28dfc40b014a8fa120aa1d9c279112"
 #     ],
 # }
 
@@ -210,18 +208,7 @@ LOGGING = {
 
 # sentry
 # ------------------------------------------------------------------------------
-sentry_sdk.init(
-    dsn="https://fc28dfc40b014a8fa120aa1d9c279112@o1324443.ingest.sentry.io/4505270983065600",
-    integrations=[
-        DjangoIntegration(),
-    ],
-    environment=SENTRY_ENVIRONMENT,
-    traces_sample_rate=0.1,
-    profiles_sample_rate=0.1,
-    send_default_pii=True,
-    profile_lifecycle="trace",
-    enable_logs=True,
-)
+init_sentry(dsn=env("SENTRY_DSN", default=""), environment=SENTRY_ENVIRONMENT)
 
 
 # Your stuff...

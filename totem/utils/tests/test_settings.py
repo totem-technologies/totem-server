@@ -14,16 +14,27 @@ print(sentry_sdk.get_client().is_active())
 """
 
 
-def sentry_active_after_import(settings_module: str, extra_env: dict[str, str] | None = None) -> bool:
-    env = {k: v for k, v in os.environ.items() if k != "DJANGO_DEBUG"}
+PRODUCTION_ENV = {
+    "DJANGO_SECRET_KEY": "test",
+    "DJANGO_ADMIN_URL": "admin/",
+    "SENTRY_DSN": "https://public@o0.ingest.sentry.io/0",
+}
+
+
+def import_settings(settings_module: str, extra_env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+    env = {k: v for k, v in os.environ.items() if k not in ("DJANGO_DEBUG", "SENTRY_DSN")}
     env.update(extra_env or {})
-    result = subprocess.run(
+    return subprocess.run(
         [sys.executable, "-c", SENTRY_ACTIVE_SCRIPT, settings_module],
         env=env,
         capture_output=True,
         text=True,
-        check=True,
     )
+
+
+def sentry_active_after_import(settings_module: str, extra_env: dict[str, str] | None = None) -> bool:
+    result = import_settings(settings_module, extra_env)
+    result.check_returncode()
     return result.stdout.strip().splitlines()[-1] == "True"
 
 
@@ -33,7 +44,12 @@ def test_sentry_disabled_outside_production_without_django_debug(settings_module
 
 
 def test_sentry_enabled_in_production():
-    assert sentry_active_after_import(
-        "config.settings.production",
-        {"DJANGO_SECRET_KEY": "test", "DJANGO_ADMIN_URL": "admin/"},
-    )
+    assert sentry_active_after_import("config.settings.production", PRODUCTION_ENV)
+
+
+@pytest.mark.parametrize("dsn", [None, ""])
+def test_sentry_disabled_in_production_without_dsn(dsn: str | None):
+    env = {k: v for k, v in PRODUCTION_ENV.items() if k != "SENTRY_DSN"}
+    if dsn is not None:
+        env["SENTRY_DSN"] = dsn
+    assert not sentry_active_after_import("config.settings.production", env)
