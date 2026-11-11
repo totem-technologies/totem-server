@@ -13,11 +13,6 @@ export type ProfileAvatarTypeEnum = 'TD' | 'IM';
  * PublicUserSchema
  */
 export type PublicUserSchema = {
-    profile_avatar_type: ProfileAvatarTypeEnum;
-    /**
-     * Circle Count
-     */
-    circle_count?: number | null;
     /**
      * Name
      */
@@ -46,6 +41,11 @@ export type PublicUserSchema = {
      * Date Created
      */
     date_created: string;
+    profile_avatar_type: ProfileAvatarTypeEnum;
+    /**
+     * Circle Count
+     */
+    circle_count?: number | null;
 };
 
 /**
@@ -115,15 +115,6 @@ export type PagedSessionListSchema = {
  * SessionListSchema
  */
 export type SessionListSchema = {
-    space: SpaceSchema;
-    /**
-     * Url
-     */
-    url: string;
-    /**
-     * Ends At
-     */
-    ends_at: string;
     /**
      * Start
      */
@@ -144,13 +135,21 @@ export type SessionListSchema = {
      * Title
      */
     title?: string | null;
+    space: SpaceSchema;
+    /**
+     * Url
+     */
+    url: string;
+    /**
+     * Ends At
+     */
+    ends_at: string;
 };
 
 /**
  * SpaceSchema
  */
 export type SpaceSchema = {
-    author: PublicUserSchema;
     /**
      * Title
      */
@@ -171,6 +170,7 @@ export type SpaceSchema = {
      * Subtitle
      */
     subtitle: string;
+    author: PublicUserSchema;
 };
 
 /**
@@ -333,11 +333,6 @@ export type SessionDetailSchema = {
  * SessionSpaceSchema
  */
 export type SessionSpaceSchema = {
-    author: PublicUserSchema;
-    /**
-     * Slug
-     */
-    slug: string;
     /**
      * Title
      */
@@ -380,6 +375,11 @@ export type SessionSpaceSchema = {
      * Content
      */
     content?: string;
+    author: PublicUserSchema;
+    /**
+     * Slug
+     */
+    slug: string;
 };
 
 /**

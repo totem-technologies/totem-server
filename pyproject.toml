@@ -82,6 +82,8 @@ norecursedirs = ["*.egg", ".*", "_darcs", "build", "CVS", "dist", "node_modules"
 filterwarnings = [
   # "ignore::pydantic.warnings.PydanticDeprecatedSince20",
   "ignore:::httplib2.*",
+  # Ninja will make this an error: a field declared on a ModelSchema must not also be in Meta.fields.
+  "error:ModelSchema class:DeprecationWarning",
 ]
 
 # ==== Coverage ====

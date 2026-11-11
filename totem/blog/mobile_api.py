@@ -21,7 +21,7 @@ class BlogPostSchema(ModelSchema):
 
     class Meta:
         model = BlogPost
-        fields = ["title", "subtitle", "date_published", "slug", "author", "publish", "read_time", "summary"]
+        fields = ["title", "subtitle", "date_published", "slug", "publish", "read_time", "summary"]
 
 
 class BlogPostListSchema(ModelSchema):
@@ -36,7 +36,7 @@ class BlogPostListSchema(ModelSchema):
 
     class Meta:
         model = BlogPost
-        fields = ["title", "subtitle", "date_published", "slug", "author", "publish", "read_time", "summary"]
+        fields = ["title", "subtitle", "date_published", "slug", "publish", "read_time", "summary"]
 
 
 blog_router = Router()

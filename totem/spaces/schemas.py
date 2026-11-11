@@ -69,7 +69,6 @@ class SessionSpaceSchema(ModelSchema):
         model = Space
         fields = [
             "title",
-            "slug",
             "date_created",
             "date_modified",
             "subtitle",
