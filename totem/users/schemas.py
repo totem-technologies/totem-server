@@ -22,7 +22,6 @@ class PublicUserSchema(ModelSchema):
             "is_staff",
             "profile_avatar_seed",
             "profile_image",
-            "profile_avatar_type",
             "date_created",
         ]
 
@@ -46,7 +45,6 @@ class UserSchema(ModelSchema):
             "api_key",
             "profile_avatar_seed",
             "profile_image",
-            "profile_avatar_type",
             "email",
             "date_created",
         ]
