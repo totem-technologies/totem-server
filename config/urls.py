@@ -111,7 +111,6 @@ urlpatterns = [
     path(f"admin/{settings.ADMIN_URL}", admin_urls),
     # User management
     path("users/", include("totem.users.urls", namespace="users")),
-    path("accounts/", include("allauth.urls")),
     path("_impersonate/", include("impersonate.urls")),
     path(
         "sitemap.xml",

@@ -7,6 +7,7 @@ from django import forms
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login as auth_login
+from django.contrib.auth import logout as auth_logout
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
@@ -182,6 +183,14 @@ def signup_view(request: HttpRequest):
 
 def user_deactivated_view(request: HttpRequest):
     return render(request, "users/deactivated.html")
+
+
+def logout_view(request: HttpRequest):
+    # GET only shows a confirmation, so a prefetched or crawled link can't log anyone out.
+    if request.method == "POST":
+        auth_logout(request)
+        return redirect("pages:home")
+    return render(request, "users/logout.html")
 
 
 def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name: str):
