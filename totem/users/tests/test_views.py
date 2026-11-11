@@ -311,3 +311,26 @@ class TestDeleteUser:
         assert response.url == reverse("pages:home")
         with pytest.raises(User.DoesNotExist):
             user.refresh_from_db()
+
+
+class TestLogoutView:
+    def test_get_shows_confirmation_without_logging_out(self, client):
+        user = UserFactory()
+        client.force_login(user)
+        response = client.get(reverse("users:logout"))
+        assert response.status_code == 200
+        assert "_auth_user_id" in client.session
+
+    def test_post_logs_out_and_redirects_home(self, client):
+        user = UserFactory()
+        client.force_login(user)
+        response = client.post(reverse("users:logout"))
+        assert response.status_code == 302
+        assert response.url == reverse("pages:home")
+        assert "_auth_user_id" not in client.session
+
+
+@pytest.mark.parametrize("path", ["/accounts/signup/", "/accounts/login/", "/accounts/password/reset/"])
+def test_password_account_routes_are_gone(client, path):
+    response = client.get(path)
+    assert response.status_code == 404
