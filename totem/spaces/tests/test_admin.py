@@ -36,6 +36,33 @@ class TestSessionAdmin:
         assert user1.email in response.content.decode()
         assert user2.email in response.content.decode()
 
+    def test_feedback_cannot_be_deleted_from_session(self, admin_client: Client) -> None:
+        from totem.spaces.models import SessionFeedback
+
+        session = SessionFactory()
+        feedback = SessionFeedback.objects.create(session=session, user=UserFactory(), feedback="down")
+        response = admin_client.get(reverse("admin:spaces_session_change", args=[session.pk]))
+        inline = next(
+            inline for inline in response.context["inline_admin_formsets"] if inline.opts.model is SessionFeedback
+        )
+        prefix = inline.formset.prefix
+        assert f'name="{prefix}-0-DELETE"' not in response.content.decode()
+
+        formset = type(inline.formset)(
+            data={
+                f"{prefix}-TOTAL_FORMS": "1",
+                f"{prefix}-INITIAL_FORMS": "1",
+                f"{prefix}-0-id": str(feedback.pk),
+                f"{prefix}-0-session": str(session.pk),
+                f"{prefix}-0-DELETE": "on",
+            },
+            instance=session,
+            prefix=prefix,
+        )
+        assert formset.is_valid(), formset.errors
+        formset.save()
+        assert SessionFeedback.objects.filter(pk=feedback.pk).exists()
+
     def test_change_page_links_to_participants(self, admin_client):
         session = SessionFactory()
         url = reverse("admin:spaces_session_change", kwargs={"object_id": session.pk})
@@ -261,14 +288,22 @@ class TestSessionFeedbackReport:
     def test_downvote_messages_follow_report_filters(self, admin_client):
         from totem.spaces.models import SessionFeedback
 
-        first = SessionFactory()
+        first = SessionFactory(title="Finding connection")
         second = SessionFactory()
-        SessionFeedback.objects.create(session=first, user=UserFactory(), feedback="down", message="First concern")
+        user = UserFactory()
+        SessionFeedback.objects.create(session=first, user=user, feedback="down", message="First concern")
         SessionFeedback.objects.create(session=second, user=UserFactory(), feedback="down", message="Other concern")
         SessionFeedback.objects.create(session=first, user=UserFactory(), feedback="up", message="Positive comment")
         url = reverse("admin:spaces_session_feedback_report")
 
         response = admin_client.get(url, {"session": first.pk})
+        from django.utils.html import escape
+
+        assert str(escape(str(user))) in response.content.decode()
+        assert (
+            f'href="{reverse("admin:spaces_session_change", args=[first.pk])}">Finding connection</a>'
+            in response.content.decode()
+        )
         assert "First concern" in response.content.decode()
         assert "Other concern" not in response.content.decode()
         assert "Positive comment" not in response.content.decode()

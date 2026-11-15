@@ -171,6 +171,7 @@ def copy_session(modeladmin, request, queryset: QuerySet[Session]):
 
 class SessionFeedbackInline(admin.TabularInline):
     model = SessionFeedback
+    can_delete = False
     extra = 0
     readonly_fields = ("user", "feedback", "message", "date_created")
 
@@ -303,7 +304,7 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
             "by_month": [add_percentages(row) for row in by_month],
             "downvote_messages": feedback.filter(feedback=SessionFeedbackOptions.DOWN)
             .exclude(message="")
-            .select_related("session__space")
+            .select_related("session__space", "user")
             .order_by("-session__start", "-pk"),
         }
         return render(request, "admin/spaces/feedback_report.html", context)
