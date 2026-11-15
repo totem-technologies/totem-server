@@ -42,8 +42,13 @@ class TestSessionAdmin:
         from totem.spaces.models import SessionFeedback
 
         session = SessionFactory()
-        feedback = SessionFeedback.objects.create(session=session, user=UserFactory(), feedback="down")
+        user = UserFactory(name="Feedback author")
+        feedback = SessionFeedback.objects.create(session=session, user=user, feedback="down")
         response = admin_client.get(reverse("admin:spaces_session_change", args=[session.pk]))
+        assert (
+            f'href="{reverse("admin:users_user_change", args=[user.pk])}">Feedback author</a>'
+            in response.content.decode()
+        )
         inline = next(
             inline for inline in response.context["inline_admin_formsets"] if inline.opts.model is SessionFeedback
         )
@@ -303,7 +308,10 @@ class TestSessionFeedbackReport:
         response = admin_client.get(url, {"session": first.pk})
         from django.utils.html import escape
 
-        assert str(escape(str(user))) in response.content.decode()
+        assert (
+            f'href="{reverse("admin:users_user_change", args=[user.pk])}">{escape(user.name)}</a>'
+            in response.content.decode()
+        )
         assert (
             f'href="{reverse("admin:spaces_session_change", args=[first.pk])}">Finding connection</a>'
             in response.content.decode()
@@ -330,11 +338,43 @@ class TestSessionFeedbackReport:
         assert {row["feedback"] for row in rows} == {"up", "down"}
         downvote = next(row for row in rows if row["feedback"] == "down")
         assert downvote["session"] == "A session"
-        assert downvote["user"] == str(user)
+        assert downvote["user_name"] == user.name
+        assert downvote["user_email"] == user.email
         assert downvote["message"] == "'=1+1"
         invalid = admin_client.get(url, {"export": "csv", "start_date": "invalid"})
         assert invalid["Content-Type"].startswith("text/html")
         assert not invalid.context["form"].is_valid()
+
+    def test_session_filter_search_and_selection(self, admin_client: Client) -> None:
+        space = SpaceFactory(title="Quiet Space")
+        session = SessionFactory(space=space, title="Finding connection")
+        other = SessionFactory(title="Unrelated session")
+        url = reverse("admin:spaces_session_feedback_report")
+        search_url = reverse("admin:spaces_session_feedback_search")
+
+        response = admin_client.get(url)
+        assert "Finding connection" not in response.content.decode()
+        assert "Unrelated session" not in response.content.decode()
+        response = admin_client.get(search_url, {"term": "Quiet Space"})
+        results = response.json()["results"]
+        result = next(result for result in results if result["id"] == str(session.pk))
+        assert "Finding connection" in result["text"]
+        assert "Quiet Space" in result["text"]
+        assert str(session.start.year) in result["text"]
+        assert str(other.pk) not in [result["id"] for result in results]
+        response = admin_client.get(url, {"session": session.pk})
+        assert "Finding connection" in response.content.decode()
+        assert response.context["form"].is_valid()
+
+    def test_session_search_is_paginated(self, admin_client: Client) -> None:
+        SessionFactory.create_batch(21, title="Searchable session")
+        url = reverse("admin:spaces_session_feedback_search")
+        first = admin_client.get(url, {"term": "Searchable session"}).json()
+        second = admin_client.get(url, {"term": "Searchable session", "page": 2}).json()
+        assert len(first["results"]) == 20
+        assert first["pagination"]["more"]
+        assert len(second["results"]) == 1
+        assert not second["pagination"]["more"]
 
     def test_report_requires_session_view_permission(self, client):
         user = UserFactory(is_staff=True, is_superuser=False)
@@ -342,3 +382,4 @@ class TestSessionFeedbackReport:
         url = reverse("admin:spaces_session_feedback_report")
         assert client.get(url).status_code == 404
         assert client.get(url, {"export": "csv"}).status_code == 404
+        assert client.get(reverse("admin:spaces_session_feedback_search"), {"term": "test"}).status_code == 404

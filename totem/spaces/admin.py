@@ -3,12 +3,14 @@ from typing import Any, final, override
 
 from django import forms
 from django.contrib import admin, messages
+from django.contrib.admin.widgets import AutocompleteSelect
+from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count, Q
 from django.db.models.functions import TruncMonth
 from django.db.models.query import QuerySet
 from django.forms import ModelForm
-from django.http import Http404, HttpRequest, HttpResponse
+from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import URLPattern, URLResolver, path, reverse
 from django.utils import timezone
@@ -174,7 +176,16 @@ class SessionFeedbackInline(admin.TabularInline):
     model = SessionFeedback
     can_delete = False
     extra = 0
-    readonly_fields = ("user", "feedback", "message", "date_created")
+    readonly_fields = ("feedback_user", "feedback", "message", "date_created")
+    fields = readonly_fields
+
+    @admin.display(description="User")
+    def feedback_user(self, obj: SessionFeedback) -> str:
+        return format_html(
+            '<a href="{}">{}</a>',
+            reverse("admin:users_user_change", args=[obj.user_id]),
+            obj.user.name or obj.user.email,
+        )
 
     @override
     def has_add_permission(self, request: HttpRequest, obj: Session | None = None) -> bool:
@@ -204,12 +215,28 @@ class SessionPromptInline(admin.TabularInline):
         css = {"all": ("css/admin/session_prompt_order.css",)}
 
 
+def feedback_session_label(session: Session) -> str:
+    start = timezone.localtime(session.start).strftime("%Y-%m-%d %H:%M %Z")
+    return f"{session.session_title_or_title()} — {session.space.title} — {start}"
+
+
+class FeedbackSessionChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj: Session) -> str:
+        return feedback_session_label(obj)
+
+
+class FeedbackSessionAutocomplete(AutocompleteSelect):
+    url_name = "%s:spaces_session_feedback_search"
+
+
 class FeedbackReportForm(forms.Form):
     start_date = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
     end_date = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
     space = forms.ModelChoiceField(queryset=Space.objects.order_by("title"), required=False)
-    session = forms.ModelChoiceField(
-        queryset=Session.objects.select_related("space").order_by("-start"), required=False
+    session = FeedbackSessionChoiceField(
+        queryset=Session.objects.select_related("space").order_by("-start"),
+        required=False,
+        widget=FeedbackSessionAutocomplete(SessionFeedback._meta.get_field("session"), admin.site),
     )
 
     def clean(self):
@@ -263,12 +290,32 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
                 name="spaces_session_feedback_report",
             ),
             path(
+                "feedback-report/sessions/",
+                self.admin_site.admin_view(self.feedback_session_search),
+                name="spaces_session_feedback_search",
+            ),
+            path(
                 "<int:object_id>/participants/",
                 self.admin_site.admin_view(self.participants_view),
                 name="spaces_session_participants",
             ),
         ]
         return custom_urls + super().get_urls()
+
+    def feedback_session_search(self, request: HttpRequest) -> JsonResponse:
+        if not self.has_view_permission(request):
+            raise Http404("Report not found")
+        term = request.GET.get("term", "").strip()
+        sessions = Session.objects.select_related("space").filter(
+            Q(title__icontains=term) | Q(space__title__icontains=term)
+        )
+        page = Paginator(sessions.order_by("-start", "-pk"), 20).get_page(request.GET.get("page", 1))
+        return JsonResponse(
+            {
+                "results": [{"id": str(session.pk), "text": feedback_session_label(session)} for session in page],
+                "pagination": {"more": page.has_next()},
+            }
+        )
 
     def feedback_report_view(self, request: HttpRequest) -> HttpResponse:
         if not self.has_view_permission(request):
@@ -295,7 +342,8 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
                     item.session.session_title_or_title(),
                     timezone.localtime(item.session.start).isoformat(),
                     item.session.space.title,
-                    str(item.user),
+                    item.user.name,
+                    item.user.email,
                     item.feedback,
                     item.message,
                 ]
@@ -307,7 +355,9 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
                         for value in values
                     ]
                 )
-            return csv_response("session-feedback", ["session", "date", "space", "user", "feedback", "message"], rows)
+            return csv_response(
+                "session-feedback", ["session", "date", "space", "user_name", "user_email", "feedback", "message"], rows
+            )
 
         counts = {
             "positive": Count("pk", filter=Q(feedback=SessionFeedbackOptions.UP)),
