@@ -1,0 +1,31 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs"><a href="{% url 'admin:index' %}">Home</a> &rsaquo; Session feedback report</div>
+{% endblock %}
+
+{% block content %}
+  <p>Feedback is grouped by session date. Percentages are based on responses received, not all participants. Each participant's latest response per session is counted.</p>
+  <form method="get">
+    {{ form.as_p }}
+    <input type="submit" value="Apply filters">
+    <a href="{% url 'admin:spaces_session_feedback_report' %}">Clear filters</a>
+  </form>
+  {% if form.is_valid %}
+    <h2>Responses</h2>
+    <p>Total: {{ totals.total }} &middot; Thumbs up: {{ totals.positive }}
+      {% if totals.total %}({{ totals.positive_percent|floatformat:1 }}%){% endif %}
+      &middot; Thumbs down: {{ totals.negative }}
+      {% if totals.total %}({{ totals.negative_percent|floatformat:1 }}%){% endif %}</p>
+    <h2>By Space</h2>
+    <table><thead><tr><th>Space</th><th>Responses</th><th>Thumbs up</th><th>Thumbs down</th><th>Positive</th></tr></thead><tbody>
+      {% for row in by_space %}<tr><th>{{ row.session__space__title }}</th><td>{{ row.total }}</td><td>{{ row.positive }}</td><td>{{ row.negative }}</td><td>{{ row.positive_percent|floatformat:1 }}%</td></tr>
+      {% empty %}<tr><td colspan="5">No responses for these filters.</td></tr>{% endfor %}
+    </tbody></table>
+    <h2>Trend by month</h2>
+    <table><thead><tr><th>Session month</th><th>Responses</th><th>Thumbs up</th><th>Thumbs down</th><th>Positive</th></tr></thead><tbody>
+      {% for row in by_month %}<tr><th>{{ row.month|date:"F Y" }}</th><td>{{ row.total }}</td><td>{{ row.positive }}</td><td>{{ row.negative }}</td><td>{{ row.positive_percent|floatformat:1 }}%</td></tr>
+      {% empty %}<tr><td colspan="5">No responses for these filters.</td></tr>{% endfor %}
+    </tbody></table>
+  {% endif %}
+{% endblock %}

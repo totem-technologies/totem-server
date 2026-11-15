@@ -204,3 +204,44 @@ class TestSessionParticipantsView:
         response = client.get(url)
         assert response.status_code == 302
         assert "/admin/login/" in response.url
+
+
+@pytest.mark.django_db
+class TestSessionFeedbackReport:
+    def test_totals_breakdowns_and_filters(self, admin_client):
+        from totem.spaces.models import SessionFeedback
+
+        first_space = SpaceFactory(title="First space")
+        second_space = SpaceFactory(title="Second space")
+        first = SessionFactory(space=first_space, start=datetime.datetime(2025, 1, 15, 12, tzinfo=datetime.UTC))
+        second = SessionFactory(space=second_space, start=datetime.datetime(2025, 2, 15, 12, tzinfo=datetime.UTC))
+        SessionFeedback.objects.create(session=first, user=UserFactory(), feedback="up")
+        SessionFeedback.objects.create(session=first, user=UserFactory(), feedback="down")
+        SessionFeedback.objects.create(session=second, user=UserFactory(), feedback="up")
+        url = reverse("admin:spaces_session_feedback_report")
+
+        response = admin_client.get(url)
+        assert response.context["totals"] == {
+            "positive": 2,
+            "negative": 1,
+            "total": 3,
+            "positive_percent": 200 / 3,
+            "negative_percent": 100 / 3,
+        }
+        assert len(response.context["by_space"]) == 2
+        assert len(response.context["by_month"]) == 2
+        response = admin_client.get(
+            url, {"start_date": "2025-01-15", "end_date": "2025-01-15", "space": first_space.pk, "session": first.pk}
+        )
+        assert response.context["totals"]["total"] == 2
+        assert response.context["totals"]["positive_percent"] == 50
+        response = admin_client.get(url, {"space": first_space.pk, "session": second.pk})
+        assert response.context["totals"]["total"] == 0
+        assert response.context["totals"]["positive_percent"] is None
+        response = admin_client.get(url, {"start_date": "2025-02-01", "end_date": "2025-01-01"})
+        assert not response.context["form"].is_valid()
+
+    def test_report_requires_session_view_permission(self, client):
+        user = UserFactory(is_staff=True, is_superuser=False)
+        client.force_login(user)
+        assert client.get(reverse("admin:spaces_session_feedback_report")).status_code == 404

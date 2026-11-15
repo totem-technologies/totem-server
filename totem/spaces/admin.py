@@ -4,6 +4,8 @@ from typing import Any, final, override
 from django import forms
 from django.contrib import admin, messages
 from django.db import transaction
+from django.db.models import Count, Q
+from django.db.models.functions import TruncMonth
 from django.db.models.query import QuerySet
 from django.forms import ModelForm
 from django.http import Http404, HttpRequest, HttpResponse
@@ -17,7 +19,7 @@ from totem.rooms.state_machine import syncing_session_prompts
 from totem.users.models import User
 from totem.utils.admin import StaleDataCheckAdminMixin
 
-from .models import Session, SessionFeedback, SessionPrompt, Space, SpaceCategory
+from .models import Session, SessionFeedback, SessionFeedbackOptions, SessionPrompt, Space, SpaceCategory
 from .participants import participant_insights
 
 
@@ -189,6 +191,35 @@ class SessionPromptInline(admin.TabularInline):
         css = {"all": ("css/admin/session_prompt_order.css",)}
 
 
+class FeedbackReportForm(forms.Form):
+    start_date = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
+    end_date = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
+    space = forms.ModelChoiceField(queryset=Space.objects.order_by("title"), required=False)
+    session = forms.ModelChoiceField(
+        queryset=Session.objects.select_related("space").order_by("-start"), required=False
+    )
+
+    def clean(self):
+        data = super().clean()
+        if data and data.get("start_date") and data.get("end_date") and data["start_date"] > data["end_date"]:
+            raise forms.ValidationError("Start date must be on or before end date.")
+        return data
+
+
+def feedback_counts(queryset):
+    return queryset.aggregate(
+        positive=Count("pk", filter=Q(feedback=SessionFeedbackOptions.UP)),
+        negative=Count("pk", filter=Q(feedback=SessionFeedbackOptions.DOWN)),
+    )
+
+
+def add_percentages(counts):
+    counts["total"] = counts["positive"] + counts["negative"]
+    counts["positive_percent"] = 100 * counts["positive"] / counts["total"] if counts["total"] else None
+    counts["negative_percent"] = 100 * counts["negative"] / counts["total"] if counts["total"] else None
+    return counts
+
+
 @final
 @admin.register(Session)
 class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
@@ -214,12 +245,57 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
     def get_urls(self) -> list[URLPattern | URLResolver]:
         custom_urls = [
             path(
+                "feedback-report/",
+                self.admin_site.admin_view(self.feedback_report_view),
+                name="spaces_session_feedback_report",
+            ),
+            path(
                 "<int:object_id>/participants/",
                 self.admin_site.admin_view(self.participants_view),
                 name="spaces_session_participants",
             ),
         ]
         return custom_urls + super().get_urls()
+
+    def feedback_report_view(self, request: HttpRequest) -> HttpResponse:
+        if not self.has_view_permission(request):
+            raise Http404("Report not found")
+        form = FeedbackReportForm(request.GET)
+        feedback = SessionFeedback.objects.all()
+        if form.is_valid():
+            data = form.cleaned_data
+            if data["start_date"]:
+                feedback = feedback.filter(session__start__date__gte=data["start_date"])
+            if data["end_date"]:
+                feedback = feedback.filter(session__start__date__lte=data["end_date"])
+            if data["space"]:
+                feedback = feedback.filter(session__space=data["space"])
+            if data["session"]:
+                feedback = feedback.filter(session=data["session"])
+        else:
+            feedback = feedback.none()
+
+        counts = {
+            "positive": Count("pk", filter=Q(feedback=SessionFeedbackOptions.UP)),
+            "negative": Count("pk", filter=Q(feedback=SessionFeedbackOptions.DOWN)),
+        }
+        by_space = (
+            feedback.values("session__space_id", "session__space__title")
+            .annotate(**counts)
+            .order_by("session__space__title")
+        )
+        by_month = (
+            feedback.annotate(month=TruncMonth("session__start")).values("month").annotate(**counts).order_by("month")
+        )
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Session feedback report",
+            "form": form,
+            "totals": add_percentages(feedback_counts(feedback)),
+            "by_space": [add_percentages(row) for row in by_space],
+            "by_month": [add_percentages(row) for row in by_month],
+        }
+        return render(request, "admin/spaces/feedback_report.html", context)
 
     def participants_view(self, request: HttpRequest, object_id: int) -> HttpResponse:
         session = self.get_object(request, str(object_id))
