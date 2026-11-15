@@ -6,11 +6,12 @@ import pytest
 from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.html import escape
 
 from totem.rooms.models import Room
 from totem.rooms.schemas import RoomStatus
 from totem.spaces.admin import SessionPromptInlineForm
-from totem.spaces.models import Session, SessionPrompt, SessionRound, SessionRoundState
+from totem.spaces.models import Session, SessionFeedback, SessionPrompt, SessionRound, SessionRoundState
 from totem.users.tests.factories import UserFactory
 
 from .factories import SessionFactory, SpaceFactory
@@ -39,8 +40,6 @@ class TestSessionAdmin:
         assert user2.email in response.content.decode()
 
     def test_feedback_cannot_be_deleted_from_session(self, admin_client: Client) -> None:
-        from totem.spaces.models import SessionFeedback
-
         session = SessionFactory()
         user = UserFactory(name="Feedback author")
         feedback = SessionFeedback.objects.create(session=session, user=user, feedback="down")
@@ -243,8 +242,6 @@ class TestSessionParticipantsView:
 @pytest.mark.django_db
 class TestSessionFeedbackReport:
     def test_space_change_page_links_to_filtered_report(self, admin_client: Client) -> None:
-        from totem.spaces.models import SessionFeedback
-
         space = SpaceFactory()
         session = SessionFactory(space=space)
         SessionFeedback.objects.create(session=session, user=UserFactory(), feedback="up")
@@ -260,8 +257,6 @@ class TestSessionFeedbackReport:
         assert report.context["totals"]["positive"] == 1
 
     def test_totals_breakdowns_and_filters(self, admin_client):
-        from totem.spaces.models import SessionFeedback
-
         first_space = SpaceFactory(title="First space")
         second_space = SpaceFactory(title="Second space")
         first = SessionFactory(space=first_space, start=datetime.datetime(2025, 1, 15, 12, tzinfo=datetime.UTC))
@@ -295,8 +290,6 @@ class TestSessionFeedbackReport:
         assert "Correct the filters to see the report." in response.content.decode()
 
     def test_downvote_messages_follow_report_filters(self, admin_client):
-        from totem.spaces.models import SessionFeedback
-
         first = SessionFactory(title="Finding connection")
         second = SessionFactory()
         user = UserFactory()
@@ -306,7 +299,6 @@ class TestSessionFeedbackReport:
         url = reverse("admin:spaces_session_feedback_report")
 
         response = admin_client.get(url, {"session": first.pk})
-        from django.utils.html import escape
 
         assert (
             f'href="{reverse("admin:users_user_change", args=[user.pk])}">{escape(user.name)}</a>'
@@ -320,9 +312,31 @@ class TestSessionFeedbackReport:
         assert "Other concern" not in response.content.decode()
         assert "Positive comment" not in response.content.decode()
 
-    def test_export_includes_filtered_responses(self, admin_client: Client) -> None:
-        from totem.spaces.models import SessionFeedback
+    def test_downvote_messages_are_limited_without_limiting_totals_or_export(self, admin_client: Client) -> None:
+        session = SessionFactory()
+        users = UserFactory.create_batch(201)
+        SessionFeedback.objects.bulk_create(
+            [
+                SessionFeedback(session=session, user=user, feedback="down", message=f"Concern {i}")
+                for i, user in enumerate(users)
+            ]
+        )
+        url = reverse("admin:spaces_session_feedback_report")
+        response = admin_client.get(url, {"session": session.pk})
+        assert response.context["totals"]["negative"] == 201
+        messages = list(response.context["downvote_messages"])
+        assert len(messages) == 200
+        assert messages[0].message == "Concern 200"
+        assert messages[-1].message == "Concern 1"
+        assert "Load more" in response.content.decode()
+        response = admin_client.get(url, {"session": session.pk, "messages_page": 2, "fragment": "messages"})
+        assert "Concern 0" in response.content.decode()
+        assert "Concern 1<" not in response.content.decode()
+        assert "Load more" not in response.content.decode()
+        export = admin_client.get(url, {"session": session.pk, "export": "csv"})
+        assert len(list(csv.DictReader(io.StringIO(export.content.decode())))) == 201
 
+    def test_export_includes_filtered_responses(self, admin_client: Client) -> None:
         session = SessionFactory(title="A session")
         user = UserFactory()
         SessionFeedback.objects.create(session=session, user=user, feedback="down", message="=1+1")

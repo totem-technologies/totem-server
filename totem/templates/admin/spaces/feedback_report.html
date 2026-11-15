@@ -8,7 +8,7 @@
     #feedback-report .results { overflow-x: auto; margin-bottom: 20px; }
     #changelist-filter form { padding: 0 15px 15px; }
     #changelist-filter form label { display: block; margin-bottom: 5px; }
-    #changelist-filter form select, #changelist-filter form input[type="date"] { max-width: 100%; box-sizing: border-box; }
+    #changelist-filter form select, #changelist-filter form input[type="date"] { width: 100%; max-width: 100%; box-sizing: border-box; }
     .feedback-intro { max-width: 75ch; color: var(--body-quiet-color); line-height: 1.5; }
     .feedback-summary { display: flex; flex-wrap: wrap; gap: 20px 48px; padding: 8px 0 18px; margin: 0; }
     .feedback-summary div { min-width: 110px; }
@@ -18,7 +18,6 @@
     .feedback-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
     .feedback-export { border-top: 1px solid var(--hairline-color); margin-top: 18px; padding-top: 15px; }
     .feedback-export p { color: var(--body-quiet-color); line-height: 1.4; }
-    #changelist-filter form select, #changelist-filter form input[type="date"] { width: 100%; }
     .feedback-empty { padding: 12px 0; }
   </style>
 {% endblock %}
@@ -26,6 +25,32 @@
 {% block extrahead %}
   {{ block.super }}
   {{ form.media }}
+  <script>
+document.addEventListener('click', async (event) => {
+  const link = event.target.closest('#feedback-messages [data-load-more]')
+  if (!link) return
+  event.preventDefault()
+  if (link.getAttribute('aria-busy') === 'true') return
+  link.setAttribute('aria-busy', 'true')
+  const url = new URL(link.href)
+  url.searchParams.set('fragment', 'messages')
+  try {
+    const response = await fetch(url)
+    if (!response.ok) throw new Error('Could not load feedback')
+    const doc = new DOMParser().parseFromString(await response.text(), 'text/html')
+    const next = doc.querySelector('#feedback-messages')
+    if (!next) throw new Error('Unexpected feedback response')
+    document.querySelector('#feedback-messages tbody').append(...next.querySelectorAll('tbody tr'))
+    const nextLink = next.querySelector('[data-load-more]')
+    if (nextLink) link.href = new URL(nextLink.getAttribute('href'), window.location.href).href
+    else link.parentElement.remove()
+  } catch {
+    window.location.href = link.href
+  } finally {
+    link.removeAttribute('aria-busy')
+  }
+})
+  </script>
 {% endblock %}
 
 {% block breadcrumbs %}
@@ -60,13 +85,7 @@
               {% empty %}<tr><td colspan="5">No responses for these filters.</td></tr>{% endfor %}
             </tbody></table>
           </div>
-          <div class="module results">
-            <h2>Thumbs down feedback</h2>
-            <table><thead><tr><th scope="col"><div class="text">Session</div></th><th scope="col"><div class="text">Date</div></th><th scope="col"><div class="text">Space</div></th><th scope="col"><div class="text">User</div></th><th scope="col"><div class="text">Message</div></th></tr></thead><tbody>
-              {% for item in downvote_messages %}<tr><td><a href="{% url 'admin:spaces_session_change' item.session.pk %}">{{ item.session.session_title_or_title }}</a></td><td>{{ item.session.start|date:"DATETIME_FORMAT" }}</td><td>{{ item.session.space }}</td><td>{% if perms.users.view_user or perms.users.change_user %}<a href="{% url 'admin:users_user_change' item.user.pk %}">{{ item.user.name|default:item.user.email }}</a>{% else %}{{ item.user.name|default:item.user.email }}{% endif %}</td><td>{{ item.message|linebreaksbr }}</td></tr>
-              {% empty %}<tr><td colspan="5">No thumbs down messages for these filters.</td></tr>{% endfor %}
-            </tbody></table>
-          </div>
+          {% include "admin/spaces/feedback_messages.html" %}
         {% else %}
           <p class="feedback-empty">Correct the filters to see the report.</p>
         {% endif %}

@@ -359,6 +359,22 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
                 "session-feedback", ["session", "date", "space", "user_name", "user_email", "feedback", "message"], rows
             )
 
+        messages = (
+            feedback.filter(feedback=SessionFeedbackOptions.DOWN)
+            .exclude(message="")
+            .select_related("session__space", "user")
+            .order_by("-session__start", "-pk")
+        )
+        message_page = Paginator(messages, 200).get_page(request.GET.get("messages_page", 1))
+        next_query = request.GET.copy()
+        next_query.pop("fragment", None)
+        next_query.pop("export", None)
+        if message_page.has_next():
+            next_query["messages_page"] = message_page.next_page_number()
+        messages_context = {"downvote_messages": message_page, "next_messages_query": next_query.urlencode()}
+        if form.is_valid() and request.GET.get("fragment") == "messages":
+            return render(request, "admin/spaces/feedback_messages.html", messages_context)
+
         counts = {
             "positive": Count("pk", filter=Q(feedback=SessionFeedbackOptions.UP)),
             "negative": Count("pk", filter=Q(feedback=SessionFeedbackOptions.DOWN)),
@@ -378,10 +394,7 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
             "totals": add_percentages(feedback_counts(feedback)),
             "by_space": [add_percentages(row) for row in by_space],
             "by_month": [add_percentages(row) for row in by_month],
-            "downvote_messages": feedback.filter(feedback=SessionFeedbackOptions.DOWN)
-            .exclude(message="")
-            .select_related("session__space", "user")
-            .order_by("-session__start", "-pk"),
+            **messages_context,
         }
         return render(request, "admin/spaces/feedback_report.html", context)
 

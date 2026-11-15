@@ -1,0 +1,8 @@
+<div class="module results" id="feedback-messages">
+            <h2>Thumbs down feedback</h2>
+            <table><thead><tr><th scope="col"><div class="text">Session</div></th><th scope="col"><div class="text">Date</div></th><th scope="col"><div class="text">Space</div></th><th scope="col"><div class="text">User</div></th><th scope="col"><div class="text">Message</div></th></tr></thead><tbody>
+              {% for item in downvote_messages %}<tr><td><a href="{% url 'admin:spaces_session_change' item.session.pk %}">{{ item.session.session_title_or_title }}</a></td><td>{{ item.session.start|date:"DATETIME_FORMAT" }}</td><td>{{ item.session.space }}</td><td>{% if perms.users.view_user or perms.users.change_user %}<a href="{% url 'admin:users_user_change' item.user.pk %}">{{ item.user.name|default:item.user.email }}</a>{% else %}{{ item.user.name|default:item.user.email }}{% endif %}</td><td>{{ item.message|linebreaksbr }}</td></tr>
+              {% empty %}<tr><td colspan="5">No thumbs down messages for these filters.</td></tr>{% endfor %}
+            </tbody></table>
+            {% if downvote_messages.has_next %}<p><a class="button" href="?{{ next_messages_query }}#feedback-messages" data-load-more>Load more</a></p>{% endif %}
+          </div>
