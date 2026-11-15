@@ -113,11 +113,18 @@ class SessionInline(StaleDataCheckAdminMixin, admin.StackedInline):
 class SpaceAdmin(admin.ModelAdmin):
     save_on_top = True
     list_display = ("title", "slug", "published")
-    readonly_fields = ("subscribed_list", "date_created", "date_modified")
+    readonly_fields = ("subscribed_list", "feedback_report_link", "date_created", "date_modified")
     autocomplete_fields = ["subscribed", "categories"]
     inlines = [
         SessionInline,
     ]
+
+    @admin.display(description="Session feedback report")
+    def feedback_report_link(self, obj: Space | None) -> str:
+        if obj is None or not obj.pk:
+            return "Save the space first"
+        url = reverse("admin:spaces_session_feedback_report")
+        return format_html('<a href="{}?space={}">View session feedback report</a>', url, obj.pk)
 
     def get_form(self, request, obj=None, change=False, **kwargs):
         form = super().get_form(request, obj, change, **kwargs)
@@ -294,6 +301,10 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
             "totals": add_percentages(feedback_counts(feedback)),
             "by_space": [add_percentages(row) for row in by_space],
             "by_month": [add_percentages(row) for row in by_month],
+            "downvote_messages": feedback.filter(feedback=SessionFeedbackOptions.DOWN)
+            .exclude(message="")
+            .select_related("session__space")
+            .order_by("-session__start", "-pk"),
         }
         return render(request, "admin/spaces/feedback_report.html", context)
 

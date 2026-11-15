@@ -208,6 +208,23 @@ class TestSessionParticipantsView:
 
 @pytest.mark.django_db
 class TestSessionFeedbackReport:
+    def test_space_change_page_links_to_filtered_report(self, admin_client: Client) -> None:
+        from totem.spaces.models import SessionFeedback
+
+        space = SpaceFactory()
+        session = SessionFactory(space=space)
+        SessionFeedback.objects.create(session=session, user=UserFactory(), feedback="up")
+        SessionFeedback.objects.create(session=SessionFactory(), user=UserFactory(), feedback="down")
+
+        response = admin_client.get(reverse("admin:spaces_space_change", args=[space.pk]))
+        report_url = f"{reverse('admin:spaces_session_feedback_report')}?space={space.pk}"
+        assert response.status_code == 200
+        assert f'href="{report_url}"' in response.content.decode()
+        report = admin_client.get(report_url)
+        assert report.status_code == 200
+        assert report.context["totals"]["total"] == 1
+        assert report.context["totals"]["positive"] == 1
+
     def test_totals_breakdowns_and_filters(self, admin_client):
         from totem.spaces.models import SessionFeedback
 
@@ -240,6 +257,21 @@ class TestSessionFeedbackReport:
         assert response.context["totals"]["positive_percent"] is None
         response = admin_client.get(url, {"start_date": "2025-02-01", "end_date": "2025-01-01"})
         assert not response.context["form"].is_valid()
+
+    def test_downvote_messages_follow_report_filters(self, admin_client):
+        from totem.spaces.models import SessionFeedback
+
+        first = SessionFactory()
+        second = SessionFactory()
+        SessionFeedback.objects.create(session=first, user=UserFactory(), feedback="down", message="First concern")
+        SessionFeedback.objects.create(session=second, user=UserFactory(), feedback="down", message="Other concern")
+        SessionFeedback.objects.create(session=first, user=UserFactory(), feedback="up", message="Positive comment")
+        url = reverse("admin:spaces_session_feedback_report")
+
+        response = admin_client.get(url, {"session": first.pk})
+        assert "First concern" in response.content.decode()
+        assert "Other concern" not in response.content.decode()
+        assert "Positive comment" not in response.content.decode()
 
     def test_report_requires_session_view_permission(self, client):
         user = UserFactory(is_staff=True, is_superuser=False)
