@@ -18,6 +18,7 @@ from totem.rooms.models import Room
 from totem.rooms.state_machine import syncing_session_prompts
 from totem.users.models import User
 from totem.utils.admin import StaleDataCheckAdminMixin
+from totem.utils.exports import csv_response
 
 from .models import Session, SessionFeedback, SessionFeedbackOptions, SessionPrompt, Space, SpaceCategory
 from .participants import participant_insights
@@ -175,6 +176,10 @@ class SessionFeedbackInline(admin.TabularInline):
     extra = 0
     readonly_fields = ("user", "feedback", "message", "date_created")
 
+    @override
+    def has_add_permission(self, request: HttpRequest, obj: Session | None = None) -> bool:
+        return False
+
 
 class SessionPromptInlineForm(ModelForm):
     position = forms.IntegerField(label="", widget=forms.HiddenInput)
@@ -282,6 +287,27 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
                 feedback = feedback.filter(session=data["session"])
         else:
             feedback = feedback.none()
+
+        if form.is_valid() and request.GET.get("export") == "csv":
+            rows = []
+            for item in feedback.select_related("session__space", "user").order_by("-session__start", "-pk"):
+                values = [
+                    item.session.session_title_or_title(),
+                    timezone.localtime(item.session.start).isoformat(),
+                    item.session.space.title,
+                    str(item.user),
+                    item.feedback,
+                    item.message,
+                ]
+                rows.append(
+                    [
+                        "'" + value
+                        if value.startswith(("\t", "\r", "\n")) or value.lstrip().startswith(("=", "+", "-", "@"))
+                        else value
+                        for value in values
+                    ]
+                )
+            return csv_response("session-feedback", ["session", "date", "space", "user", "feedback", "message"], rows)
 
         counts = {
             "positive": Count("pk", filter=Q(feedback=SessionFeedbackOptions.UP)),

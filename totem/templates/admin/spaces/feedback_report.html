@@ -9,7 +9,17 @@
     #changelist-filter form { padding: 0 15px 15px; }
     #changelist-filter form label { display: block; margin-bottom: 5px; }
     #changelist-filter form select, #changelist-filter form input[type="date"] { max-width: 100%; box-sizing: border-box; }
-    #changelist-filter form input[type="submit"] { margin-right: 8px; }
+    .feedback-intro { max-width: 75ch; color: var(--body-quiet-color); line-height: 1.5; }
+    .feedback-summary { display: flex; flex-wrap: wrap; gap: 20px 48px; padding: 8px 0 18px; margin: 0; }
+    .feedback-summary div { min-width: 110px; }
+    .feedback-summary dt { color: var(--body-quiet-color); margin-bottom: 5px; }
+    .feedback-summary dd { margin: 0; font-size: 1.35rem; font-weight: 600; color: var(--body-fg); }
+    .feedback-summary dd span { font-size: 0.875rem; font-weight: normal; color: var(--body-quiet-color); }
+    .feedback-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .feedback-export { border-top: 1px solid var(--hairline-color); margin-top: 18px; padding-top: 15px; }
+    .feedback-export p { color: var(--body-quiet-color); line-height: 1.4; }
+    #changelist-filter form select, #changelist-filter form input[type="date"] { width: 100%; }
+    .feedback-empty { padding: 12px 0; }
   </style>
 {% endblock %}
 
@@ -18,17 +28,18 @@
 {% endblock %}
 
 {% block content %}
-  <p>Feedback is grouped by session date. Percentages are based on responses received, not all participants. Each participant's latest response per session is counted.</p>
+  <p class="feedback-intro">Feedback is grouped by session date. Percentages are based on responses received, not all participants. Each participant's latest response per session is counted.</p>
   <div id="changelist" class="module filtered">
     <div class="changelist-form-container">
       <div id="feedback-report">
         {% if form.is_valid %}
           <div class="module">
             <h2>Responses</h2>
-            <p>Total: {{ totals.total }} &middot; Thumbs up: {{ totals.positive }}
-              {% if totals.total %}({{ totals.positive_percent|floatformat:1 }}%){% endif %}
-              &middot; Thumbs down: {{ totals.negative }}
-              {% if totals.total %}({{ totals.negative_percent|floatformat:1 }}%){% endif %}</p>
+            <dl class="feedback-summary">
+              <div><dt>Total responses</dt><dd>{{ totals.total }}</dd></div>
+              <div><dt>Thumbs up</dt><dd>{{ totals.positive }} {% if totals.total %}<span>({{ totals.positive_percent|floatformat:1 }}%)</span>{% endif %}</dd></div>
+              <div><dt>Thumbs down</dt><dd>{{ totals.negative }} {% if totals.total %}<span>({{ totals.negative_percent|floatformat:1 }}%)</span>{% endif %}</dd></div>
+            </dl>
           </div>
           <div class="module results">
             <h2>By Space</h2>
@@ -51,14 +62,22 @@
               {% empty %}<tr><td colspan="5">No thumbs down messages for these filters.</td></tr>{% endfor %}
             </tbody></table>
           </div>
+        {% else %}
+          <p class="feedback-empty">Correct the filters to see the report.</p>
         {% endif %}
       </div>
       <aside id="changelist-filter" aria-label="Filters">
         <h2>Filters</h2>
         <form method="get">
           {{ form.as_p }}
-          <input type="submit" value="Apply filters">
-          <a href="{% url 'admin:spaces_session_feedback_report' %}">Clear filters</a>
+          <div class="feedback-actions">
+            <input type="submit" value="Apply filters">
+            <a href="{% url 'admin:spaces_session_feedback_report' %}">Clear filters</a>
+          </div>
+          <div class="feedback-export">
+            <p>Export all filtered responses, including feedback without a message.</p>
+            <button class="button" type="submit" name="export" value="csv">Export CSV</button>
+          </div>
         </form>
       </aside>
     </div>

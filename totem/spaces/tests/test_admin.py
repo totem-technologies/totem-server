@@ -1,4 +1,6 @@
+import csv
 import datetime
+import io
 
 import pytest
 from django.test import Client
@@ -265,6 +267,7 @@ class TestSessionFeedbackReport:
         url = reverse("admin:spaces_session_feedback_report")
 
         response = admin_client.get(url)
+        assert "Export all filtered responses" in response.content.decode()
         assert response.context["totals"] == {
             "positive": 2,
             "negative": 1,
@@ -284,6 +287,7 @@ class TestSessionFeedbackReport:
         assert response.context["totals"]["positive_percent"] is None
         response = admin_client.get(url, {"start_date": "2025-02-01", "end_date": "2025-01-01"})
         assert not response.context["form"].is_valid()
+        assert "Correct the filters to see the report." in response.content.decode()
 
     def test_downvote_messages_follow_report_filters(self, admin_client):
         from totem.spaces.models import SessionFeedback
@@ -308,7 +312,33 @@ class TestSessionFeedbackReport:
         assert "Other concern" not in response.content.decode()
         assert "Positive comment" not in response.content.decode()
 
+    def test_export_includes_filtered_responses(self, admin_client: Client) -> None:
+        from totem.spaces.models import SessionFeedback
+
+        session = SessionFactory(title="A session")
+        user = UserFactory()
+        SessionFeedback.objects.create(session=session, user=user, feedback="down", message="=1+1")
+        SessionFeedback.objects.create(session=session, user=UserFactory(), feedback="up", message="")
+        SessionFeedback.objects.create(session=SessionFactory(), user=UserFactory(), feedback="down", message="Other")
+        url = reverse("admin:spaces_session_feedback_report")
+        response = admin_client.get(url, {"session": session.pk, "export": "csv"})
+
+        assert response["Content-Type"].startswith("text/csv")
+        assert "attachment" in response["Content-Disposition"]
+        rows = list(csv.DictReader(io.StringIO(response.content.decode())))
+        assert len(rows) == 2
+        assert {row["feedback"] for row in rows} == {"up", "down"}
+        downvote = next(row for row in rows if row["feedback"] == "down")
+        assert downvote["session"] == "A session"
+        assert downvote["user"] == str(user)
+        assert downvote["message"] == "'=1+1"
+        invalid = admin_client.get(url, {"export": "csv", "start_date": "invalid"})
+        assert invalid["Content-Type"].startswith("text/html")
+        assert not invalid.context["form"].is_valid()
+
     def test_report_requires_session_view_permission(self, client):
         user = UserFactory(is_staff=True, is_superuser=False)
         client.force_login(user)
-        assert client.get(reverse("admin:spaces_session_feedback_report")).status_code == 404
+        url = reverse("admin:spaces_session_feedback_report")
+        assert client.get(url).status_code == 404
+        assert client.get(url, {"export": "csv"}).status_code == 404
