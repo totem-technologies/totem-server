@@ -125,7 +125,9 @@ class TestProfilePageMatchesDeletionRules:
         "make_owner",
         [
             lambda: SpaceFactory().author,
-            lambda: CirclePlan.objects.create(name="p", description="d", content="c", created_by=UserFactory()).created_by,
+            lambda: (
+                CirclePlan.objects.create(name="p", description="d", content="c", created_by=UserFactory()).created_by
+            ),
             lambda: Prompt.objects.create(prompt="p", created_by=UserFactory()).created_by,
         ],
         ids=["space_author", "circle_plan", "prompt"],

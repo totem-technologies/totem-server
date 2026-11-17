@@ -184,11 +184,12 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
 
     def save(self, *args: Any, **kwargs: Any) -> None:
         # A bounce is a fact about one address, so a new address starts clean.
-        if self.email_bounced_at is not None and self.pk is not None:
+        update_fields = kwargs.get("update_fields")
+        writes_email = update_fields is None or "email" in update_fields
+        if writes_email and self.email_bounced_at is not None and self.pk is not None:
             stored_email = User.objects.filter(pk=self.pk).values_list("email", flat=True).first()
             if stored_email is not None and stored_email != self.email:
                 self.email_bounced_at = None
-                update_fields = kwargs.get("update_fields")
                 if update_fields is not None:
                     kwargs["update_fields"] = {*update_fields, "email_bounced_at"}
         super().save(*args, **kwargs)

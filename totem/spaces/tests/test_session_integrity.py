@@ -341,6 +341,30 @@ class TestResolveSessionConflicts:
 
 
 class TestReminderRecipients:
+    @pytest.mark.django_db(transaction=True)
+    def test_rsvp_committing_during_a_starting_run_gets_the_starting_email(self):
+        session = _open_session()
+        user = UserFactory()
+        added = threading.Event()
+
+        def rsvp() -> None:
+            try:
+                with transaction.atomic():
+                    Session.objects.get(pk=session.pk).add_attendee(user)
+                    added.set()
+                    # Give the reminder run time to start before this commits.
+                    time.sleep(0.3)
+            finally:
+                connection.close()
+
+        t = threading.Thread(target=rsvp)
+        t.start()
+        added.wait()
+        Session.objects.get(pk=session.pk).notify()
+        t.join()
+
+        assert EmailLog.objects.filter(recipient=user.email, template="circle_starting").exists()
+
     def test_flag_is_not_claimed_when_reading_recipients_fails(self, db):
         session = _open_session()
 
@@ -393,7 +417,9 @@ class TestRemindersAreSentAtMostOnce:
         session.refresh_from_db()
         assert getattr(session, flag) is True
 
-    def test_total_outage_keeps_the_flag(self, db, django_capture_on_commit_callbacks, method, flag, start_offset, email_name):
+    def test_total_outage_keeps_the_flag(
+        self, db, django_capture_on_commit_callbacks, method, flag, start_offset, email_name
+    ):
         session, users = _session_with_recipients(start_offset)
         _add_attendees_unless_advertising(method, session, users)
 

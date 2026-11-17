@@ -419,12 +419,14 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
 
         The confirmation email goes out once the caller's transaction commits.
         """
+        from totem.users.models import User
+
         with transaction.atomic():
             # Concurrent RSVPs run their checks one at a time: the user row lock covers
             # time conflicts across sessions, the session row lock (also taken by room
             # and prompt writes) covers seats. Always user first, then session. The
             # checks run on a freshly loaded row because this instance may be stale.
-            self.attendees.model.objects.select_for_update(no_key=True).get(pk=user.pk)
+            User.objects.select_for_update(no_key=True).get(pk=user.pk)
             session = (
                 Session.objects.select_for_update(of=("self",))
                 .select_related("space__author")
@@ -538,14 +540,17 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         """Claim the reminder's flag, then send its notice to each recipient after commit.
 
         At most once: the flag stays claimed whatever happens to the sends, because a
-        failure such as a timeout may still have delivered. Recipients are read before
-        the claim so a failed read leaves the flag free for the next run.
+        failure such as a timeout may still have delivered. A failed read of the
+        recipients rolls the claim back, leaving the flag free for the next run.
+
+        The claim's UPDATE holds the session row until this commits, so an RSVP either
+        commits first and is among the recipients, or waits and then sees the flag set.
         """
-        user_ids = [user.pk for user in recipients]
-        if not self._claim_notification(reminder.flag, force):
-            return
-        for user_id in user_ids:
-            transaction.on_commit(partial(send_session_notice, reminder.notice, self.pk, user_id))
+        with transaction.atomic():
+            if not self._claim_notification(reminder.flag, force):
+                return
+            for user in recipients:
+                transaction.on_commit(partial(send_session_notice, reminder.notice, self.pk, user.pk))
 
     def notify(self, force=False):
         # Notify users who are attending that the space is about to start

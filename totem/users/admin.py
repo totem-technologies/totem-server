@@ -47,7 +47,6 @@ class UserAdmin(UserAdminImpersonateMixin, ExportCsvMixin, auth_admin.UserAdmin)
         ),
         (_("Important dates"), {"fields": ("last_login", "date_joined", "email_bounced_at")}),
     )
-    readonly_fields = ["email_bounced_at"]
     list_display = ["email", "name", "verified", "newsletter_consent", "date_joined"]
     list_filter = ["is_active", "is_staff", "is_superuser", "verified", "newsletter_consent", "fixed_pin_enabled"]
     search_fields = ["name", "email"]

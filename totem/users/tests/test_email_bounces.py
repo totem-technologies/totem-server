@@ -103,6 +103,15 @@ class TestClearingTheFlag:
         user.refresh_from_db()
         assert user.email_bounced_at is None
 
+    def test_partial_save_that_does_not_write_the_email_keeps_it(self):
+        user = _flagged_user()
+        old_email = user.email
+        user.email = "new@totem.org"
+        user.save(update_fields=["name"])
+        user.refresh_from_db()
+        assert user.email == old_email
+        assert user.email_bounced_at is not None
+
     def test_saving_with_the_same_email_keeps_it(self):
         user = _flagged_user()
         user.name = "Someone"
@@ -140,6 +149,13 @@ class TestClearingTheFlag:
         assert LoginPin.objects.validate_pin(user, "111111") == (True, None)
         user.refresh_from_db()
         assert user.email_bounced_at is not None
+
+
+class TestClearingTheFlagAsStaff:
+    def test_admin_user_form_can_edit_it(self, admin_client: Client):
+        user = _flagged_user()
+        response = admin_client.get(reverse("admin:users_user_change", args=[user.pk]))
+        assert "email_bounced_at" in response.context["adminform"].form.fields
 
 
 class TestUserApiDoesNotExposeTheFlag:
