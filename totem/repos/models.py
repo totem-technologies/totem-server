@@ -5,7 +5,7 @@ from taggit.managers import TaggableManager
 
 class Prompt(models.Model):
     prompt = models.CharField(max_length=1000)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
     date_created = models.DateTimeField(auto_now_add=True)
     date_modified = models.DateTimeField(auto_now=True)
     notes = models.TextField(blank=True, null=True)

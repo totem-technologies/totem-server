@@ -261,10 +261,7 @@ def rsvp_confirm(request: HttpRequest, event_slug: str):
     if not session.can_view(user):
         raise Http404
     try:
-        with transaction.atomic():
-            if not session.add_attendee(user):
-                raise SessionException("Unable to save your spot")
-            session.space.subscribe(user)
+        session.add_attendee(user)
     except SessionTimeConflict as e:
         return Status(409, _session_conflict_schema(e.conflicting_sessions, user))
     except SessionException as e:

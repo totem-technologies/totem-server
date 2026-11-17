@@ -1,17 +1,16 @@
 import pytz
-from auditlog.context import disable_auditlog
-from auditlog.models import LogEntry
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.forms import ImageField
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
 from ninja import File, Router
-from ninja.errors import ValidationError
+from ninja.errors import AuthorizationError, ValidationError
 from ninja.files import UploadedFile
 from pytz.exceptions import UnknownTimeZoneError
 
 from totem.email.utils import validate_email_blocked
+from totem.users.account import ACCOUNT_NOT_DELETABLE_MESSAGE, delete_account
 from totem.users.models import Feedback, KeeperProfile, User
 from totem.users.schemas import FeedbackSchema, KeeperProfileSchema, PublicUserSchema, UserSchema, UserUpdateSchema
 from totem.users.views import FeedbackForm
@@ -101,10 +100,8 @@ def update_current_user_image(
 @user_router.delete("/delete", response={200: bool}, url_name="user_delete")
 def delete_current_user(request: HttpRequest):
     user: User = request.user  # type: ignore
-    # make a log entry for the deletion
-    LogEntry.objects.log_create(user, force_log=True, action=LogEntry.Action.DELETE).save()  # type: ignore
-    with disable_auditlog():
-        user.delete()
+    if not delete_account(user):
+        raise AuthorizationError(message=ACCOUNT_NOT_DELETABLE_MESSAGE)
     return True
 
 

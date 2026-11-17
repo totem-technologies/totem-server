@@ -1,8 +1,6 @@
 import logging
 from urllib.parse import quote
 
-from auditlog.context import disable_auditlog
-from auditlog.models import LogEntry
 from django import forms
 from django.conf import settings
 from django.contrib import messages
@@ -17,6 +15,7 @@ from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 
 from totem.email import emails
+from totem.email.exceptions import EmailBounced
 from totem.spaces.filters import (
     upcoming_sessions_by_author,
 )
@@ -25,6 +24,7 @@ from totem.utils.slack import notify_slack
 from totem.utils.utils import request_log_context
 
 from . import analytics
+from .account import ACCOUNT_NOT_DELETABLE_MESSAGE, can_delete_account, delete_account
 from .forms import SignupForm
 from .models import Feedback, KeeperProfile, LoginPin, User
 
@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 # Deliberately generic to avoid revealing whether an email has an account or
 # why exactly a code was rejected; the real reason is logged server side.
 PIN_ERROR_MESSAGE = "Invalid or expired verification code. Please try again or request a new code."
+EMAIL_BOUNCED_MESSAGE = "We can't deliver email to that address. Please check it or try a different one."
 
 
 def user_detail_view(request, slug):
@@ -246,14 +247,17 @@ def _auth_view(request: HttpRequest, form_class: type[forms.Form], template_name
                 request.session["next"] = next
 
             # Send PIN via email
-            emails.login_pin_email(user.email, login_pin.pin).send()
+            try:
+                emails.login_pin_email(user.email, login_pin.pin).send()
+            except EmailBounced:
+                form.add_error("email", EMAIL_BOUNCED_MESSAGE)
+            else:
+                if created:
+                    analytics.user_signed_up(user)
+                    emails.send_welcome_email(user)
 
-            if created:
-                analytics.user_signed_up(user)
-                emails.send_welcome_email(user)
-
-            user.identify()
-            return redirect(f"{reverse('users:verify-pin')}?email={quote(email)}")
+                user.identify()
+                return redirect(f"{reverse('users:verify-pin')}?email={quote(email)}")
     else:
         if request.user.is_authenticated:
             return redirect(next or "users:redirect")
@@ -286,6 +290,8 @@ def user_profile_view(request):
         "subscribed_spaces": subscribed_spaces,
         "session_history": session_history,
         "space_count": space_count,
+        "can_delete_account": can_delete_account(request.user),
+        "account_not_deletable_message": ACCOUNT_NOT_DELETABLE_MESSAGE,
     }
     context.update(_user_profile_info(request, request.user))
     return render(
@@ -349,11 +355,9 @@ def user_profile_image_view(request):
 @login_required
 def user_profile_delete_view(request):
     if request.method == "POST":
-        user = request.user
-        # make a log entry for the deletion
-        LogEntry.objects.log_create(user, force_log=True, action=LogEntry.Action.DELETE).save()  # type: ignore
-        with disable_auditlog():
-            user.delete()
+        if not delete_account(request.user):
+            messages.error(request, ACCOUNT_NOT_DELETABLE_MESSAGE)
+            return redirect("users:profile")
         messages.success(request, "Account successfully deleted.")
         return redirect("pages:home")
     return HttpResponseForbidden()

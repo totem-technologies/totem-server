@@ -27,7 +27,7 @@ class TestMissedSessionTask:
         assert ended_event.notified_missed is True
         assert mail.outbox == []
 
-    def test_notify_missed_session_attending(self, db):
+    def test_notify_missed_session_attending(self, db, django_capture_on_commit_callbacks):
         author = UserFactory()
         space = SpaceFactory(author=author)
         event = SessionFactory(space=space, start=timezone.now() - timedelta(hours=1, minutes=30))
@@ -40,7 +40,8 @@ class TestMissedSessionTask:
         event.joined.add(joined_user)
         event.save()
         assert event.notified_missed is False
-        assert notify_missed_session() == 1
+        with django_capture_on_commit_callbacks(execute=True):
+            assert notify_missed_session() == 1
         event.refresh_from_db()
         assert event.notified_missed is True
         assert len(mail.outbox) == 1
@@ -49,11 +50,12 @@ class TestMissedSessionTask:
         message = email_text(email)
         assert "missed you" in message
         assert "forms.gle" in message
-        assert notify_missed_session() == 0
+        with django_capture_on_commit_callbacks(execute=True):
+            assert notify_missed_session() == 0
 
     @patch("totem.spaces.models.missed_session_email")
-    def test_notify_missed_session_email_bounced(self, mock_email, db):
-        """Test that a bounced email unsubscribes the user from the space."""
+    def test_notify_missed_session_email_bounced(self, mock_email, db, django_capture_on_commit_callbacks):
+        """A bounced email leaves the user's space subscription alone."""
         mock_email.return_value.send.side_effect = EmailBounced()
         author = UserFactory()
         space = SpaceFactory(author=author)
@@ -64,11 +66,12 @@ class TestMissedSessionTask:
         event.save()
 
         assert user in space.subscribed.all()
-        notify_missed_session()
+        with django_capture_on_commit_callbacks(execute=True):
+            notify_missed_session()
         event.refresh_from_db()
 
         assert event.notified_missed is True
-        assert user not in space.subscribed.all()
+        assert user in space.subscribed.all()
 
     def test_notify_missed_session_long_duration_not_ended(self, db):
         """A session that started 1.5h ago but has a 2h duration should NOT
@@ -86,7 +89,7 @@ class TestMissedSessionTask:
         assert event.notified_missed is False
         assert mail.outbox == []
 
-    def test_notify_missed_session_long_duration_ended(self, db):
+    def test_notify_missed_session_long_duration_ended(self, db, django_capture_on_commit_callbacks):
         """A long-duration session that has ended should trigger notify_missed."""
         event = SessionFactory(
             start=timezone.now() - timedelta(hours=1, minutes=30),
@@ -96,7 +99,8 @@ class TestMissedSessionTask:
         event.attendees.add(user)
         event.save()
         assert event.ended() is True
-        notify_missed_session()
+        with django_capture_on_commit_callbacks(execute=True):
+            notify_missed_session()
         event.refresh_from_db()
         assert event.notified_missed is True
         assert len(mail.outbox) == 1
@@ -122,13 +126,14 @@ class TestMissedSessionTask:
         assert session.notified_missed is False
         assert mail.outbox == []
 
-    def test_notify_missed_session_livekit_ended_late(self, db):
+    def test_notify_missed_session_livekit_ended_late(self, db, django_capture_on_commit_callbacks):
         """An overrunning LiveKit session is notified once ended_at is set, even
         if that's more than an hour past the scheduled end."""
         session = self._overrunning_livekit_session(scheduled_end_ago=timedelta(minutes=90))
         session.ended_at = timezone.now() - timedelta(minutes=5)
         session.save()
-        assert notify_missed_session() == 1
+        with django_capture_on_commit_callbacks(execute=True):
+            assert notify_missed_session() == 1
         session.refresh_from_db()
         assert session.notified_missed is True
         assert len(mail.outbox) == 1
@@ -144,8 +149,8 @@ class TestMissedSessionTask:
 
 class TestNotifyBounceHandling:
     @patch("totem.spaces.models.notify_session_starting")
-    def test_notify_email_bounced(self, mock_email, db):
-        """Test that a bounced 'starting soon' email removes user from session and space."""
+    def test_notify_email_bounced(self, mock_email, db, django_capture_on_commit_callbacks):
+        """A bounced 'starting soon' email leaves the user's spot and space subscription alone."""
         mock_email.return_value.send.side_effect = EmailBounced()
         author = UserFactory()
         space = SpaceFactory(author=author)
@@ -158,16 +163,17 @@ class TestNotifyBounceHandling:
         assert user in event.attendees.all()
         assert user in space.subscribed.all()
 
-        event.notify(force=True)
+        with django_capture_on_commit_callbacks(execute=True):
+            event.notify(force=True)
         event.refresh_from_db()
 
         assert event.notified is True
-        assert user not in event.attendees.all()
-        assert user not in space.subscribed.all()
+        assert user in event.attendees.all()
+        assert user in space.subscribed.all()
 
     @patch("totem.spaces.models.notify_session_tomorrow")
-    def test_notify_tomorrow_email_bounced(self, mock_email, db):
-        """Test that a bounced 'tomorrow' email removes user from session and space."""
+    def test_notify_tomorrow_email_bounced(self, mock_email, db, django_capture_on_commit_callbacks):
+        """A bounced 'tomorrow' email leaves the user's spot and space subscription alone."""
         mock_email.return_value.send.side_effect = EmailBounced()
         author = UserFactory()
         space = SpaceFactory(author=author)
@@ -180,16 +186,17 @@ class TestNotifyBounceHandling:
         assert user in event.attendees.all()
         assert user in space.subscribed.all()
 
-        event.notify_tomorrow(force=True)
+        with django_capture_on_commit_callbacks(execute=True):
+            event.notify_tomorrow(force=True)
         event.refresh_from_db()
 
         assert event.notified_tomorrow is True
-        assert user not in event.attendees.all()
-        assert user not in space.subscribed.all()
+        assert user in event.attendees.all()
+        assert user in space.subscribed.all()
 
     @patch("totem.spaces.models.notify_session_signup")
-    def test_add_attendee_email_bounced(self, mock_email, db):
-        """Test that a bounced signup email removes user from session and space."""
+    def test_add_attendee_email_bounced(self, mock_email, db, django_capture_on_commit_callbacks):
+        """A bounced signup email leaves the user's spot and space subscription alone."""
         mock_email.return_value.send.side_effect = EmailBounced()
         author = UserFactory()
         space = SpaceFactory(author=author)
@@ -200,8 +207,9 @@ class TestNotifyBounceHandling:
         assert user not in event.attendees.all()
         assert user in space.subscribed.all()
 
-        event.add_attendee(user)
+        with django_capture_on_commit_callbacks(execute=True):
+            event.add_attendee(user)
         event.refresh_from_db()
 
-        assert user not in event.attendees.all()
-        assert user not in space.subscribed.all()
+        assert user in event.attendees.all()
+        assert user in space.subscribed.all()

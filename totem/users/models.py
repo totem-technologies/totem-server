@@ -4,13 +4,23 @@ import time
 import uuid
 from datetime import datetime, timedelta
 from enum import StrEnum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import BooleanField, CharField, EmailField, F, Sum, TextChoices, URLField, UUIDField
+from django.db.models import (
+    BooleanField,
+    CharField,
+    DateTimeField,
+    EmailField,
+    F,
+    Sum,
+    TextChoices,
+    URLField,
+    UUIDField,
+)
 from django.urls import Resolver404, resolve, reverse
 from django.utils import timezone
 from django.utils.html import strip_tags
@@ -105,6 +115,13 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
         choices=ProfileChoices.choices,
     )
     verified = BooleanField(_("Verified"), default=False)
+    email_bounced_at = DateTimeField(
+        _("Email bounced at"),
+        null=True,
+        blank=True,
+        help_text="When an email to this address last bounced. Emails other than login codes are not sent "
+        "while set. Cleared when the email changes or the user signs in with an emailed code.",
+    )
     timezone = TimeZoneField(choices_display="WITH_GMT_OFFSET", blank=True)
     fixed_pin = CharField(
         _("Fixed PIN"),
@@ -164,6 +181,18 @@ class User(AdminURLMixin, SluggedModel, AbstractUser):
 
     def __str__(self):
         return f"<User: {self.name}, slug: {self.slug}, email: {self.email}>"
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        # A bounce is a fact about one address, so a new address starts clean.
+        update_fields = kwargs.get("update_fields")
+        writes_email = update_fields is None or "email" in update_fields
+        if writes_email and self.email_bounced_at is not None and self.pk is not None:
+            stored_email = User.objects.filter(pk=self.pk).values_list("email", flat=True).first()
+            if stored_email is not None and stored_email != self.email:
+                self.email_bounced_at = None
+                if update_fields is not None:
+                    kwargs["update_fields"] = {*update_fields, "email_bounced_at"}
+        super().save(*args, **kwargs)
 
     def clean(self):
         super().clean()
@@ -282,6 +311,9 @@ class LoginPinManager(models.Manager):
         if active.filter(pin=pin).exists():
             # Success consumes every outstanding code so none can be replayed.
             pins.delete()
+            # The code arrived by email, so the address works.
+            User.objects.filter(pk=user.pk, email_bounced_at__isnull=False).update(email_bounced_at=None)
+            user.email_bounced_at = None
             return True, None
 
         newest = active.order_by("-id").first()
