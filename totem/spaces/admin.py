@@ -1,9 +1,14 @@
 import datetime
+from collections.abc import Mapping
 from typing import Any, final, override
 
 from django import forms
 from django.contrib import admin, messages
+from django.contrib.admin.widgets import AutocompleteSelect
+from django.core.paginator import Paginator
 from django.db import transaction
+from django.db.models import Count, Q
+from django.db.models.functions import TruncMonth
 from django.db.models.query import QuerySet
 from django.forms import ModelForm
 from django.http import Http404, HttpRequest, HttpResponse
@@ -12,12 +17,14 @@ from django.urls import URLPattern, URLResolver, path, reverse
 from django.utils import timezone
 from django.utils.html import format_html
 
+from totem.reporting.facts import beneficiary_feedback
 from totem.rooms.models import Room
 from totem.rooms.state_machine import syncing_session_prompts
 from totem.users.models import User
 from totem.utils.admin import StaleDataCheckAdminMixin
+from totem.utils.exports import csv_response
 
-from .models import Session, SessionFeedback, SessionPrompt, Space, SpaceCategory
+from .models import Session, SessionFeedback, SessionFeedbackOptions, SessionPrompt, Space, SpaceCategory
 from .participants import participant_insights
 
 
@@ -111,11 +118,18 @@ class SessionInline(StaleDataCheckAdminMixin, admin.StackedInline):
 class SpaceAdmin(admin.ModelAdmin):
     save_on_top = True
     list_display = ("title", "slug", "published")
-    readonly_fields = ("subscribed_list", "date_created", "date_modified")
+    readonly_fields = ("subscribed_list", "feedback_report_link", "date_created", "date_modified")
     autocomplete_fields = ["subscribed", "categories"]
     inlines = [
         SessionInline,
     ]
+
+    @admin.display(description="Session feedback report")
+    def feedback_report_link(self, obj: Space | None) -> str:
+        if obj is None or not obj.pk:
+            return "Save the space first"
+        url = reverse("admin:spaces_session_feedback_report")
+        return format_html('<a href="{}?space={}">View session feedback report</a>', url, obj.pk)
 
     def get_form(self, request, obj=None, change=False, **kwargs):
         form = super().get_form(request, obj, change, **kwargs)
@@ -162,8 +176,22 @@ def copy_session(modeladmin, request, queryset: QuerySet[Session]):
 
 class SessionFeedbackInline(admin.TabularInline):
     model = SessionFeedback
+    can_delete = False
     extra = 0
-    readonly_fields = ("user", "feedback", "message", "date_created")
+    readonly_fields = ("feedback_user", "feedback", "message", "date_created")
+    fields = readonly_fields
+
+    @admin.display(description="User")
+    def feedback_user(self, obj: SessionFeedback) -> str:
+        return format_html(
+            '<a href="{}">{}</a>',
+            reverse("admin:users_user_change", args=[obj.user_id]),
+            obj.user.name or obj.user.email,
+        )
+
+    @override
+    def has_add_permission(self, request: HttpRequest, obj: Session | None = None) -> bool:
+        return False
 
 
 class SessionPromptInlineForm(ModelForm):
@@ -189,15 +217,90 @@ class SessionPromptInline(admin.TabularInline):
         css = {"all": ("css/admin/session_prompt_order.css",)}
 
 
+FEEDBACK_COUNTS = {
+    "positive": Count("pk", filter=Q(feedback=SessionFeedbackOptions.UP)),
+    "negative": Count("pk", filter=Q(feedback=SessionFeedbackOptions.DOWN)),
+}
+
+
+class FeedbackReportForm(forms.Form):
+    start_date = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
+    end_date = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
+    space = forms.ModelChoiceField(queryset=Space.objects.order_by("title"), required=False)
+    session = forms.ModelChoiceField(
+        queryset=Session.objects.select_related("space"),
+        required=False,
+        widget=AutocompleteSelect(SessionFeedback._meta.get_field("session"), admin.site),
+    )
+
+    @override
+    def clean(self) -> dict[str, Any] | None:
+        data = super().clean()
+        if data and data.get("start_date") and data.get("end_date") and data["start_date"] > data["end_date"]:
+            raise forms.ValidationError("Start date must be on or before end date.")
+        return data
+
+
+def local_day_start(day: datetime.date) -> datetime.datetime:
+    return datetime.datetime.combine(day, datetime.time.min, tzinfo=timezone.get_current_timezone())
+
+
+def filtered_feedback(filters: dict[str, Any]) -> QuerySet[SessionFeedback]:
+    feedback = beneficiary_feedback(as_of=timezone.now())
+    if filters["start_date"]:
+        feedback = feedback.filter(session__start__gte=local_day_start(filters["start_date"]))
+    if filters["end_date"]:
+        next_day = filters["end_date"] + datetime.timedelta(days=1)
+        feedback = feedback.filter(session__start__lt=local_day_start(next_day))
+    if filters["space"]:
+        feedback = feedback.filter(session__space=filters["space"])
+    if filters["session"]:
+        feedback = feedback.filter(session=filters["session"])
+    return feedback
+
+
+def add_percentages(counts: Mapping[str, Any]) -> dict[str, Any]:
+    total = counts["positive"] + counts["negative"]
+    return {
+        **counts,
+        "total": total,
+        "positive_percent": 100 * counts["positive"] / total if total else None,
+        "negative_percent": 100 * counts["negative"] / total if total else None,
+    }
+
+
+def feedback_csv(feedback: QuerySet[SessionFeedback]) -> HttpResponse:
+    rows = [
+        [
+            item.session.session_title_or_title(),
+            timezone.localtime(item.session.start).isoformat(),
+            item.session.space.title,
+            item.user.name,
+            item.user.email,
+            item.feedback,
+            item.message,
+        ]
+        for item in feedback.select_related("session__space", "user").order_by("-session__start", "-pk")
+    ]
+    columns = ["session", "date", "space", "user_name", "user_email", "feedback", "message"]
+    return csv_response("session-feedback", columns, rows)
+
+
 @final
 @admin.register(Session)
 class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
     list_display = ("start", "title", "space", "slug")
+    search_fields = ("title", "space__title", "slug")
+    ordering = ("-start",)
     list_filter = [AuthorDropdownFilter, SpaceDropdownFilter, "start", "listed", "open", "cancelled"]
     autocomplete_fields = ["attendees", "joined"]
     readonly_fields = ("attendee_email_list", "participants_link", "date_created", "date_modified", "room_link")
     actions = [copy_session]
     inlines = [SessionPromptInline, SessionFeedbackInline]
+
+    @override
+    def get_queryset(self, request: HttpRequest) -> QuerySet[Session]:
+        return super().get_queryset(request).select_related("space")
 
     @override
     def save_formset(self, request: HttpRequest, form: Any, formset: Any, change: bool) -> None:
@@ -214,12 +317,62 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
     def get_urls(self) -> list[URLPattern | URLResolver]:
         custom_urls = [
             path(
+                "feedback-report/",
+                self.admin_site.admin_view(self.feedback_report_view),
+                name="spaces_session_feedback_report",
+            ),
+            path(
                 "<int:object_id>/participants/",
                 self.admin_site.admin_view(self.participants_view),
                 name="spaces_session_participants",
             ),
         ]
         return custom_urls + super().get_urls()
+
+    def feedback_report_view(self, request: HttpRequest) -> HttpResponse:
+        if not self.has_view_permission(request):
+            raise Http404("Report not found")
+        form = FeedbackReportForm(request.GET)
+        context: dict[str, Any] = {
+            **self.admin_site.each_context(request),
+            "title": "Session feedback report",
+            "form": form,
+            "report_timezone": timezone.get_current_timezone_name(),
+        }
+        if not form.is_valid():
+            return render(request, "admin/spaces/feedback_report.html", context)
+
+        feedback = filtered_feedback(form.cleaned_data)
+        if request.GET.get("export") == "csv":
+            return feedback_csv(feedback)
+
+        downvotes = (
+            feedback.filter(feedback=SessionFeedbackOptions.DOWN)
+            .exclude(message="")
+            .select_related("session__space", "user")
+            .order_by("-session__start", "-pk")
+        )
+        filter_query = request.GET.copy()
+        filter_query.pop("messages_page", None)
+        by_space = (
+            feedback.values("session__space_id", "session__space__title")
+            .annotate(**FEEDBACK_COUNTS)
+            .order_by("session__space__title")
+        )
+        by_month = (
+            feedback.annotate(month=TruncMonth("session__start"))
+            .values("month")
+            .annotate(**FEEDBACK_COUNTS)
+            .order_by("month")
+        )
+        context |= {
+            "totals": add_percentages(feedback.aggregate(**FEEDBACK_COUNTS)),
+            "by_space": [add_percentages(row) for row in by_space],
+            "by_month": [add_percentages(row) for row in by_month],
+            "downvotes": Paginator(downvotes, 200).get_page(request.GET.get("messages_page")),
+            "filter_query": filter_query.urlencode(),
+        }
+        return render(request, "admin/spaces/feedback_report.html", context)
 
     def participants_view(self, request: HttpRequest, object_id: int) -> HttpResponse:
         session = self.get_object(request, str(object_id))

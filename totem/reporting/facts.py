@@ -1,6 +1,6 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 
-from django.db.models import F, Prefetch
+from django.db.models import DurationField, ExpressionWrapper, F, Prefetch, QuerySet
 
 from totem.reporting.periods import ReportPeriod
 from totem.reporting.types import ReportFilters, SessionFact
@@ -76,3 +76,18 @@ def previous_beneficiary_ids(*, before) -> frozenset[int]:
         session__start__lt=before,
     ).exclude(user_id=F("session__space__author_id"))
     return frozenset(joined.values_list("user_id", flat=True))
+
+
+def beneficiary_feedback(*, as_of: datetime) -> QuerySet[SessionFeedback]:
+    """Feedback that counts toward satisfaction metrics.
+
+    Applies the same rules as the feedback metrics in session_metrics: the respondent joined the
+    session and is not its keeper, and the session was not cancelled and has reached its scheduled end.
+    """
+
+    duration = ExpressionWrapper(F("session__duration_minutes") * timedelta(minutes=1), output_field=DurationField())
+    return (
+        SessionFeedback.objects.alias(scheduled_end=F("session__start") + duration)
+        .filter(session__cancelled=False, session__joined=F("user"), scheduled_end__lte=as_of)
+        .exclude(user=F("session__space__author"))
+    )

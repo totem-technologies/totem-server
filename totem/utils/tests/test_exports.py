@@ -1,3 +1,5 @@
+import csv
+import io
 from datetime import timedelta
 
 import pytest
@@ -8,6 +10,7 @@ from django.utils import timezone
 from totem.onboard.tests.factories import OnboardModelFactory
 from totem.spaces.tests.factories import SessionFactory
 from totem.users.tests.factories import UserFactory
+from totem.utils.exports import csv_response
 
 
 @pytest.fixture
@@ -148,3 +151,12 @@ class TestGrantMetricsExport:
         content = response.content.decode()
         assert "Unique participants (lifetime):" in content
         assert "Total sessions hosted:" in content
+
+
+class TestCsvResponse:
+    def test_neutralises_cells_a_spreadsheet_would_run_as_formulas(self):
+        rows = [["=1+1", "  @cmd", "-2", "+3", "\tx"], ["plain", "a-b", 5, None, "user@example.com"]]
+        response = csv_response("report", ["a", "b", "c", "d", "e"], rows)
+        _, first, second = csv.reader(io.StringIO(response.content.decode()))
+        assert first == ["'=1+1", "'  @cmd", "'-2", "'+3", "'\tx"]
+        assert second == ["plain", "a-b", "5", "", "user@example.com"]

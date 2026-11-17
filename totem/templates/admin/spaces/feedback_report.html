@@ -1,0 +1,190 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/changelists.css' %}">
+  <style>
+    #feedback-report .results { overflow-x: auto; margin-bottom: 20px; }
+    #changelist-filter form { padding: 0 15px 15px; }
+    #changelist-filter form label { display: block; margin-bottom: 5px; }
+    #changelist-filter form select, #changelist-filter form input[type="date"] { width: 100%; max-width: 100%; box-sizing: border-box; }
+    .feedback-intro { max-width: 75ch; color: var(--body-quiet-color); line-height: 1.5; }
+    .feedback-summary { display: flex; flex-wrap: wrap; gap: 20px 48px; padding: 8px 0 18px; margin: 0; }
+    .feedback-summary div { min-width: 110px; }
+    .feedback-summary dt { color: var(--body-quiet-color); margin-bottom: 5px; }
+    .feedback-summary dd { margin: 0; font-size: 1.35rem; font-weight: 600; color: var(--body-fg); }
+    .feedback-summary dd span { font-size: 0.875rem; font-weight: normal; color: var(--body-quiet-color); }
+    .feedback-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .feedback-export { border-top: 1px solid var(--hairline-color); margin-top: 18px; padding-top: 15px; }
+    .feedback-export p { color: var(--body-quiet-color); line-height: 1.4; }
+    .feedback-empty { padding: 12px 0; }
+    .feedback-pages { display: flex; align-items: center; gap: 12px; }
+  </style>
+{% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+  {{ form.media }}
+{% endblock %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Home</a>
+    &rsaquo; <a href="{% url 'admin:spaces_session_changelist' %}">Sessions</a>
+    &rsaquo; Session feedback report
+  </div>
+{% endblock %}
+
+{% block content %}
+  <p class="feedback-intro">
+    Counts responses from participants who joined a session that has ended and was not cancelled.
+    Responses from the session's keeper are left out. Percentages are based on responses received,
+    not all participants. Dates and months use your timezone ({{ report_timezone }}).
+  </p>
+  <div id="changelist" class="module filtered">
+    <div class="changelist-form-container">
+      <div id="feedback-report">
+        {% if form.is_valid %}
+          <div class="module">
+            <h2>Responses</h2>
+            <dl class="feedback-summary">
+              <div>
+                <dt>Total responses</dt>
+                <dd>{{ totals.total }}</dd>
+              </div>
+              <div>
+                <dt>Thumbs up</dt>
+                <dd>
+                  {{ totals.positive }}
+                  {% if totals.total %}<span>({{ totals.positive_percent|floatformat:1 }}%)</span>{% endif %}
+                </dd>
+              </div>
+              <div>
+                <dt>Thumbs down</dt>
+                <dd>
+                  {{ totals.negative }}
+                  {% if totals.total %}<span>({{ totals.negative_percent|floatformat:1 }}%)</span>{% endif %}
+                </dd>
+              </div>
+            </dl>
+          </div>
+          <div class="module results">
+            <h2>By Space</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col"><div class="text">Space</div></th>
+                  <th scope="col"><div class="text">Responses</div></th>
+                  <th scope="col"><div class="text">Thumbs up</div></th>
+                  <th scope="col"><div class="text">Thumbs down</div></th>
+                  <th scope="col"><div class="text">Positive</div></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in by_space %}
+                  <tr>
+                    <th scope="row">{{ row.session__space__title }}</th>
+                    <td>{{ row.total }}</td>
+                    <td>{{ row.positive }}</td>
+                    <td>{{ row.negative }}</td>
+                    <td>{{ row.positive_percent|floatformat:1 }}%</td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="5">No responses for these filters.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="module results">
+            <h2>Trend by month</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col"><div class="text">Session month</div></th>
+                  <th scope="col"><div class="text">Responses</div></th>
+                  <th scope="col"><div class="text">Thumbs up</div></th>
+                  <th scope="col"><div class="text">Thumbs down</div></th>
+                  <th scope="col"><div class="text">Positive</div></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in by_month %}
+                  <tr>
+                    <th scope="row">{{ row.month|date:"F Y" }}</th>
+                    <td>{{ row.total }}</td>
+                    <td>{{ row.positive }}</td>
+                    <td>{{ row.negative }}</td>
+                    <td>{{ row.positive_percent|floatformat:1 }}%</td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="5">No responses for these filters.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          <div class="module results" id="feedback-messages">
+            <h2>Thumbs down feedback</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col"><div class="text">Session</div></th>
+                  <th scope="col"><div class="text">Date</div></th>
+                  <th scope="col"><div class="text">Space</div></th>
+                  <th scope="col"><div class="text">User</div></th>
+                  <th scope="col"><div class="text">Message</div></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in downvotes %}
+                  <tr>
+                    <td><a href="{% url 'admin:spaces_session_change' item.session.pk %}">{{ item.session.session_title_or_title }}</a></td>
+                    <td>{{ item.session.start|date:"DATETIME_FORMAT" }}</td>
+                    <td>{{ item.session.space }}</td>
+                    <td>
+                      {% if perms.users.view_user or perms.users.change_user %}
+                        <a href="{% url 'admin:users_user_change' item.user.pk %}">{{ item.user.name|default:item.user.email }}</a>
+                      {% else %}
+                        {{ item.user.name|default:item.user.email }}
+                      {% endif %}
+                    </td>
+                    <td>{{ item.message|linebreaksbr }}</td>
+                  </tr>
+                {% empty %}
+                  <tr><td colspan="5">No thumbs down messages for these filters.</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+            {% if downvotes.has_other_pages %}
+              <p class="feedback-pages">
+                {% if downvotes.has_previous %}
+                  <a href="?{{ filter_query }}&amp;messages_page={{ downvotes.previous_page_number }}#feedback-messages">Previous</a>
+                {% endif %}
+                <span>Page {{ downvotes.number }} of {{ downvotes.paginator.num_pages }}</span>
+                {% if downvotes.has_next %}
+                  <a href="?{{ filter_query }}&amp;messages_page={{ downvotes.next_page_number }}#feedback-messages">Next</a>
+                {% endif %}
+              </p>
+            {% endif %}
+          </div>
+        {% else %}
+          <p class="feedback-empty">Correct the filters to see the report.</p>
+        {% endif %}
+      </div>
+      <aside id="changelist-filter" aria-label="Filters">
+        <h2>Filters</h2>
+        <form method="get">
+          {{ form.as_p }}
+          <div class="feedback-actions">
+            <input type="submit" value="Apply filters">
+            <a href="{% url 'admin:spaces_session_feedback_report' %}">Clear filters</a>
+          </div>
+          <div class="feedback-export">
+            <p>Export all filtered responses, including feedback without a message.</p>
+            <button class="button" type="submit" name="export" value="csv">Export CSV</button>
+          </div>
+        </form>
+      </aside>
+    </div>
+  </div>
+{% endblock %}
