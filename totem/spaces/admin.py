@@ -1,4 +1,5 @@
 import datetime
+from collections.abc import Mapping
 from typing import Any, final, override
 
 from django import forms
@@ -10,12 +11,13 @@ from django.db.models import Count, Q
 from django.db.models.functions import TruncMonth
 from django.db.models.query import QuerySet
 from django.forms import ModelForm
-from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
+from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import URLPattern, URLResolver, path, reverse
 from django.utils import timezone
 from django.utils.html import format_html
 
+from totem.reporting.facts import beneficiary_feedback
 from totem.rooms.models import Room
 from totem.rooms.state_machine import syncing_session_prompts
 from totem.users.models import User
@@ -215,60 +217,90 @@ class SessionPromptInline(admin.TabularInline):
         css = {"all": ("css/admin/session_prompt_order.css",)}
 
 
-def feedback_session_label(session: Session) -> str:
-    start = timezone.localtime(session.start).strftime("%Y-%m-%d %H:%M %Z")
-    return f"{session.session_title_or_title()} — {session.space.title} — {start}"
-
-
-class FeedbackSessionChoiceField(forms.ModelChoiceField):
-    def label_from_instance(self, obj: Session) -> str:
-        return feedback_session_label(obj)
-
-
-class FeedbackSessionAutocomplete(AutocompleteSelect):
-    url_name = "%s:spaces_session_feedback_search"
+FEEDBACK_COUNTS = {
+    "positive": Count("pk", filter=Q(feedback=SessionFeedbackOptions.UP)),
+    "negative": Count("pk", filter=Q(feedback=SessionFeedbackOptions.DOWN)),
+}
 
 
 class FeedbackReportForm(forms.Form):
     start_date = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
     end_date = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
     space = forms.ModelChoiceField(queryset=Space.objects.order_by("title"), required=False)
-    session = FeedbackSessionChoiceField(
-        queryset=Session.objects.select_related("space").order_by("-start"),
+    session = forms.ModelChoiceField(
+        queryset=Session.objects.select_related("space"),
         required=False,
-        widget=FeedbackSessionAutocomplete(SessionFeedback._meta.get_field("session"), admin.site),
+        widget=AutocompleteSelect(SessionFeedback._meta.get_field("session"), admin.site),
     )
 
-    def clean(self):
+    @override
+    def clean(self) -> dict[str, Any] | None:
         data = super().clean()
         if data and data.get("start_date") and data.get("end_date") and data["start_date"] > data["end_date"]:
             raise forms.ValidationError("Start date must be on or before end date.")
         return data
 
 
-def feedback_counts(queryset):
-    return queryset.aggregate(
-        positive=Count("pk", filter=Q(feedback=SessionFeedbackOptions.UP)),
-        negative=Count("pk", filter=Q(feedback=SessionFeedbackOptions.DOWN)),
-    )
+def local_day_start(day: datetime.date) -> datetime.datetime:
+    return datetime.datetime.combine(day, datetime.time.min, tzinfo=timezone.get_current_timezone())
 
 
-def add_percentages(counts):
-    counts["total"] = counts["positive"] + counts["negative"]
-    counts["positive_percent"] = 100 * counts["positive"] / counts["total"] if counts["total"] else None
-    counts["negative_percent"] = 100 * counts["negative"] / counts["total"] if counts["total"] else None
-    return counts
+def filtered_feedback(filters: dict[str, Any]) -> QuerySet[SessionFeedback]:
+    feedback = beneficiary_feedback(as_of=timezone.now())
+    if filters["start_date"]:
+        feedback = feedback.filter(session__start__gte=local_day_start(filters["start_date"]))
+    if filters["end_date"]:
+        next_day = filters["end_date"] + datetime.timedelta(days=1)
+        feedback = feedback.filter(session__start__lt=local_day_start(next_day))
+    if filters["space"]:
+        feedback = feedback.filter(session__space=filters["space"])
+    if filters["session"]:
+        feedback = feedback.filter(session=filters["session"])
+    return feedback
+
+
+def add_percentages(counts: Mapping[str, Any]) -> dict[str, Any]:
+    total = counts["positive"] + counts["negative"]
+    return {
+        **counts,
+        "total": total,
+        "positive_percent": 100 * counts["positive"] / total if total else None,
+        "negative_percent": 100 * counts["negative"] / total if total else None,
+    }
+
+
+def feedback_csv(feedback: QuerySet[SessionFeedback]) -> HttpResponse:
+    rows = [
+        [
+            item.session.session_title_or_title(),
+            timezone.localtime(item.session.start).isoformat(),
+            item.session.space.title,
+            item.user.name,
+            item.user.email,
+            item.feedback,
+            item.message,
+        ]
+        for item in feedback.select_related("session__space", "user").order_by("-session__start", "-pk")
+    ]
+    columns = ["session", "date", "space", "user_name", "user_email", "feedback", "message"]
+    return csv_response("session-feedback", columns, rows)
 
 
 @final
 @admin.register(Session)
 class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
     list_display = ("start", "title", "space", "slug")
+    search_fields = ("title", "space__title", "slug")
+    ordering = ("-start",)
     list_filter = [AuthorDropdownFilter, SpaceDropdownFilter, "start", "listed", "open", "cancelled"]
     autocomplete_fields = ["attendees", "joined"]
     readonly_fields = ("attendee_email_list", "participants_link", "date_created", "date_modified", "room_link")
     actions = [copy_session]
     inlines = [SessionPromptInline, SessionFeedbackInline]
+
+    @override
+    def get_queryset(self, request: HttpRequest) -> QuerySet[Session]:
+        return super().get_queryset(request).select_related("space")
 
     @override
     def save_formset(self, request: HttpRequest, form: Any, formset: Any, change: bool) -> None:
@@ -290,11 +322,6 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
                 name="spaces_session_feedback_report",
             ),
             path(
-                "feedback-report/sessions/",
-                self.admin_site.admin_view(self.feedback_session_search),
-                name="spaces_session_feedback_search",
-            ),
-            path(
                 "<int:object_id>/participants/",
                 self.admin_site.admin_view(self.participants_view),
                 name="spaces_session_participants",
@@ -302,99 +329,48 @@ class SessionAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
         ]
         return custom_urls + super().get_urls()
 
-    def feedback_session_search(self, request: HttpRequest) -> JsonResponse:
-        if not self.has_view_permission(request):
-            raise Http404("Report not found")
-        term = request.GET.get("term", "").strip()
-        sessions = Session.objects.select_related("space").filter(
-            Q(title__icontains=term) | Q(space__title__icontains=term)
-        )
-        page = Paginator(sessions.order_by("-start", "-pk"), 20).get_page(request.GET.get("page", 1))
-        return JsonResponse(
-            {
-                "results": [{"id": str(session.pk), "text": feedback_session_label(session)} for session in page],
-                "pagination": {"more": page.has_next()},
-            }
-        )
-
     def feedback_report_view(self, request: HttpRequest) -> HttpResponse:
         if not self.has_view_permission(request):
             raise Http404("Report not found")
         form = FeedbackReportForm(request.GET)
-        feedback = SessionFeedback.objects.all()
-        if form.is_valid():
-            data = form.cleaned_data
-            if data["start_date"]:
-                feedback = feedback.filter(session__start__date__gte=data["start_date"])
-            if data["end_date"]:
-                feedback = feedback.filter(session__start__date__lte=data["end_date"])
-            if data["space"]:
-                feedback = feedback.filter(session__space=data["space"])
-            if data["session"]:
-                feedback = feedback.filter(session=data["session"])
-        else:
-            feedback = feedback.none()
+        context: dict[str, Any] = {
+            **self.admin_site.each_context(request),
+            "title": "Session feedback report",
+            "form": form,
+            "report_timezone": timezone.get_current_timezone_name(),
+        }
+        if not form.is_valid():
+            return render(request, "admin/spaces/feedback_report.html", context)
 
-        if form.is_valid() and request.GET.get("export") == "csv":
-            rows = []
-            for item in feedback.select_related("session__space", "user").order_by("-session__start", "-pk"):
-                values = [
-                    item.session.session_title_or_title(),
-                    timezone.localtime(item.session.start).isoformat(),
-                    item.session.space.title,
-                    item.user.name,
-                    item.user.email,
-                    item.feedback,
-                    item.message,
-                ]
-                rows.append(
-                    [
-                        "'" + value
-                        if value.startswith(("\t", "\r", "\n")) or value.lstrip().startswith(("=", "+", "-", "@"))
-                        else value
-                        for value in values
-                    ]
-                )
-            return csv_response(
-                "session-feedback", ["session", "date", "space", "user_name", "user_email", "feedback", "message"], rows
-            )
+        feedback = filtered_feedback(form.cleaned_data)
+        if request.GET.get("export") == "csv":
+            return feedback_csv(feedback)
 
-        messages = (
+        downvotes = (
             feedback.filter(feedback=SessionFeedbackOptions.DOWN)
             .exclude(message="")
             .select_related("session__space", "user")
             .order_by("-session__start", "-pk")
         )
-        message_page = Paginator(messages, 200).get_page(request.GET.get("messages_page", 1))
-        next_query = request.GET.copy()
-        next_query.pop("fragment", None)
-        next_query.pop("export", None)
-        if message_page.has_next():
-            next_query["messages_page"] = message_page.next_page_number()
-        messages_context = {"downvote_messages": message_page, "next_messages_query": next_query.urlencode()}
-        if form.is_valid() and request.GET.get("fragment") == "messages":
-            return render(request, "admin/spaces/feedback_messages.html", messages_context)
-
-        counts = {
-            "positive": Count("pk", filter=Q(feedback=SessionFeedbackOptions.UP)),
-            "negative": Count("pk", filter=Q(feedback=SessionFeedbackOptions.DOWN)),
-        }
+        filter_query = request.GET.copy()
+        filter_query.pop("messages_page", None)
         by_space = (
             feedback.values("session__space_id", "session__space__title")
-            .annotate(**counts)
+            .annotate(**FEEDBACK_COUNTS)
             .order_by("session__space__title")
         )
         by_month = (
-            feedback.annotate(month=TruncMonth("session__start")).values("month").annotate(**counts).order_by("month")
+            feedback.annotate(month=TruncMonth("session__start"))
+            .values("month")
+            .annotate(**FEEDBACK_COUNTS)
+            .order_by("month")
         )
-        context = {
-            **self.admin_site.each_context(request),
-            "title": "Session feedback report",
-            "form": form,
-            "totals": add_percentages(feedback_counts(feedback)),
+        context |= {
+            "totals": add_percentages(feedback.aggregate(**FEEDBACK_COUNTS)),
             "by_space": [add_percentages(row) for row in by_space],
             "by_month": [add_percentages(row) for row in by_month],
-            **messages_context,
+            "downvotes": Paginator(downvotes, 200).get_page(request.GET.get("messages_page")),
+            "filter_query": filter_query.urlencode(),
         }
         return render(request, "admin/spaces/feedback_report.html", context)
 

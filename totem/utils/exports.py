@@ -98,13 +98,22 @@ def get_url_patterns():
 # --- Helpers ---
 
 
+def _plain_text_cell(value: Any) -> Any:
+    """Quote text that a spreadsheet would otherwise evaluate as a formula."""
+    if isinstance(value, str) and (
+        value.startswith(("\t", "\r", "\n")) or value.lstrip().startswith(("=", "+", "-", "@"))
+    ):
+        return "'" + value
+    return value
+
+
 def csv_response(filename: str, columns: list[str], rows: list[list[Any]]) -> HttpResponse:
     response = HttpResponse(content_type="text/csv")
     response["Content-Disposition"] = f'attachment; filename="{filename}.csv"'
     writer = csv.writer(response)
     writer.writerow(columns)
     for row in rows:
-        writer.writerow(row)
+        writer.writerow([_plain_text_cell(value) for value in row])
     return response
 
 

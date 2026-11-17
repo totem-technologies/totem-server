@@ -9,8 +9,14 @@
       <caption>
         <a href="{% url 'admin:exports_index' %}" class="section" title="{% translate 'Admin tools' %}">{% translate 'Tools' %}</a>
       </caption>
-      {% if perms.spaces.view_session %}
-      <tr><th scope="row"><a href="{% url 'admin:spaces_session_feedback_report' %}">Session feedback report</a></th><td></td><td></td></tr>
+      {% if perms.spaces.view_session or perms.spaces.change_session %}
+        <tr class="model-feedback-report">
+          <th scope="row">
+            <a href="{% url 'admin:spaces_session_feedback_report' %}">Session feedback report</a>
+          </th>
+          <td></td>
+          <td></td>
+        </tr>
       {% endif %}
       <tr class="model-exports">
         <th scope="row">

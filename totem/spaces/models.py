@@ -594,8 +594,9 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
     def event_title_or_title(self):
         return self.session_title_or_title()
 
-    def __str__(self):
-        return f"Session: {self.start}"
+    def __str__(self) -> str:
+        start = timezone.localtime(self.start).strftime("%Y-%m-%d %H:%M %Z")
+        return " — ".join(filter(None, [self.title, self.space.title, start]))
 
 
 MAX_PREPARED_PROMPT_LENGTH = 1000
