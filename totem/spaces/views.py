@@ -96,15 +96,6 @@ def ics_hash(slug, user_ics_key):
     return basic_hash(slug + str(user_ics_key))
 
 
-def _add_or_remove_attendee(user, session: Session, add: bool):
-    if add:
-        if not session.add_attendee(user):
-            raise SessionException("Unable to save your spot")
-        session.space.subscribe(user)
-    else:
-        session.remove_attendee(user)
-
-
 def rsvp(request: HttpRequest, session_slug):
     if not request.user.is_authenticated:
         request.session[AUTO_RSVP_SESSION_KEY] = session_slug
@@ -115,7 +106,10 @@ def rsvp(request: HttpRequest, session_slug):
     if request.POST:
         try:
             with transaction.atomic():
-                _add_or_remove_attendee(request.user, session, request.POST.get("action") != "remove")
+                if request.POST.get("action") == "remove":
+                    session.remove_attendee(request.user)
+                else:
+                    session.add_attendee(request.user)
         except SessionTimeConflict as e:
             capture_exception(e)
             error = "This session conflicts with another one you're attending."

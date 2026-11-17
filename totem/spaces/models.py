@@ -1,8 +1,10 @@
 import datetime
 import time
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass
 from enum import Enum
 from functools import partial
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal
 
 import pytz
 from django.conf import settings
@@ -15,6 +17,7 @@ from django.utils.translation import gettext_lazy as _
 from imagekit import ImageSpec
 from imagekit.models import ProcessedImageField
 from imagekit.processors import ResizeToFit, Transpose
+from sentry_sdk import capture_exception
 from taggit.managers import TaggableManager
 
 from totem.email.emails import (
@@ -160,6 +163,25 @@ class SessionState(Enum):
     CANCELLED = "CANCELLED"
 
 
+# What a session email (and its push notification) is about. "signup" turns into
+# "starting" when the user signs up after the starting reminders went out.
+SessionNotice = Literal["signup", "starting", "tomorrow", "missed", "advertisement"]
+
+
+@dataclass(frozen=True)
+class Reminder:
+    """A notice sent once per session, and the Session field recording that it went out."""
+
+    notice: SessionNotice
+    flag: str
+
+
+STARTING_REMINDER = Reminder("starting", "notified")
+TOMORROW_REMINDER = Reminder("tomorrow", "notified_tomorrow")
+MISSED_REMINDER = Reminder("missed", "notified_missed")
+ADVERTISEMENT = Reminder("advertisement", "advertised")
+
+
 class SpaceImageSpec(ImageSpec):
     # Bake in EXIF orientation and convert any wide-gamut (Display P3) profile to sRGB
     # before resizing (which drops both tags).
@@ -211,7 +233,9 @@ class Space(AdminURLMixin, MarkdownMixin, SluggedModel):
     content = MarkdownField(default="")
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        # Deleting a space takes every session and its attendance history with it,
+        # so a space has to be handed to another keeper before its author can go.
+        on_delete=models.PROTECT,
         limit_choices_to={"is_staff": True},
         related_name="created_spaces",
     )
@@ -390,33 +414,38 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
             return SessionState.JOINABLE
         return SessionState.CLOSED
 
-    def add_attendee(self, user: "User", *, prevalidated: bool = False) -> bool:
-        # checks if the user can attend and adds them to the attendees list, throws an exception if they can't
-        if prevalidated or self.can_attend(user=user):
+    def add_attendee(self, user: "User", *, check_time_conflicts: bool = True) -> None:
+        """Add the user and subscribe them to the space, raising SessionException if they can't attend.
+
+        The confirmation email goes out once the caller's transaction commits.
+        """
+        with transaction.atomic():
+            # Concurrent RSVPs run their checks one at a time: the user row lock covers
+            # time conflicts across sessions, the session row lock (also taken by room
+            # and prompt writes) covers seats. Always user first, then session. The
+            # checks run on a freshly loaded row because this instance may be stale.
+            self.attendees.model.objects.select_for_update(no_key=True).get(pk=user.pk)
+            session = (
+                Session.objects.select_for_update(of=("self",))
+                .select_related("space__author")
+                .filter(pk=self.pk)
+                .first()
+            )
+            if session is None:
+                raise SessionException("Session is not available for signup")
+            session.can_attend(user=user, check_time_conflicts=check_time_conflicts)
+            # Added through self so the caller's instance drops any prefetched attendees.
             self.attendees.add(user)
-            try:
-                if self.notified and self.can_join(user):
-                    # Send the user the join email if they are attending and the event is about to start
-                    notify_session_starting(self, user).send()
-                    session_starting_notification(self, user).send()
-                else:
-                    # Otherwise, send the user the signed up email
-                    notify_session_signup(self, user).send()
-            except EmailBounced:
-                # If the email was blocked, remove the user from the session and space
-                self.attendees.remove(user)
-                self.space.unsubscribe(user)
-                return False
-            if not self.space.author == user:
+            session.space.subscribe(user)
+            transaction.on_commit(partial(send_session_notice, "signup", session.pk, user.pk))
+            if not session.space.author == user:
                 transaction.on_commit(
                     partial(
                         notify_slack,
-                        f"✅ New session attendee: {self._get_slack_attendee_message(user)}",
-                        email_to_mention=self.space.author.email,
+                        f"✅ New session attendee: {session._get_slack_attendee_message(user)}",
+                        email_to_mention=session.space.author.email,
                     )
                 )
-            return True
-        return False
 
     def started(self):
         return self.start < timezone.now()
@@ -489,68 +518,60 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         short_date = self.start.astimezone(pytz.timezone("America/Los_Angeles")).strftime("%b %d")
         return f"<{full_url(user.get_admin_url())}|{user.name}> for <{full_url(self.get_admin_url())}|{self.space.title}> @ {start_time_in_pst}, {short_date}"
 
+    def _claim_notification(self, flag: str, force: bool) -> bool:
+        """Set a once-per-session notification flag, returning False if it was already set.
+
+        The flag is set with a conditional UPDATE rather than save(): a cron run holds
+        its copy of the session while it emails everyone, and a full save would write
+        that stale copy over concurrent edits. The condition also means only one of two
+        overlapping runs gets to send.
+        """
+        rows = Session.objects.filter(pk=self.pk)
+        if not force:
+            rows = rows.filter(**{flag: False})
+        if not rows.update(**{flag: True}):
+            return False
+        setattr(self, flag, True)
+        return True
+
+    def _send_reminders(self, reminder: Reminder, force: bool, recipients: Iterable["User"]) -> None:
+        """Claim the reminder's flag, then send its notice to each recipient after commit.
+
+        At most once: the flag stays claimed whatever happens to the sends, because a
+        failure such as a timeout may still have delivered. Recipients are read before
+        the claim so a failed read leaves the flag free for the next run.
+        """
+        user_ids = [user.pk for user in recipients]
+        if not self._claim_notification(reminder.flag, force):
+            return
+        for user_id in user_ids:
+            transaction.on_commit(partial(send_session_notice, reminder.notice, self.pk, user_id))
+
     def notify(self, force=False):
         # Notify users who are attending that the space is about to start
-        if force is False and self.notified:
-            return
-        self.notified = True
-        self.save()
-        for user in self.active_attendees():
-            try:
-                notify_session_starting(self, user).send()
-                session_starting_notification(self, user).send()
-            except EmailBounced:
-                # If the email was blocked, remove the user from the session and space
-                self.attendees.remove(user)
-                self.space.unsubscribe(user)
+        self._send_reminders(STARTING_REMINDER, force, self.active_attendees())
 
     def notify_tomorrow(self, force=False):
         # Notify users who are attending that the space is starting tomorrow
-        if force is False and self.notified_tomorrow:
-            return
-        self.notified_tomorrow = True
-        self.save()
-        for user in self.active_attendees():
-            try:
-                notify_session_tomorrow(self, user).send()
-            except EmailBounced:
-                # If the email was blocked, remove the user from the session and space
-                self.attendees.remove(user)
-                self.space.unsubscribe(user)
+        self._send_reminders(TOMORROW_REMINDER, force, self.active_attendees())
 
     def notify_missed(self, force=False):
         # Notify users who signed up but didn't join
-        if force is False and self.notified_missed:
+        if not force and self.notified_missed:
             return
         assert not self.cancelled
         assert self.ended()
-        self.notified_missed = True
-        self.save()
-        for user in self.active_attendees():
-            if user == self.space.author:
-                continue
-            if user not in self.joined.all():
-                try:
-                    missed_session_email(self, user).send()
-                    missed_session_notification(self, user).send()
-                except EmailBounced:
-                    # If the email was blocked, unsubscribe the user from the space
-                    self.space.unsubscribe(user)
+        recipients = self.active_attendees().exclude(pk=self.space.author_id).exclude(sessions_joined=self)
+        self._send_reminders(MISSED_REMINDER, force, recipients)
 
     def advertise(self, force=False):
         # Notify users who are subscribed that a new event is available, if they aren't already attending.
-        if force is False and self.advertised:
-            return
-        self.advertised = True
-        self.save()
-        for user in self._exclude_banned_users(self.space.subscribed.all()):
-            if self.can_attend(silent=True) and user not in self.attendees.all():
-                try:
-                    notify_session_advertisement(self, user).send()
-                    session_advertisement_notification(self, user).send()
-                except EmailBounced:
-                    # If the email was blocked, remove the user from the space
-                    self.space.unsubscribe(user)
+        recipients = (
+            self._exclude_banned_users(self.space.subscribed.exclude(sessions_attending=self))
+            if self.can_attend(silent=True)
+            else []
+        )
+        self._send_reminders(ADVERTISEMENT, force, recipients)
 
     def cal_link(self):
         return full_url(self.get_absolute_url())
@@ -596,6 +617,45 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
 
     def __str__(self):
         return f"Session: {self.start}"
+
+
+def send_session_notice(notice: SessionNotice, session_id: int, user_id: int) -> None:
+    """Email (and push) one user about one session, as a best effort.
+
+    Every session email goes out through here, after the state it describes has
+    committed, so nothing it does can block or undo that state. The email and the
+    push notification are sent independently. A bounce is expected and already
+    recorded on the user by Email.send; any other failure is reported to Sentry.
+    """
+    from totem.users.models import User
+
+    try:
+        session = Session.objects.select_related("space__author").get(pk=session_id)
+        user = User.objects.get(pk=user_id)
+        if notice == "signup" and session.notified and session.can_join(user):
+            notice = "starting"
+    except Exception as e:
+        capture_exception(e)
+        return
+    builders: tuple[Callable[[Session, User], Any], ...]
+    match notice:
+        case "signup":
+            builders = (notify_session_signup,)
+        case "starting":
+            builders = (notify_session_starting, session_starting_notification)
+        case "tomorrow":
+            builders = (notify_session_tomorrow,)
+        case "missed":
+            builders = (missed_session_email, missed_session_notification)
+        case "advertisement":
+            builders = (notify_session_advertisement, session_advertisement_notification)
+    for build in builders:
+        try:
+            build(session, user).send()
+        except EmailBounced:
+            pass
+        except Exception as e:
+            capture_exception(e)
 
 
 MAX_PREPARED_PROMPT_LENGTH = 1000

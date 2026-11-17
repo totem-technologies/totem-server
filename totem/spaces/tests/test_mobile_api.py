@@ -1153,18 +1153,23 @@ class TestMobileApiSpaces:
         assert data["slug"] == event.slug
         assert data["attending"] is True
 
-    def test_rsvp_confirm_does_not_resubscribe_after_signup_email_bounces(self, client_with_user: tuple[Client, User]):
+    def test_rsvp_confirm_keeps_the_spot_and_subscription_after_signup_email_bounces(
+        self, client_with_user: tuple[Client, User], django_capture_on_commit_callbacks
+    ):
         client, user = client_with_user
         event = SessionFactory(space__published=True)
         url = reverse("mobile-api:rsvp_confirm", kwargs={"event_slug": event.slug})
 
-        with patch("totem.spaces.models.notify_session_signup") as mock_email:
+        with (
+            patch("totem.spaces.models.notify_session_signup") as mock_email,
+            django_capture_on_commit_callbacks(execute=True),
+        ):
             mock_email.return_value.send.side_effect = EmailBounced()
             response = client.post(url)
 
-        assert response.status_code == 403
-        assert not event.attendees.filter(pk=user.pk).exists()
-        assert not event.space.subscribed.filter(pk=user.pk).exists()
+        assert response.status_code == 200
+        assert event.attendees.filter(pk=user.pk).exists()
+        assert event.space.subscribed.filter(pk=user.pk).exists()
 
     def test_rsvp_confirm_returns_all_conflicting_sessions(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -1325,7 +1330,9 @@ class TestMobileApiSpaces:
         assert "already attending" in response.json()["detail"].lower()
         assert event.attendees.filter(pk=user.pk).exists()
 
-    def test_rsvp_resolve_conflicts_rolls_back_when_signup_email_bounces(self, client_with_user: tuple[Client, User]):
+    def test_rsvp_resolve_conflicts_keeps_the_swap_when_signup_email_bounces(
+        self, client_with_user: tuple[Client, User], django_capture_on_commit_callbacks
+    ):
         client, user = client_with_user
         start = timezone.now() + timedelta(days=1)
         attending = SessionFactory(start=start, duration_minutes=60)
@@ -1333,7 +1340,10 @@ class TestMobileApiSpaces:
         event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
 
         url = reverse("mobile-api:rsvp_resolve_conflicts", kwargs={"event_slug": event.slug})
-        with patch("totem.spaces.models.notify_session_signup") as mock_email:
+        with (
+            patch("totem.spaces.models.notify_session_signup") as mock_email,
+            django_capture_on_commit_callbacks(execute=True),
+        ):
             mock_email.return_value.send.side_effect = EmailBounced()
             response = client.post(
                 url,
@@ -1341,10 +1351,10 @@ class TestMobileApiSpaces:
                 content_type="application/json",
             )
 
-        assert response.status_code == 403
-        assert attending.attendees.filter(pk=user.pk).exists()
-        assert not event.attendees.filter(pk=user.pk).exists()
-        assert not event.space.subscribed.filter(pk=user.pk).exists()
+        assert response.status_code == 200
+        assert not attending.attendees.filter(pk=user.pk).exists()
+        assert event.attendees.filter(pk=user.pk).exists()
+        assert event.space.subscribed.filter(pk=user.pk).exists()
 
     def test_rsvp_resolve_conflicts_rolls_back_when_add_attendee_fails(
         self, client_with_user: tuple[Client, User], django_capture_on_commit_callbacks
@@ -1355,10 +1365,10 @@ class TestMobileApiSpaces:
         attending.attendees.add(user)
         event = SessionFactory(start=start + timedelta(minutes=30), duration_minutes=60)
 
-        def fail_after_conflicts_removed(target: Session, attendee: User, *, prevalidated: bool = False) -> bool:
+        def fail_after_conflicts_removed(target: Session, attendee: User, *, check_time_conflicts: bool = True) -> None:
             assert target.pk == event.pk
             assert attendee.pk == user.pk
-            assert prevalidated is True
+            assert check_time_conflicts is False
             assert not attending.attendees.filter(pk=user.pk).exists()
             raise SessionException("Unable to add attendee")
 

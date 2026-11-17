@@ -320,14 +320,15 @@ class TestSessionModel:
         with pytest.raises(ValidationError):
             session.full_clean()
 
-    def test_notify(self, db):
+    def test_notify(self, db, django_capture_on_commit_callbacks):
         user = UserFactory()
         session = SessionFactory()
         session.attendees.add(user)
         assert mail.outbox == []
         session.save()
         assert not session.notified
-        session.notify()
+        with django_capture_on_commit_callbacks(execute=True):
+            session.notify()
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
@@ -336,14 +337,15 @@ class TestSessionModel:
         session.refresh_from_db()
         assert session.notified
 
-    def test_advertise(self, db):
+    def test_advertise(self, db, django_capture_on_commit_callbacks):
         user = UserFactory()
         session = SessionFactory()
         session.space.subscribed.add(user)
         assert mail.outbox == []
         session.save()
         assert not session.advertised
-        session.advertise()
+        with django_capture_on_commit_callbacks(execute=True):
+            session.advertise()
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
@@ -353,14 +355,15 @@ class TestSessionModel:
         session.refresh_from_db()
         assert session.advertised
 
-    def test_notify_tomorrow(self, db):
+    def test_notify_tomorrow(self, db, django_capture_on_commit_callbacks):
         user = UserFactory()
         session = SessionFactory()
         session.attendees.add(user)
         assert mail.outbox == []
         session.save()
         assert not session.notified_tomorrow
-        session.notify_tomorrow()
+        with django_capture_on_commit_callbacks(execute=True):
+            session.notify_tomorrow()
         assert len(mail.outbox) == 1
         email = mail.outbox[0]
         assert email.to == [user.email]
@@ -369,33 +372,36 @@ class TestSessionModel:
         session.refresh_from_db()
         assert session.notified_tomorrow
 
-    def test_notify_skips_banned(self, db):
+    def test_notify_skips_banned(self, db, django_capture_on_commit_callbacks):
         user = UserFactory()
         banned = UserFactory()
         session = SessionFactory()
         session.attendees.add(user, banned)
         _ban_user(session, banned)
-        session.notify()
+        with django_capture_on_commit_callbacks(execute=True):
+            session.notify()
         assert len(mail.outbox) == 1
         assert mail.outbox[0].to == [user.email]
 
-    def test_notify_tomorrow_skips_banned(self, db):
+    def test_notify_tomorrow_skips_banned(self, db, django_capture_on_commit_callbacks):
         user = UserFactory()
         banned = UserFactory()
         session = SessionFactory()
         session.attendees.add(user, banned)
         _ban_user(session, banned)
-        session.notify_tomorrow()
+        with django_capture_on_commit_callbacks(execute=True):
+            session.notify_tomorrow()
         assert len(mail.outbox) == 1
         assert mail.outbox[0].to == [user.email]
 
-    def test_notify_missed_skips_banned(self, db):
+    def test_notify_missed_skips_banned(self, db, django_capture_on_commit_callbacks):
         user = UserFactory()
         banned = UserFactory()
         session = SessionFactory(start=timezone.now() - timezone.timedelta(hours=3))
         session.attendees.add(user, banned)
         _ban_user(session, banned)
-        session.notify_missed()
+        with django_capture_on_commit_callbacks(execute=True):
+            session.notify_missed()
         assert len(mail.outbox) == 1
         assert mail.outbox[0].to == [user.email]
 
@@ -619,13 +625,14 @@ class TestSessionModel:
 
         assert session.can_attend(user=user) is True
 
-    def test_advertise_skips_banned(self, db):
+    def test_advertise_skips_banned(self, db, django_capture_on_commit_callbacks):
         user = UserFactory()
         banned = UserFactory()
         session = SessionFactory()
         session.space.subscribed.add(user, banned)
         _ban_user(session, banned)
-        session.advertise()
+        with django_capture_on_commit_callbacks(execute=True):
+            session.advertise()
         assert len(mail.outbox) == 1
         assert mail.outbox[0].to == [user.email]
 

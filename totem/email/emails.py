@@ -3,10 +3,11 @@ from __future__ import annotations
 import logging
 import urllib.parse
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from django.conf import settings
 from django.urls import reverse
+from django.utils import timezone
 
 if TYPE_CHECKING:
     from totem.spaces.models import Session
@@ -16,6 +17,7 @@ import mrml
 from django.template.loader import render_to_string
 from pydantic import AnyHttpUrl, BaseModel, TypeAdapter
 
+from .exceptions import EmailBounced
 from .models import EmailLog
 from .utils import mjml_to_text, send_mail
 
@@ -45,6 +47,9 @@ class Email(BaseModel):
     support_email: str = settings.EMAIL_SUPPORT_ADDRESS
     show_env_banner: bool = settings.EMAIL_SHOW_ENV_BANNER
     environment: str = settings.ENVIRONMENT_NAME
+    # Login codes go out even to an address that bounced before: a wrongly recorded
+    # bounce must never lock anyone out, and signing in with the code clears it.
+    sends_to_bounced_addresses: ClassVar[bool] = False
 
     def render_mjml(self) -> str:
         return render_to_string(f"email/emails/{self.template}.mjml", context=self.model_dump())
@@ -55,22 +60,28 @@ class Email(BaseModel):
     def render_text(self) -> str:
         return mjml_to_text(self.render_mjml())
 
-    def send(self):
-        # if blocking:
-        send_mail(
-            subject=self.subject,
-            html_message=self.render_html(),
-            text_message=self.render_text(),
-            recipient_list=[self.recipient],
-        )
-        # else:
-        #     global_pool.add_task(
-        #         send_mail,
-        #         subject=self.subject,
-        #         html_message=self.render_html(),
-        #         text_message=self.render_text(),
-        #         recipient_list=[self.recipient],
-        #     )
+    def send(self) -> None:
+        """Send the email, skipping users whose address has bounced.
+
+        A bounce is recorded on the recipient's user (if there is one) and then
+        re-raised as EmailBounced.
+        """
+        from totem.users.models import User
+
+        recipient_users = User.objects.filter(email=self.recipient)
+        if not self.sends_to_bounced_addresses and recipient_users.filter(email_bounced_at__isnull=False).exists():
+            logger.info("Skipping %s email to an address that bounced", self.template)
+            return
+        try:
+            send_mail(
+                subject=self.subject,
+                html_message=self.render_html(),
+                text_message=self.render_text(),
+                recipient_list=[self.recipient],
+            )
+        except EmailBounced:
+            recipient_users.update(email_bounced_at=timezone.now())
+            raise
         EmailLog.objects.create(
             subject=self.subject,
             template=self.template,
@@ -97,6 +108,7 @@ class LoginPinEmail(Email):
     message: str = "Enter this one-time code to finish signing in. It expires in 15 minutes."
     preview: str = "Enter this one-time code to finish signing in."
     pin: str
+    sends_to_bounced_addresses: ClassVar[bool] = True
 
 
 class SessionStartingEmail(Email):
@@ -185,6 +197,8 @@ def send_welcome_email(user: User) -> None:
     """Signup must not fail because the welcome email did; the PIN email has already gone out."""
     try:
         welcome_email(user).send()
+    except EmailBounced:
+        logger.info("Welcome email bounced")
     except Exception:
         logger.exception("Failed to send welcome email")
 

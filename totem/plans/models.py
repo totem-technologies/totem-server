@@ -17,7 +17,7 @@ class CirclePlan(models.Model):
     date_modified = models.DateTimeField(auto_now=True)
     display_date = models.DateTimeField(default=timezone.now)
     published = models.BooleanField(default=False)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
 
     @property
     def short_description(self):
