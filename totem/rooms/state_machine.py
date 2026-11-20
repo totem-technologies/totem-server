@@ -223,21 +223,21 @@ def syncing_session_prompts(session: Session, actor: str) -> Iterator[None]:
 
     room = _get_room(session)
     state_before = room.to_state() if room else None
-    prompts_before = list(session.discussion_prompts.values_list("pk", "prompt", "position"))
+    prompts_before = list(session.discussion_prompts.values_list("pk", "prompt", "position"))  # pyright: ignore[reportAttributeAccessIssue]
     active_rounds = list(
         SessionRound.objects.filter(session=session, state=SessionRoundState.ACTIVE, prepared_prompt__isnull=False)
     )
 
     yield
 
-    prompts_after = list(session.discussion_prompts.values_list("pk", "prompt", "position"))
+    prompts_after = list(session.discussion_prompts.values_list("pk", "prompt", "position"))  # pyright: ignore[reportAttributeAccessIssue]
     if prompts_after == prompts_before:
         return
 
     prompt_text = {pk: prompt for pk, prompt, _ in prompts_after}
     changed_rounds = []
     for round in active_rounds:
-        text = prompt_text.get(round.prepared_prompt_id, "")
+        text = prompt_text.get(round.prepared_prompt_id, "")  # pyright: ignore[reportAttributeAccessIssue]
         if round.prompt != text:
             round.prompt = text
             round.date_modified = timezone.now()
@@ -383,7 +383,7 @@ def _set_round_prompt(room: Room, prompt: str | None, session_prompt_id: int | N
         number=room.round_number,
         defaults={"prompt": prompt or "", "prepared_prompt": prepared_prompt},
     )
-    previous_prepared_prompt_id = None if created else round.prepared_prompt_id
+    previous_prepared_prompt_id = None if created else round.prepared_prompt_id  # pyright: ignore[reportAttributeAccessIssue]
     if not created:
         round.prompt = prompt or ""
         round.prepared_prompt = prepared_prompt
@@ -392,7 +392,7 @@ def _set_round_prompt(room: Room, prompt: str | None, session_prompt_id: int | N
         round.save(update_fields=["prompt", "prepared_prompt", "state", "date_modified"])
     # Prepared prompts report which rounds consumed them, so changing a
     # round's prepared prompt changes the prompt list clients cache.
-    if round.prepared_prompt_id != previous_prepared_prompt_id:
+    if round.prepared_prompt_id != previous_prepared_prompt_id:  # pyright: ignore[reportAttributeAccessIssue]
         _bump_prompts_revision(room.session)
 
 

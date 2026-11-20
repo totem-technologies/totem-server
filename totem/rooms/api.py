@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from typing import cast
 
 from django.db import transaction
 from django.http import HttpRequest
@@ -99,7 +100,7 @@ def post_event(
 
     identities = None
     if connected is not None:
-        identities = _project_connected(session_slug, connected, participant_sids=participant_sids)
+        identities = cast(set[str], _project_connected(session_slug, connected, participant_sids=participant_sids))
 
     try:
         state = apply_event(

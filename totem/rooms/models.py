@@ -54,6 +54,9 @@ class Room(BaseModel):
 
     objects: ClassVar[RoomManager] = RoomManager()  # type: ignore[assignment]
 
+    if TYPE_CHECKING:
+        session_id: int
+
     session = models.OneToOneField(
         "spaces.Session",
         on_delete=models.CASCADE,
@@ -120,7 +123,7 @@ class Room(BaseModel):
             banned_participants=self.banned_participants,
             round_number=self.round_number,
             round_message=round.prompt or None if round else None,
-            round_prompt_id=round.prepared_prompt_id if round else None,
+            round_prompt_id=round.prepared_prompt_id if round else None,  # pyright: ignore[reportAttributeAccessIssue]
         )
 
 
@@ -134,6 +137,13 @@ class AdmissionState(models.TextChoices):
 class SessionAdmission(BaseModel):
     """Durable authorization, independent of any connection or Keeper device."""
 
+    if TYPE_CHECKING:
+        session_id: int
+        user_id: int
+
+        @property
+        def attempts(self) -> models.Manager[AdmissionAttempt]: ...
+
     session = models.ForeignKey("spaces.Session", on_delete=models.CASCADE, related_name="admissions")
     user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="session_admissions")
     state = models.CharField(max_length=24, choices=AdmissionState.choices, default=AdmissionState.NONE)
@@ -141,7 +151,7 @@ class SessionAdmission(BaseModel):
     decision_actor = models.ForeignKey("users.User", on_delete=models.SET_NULL, null=True, related_name="+")
     decided_at = models.DateTimeField(null=True)
 
-    class Meta:
+    class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]
         constraints = [
             models.UniqueConstraint(fields=["session", "user"], name="unique_session_admission"),
             models.CheckConstraint(condition=models.Q(state__in=AdmissionState.values), name="valid_admission_state"),
@@ -164,6 +174,10 @@ class AttemptStatus(models.TextChoices):
 class AdmissionAttempt(BaseModel):
     """One idempotent request/connection attempt; terminal attempts never reopen."""
 
+    if TYPE_CHECKING:
+        admission_id: int
+        decision_actor_id: int | None
+
     admission = models.ForeignKey(SessionAdmission, on_delete=models.CASCADE, related_name="attempts")
     request_id = models.UUIDField(unique=True)
     attempt_id = models.UUIDField(unique=True)
@@ -179,7 +193,7 @@ class AdmissionAttempt(BaseModel):
     returning = models.BooleanField(default=False)
     session_started = models.BooleanField(default=False)
 
-    class Meta:
+    class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]
         constraints = [
             models.UniqueConstraint(
                 fields=["admission"],
@@ -211,6 +225,9 @@ class AdmissionPermissionSync(BaseModel):
 class AdmissionCommand(BaseModel):
     """Idempotency receipt, never replayed as authorization or a permission grant."""
 
+    if TYPE_CHECKING:
+        actor_id: int
+
     session = models.ForeignKey("spaces.Session", on_delete=models.CASCADE, related_name="admission_commands")
     command_id = models.UUIDField()
     actor = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="+")
@@ -218,7 +235,7 @@ class AdmissionCommand(BaseModel):
     payload_hash = models.CharField(max_length=64)
     result = models.JSONField(default=list)
 
-    class Meta:
+    class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]
         constraints = [
             models.UniqueConstraint(fields=["session", "command_id"], name="unique_session_admission_command"),
         ]

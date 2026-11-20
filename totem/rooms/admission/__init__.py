@@ -10,7 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import timedelta
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 from uuid import UUID, uuid4
 
 from django.db import IntegrityError, transaction
@@ -62,7 +62,7 @@ def invalidate_pending_admission(session: Session) -> None:
     )
     from .permissions import queue_permission_sync
 
-    for admission in session.admissions.select_related("permission_sync"):
+    for admission in SessionAdmission.objects.filter(session=session).select_related("permission_sync"):
         sync = getattr(admission, "permission_sync", None)
         if sync is None or sync.desired_admitted:
             queue_permission_sync(admission)
@@ -603,7 +603,7 @@ def prepare_admission_join(
         else:
             attempt = request_admission(session_slug, user, uuid4(), uuid4())
         _join_candidate(room, user, attempt.request_id, attempt.attempt_id)
-        request_id, attempt_id = attempt.request_id, attempt.attempt_id
+        request_id, attempt_id = cast(UUID, attempt.request_id), cast(UUID, attempt.attempt_id)
 
     with _locked_room(session_slug) as room:
         attempt = _join_candidate(room, user, request_id, attempt_id)

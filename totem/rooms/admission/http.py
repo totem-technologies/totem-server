@@ -439,7 +439,7 @@ def execute_keeper_command(
     # on_commit permission operations have finished or left durable pending/error
     # state. Never report a blanket batch success from the DB decision alone.
     snapshot = cast(AdmissionSnapshot, admission_snapshot(session_slug, actor))
-    participants = {item.identity: item for item in snapshot.participants}
+    participants: dict[str | None, Participant] = {item.identity: item for item in snapshot.participants}
     results = [CommandResult(**row, participant=participants.get(row.get("identity"))) for row in rows]
     partial_failure = any(
         item.error or (item.participant and item.participant.permission_status != "applied") for item in results

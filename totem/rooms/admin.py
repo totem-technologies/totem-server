@@ -1,5 +1,6 @@
-from typing import final, override
+from typing import cast, final, override
 
+from django import forms
 from django.contrib import admin
 from django.db import transaction
 from django.utils import timezone
@@ -99,8 +100,10 @@ class RoomAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
         if form_field is None:
             return None
         if db_field.name in {"status", "end_reason"}:
-            form_field.choices = [
-                (value, self._format_choice_label(value, label)) for value, label in form_field.choices
+            choice_field = cast(forms.ChoiceField, form_field)
+            choice_field.choices = [
+                (value, self._format_choice_label(value, label))
+                for value, label in choice_field.choices  # pyright: ignore[reportGeneralTypeIssues]
             ]
         return form_field
 

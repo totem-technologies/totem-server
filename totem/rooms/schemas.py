@@ -292,7 +292,7 @@ class RoomErrorResponse(Schema):
     message: str
     detail: Optional[str] = None
 
-    def as_http_response(self) -> tuple[int, RoomErrorResponse]:
+    def as_http_response(self) -> Status[RoomErrorResponse]:
         """Map error codes to HTTP statuses. Defaults to 400."""
         match self.code:
             case (
