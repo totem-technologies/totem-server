@@ -251,7 +251,8 @@ def confirm_connection(session_slug: str, user: User, request_id: UUID, attempt_
             raise AdmissionError("invalid_attempt", "A replacement connection needs a fresh admission attempt")
         if attempt.participant_sid not in [previous_sid, participant.sid]:
             raise AdmissionError("stale_version", "A newer connection receipt superseded this observation")
-        if attempt.participant_sid != participant.sid:
+        queued_sync = attempt.participant_sid != participant.sid
+        if queued_sync:
             attempt.participant_sid = participant.sid
             attempt.connected_at = timezone.now()
             attempt.version += 1
@@ -259,8 +260,9 @@ def confirm_connection(session_slug: str, user: User, request_id: UUID, attempt_
             bump_admission_version(room.session_id, user.slug)
             queue_permission_sync(attempt.admission)
         admission_id = attempt.admission_id
-    # A same-SID retry respects the shared backoff and never creates a new grant.
-    reconcile_admission_permissions(admission_id)
+    if not queued_sync:
+        # A same-SID retry respects the shared backoff and never creates a new grant.
+        reconcile_admission_permissions(admission_id)
     return attempt
 
 

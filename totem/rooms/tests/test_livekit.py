@@ -22,6 +22,7 @@ from totem.users.models import User
 from totem.users.tests.factories import UserFactory
 
 LK_SETTINGS = {
+    "LIVEKIT_URL": "ws://localhost:7880",
     "LIVEKIT_API_KEY": "test-key-test-key-test-key-test-key-test-key",
     "LIVEKIT_API_SECRET": "test-secret-test-secret-test-secret-test-secret-test-secret",
 }

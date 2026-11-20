@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 
 import jwt
 import pytest
-from django.db import close_old_connections, connection
+from django.db import close_old_connections, connection, transaction
 from django.http import HttpRequest
 from django.test import Client, override_settings
 from django.utils import timezone
@@ -384,6 +384,37 @@ def test_toggle_off_promotes_waiter_and_toggle_on_does_not_revoke(context, livek
     )
     assert response.status_code == 200, response.content
     assert SessionAdmission.objects.get(session=session, user=user).state == AdmissionState.ADMITTED
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("nested", [False, True])
+def test_connection_receipt_reconciles_once_and_same_sid_retries(context, livekit, nested):
+    from totem.rooms.admission.http import confirm_connection
+
+    _, user, _, _, session, _ = context
+    ids, _ = request_attempt(context)
+    attempt = AdmissionAttempt.objects.get(request_id=ids["request_id"])
+    args = (session.slug, user, UUID(ids["request_id"]), UUID(ids["attempt_id"]))
+    participant = api.ParticipantInfo(identity=user.slug, sid="new-sid")
+    with (
+        patch("totem.rooms.admission.http.get_participant_snapshot", return_value=participant),
+        patch("totem.rooms.admission.permissions.reconcile_admission_permissions") as reconcile,
+        patch("totem.rooms.admission.http.reconcile_admission_permissions", new=reconcile),
+    ):
+        if nested:
+            with transaction.atomic():
+                confirm_connection(*args)
+                reconcile.assert_not_called()
+            reconcile.assert_called_once_with(attempt.admission_id)
+        else:
+            confirm_connection(*args)
+            reconcile.assert_called_once_with(attempt.admission_id)
+
+        reconcile.reset_mock()
+        confirm_connection(*args)
+        reconcile.assert_called_once_with(attempt.admission_id)
+        attempt.refresh_from_db()
+        assert attempt.participant_sid == "new-sid"
 
 
 @pytest.mark.django_db(transaction=True)
