@@ -10,10 +10,10 @@ from functools import partial
 from uuid import UUID, uuid4
 
 from django.db import connection, transaction
-from django.db.models import F, Q
+from django.db.models import F, OuterRef, Q, Subquery
 from django.utils import timezone
 
-from totem.spaces.models import Session
+from totem.spaces.models import LIVEKIT_ENDED_BACKSTOP, SESSION_END_TIME, Session
 
 from ..livekit import (
     LiveKitPermissionError,
@@ -331,16 +331,25 @@ def permissions_reconciled(admission: SessionAdmission, proof: tuple[int, str] |
 
 
 def reconcile_session_permissions() -> int:
-    """Run from the existing scheduled task runner; recheck clean rows for token replay.
+    """Recheck clean live-session rows for token replay.
 
     Require a post-token-TTL observation before retiring clean ended Sessions.
     Unresolved restrictions are retried regardless of Session age.
     Live sessions are checked even after an acknowledged denial, since self-hosted
     deployments need reconciliation for replayed unexpired tokens.
     """
+    # For implicit endings, the backstop is a conservative upper bound even
+    # when the room did not qualify for an overrun.
+    implicit_end = (
+        Session.objects.filter(pk=OuterRef("admission__session_id"))
+        .annotate(end_bound=SESSION_END_TIME + LIVEKIT_ENDED_BACKSTOP)
+        .values("end_bound")
+    )
     admissions = AdmissionPermissionSync.objects.filter(
-        Q(admission__session__ended_at__isnull=True)
+        Q(admission__session__in=Session.objects.not_ended())
         | Q(admission__session__ended_at__gte=timezone.now() - timedelta(minutes=2))
+        | Q(admission__session__ended_at__isnull=True, checked_at__lt=Subquery(implicit_end) + timedelta(minutes=2))
+        | Q(desired_admitted=True)
         | Q(checked_at__isnull=True)
         | Q(checked_at__lt=F("admission__session__ended_at") + timedelta(minutes=2))
         | Q(applied_revision__isnull=True)

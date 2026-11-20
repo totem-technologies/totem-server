@@ -3,6 +3,8 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
@@ -10,7 +12,8 @@ from totem.rooms.admission import AdmissionError, request_admission
 from totem.rooms.models import AdmissionAttempt, AdmissionState, AttemptStatus, Room, SessionAdmission
 from totem.rooms.schemas import RoomStatus
 from totem.spaces.actions import JoinSessionAction
-from totem.spaces.models import Space
+from totem.spaces.filters import join_listing_queryset
+from totem.spaces.models import Session, Space
 from totem.spaces.tests.factories import SessionFactory
 from totem.users.tests.factories import UserFactory
 
@@ -63,6 +66,46 @@ def test_existing_attempt_continues_until_expiry(entry, status):
     assert session.can_join(user)
     attempt.expires_at = timezone.now() - timedelta(seconds=1)
     attempt.save(update_fields=["expires_at"])
+    assert not session.can_join(user)
+
+
+def test_prefetched_attempt_expiry_and_other_user_isolation(entry):
+    session, room, user = entry
+    admission = SessionAdmission.objects.create(session=session, user=user)
+    attempt = AdmissionAttempt.objects.create(
+        admission=admission,
+        request_id=uuid4(),
+        attempt_id=uuid4(),
+        status=AttemptStatus.PENDING,
+        expires_at=timezone.now() + timedelta(minutes=1),
+    )
+    listed = join_listing_queryset(Session.objects.filter(pk=session.pk), user).get()
+    assert listed.can_join(user)
+    other = UserFactory()
+    session.attendees.add(other)
+    assert not listed.join_window(other)[1] == attempt.expires_at
+    with patch("django.utils.timezone.now", return_value=attempt.expires_at + timedelta(seconds=1)):
+        assert not listed.can_join(user)
+
+
+def test_can_join_fetches_livekit_state_once_per_call(entry):
+    original, room, user = entry
+    session = Session.objects.select_related("space__author").get(pk=original.pk)
+    session.start = timezone.now() - timedelta(minutes=1)
+    admission = SessionAdmission.objects.create(session=session, user=user)
+    with CaptureQueriesContext(connection) as queries:
+        assert session.can_join(user)
+    selects = [query["sql"] for query in queries if query["sql"].startswith("SELECT")]
+    assert sum('FROM "rooms_room"' in sql for sql in selects) == 1
+    assert sum('FROM "rooms_sessionadmission"' in sql for sql in selects) == 1
+    room.banned_participants = [user.slug]
+    room.save(update_fields=["banned_participants"])
+    assert not session.can_join(user)
+    room.banned_participants = []
+    room.save(update_fields=["banned_participants"])
+    assert session.can_join(user)
+    admission.state = AdmissionState.PERMANENTLY_DECLINED
+    admission.save(update_fields=["state"])
     assert not session.can_join(user)
 
 

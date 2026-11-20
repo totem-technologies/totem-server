@@ -488,6 +488,8 @@ def remove(
     except AdmissionError as error:
         code = ErrorCode.NOT_KEEPER if error.code == "not_keeper" else ErrorCode.INVALID_TRANSITION
         return RoomErrorResponse(code=code, message=str(error)).as_http_response()
+    except TransitionError as error:
+        return RoomErrorResponse(code=error.code, message=error.message, detail=error.detail).as_http_response()
 
     try:
         remove_participant(session_slug, participant_identity, reason=reason)

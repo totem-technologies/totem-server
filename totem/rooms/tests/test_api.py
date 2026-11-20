@@ -16,7 +16,7 @@ from totem.rooms.models import (
     RoomEventLog,
     SessionAdmission,
 )
-from totem.rooms.schemas import EndReason, RemoveReason, RoomStatus, TurnState
+from totem.rooms.schemas import EndReason, ErrorCode, RemoveReason, RoomStatus, TransitionError, TurnState
 from totem.spaces.models import SessionPrompt, SessionRound, SessionRoundState, Space
 from totem.spaces.tests.factories import SessionFactory
 from totem.users.models import User
@@ -1328,6 +1328,23 @@ class TestRemoveParticipant:
         assert resp.status_code == 200
         mock_remove.assert_called_once_with(session.slug, participant.slug, reason=RemoveReason.REMOVE)
         assert SessionAdmission.objects.get(session=session, user=participant).state == AdmissionState.REVOKED
+
+    def test_remove_transition_error(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        participant = UserFactory()
+        session = _make_joinable_session(keeper, [participant])
+        Room.objects.get_or_create_for_session(session)
+        error = TransitionError(code=ErrorCode.STALE_VERSION, message="State changed", detail="expected 0, current 1")
+
+        with (
+            patch("totem.rooms.admission.record_removal", side_effect=error),
+            patch("totem.rooms.api.remove_participant") as mock_remove,
+        ):
+            resp = client.post(f"{BASE}/{session.slug}/remove/{participant.slug}")
+
+        assert resp.status_code == 409
+        assert resp.json() == {"code": "stale_version", "message": "State changed", "detail": "expected 0, current 1"}
+        mock_remove.assert_not_called()
 
     def test_remove_not_keeper(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user

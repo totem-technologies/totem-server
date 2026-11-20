@@ -1,4 +1,5 @@
 import asyncio
+import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -18,6 +19,7 @@ from totem.rooms.livekit import (
     mute_participant,
     remove_participant,
 )
+from totem.rooms.schemas import RemoveReason
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
 
@@ -66,6 +68,7 @@ def _make_mock_lkapi() -> MagicMock:
     mock.room.mute_published_track = AsyncMock()
     mock.room.list_participants = AsyncMock()
     mock.room.remove_participant = AsyncMock()
+    mock.room.send_data = AsyncMock()
     # Support async context manager: async with _get_api() as lkapi
     mock.__aenter__ = AsyncMock(return_value=mock)
     mock.__aexit__ = AsyncMock(return_value=False)
@@ -339,19 +342,60 @@ class TestDisableCameraParticipant:
 
 @pytest.mark.enable_socket
 class TestRemoveParticipant:
+    @pytest.mark.parametrize("reason", list(RemoveReason))
     @override_settings(**LK_SETTINGS)
-    def test_removes_participant(self):
+    def test_removes_participant(self, reason):
         mock_lkapi = _make_mock_lkapi()
+        calls = []
+        mock_lkapi.room.send_data.side_effect = lambda request: calls.append("notify")
+        mock_lkapi.room.remove_participant.side_effect = lambda request: calls.append("remove")
+
+        with patch("totem.rooms.livekit.api.LiveKitAPI", return_value=mock_lkapi):
+            remove_participant("room-1", "user-1", reason)
+
+        request = mock_lkapi.room.send_data.await_args.args[0]
+        assert request.room == "room-1"
+        assert request.topic == "lk-participant-removed-topic"
+        assert request.kind == api.DataPacket.Kind.RELIABLE
+        assert list(request.destination_identities) == ["user-1"]
+        assert json.loads(request.data) == {
+            "action": "remove_participant",
+            "identity": "user-1",
+            "reason": reason.value,
+        }
+        assert calls == ["notify", "remove"]
+        removal = mock_lkapi.room.remove_participant.await_args.args[0]
+        assert (removal.room, removal.identity) == ("room-1", "user-1")
+        assert removal.revoke_token_ts > 0
+
+    @pytest.mark.parametrize("error", [RuntimeError("send failed"), TimeoutError()])
+    @override_settings(**LK_SETTINGS)
+    def test_notification_failure_does_not_prevent_removal(self, error):
+        mock_lkapi = _make_mock_lkapi()
+        mock_lkapi.room.send_data.side_effect = error
 
         with patch("totem.rooms.livekit.api.LiveKitAPI", return_value=mock_lkapi):
             remove_participant("room-1", "user-1")
 
-        mock_lkapi.room.remove_participant.assert_called_once()
+        mock_lkapi.room.remove_participant.assert_awaited_once()
 
+    @pytest.mark.parametrize("message", ["participant not found", "room not found"])
     @override_settings(**LK_SETTINGS)
-    def test_raises_on_failure(self):
+    def test_already_absent_after_notification_is_success(self, message):
         mock_lkapi = _make_mock_lkapi()
-        mock_lkapi.room.remove_participant.side_effect = Exception("API error")
+        mock_lkapi.room.remove_participant.side_effect = api.TwirpError(code="not_found", msg=message, status=404)
+
+        with patch("totem.rooms.livekit.api.LiveKitAPI", return_value=mock_lkapi):
+            remove_participant("room-1", "user-1")
+
+        mock_lkapi.room.send_data.assert_awaited_once()
+        mock_lkapi.room.remove_participant.assert_awaited_once()
+
+    @pytest.mark.parametrize("error", [Exception("API error"), aiohttp.ClientConnectionError("API error")])
+    @override_settings(**LK_SETTINGS)
+    def test_raises_on_failure(self, error):
+        mock_lkapi = _make_mock_lkapi()
+        mock_lkapi.room.remove_participant.side_effect = error
 
         with patch("totem.rooms.livekit.api.LiveKitAPI", return_value=mock_lkapi):
             with pytest.raises(Exception, match="API error"):
@@ -439,6 +483,62 @@ def test_update_permissions_reads_updates_and_verifies(admitted):
         )
     )
     assert list(permission.can_publish_sources) == []
+
+
+@pytest.mark.parametrize("admitted", [True, False])
+def test_update_ignores_unknown_permission_fields(admitted):
+    after = participant(admitted=admitted)
+    after.permission.MergeFromString(b"\x98\x06\x01")  # Unknown protobuf field 99.
+    client = mock_api(participant(admitted=not admitted), after)
+    with patch.object(livekit, "_get_api", return_value=client):
+        assert livekit.update_participant_permissions("room", "user", admitted=admitted) == after
+
+
+def test_update_accepts_normalized_admitted_publish_sources():
+    after = participant(admitted=True)
+    after.permission.can_publish_sources.append(api.TrackSource.CAMERA)
+    client = mock_api(participant(admitted=False), after)
+    with patch.object(livekit, "_get_api", return_value=client):
+        assert livekit.update_participant_permissions("room", "user", admitted=True) == after
+
+
+@pytest.mark.parametrize("admitted", [True, False])
+@pytest.mark.parametrize(
+    "field",
+    [
+        "can_publish",
+        "can_subscribe",
+        "can_publish_data",
+        "can_update_metadata",
+        "hidden",
+        "recorder",
+        "agent",
+        "can_subscribe_metrics",
+        "can_manage_agent_session",
+        "can_publish_sources",
+    ],
+)
+def test_update_rejects_each_unexpected_permission(admitted, field):
+    if admitted and field == "can_publish_sources":
+        pytest.skip("Admitted publish sources may be normalized by LiveKit")
+    after = participant(admitted=admitted)
+    if field == "can_publish_sources":
+        after.permission.can_publish_sources.append(api.TrackSource.CAMERA)
+    else:
+        setattr(after.permission, field, not getattr(after.permission, field))
+    client = mock_api(participant(admitted=not admitted), after)
+    with patch.object(livekit, "_get_api", return_value=client), pytest.raises(livekit.LiveKitPermissionError) as exc:
+        livekit.update_participant_permissions("room", "user", admitted=admitted)
+    assert exc.value.code == "permission_mismatch"
+
+
+def test_update_rejects_missing_permission():
+    after = participant()
+    after.ClearField("permission")
+    client = mock_api(participant(), after)
+    with patch.object(livekit, "_get_api", return_value=client), pytest.raises(livekit.LiveKitPermissionError) as exc:
+        livekit.update_participant_permissions("room", "user", admitted=True)
+    assert exc.value.code == "permission_mismatch"
 
 
 @pytest.mark.parametrize(

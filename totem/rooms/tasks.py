@@ -5,7 +5,6 @@ from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
-from totem.rooms.admission.permissions import reconcile_session_permissions
 from totem.rooms.livekit import get_admission_participants, publish_state
 from totem.rooms.models import Room
 from totem.rooms.schemas import EndReason, EndRoomEvent, RoomStatus
@@ -102,4 +101,4 @@ def end_sessions_without_keeper() -> int:
     return ended_count
 
 
-tasks = [end_sessions_without_keeper, reconcile_session_permissions]
+tasks = [end_sessions_without_keeper]

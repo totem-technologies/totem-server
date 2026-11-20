@@ -291,7 +291,24 @@ async def update_participant_permissions(
                 _require_connected(after)
                 if after.sid != before.sid:
                     raise LiveKitPermissionError("identity_replaced", "Participant connection has changed")
-                if not after.HasField("permission") or after.permission != permission:
+                if (
+                    not after.HasField("permission")
+                    or any(
+                        getattr(after.permission, field) != getattr(permission, field)
+                        for field in (
+                            "can_publish",
+                            "can_subscribe",
+                            "can_publish_data",
+                            "can_update_metadata",
+                            "hidden",
+                            "recorder",
+                            "agent",
+                            "can_subscribe_metrics",
+                            "can_manage_agent_session",
+                        )
+                    )
+                    or (not admitted and after.permission.can_publish_sources)
+                ):
                     raise LiveKitPermissionError("permission_mismatch", "Participant permissions were not applied")
                 return after
 
@@ -375,9 +392,30 @@ async def _mute_track_for_all_participants(
 
 
 async def _remove_participant(room_name: str, identity: str, reason: RemoveReason = RemoveReason.REMOVE) -> None:
+    try:
+        async with asyncio.timeout(PERMISSION_UPDATE_TIMEOUT_SECONDS):
+            async with _get_api() as lkapi:
+                await lkapi.room.send_data(
+                    api.SendDataRequest(
+                        room=room_name,
+                        topic="lk-participant-removed-topic",
+                        data=json.dumps(
+                            {"action": "remove_participant", "identity": identity, "reason": reason.value}
+                        ).encode(),
+                        kind=api.DataPacket.Kind.RELIABLE,
+                        destination_identities=[identity],
+                    )
+                )
+    except Exception:
+        logger.warning("Failed to notify participant of removal from session %s", room_name, exc_info=True)
+
     # LiveKit has no compare-and-swap by SID; a concurrent explicit re-admission
     # can race this identity-based removal.
-    await _hard_disconnect_participant(room_name, identity)
+    try:
+        await _hard_disconnect_participant(room_name, identity)
+    except LiveKitPermissionError as error:
+        if error.code not in {"participant_missing", "room_missing"}:
+            raise
 
 
 @async_to_sync

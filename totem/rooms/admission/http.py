@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime
 from typing import Any, cast
 from uuid import UUID
@@ -15,6 +17,7 @@ from uuid import UUID
 from django.utils import timezone
 
 from totem.rooms import admission
+from totem.spaces.models import Session, Space
 from totem.users.models import User
 from totem.users.schemas import PublicUserSchema
 
@@ -51,13 +54,33 @@ HISTORY_LIMIT = 100
 
 
 def _read_access(room: Room, actor: User, *, keeper: bool) -> None:
-    if not actor.is_active:
+    if not User.objects.filter(pk=actor.pk, is_active=True).exists():
         raise AdmissionError("not_eligible", "Account is inactive")
     if keeper:
         if actor.slug != room.keeper:
             raise AdmissionError("not_keeper", "Only the current Keeper may read the admission queue")
     elif actor.slug != room.keeper and not room.session.attendees.filter(pk=actor.pk).exists():
         raise AdmissionError("not_eligible", "You are not an attendee of this Session")
+
+
+def _snapshot_room(session_slug: str) -> Room:
+    session = Session.objects.select_related("space__author").get(slug=session_slug)
+    if session.space.meeting_provider != Space.MeetingProviderChoices.LIVEKIT:
+        raise AdmissionError("not_found", "Session not found")
+    room = Room.objects.filter(session=session).first()
+    if room is None:
+        room = Room(session=session, keeper=session.space.author.slug, talking_order=[])
+    else:
+        room.session = session
+    return room
+
+
+@contextmanager
+def _authorized_snapshot_room(session_slug: str, actor: User, *, keeper: bool) -> Iterator[Room]:
+    room = _snapshot_room(session_slug)
+    _read_access(room, actor, keeper=keeper)
+    yield room
+    _read_access(_snapshot_room(session_slug), actor, keeper=keeper)
 
 
 def _eligible(room: Room, user: User) -> bool:
@@ -76,6 +99,8 @@ def _participant(
     connected: set[str] | None,
     capacity: int,
     slots_used: int,
+    observed_at: datetime,
+    ended: bool,
 ) -> Participant:
     sync = getattr(durable, "permission_sync", None)
     permission_status = "pending"
@@ -87,6 +112,11 @@ def _participant(
         elif sync.applied_revision == sync.revision:
             permission_status = "applied"
     status = attempt.status if attempt else "no_request"
+    if attempt and status in admission.ACTIVE_STATUSES:
+        if ended:
+            status = AttemptStatus.CANCELLED
+        elif attempt.expires_at <= observed_at:
+            status = AttemptStatus.EXPIRED
     if status == AttemptStatus.GRANTING and permission_status == "applied" and sync and sync.desired_admitted:
         status = "approved"
     elif status == AttemptStatus.ADMITTED:
@@ -117,7 +147,7 @@ def _participant(
         requested_at=attempt.date_created if attempt else None,
         expires_at=attempt.expires_at if attempt else None,
         approved_at=attempt.decided_at
-        if attempt and attempt.status in [AttemptStatus.GRANTING, AttemptStatus.ADMITTED]
+        if attempt and (attempt.status == AttemptStatus.ADMITTED or status in [AttemptStatus.GRANTING, "approved"])
         else None,
         activated_at=attempt.completed_at if attempt and attempt.status == AttemptStatus.ADMITTED else None,
         connected_at=attempt.connected_at if attempt else None,
@@ -141,8 +171,8 @@ def admission_snapshot(
     session_slug: str, actor: User, *, keeper: bool = True
 ) -> AdmissionSnapshot | AdmissionMeSnapshot:
     # Authorize before I/O, and again before exposing a snapshot after I/O.
-    with admission._locked_room(session_slug) as room:
-        _read_access(room, actor, keeper=keeper)
+    with _authorized_snapshot_room(session_slug, actor, keeper=keeper):
+        pass
     presence_error = None
     try:
         connected: set[str] | None = get_admission_participants(session_slug)
@@ -150,8 +180,8 @@ def admission_snapshot(
         connected = None
         presence_error = error.code
     observed_at = timezone.now()
-    with admission._locked_room(session_slug) as room:
-        _read_access(room, actor, keeper=keeper)
+    with _authorized_snapshot_room(session_slug, actor, keeper=keeper) as room:
+        ended = room.status == RoomStatus.ENDED or room.session.cancelled or room.session.ended()
         memberships = list(room.session.admissions.select_related("user", "decision_actor", "permission_sync"))
         attempts = AdmissionAttempt.objects.filter(admission__session=room.session).select_related("decision_actor")
         latest = {
@@ -162,7 +192,8 @@ def admission_snapshot(
         capacity = admission_limit(room)
         slots_used = admission_slots_used(room)
         participants = [
-            _participant(room, item, latest.get(item.pk), connected, capacity, slots_used) for item in memberships
+            _participant(room, item, latest.get(item.pk), connected, capacity, slots_used, observed_at, ended)
+            for item in memberships
         ]
         participant_rows = [item for item in participants if item.identity != room.keeper]
         waiting = sorted(
@@ -170,8 +201,7 @@ def admission_snapshot(
             key=lambda item: cast(datetime, item.requested_at),
         )
         identities = set(room.session.attendees.values_list("slug", flat=True)) | {room.keeper}
-        # Expiry cleanup may have advanced the revision using another Room instance.
-        room.refresh_from_db(fields=["admission_version"])
+
         occupied, waiting_slots = connection_reservations(room, connected) if connected is not None else (None, None)
         header = AdmissionHeader(
             session_slug=session_slug,
@@ -202,7 +232,7 @@ def admission_snapshot(
             )
         recent = list(attempts.order_by("-date_created", "-pk")[: HISTORY_LIMIT + 1])
         history = [
-            _participant(room, by_id[item.admission_id], item, connected, capacity, slots_used)
+            _participant(room, by_id[item.admission_id], item, connected, capacity, slots_used, observed_at, ended)
             for item in reversed(recent[:HISTORY_LIMIT])
         ]
         return AdmissionSnapshot(
@@ -355,28 +385,21 @@ def _apply_command(
                 admission__session=room.session, status=AttemptStatus.PENDING
             ).select_related("admission__user")
         )
+        outcomes: dict[int, tuple[AdmissionAttempt, str | None]] = {}
         admission.update_approval_required(
             room.session.slug,
             actor,
             body.approval_required,
             expected_revision=body.expected_revision,
             expected_room_version=body.expected_room_version,
+            outcomes=outcomes,
         )
+        if body.approval_required:
+            return []
         results = []
-        if not body.approval_required:
-            for attempt in pending:
-                attempt.refresh_from_db()
-                error = None
-                if attempt.status != AttemptStatus.GRANTING:
-                    if attempt.admission.state == AdmissionState.REVOKED:
-                        error = "requires_reapproval"
-                    elif attempt.admission.state != AdmissionState.PERMANENTLY_DECLINED and _eligible(
-                        room, attempt.admission.user
-                    ):
-                        error = "admission_full"
-                    else:
-                        error = "not_eligible"
-                results.append(_result(attempt, "approved" if error is None else "skipped", error))
+        for original in pending:
+            attempt, error = outcomes.get(original.pk, (original, "invalid_attempt"))
+            results.append(_result(attempt, "approved" if error is None else "skipped", error))
         return results
     if identity is None:
         raise AdmissionError("invalid_attempt", "A target identity is required")

@@ -10,6 +10,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import timedelta
+from functools import partial
 from typing import TYPE_CHECKING, cast
 from uuid import UUID, uuid4
 
@@ -121,7 +122,7 @@ def _set_membership(
     admission.version += 1
     admission.decision_actor = actor
     admission.decided_at = timezone.now()
-    admission.save()
+    admission.save(update_fields=["state", "version", "decision_actor", "decided_at", "date_modified"])
     bump_admission_version(admission.session_id, admission.user.slug, notify=schedule)
     if schedule:
         _queue_permissions(admission)
@@ -138,12 +139,19 @@ def _set_attempt(
 ) -> None:
     attempt.status = status
     attempt.version += 1
+    update_fields = ["status", "version", "date_modified"]
     if status in [AttemptStatus.GRANTING, AttemptStatus.DECLINED, AttemptStatus.PERMANENTLY_DECLINED]:
         attempt.decision_actor = actor
         attempt.decided_at = timezone.now()
+        update_fields.extend(["decision_actor", "decided_at"])
+    if status == AttemptStatus.GRANTING:
+        update_fields.extend(["session_started", "expires_at"])
+    if status == AttemptStatus.ADMITTED:
+        update_fields.extend(["participant_sid", "connected_at"])
     if status not in ACTIVE_STATUSES:
         attempt.completed_at = timezone.now()
-    attempt.save()
+        update_fields.append("completed_at")
+    attempt.save(update_fields=update_fields)
     bump_admission_version(attempt.admission.session_id, attempt.admission.user.slug, notify=schedule)
     if schedule and status != AttemptStatus.ADMITTED:
         _queue_permissions(attempt.admission)
@@ -163,21 +171,22 @@ def _approve(attempt: AdmissionAttempt, actor: User | None, *, record_admission:
     _set_attempt(attempt, AttemptStatus.GRANTING, actor)
 
 
-def _automatic_approval(room: Room, attempt: AdmissionAttempt, actor: User | None = None) -> bool:
+def _automatic_approval(room: Room, attempt: AdmissionAttempt, actor: User | None = None) -> str | None:
     member = attempt.admission
     keeper = member.user.slug == room.keeper
     removed = member.state == AdmissionState.REVOKED
+    # Removal requires explicit reapproval even when approval is otherwise disabled.
     if not keeper and (removed or member.state == AdmissionState.PERMANENTLY_DECLINED):
-        return False
+        return "requires_reapproval" if removed else "not_eligible"
     if not keeper and room.approval_required and member.state != AdmissionState.ADMITTED:
-        return False
+        return "approval_required"
     try:
         _approve(attempt, actor, record_admission=not keeper)
     except AdmissionError as error:
         if error.code != "admission_full":
             raise
-        return False
-    return True
+        return error.code
+    return None
 
 
 def request_admission(session_slug: str, user: User, request_id: UUID, attempt_id: UUID) -> AdmissionAttempt:
@@ -216,7 +225,7 @@ def request_admission(session_slug: str, user: User, request_id: UUID, attempt_i
                 )
         except IntegrityError as error:
             raise AdmissionError("invalid_attempt", "Request and attempt IDs cannot be reused") from error
-        if not _automatic_approval(room, attempt):
+        if _automatic_approval(room, attempt) is not None:
             bump_admission_version(room.session_id, user.slug)
             _queue_permissions(admission)
         return attempt
@@ -275,6 +284,7 @@ def update_approval_required(
     *,
     expected_revision: int,
     expected_room_version: int,
+    outcomes: dict[int, tuple[AdmissionAttempt, str | None]] | None = None,
 ) -> Room:
     with _locked_room(session_slug) as room:
         _keeper(room, actor, expected_room_version)
@@ -291,10 +301,14 @@ def update_approval_required(
                 .order_by("date_created", "pk")
             )
             for attempt in pending:
-                if attempt.admission.state != AdmissionState.PERMANENTLY_DECLINED and _eligible(
+                if attempt.admission.state == AdmissionState.PERMANENTLY_DECLINED or not _eligible(
                     room, attempt.admission.user, check_window=False
                 ):
-                    _automatic_approval(room, attempt, actor)
+                    error = "not_eligible"
+                else:
+                    error = _automatic_approval(room, attempt, actor)
+                if outcomes is not None:
+                    outcomes[attempt.pk] = (attempt, error)
         return room
 
 
@@ -452,8 +466,6 @@ def record_removal(
         ):
             raise AdmissionError("not_eligible", "Target does not belong to this Session")
         if ban and user.slug not in room.banned_participants:
-            from functools import partial
-
             from ..livekit import publish_state
             from ..schemas import BanParticipantEvent
             from ..state_machine import apply_event
@@ -522,17 +534,11 @@ def is_authorized_to_enter(session_slug: str, user: User) -> bool:
 
 
 def _initial_join_window(room: Room, user: User, admission: SessionAdmission) -> bool:
-    """Admission, not legacy token attendance, establishes returning privileges."""
-    from totem.spaces.models import _default_grace_period
-
+    """Check the initial window without extending it for an existing attempt."""
+    opens, closes = room.session._livekit_initial_join_window(user, room, admission)
     now = timezone.now()
-    returning = user.slug == room.keeper or admission.state == AdmissionState.ADMITTED
-    wide = returning or user.is_staff
-    opens = room.session.start - timedelta(minutes=60 if wide else 15)
-    if returning:
-        # _require_open enforces ended_at and the existing LiveKit overrun backstop.
+    if closes is None:
         return opens < now and not room.session.ended()
-    closes = room.session.end() if wide else room.session.start + _default_grace_period
     return opens < now < closes
 
 

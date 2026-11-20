@@ -54,7 +54,11 @@ BASE = "/api/mobile/protected/rooms"
 def context(client_with_user):
     client, user = client_with_user
     keeper = UserFactory()
-    session = SessionFactory(space__author=keeper, start=timezone.now() - timedelta(minutes=1))
+    session = SessionFactory(
+        space__author=keeper,
+        space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+        start=timezone.now() - timedelta(minutes=1),
+    )
     session.attendees.add(keeper, user)
     room = Room.objects.get_or_create_for_session(session)
     keeper_client = Client(HTTP_AUTHORIZATION=f"Bearer {generate_jwt_token(keeper)}")
@@ -90,7 +94,11 @@ def livekit():
 def test_request_then_me_returns_own_pending_attempt(client_with_user, livekit):
     client, user = client_with_user
     keeper = UserFactory()
-    session = SessionFactory(space__author=keeper, start=timezone.now() - timedelta(minutes=1))
+    session = SessionFactory(
+        space__author=keeper,
+        space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+        start=timezone.now() - timedelta(minutes=1),
+    )
     session.attendees.add(keeper, user)
     Room.objects.get_or_create_for_session(session)
     url = f"/api/mobile/protected/rooms/{session.slug}/admission"
@@ -181,6 +189,85 @@ def decision_body(room, ids, attempt, command_id=None):
         "expected_version": attempt["attempt_version"],
         "expected_room_version": room.state_version,
     }
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("suffix", ["", "/me"])
+def test_snapshot_without_room_does_not_create_one(client_with_user, livekit, suffix):
+    client, user = client_with_user
+    session = SessionFactory(space__author=user, space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT)
+    session.attendees.add(user)
+    response = client.get(f"{BASE}/{session.slug}/admission{suffix}")
+    assert response.status_code == 200, response.content
+    assert response.json()["keeper"] == user.slug
+    assert not Room.objects.filter(session=session).exists()
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("suffix", ["", "/me"])
+def test_snapshot_rejects_non_livekit_without_creating_room(client_with_user, livekit, suffix):
+    client, user = client_with_user
+    session = SessionFactory(space__author=user, space__meeting_provider=Space.MeetingProviderChoices.GOOGLE_MEET)
+    response = client.get(f"{BASE}/{session.slug}/admission{suffix}")
+    assert response.status_code == 404
+    assert not Room.objects.filter(session=session).exists()
+    livekit.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_snapshot_projects_expiry_without_writes(context, livekit, admission_notification_transport):
+    client, user, keeper_client, _, session, room = context
+    request_attempt(context)
+    attempt = AdmissionAttempt.objects.get(admission__session=session, admission__user=user)
+    attempt.expires_at = timezone.now() - timedelta(seconds=1)
+    attempt.save(update_fields=["expires_at"])
+    room.refresh_from_db()
+    original_version = room.admission_version
+    admission_notification_transport.reset_mock()
+    url = f"{BASE}/{session.slug}/admission"
+    snapshot = keeper_client.get(url)
+    me = client.get(f"{url}/me")
+    assert snapshot.status_code == me.status_code == 200
+    assert snapshot.json()["pending_count"] == 0
+    assert snapshot.json()["waiting"] == []
+    assert me.json()["me"]["status"] == "expired"
+    attempt.refresh_from_db()
+    room.refresh_from_db()
+    assert attempt.status == AttemptStatus.PENDING
+    assert room.admission_version == original_version
+    admission_notification_transport.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_snapshot_rechecks_keeper_after_presence(context, livekit):
+    _, _, keeper_client, _, session, room = context
+    replacement = UserFactory()
+
+    def reassign(_slug):
+        Room.objects.filter(pk=room.pk).update(keeper=replacement.slug)
+        return set()
+
+    livekit.side_effect = reassign
+    assert keeper_client.get(f"{BASE}/{session.slug}/admission").status_code == 403
+
+
+@pytest.mark.django_db(transaction=True)
+def test_snapshot_rechecks_access_after_assembling(context, livekit):
+    from totem.rooms.admission import http
+
+    _, _, keeper_client, _, session, room = context
+    request_attempt(context)
+    replacement = UserFactory()
+    participant = http._participant
+
+    def reassign(*args, **kwargs):
+        result = participant(*args, **kwargs)
+        Room.objects.filter(pk=room.pk).update(keeper=replacement.slug)
+        return result
+
+    with patch.object(http, "_participant", side_effect=reassign):
+        response = keeper_client.get(f"{BASE}/{session.slug}/admission")
+    assert response.status_code == 403
 
 
 @pytest.mark.django_db(transaction=True)
@@ -503,6 +590,99 @@ def test_reconnection_receipt_replaces_sid_and_allows_activation(context, liveki
         )
         assert activated.status_code == 200, activated.content
         assert activated.json()["me"]["status"] == "activated"
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize(
+    ("state", "eligible", "seats", "error"),
+    [
+        (AdmissionState.REVOKED, True, 2, "requires_reapproval"),
+        (AdmissionState.REVOKED, False, 2, "not_eligible"),
+        (AdmissionState.PERMANENTLY_DECLINED, True, 2, "not_eligible"),
+        (AdmissionState.NONE, True, 1, "admission_full"),
+    ],
+)
+def test_settings_reports_why_pending_attempt_was_skipped(context, livekit, state, eligible, seats, error):
+    _, user, keeper_client, _, session, room = context
+    request_attempt(context)
+    SessionAdmission.objects.filter(session=session, user=user).update(state=state)
+    if not eligible:
+        session.attendees.remove(user)
+    session.seats = seats
+    session.save(update_fields=["seats"])
+    room.refresh_from_db()
+    response = send(
+        keeper_client,
+        "patch",
+        f"{BASE}/{session.slug}/admission/settings",
+        {
+            "command_id": str(uuid4()),
+            "expected_room_version": room.state_version,
+            "expected_revision": room.admission_revision,
+            "approval_required": False,
+        },
+    )
+    assert response.status_code == 200, response.content
+    result = response.json()["results"][0]
+    assert (result["identity"], result["outcome"], result["error"]) == (user.slug, "skipped", error)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_settings_reports_domain_capacity_error_and_replays_it(context, livekit):
+    _, user, keeper_client, _, session, room = context
+    request_attempt(context)
+    session.seats = 10
+    session.save(update_fields=["seats"])
+    room.refresh_from_db()
+    url = f"{BASE}/{session.slug}/admission/settings"
+    body = {
+        "command_id": str(uuid4()),
+        "expected_room_version": room.state_version,
+        "expected_revision": room.admission_revision,
+        "approval_required": False,
+    }
+    with patch(
+        "totem.rooms.admission.capacity.ensure_admission_capacity",
+        side_effect=admission.AdmissionError("admission_full", "capacity check failed"),
+    ):
+        response = send(keeper_client, "patch", url, body)
+    assert response.status_code == 200, response.content
+    result = response.json()["results"][0]
+    assert (result["identity"], result["outcome"], result["error"]) == (user.slug, "skipped", "admission_full")
+    replay = send(keeper_client, "patch", url, body)
+    assert replay.status_code == 200, replay.content
+    assert replay.json()["replayed"] is True
+    assert replay.json()["results"][0]["error"] == "admission_full"
+
+
+@pytest.mark.django_db(transaction=True)
+def test_settings_reports_attempt_expiring_during_command(context, livekit):
+    _, user, keeper_client, _, session, room = context
+    request_attempt(context)
+    update = admission.update_approval_required
+
+    def expire_then_update(*args, **kwargs):
+        AdmissionAttempt.objects.filter(admission__session=session, admission__user=user).update(
+            expires_at=timezone.now() - timedelta(seconds=1)
+        )
+        return update(*args, **kwargs)
+
+    room.refresh_from_db()
+    with patch("totem.rooms.admission.update_approval_required", side_effect=expire_then_update):
+        response = send(
+            keeper_client,
+            "patch",
+            f"{BASE}/{session.slug}/admission/settings",
+            {
+                "command_id": str(uuid4()),
+                "expected_room_version": room.state_version,
+                "expected_revision": room.admission_revision,
+                "approval_required": False,
+            },
+        )
+    assert response.status_code == 200, response.content
+    result = response.json()["results"][0]
+    assert (result["identity"], result["outcome"], result["error"]) == (user.slug, "skipped", "invalid_attempt")
 
 
 @pytest.mark.django_db(transaction=True)

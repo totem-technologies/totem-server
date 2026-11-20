@@ -290,6 +290,62 @@ def test_revocation_failure_uses_hard_disconnect(room_context, queued_grant, liv
     assert sync.last_error == "timeout"
 
 
+@pytest.mark.parametrize("implicit", [False, True])
+def test_old_clean_grant_is_denied_before_retirement(room_context, queued_grant, livekit, implicit):
+    session, _, _, _ = room_context
+    admission_permissions.reconcile_admission_permissions(queued_grant.admission_id)
+    sync = AdmissionPermissionSync.objects.get(admission=queued_grant.admission)
+    assert sync.desired_admitted and sync.applied_revision == sync.revision
+    if implicit:
+        session.start = timezone.now() - timedelta(days=2)
+        session.save(update_fields=["start"])
+    else:
+        session.ended_at = timezone.now() - timedelta(minutes=5)
+        session.save(update_fields=["ended_at"])
+    livekit[1].reset_mock()
+    assert admission_permissions.reconcile_session_permissions() == 1
+    sync.refresh_from_db()
+    assert not sync.desired_admitted and sync.applied_revision == sync.revision
+    assert livekit[1].call_args.kwargs["admitted"] is False
+    livekit[0].reset_mock()
+    assert admission_permissions.reconcile_session_permissions() == 0
+    livekit[0].assert_not_called()
+
+
+def test_implicit_end_backstop_and_replay_boundary(room_context, queued_grant, livekit):
+    session, room, _, _ = room_context
+    now = timezone.now()
+    end = now - timedelta(hours=3) + timedelta(minutes=1)
+    session.start = end - timedelta(minutes=session.duration_minutes)
+    session.save(update_fields=["start"])
+    Room.objects.filter(pk=room.pk).update(date_created=end - timedelta(minutes=1))
+    sync = AdmissionPermissionSync.objects.get(admission=queued_grant.admission)
+    sync.desired_admitted = False
+    sync.applied_revision = sync.revision
+    sync.checked_at = now
+    sync.save()
+    with patch.object(admission_permissions, "reconcile_admission_permissions") as reconcile:
+        assert admission_permissions.reconcile_session_permissions() == 1
+        reconcile.assert_called_once_with(sync.admission_id)
+        # Once past the backstop, an observation before its TTL is insufficient.
+        session.start -= timedelta(minutes=2)
+        session.save(update_fields=["start"])
+        sync.checked_at = end - timedelta(minutes=2) + timedelta(hours=3, minutes=2) - timedelta(microseconds=1)
+        sync.save(update_fields=["checked_at"])
+        reconcile.reset_mock()
+        assert admission_permissions.reconcile_session_permissions() == 1
+        reconcile.assert_called_once()
+        sync.checked_at += timedelta(microseconds=1)
+        sync.save(update_fields=["checked_at"])
+        reconcile.reset_mock()
+        assert admission_permissions.reconcile_session_permissions() == 0
+        reconcile.assert_not_called()
+        for applied_revision in [None, sync.revision + 1]:
+            sync.applied_revision = applied_revision
+            sync.save(update_fields=["applied_revision"])
+            assert admission_permissions.reconcile_session_permissions() == 1
+
+
 def test_dirty_old_ended_session_is_retried(room_context, queued_grant, livekit):
     session, _, _, _ = room_context
     session.ended_at = timezone.now() - timedelta(minutes=5)
@@ -325,11 +381,16 @@ def test_absent_participant_only_acknowledges_denial(queued_grant, livekit, deni
         assert sync.last_error == "participant_missing"
 
 
-def test_clean_ended_row_is_rechecked_after_token_ttl_before_retirement(room_context, queued_grant, livekit):
+@pytest.mark.parametrize("implicit", [False, True])
+def test_clean_ended_row_is_rechecked_after_token_ttl_before_retirement(room_context, queued_grant, livekit, implicit):
     session, _, _, user = room_context
     ended_at = timezone.now() - timedelta(minutes=3)
-    session.ended_at = ended_at
-    session.save(update_fields=["ended_at"])
+    if implicit:
+        session.start = ended_at - timedelta(hours=3, minutes=session.duration_minutes)
+        session.save(update_fields=["start"])
+    else:
+        session.ended_at = ended_at
+        session.save(update_fields=["ended_at"])
     get, update, disconnect = livekit
 
     def missing(*args, **kwargs):

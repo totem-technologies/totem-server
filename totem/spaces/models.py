@@ -52,6 +52,7 @@ if TYPE_CHECKING:
     from totem.users.models import User
 
 _default_grace_period = datetime.timedelta(minutes=10)
+_room_not_provided = object()
 
 
 # Session visibility is decided in exactly one place: SessionQuerySet.visible_to.
@@ -455,7 +456,7 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
     def end(self):
         return self.start + datetime.timedelta(minutes=self.duration_minutes)
 
-    def _livekit_room_opened_in_time(self) -> bool:
+    def _livekit_room_opened_in_time(self, *, room=_room_not_provided) -> bool:
         """Only a room opened before the scheduled end can keep a session live.
 
         A Space's provider can change after a session ends. Attendance alone
@@ -463,30 +464,49 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         """
         if self.space.meeting_provider != Space.MeetingProviderChoices.LIVEKIT:
             return False
-        room = getattr(self, "room", None)
+        if room is _room_not_provided:
+            room = getattr(self, "room", None)
         return room is not None and room.date_created < self.end()
 
-    def join_window(self, user: "User | AnonymousUser") -> tuple[datetime.datetime, datetime.datetime | None]:
-        """Absolute times between which `user` may join, the single source of
-        truth for join timing. A None close means the room stays open for
-        rejoining until the session ends, including the overrun backstop."""
-        if self.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT:
-            from totem.rooms.models import AdmissionAttempt, AdmissionState, AttemptStatus, Room, SessionAdmission
+    def _livekit_initial_join_window(self, user, room, admission):
+        from totem.rooms.models import AdmissionState
 
-            room = Room.objects.filter(session=self).first()
-            keeper = room.keeper if room else self.space.author.slug
-            is_keeper = user.is_authenticated and user.slug == keeper
-            admission = (
-                SessionAdmission.objects.filter(session=self, user=user).first() if user.is_authenticated else None
-            )
-            returning = is_keeper or (admission is not None and admission.state == AdmissionState.ADMITTED)
-            opens = self.start - datetime.timedelta(minutes=60 if user.is_staff or returning else 15)
-            if returning:
-                return opens, None
-            closes = self.start + (
-                datetime.timedelta(minutes=self.duration_minutes) if user.is_staff else _default_grace_period
-            )
-            if admission:
+        keeper = room.keeper if room else self.space.author.slug
+        returning = (user.is_authenticated and user.slug == keeper) or (
+            admission is not None and admission.state == AdmissionState.ADMITTED
+        )
+        wide = user.is_staff or returning
+        opens = self.start - datetime.timedelta(minutes=60 if wide else 15)
+        if returning:
+            return opens, None
+        return opens, self.start + (
+            datetime.timedelta(minutes=self.duration_minutes) if wide else _default_grace_period
+        )
+
+    def _join_room(self):
+        from totem.rooms.models import Room
+
+        if getattr(self, "_join_listing", False):
+            return getattr(self, "room", None)
+        return Room.objects.filter(session=self).first()
+
+    def _user_admission(self, user):
+        from totem.rooms.models import SessionAdmission
+
+        if not user.is_authenticated:
+            return None
+        prefetched = getattr(self, "_join_admissions", None)
+        if prefetched is not None and getattr(self, "_join_admissions_user_id", None) == user.pk:
+            return prefetched[0] if prefetched else None
+        return SessionAdmission.objects.filter(session=self, user=user).first()
+
+    def _livekit_join_window(self, user, room, admission):
+        from totem.rooms.models import AdmissionAttempt, AttemptStatus
+
+        opens, closes = self._livekit_initial_join_window(user, room, admission)
+        if admission and closes is not None:
+            attempts = getattr(admission, "_join_attempts", None)
+            if attempts is None:
                 expires_at = (
                     AdmissionAttempt.objects.filter(
                         admission=admission,
@@ -496,9 +516,18 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
                     .values_list("expires_at", flat=True)
                     .first()
                 )
-                if expires_at:
-                    closes = max(closes, expires_at)
-            return opens, closes
+            else:
+                expires_at = attempts[0].expires_at if attempts and attempts[0].expires_at > timezone.now() else None
+            if expires_at:
+                closes = max(closes, expires_at)
+        return opens, closes
+
+    def join_window(self, user: "User | AnonymousUser") -> tuple[datetime.datetime, datetime.datetime | None]:
+        """Absolute times between which `user` may join, the single source of
+        truth for join timing. A None close means the room stays open for
+        rejoining until the session ends, including the overrun backstop."""
+        if self.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT:
+            return self._livekit_join_window(user, self._join_room(), self._user_admission(user))
 
         is_joined = user in self.joined.all()
         wide = user.is_staff or is_joined
@@ -511,38 +540,37 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
     def can_join(self, user: "User | AnonymousUser"):
         if self.cancelled or user not in self.attendees.all():
             return False
+        room = _room_not_provided
         if self.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT:
-            from totem.rooms.models import AdmissionState, Room, SessionAdmission
+            from totem.rooms.models import AdmissionState
             from totem.rooms.schemas import RoomStatus
 
             if not user.is_active:
                 return False
-            room = Room.objects.filter(session=self).first()
+            room = self._join_room()
             if room and (room.status == RoomStatus.ENDED or user.slug in room.banned_participants):
                 return False
             keeper = room.keeper if room else self.space.author.slug
-            if (
-                user.slug != keeper
-                and SessionAdmission.objects.filter(
-                    session=self, user=user, state=AdmissionState.PERMANENTLY_DECLINED
-                ).exists()
-            ):
+            admission = self._user_admission(user)
+            if user.slug != keeper and admission is not None and admission.state == AdmissionState.PERMANENTLY_DECLINED:
                 return False
-        opens, closes = self.join_window(user)
+            opens, closes = self._livekit_join_window(user, room, admission)
+        else:
+            opens, closes = self.join_window(user)
         now = timezone.now()
-        if self.ended():
+        if self.ended(room=room):
             return False
         if closes is None:
             return opens < now
         return opens < now < closes
 
-    def ended(self):
+    def ended(self, *, room=_room_not_provided):
         # Mirrors SessionQuerySet.not_ended: rooms opened before the scheduled
         # end can overrun until ended_at or the backstop.
         if self.ended_at is not None:
             return True
         end = self.end()
-        if self._livekit_room_opened_in_time():
+        if self._livekit_room_opened_in_time(room=room):
             return end + LIVEKIT_ENDED_BACKSTOP < timezone.now()
         return end < timezone.now()
 
