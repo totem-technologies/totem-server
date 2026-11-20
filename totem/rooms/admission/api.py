@@ -1,7 +1,6 @@
 from collections.abc import Callable
 from typing import TypeVar, cast
 
-from django.conf import settings
 from django.http import HttpRequest
 from ninja import Router, Status
 
@@ -59,8 +58,6 @@ T = TypeVar("T")
 
 
 def _call(action: Callable[[], T]) -> T | Status:
-    if not settings.SERVER_ENFORCED_ADMISSION:
-        return Status(404, ErrorSchema(code="feature_disabled", message="Admission is disabled"))
     try:
         return action()
     except AdmissionError as error:

@@ -55,7 +55,7 @@ def test_token_permission_profiles(admitted):
     }
     assert claims["roomConfig"]["name"] == "room"
     assert claims["roomConfig"]["emptyTimeout"] == 3600
-    assert claims["roomConfig"]["maxParticipants"] == 10
+    assert claims["roomConfig"]["maxParticipants"] == 15
 
 
 @override_settings(LIVEKIT_API_KEY=KEY, LIVEKIT_API_SECRET=SECRET)

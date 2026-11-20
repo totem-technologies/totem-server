@@ -1,12 +1,21 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from threading import Event
+from uuid import uuid4
 
 import pytest
 from django.db import connections, transaction
 from django.utils import timezone
 
-from totem.rooms.models import Room, RoomEventLog
+from totem.rooms.models import (
+    AdmissionAttempt,
+    AdmissionPermissionSync,
+    AdmissionState,
+    AttemptStatus,
+    Room,
+    RoomEventLog,
+    SessionAdmission,
+)
 from totem.rooms.schemas import (
     AcceptStickEvent,
     BanParticipantEvent,
@@ -26,15 +35,52 @@ from totem.rooms.schemas import (
 )
 from totem.rooms.state_machine import (
     _next_in_order,
-    _reconcile_talking_order,
     _require_keeper_in_room,
-    apply_event,
     record_join,
+)
+from totem.rooms.state_machine import (
+    _reconcile_talking_order as reconcile_talking_order,
+)
+from totem.rooms.state_machine import (
+    apply_event as apply_room_event,
 )
 from totem.spaces.models import SessionPrompt, SessionRound, SessionRoundState
 from totem.spaces.tests.factories import SessionFactory
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
+
+
+def _activate(session, user):
+    session.attendees.add(user)
+    admission, _ = SessionAdmission.objects.update_or_create(
+        session=session, user=user, defaults={"state": AdmissionState.ADMITTED}
+    )
+    sid = f"sid-{user.slug}"
+    AdmissionAttempt.objects.create(
+        admission=admission,
+        request_id=uuid4(),
+        attempt_id=uuid4(),
+        status=AttemptStatus.ADMITTED,
+        expires_at=timezone.now() + timedelta(minutes=10),
+        participant_sid=sid,
+    )
+    AdmissionPermissionSync.objects.update_or_create(
+        admission=admission,
+        defaults={"desired_admitted": True, "revision": 1, "applied_revision": 1, "participant_sid": sid},
+    )
+
+
+def _sids(connected):
+    return {slug: f"sid-{slug}" for slug in connected}
+
+
+def apply_event(session_slug, actor, event, last_seen_version, connected):
+    return apply_room_event(session_slug, actor, event, last_seen_version, connected, participant_sids=_sids(connected))
+
+
+def _reconcile_talking_order(room, connected):
+    return reconcile_talking_order(room, connected, participant_sids=_sids(connected))
+
 
 # ---------------------------------------------------------------------------
 # Pure helper: _next_in_order
@@ -83,8 +129,11 @@ class TestNextInOrder:
 @pytest.mark.django_db
 class TestReconcileTalkingOrder:
     def _make_room(self, keeper_slug: str, talking_order: list[str], **kwargs) -> Room:
-        """Create a Room with the given state, using a real Session."""
-        session = SessionFactory()
+        """Create a Room with the given state, using admitted participants."""
+        users = {slug: UserFactory(slug=slug) for slug in ("a", "b", "c", "d")}
+        session = SessionFactory(space__author=users[keeper_slug])
+        for user in users.values():
+            _activate(session, user)
         room = Room(
             session=session,
             keeper=keeper_slug,
@@ -252,7 +301,7 @@ def _setup_room(keeper: User, attendees: list[User]):
     """
     session = SessionFactory(space__author=keeper)
     for u in attendees:
-        session.attendees.add(u)
+        _activate(session, u)
     room = Room.objects.get_or_create_for_session(session)
     room.talking_order = [u.slug for u in attendees]
     room.save(update_fields=["talking_order"])
@@ -287,6 +336,7 @@ class TestRecordJoin:
         user1 = UserFactory()
         late = UserFactory()
         room, slug = _setup_room(keeper, [keeper, user1])
+        _activate(room.session, late)
 
         apply_event(slug, keeper.slug, StartRoomEvent(), 0, {keeper.slug, user1.slug})
         record_join(room.session, late)
@@ -315,6 +365,7 @@ class TestRecordJoin:
         user2 = UserFactory()
         late = UserFactory()
         room, slug = _setup_room(keeper, [keeper, user1, user2])
+        _activate(room.session, late)
         connected = {keeper.slug, user1.slug, user2.slug}
 
         apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
@@ -1030,8 +1081,12 @@ class TestSetPrompt:
 
         apply_event(slug, keeper.slug, StartRoomEvent(), 0, connected)
         apply_event(slug, keeper.slug, EndRoomEvent(reason=EndReason.KEEPER_ENDED), 1, connected)
-        # An admin can move an ended room back to the waiting room.
+        # Reopen the session and reactivate admission after the end invalidated it.
         Room.objects.filter(pk=room.pk).update(status=RoomStatus.WAITING_ROOM)
+        room.session.ended_at = None
+        room.session.save(update_fields=["ended_at"])
+        _activate(room.session, keeper)
+        _activate(room.session, user1)
         apply_event(slug, keeper.slug, StartRoomEvent(), 2, connected)
         apply_event(slug, keeper.slug, SetPromptEvent(session_prompt_id=prompt.pk), 3, connected)
 
@@ -1174,7 +1229,7 @@ class TestReorder:
         assert room
         current_order = list(room.talking_order)
 
-        room.session.attendees.add(user3)
+        _activate(room.session, user3)
         new_connected = {keeper.slug, user1.slug, user2.slug, user3.slug}
 
         # Keeper reorders based on the previously seen talking_order (doesn't know about user3 yet)
@@ -1510,6 +1565,7 @@ class TestEmptyRoomEvent:
         keeper = UserFactory()
         participant = UserFactory()
         room, slug = _setup_room(keeper, [keeper])
+        _activate(room.session, participant)
 
         state = apply_event(slug, keeper.slug, EmptyRoomEvent(), 0, {keeper.slug, participant.slug})
 
@@ -1537,7 +1593,8 @@ class TestEmptyRoomEvent:
     def test_changed_reconciliation_invalidates_previous_client_version(self):
         keeper = UserFactory()
         participant = UserFactory()
-        _, slug = _setup_room(keeper, [keeper])
+        room, slug = _setup_room(keeper, [keeper])
+        _activate(room.session, participant)
 
         state = apply_event(slug, keeper.slug, EmptyRoomEvent(), 0, {keeper.slug, participant.slug})
         assert state.version == 1

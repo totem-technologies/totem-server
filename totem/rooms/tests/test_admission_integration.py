@@ -56,37 +56,18 @@ def revoke(room, keeper, user):
     )
 
 
-@pytest.mark.parametrize("enforced", [False, True])
-def test_keeper_can_record_join_without_admission(settings, setup_room, enforced):
-    settings.SERVER_ENFORCED_ADMISSION = enforced
+def test_keeper_cannot_record_join_without_admission(setup_room):
     session, room, keeper, _ = setup_room
     original_order = room.talking_order.copy()
-    if enforced:
-        with pytest.raises(TransitionError) as error:
-            record_join(session, keeper)
-        assert error.value.code == ErrorCode.NOT_JOINABLE
-    else:
+    with pytest.raises(TransitionError) as error:
         record_join(session, keeper)
+    assert error.value.code == ErrorCode.NOT_JOINABLE
     room.refresh_from_db()
-    assert session.joined.filter(pk=keeper.pk).exists() is not enforced
-    if enforced:
-        assert room.talking_order == original_order
-    else:
-        assert keeper.slug in room.talking_order
+    assert not session.joined.filter(pk=keeper.pk).exists()
+    assert room.talking_order == original_order
 
 
-def test_record_join_flag_off_preserves_legacy_join(settings, setup_room):
-    settings.SERVER_ENFORCED_ADMISSION = False
-    session, room, _, user = setup_room
-    record_join(session, user)
-    room.refresh_from_db()
-    assert session.joined.filter(pk=user.pk).exists()
-    assert user.slug in room.talking_order
-    assert admission.get_admission(session.slug, user) is None
-
-
-def test_record_join_requires_admission_without_mutating_join_or_order(settings, setup_room):
-    settings.SERVER_ENFORCED_ADMISSION = True
+def test_record_join_requires_admission_without_mutating_join_or_order(setup_room):
     session, room, _, user = setup_room
     original_order = room.talking_order.copy()
     with pytest.raises(TransitionError) as error:
@@ -97,8 +78,7 @@ def test_record_join_requires_admission_without_mutating_join_or_order(settings,
     assert room.talking_order == original_order
 
 
-def test_record_join_admitted_succeeds_but_revoked_cannot_rejoin(settings, setup_room):
-    settings.SERVER_ENFORCED_ADMISSION = True
+def test_record_join_admitted_succeeds_but_revoked_cannot_rejoin(setup_room):
     session, room, keeper, user = setup_room
     attempt = decide(room, keeper, request(session, user))
     with pytest.raises(TransitionError) as error:
@@ -129,27 +109,7 @@ def test_record_join_admitted_succeeds_but_revoked_cannot_rejoin(settings, setup
     assert room.talking_order == original_order
 
 
-def test_remove_flag_off_skips_admission_removal(settings, client_with_user):
-    settings.SERVER_ENFORCED_ADMISSION = False
-    client, keeper = client_with_user
-    user = UserFactory()
-    session = SessionFactory(space__author=keeper, start=timezone.now() - timedelta(minutes=1))
-    session.attendees.add(keeper, user)
-    room = Room.objects.get_or_create_for_session(session)
-    decide(room, keeper, request(session, user))
-    with (
-        patch("totem.rooms.admission.record_removal") as record_removal,
-        patch("totem.rooms.api.remove_participant") as remove,
-    ):
-        response = client.post(f"/api/mobile/protected/rooms/{session.slug}/remove/{user.slug}")
-    assert response.status_code == 200
-    record_removal.assert_not_called()
-    remove.assert_called_once()
-    assert admission.get_admission(session.slug, user).state == "admitted"
-
-
-def test_remove_revokes_before_livekit_failure(settings, client_with_user):
-    settings.SERVER_ENFORCED_ADMISSION = True
+def test_remove_revokes_before_livekit_failure(client_with_user):
     client, keeper = client_with_user
     user = UserFactory()
     session = SessionFactory(space__author=keeper, start=timezone.now() - timedelta(minutes=1))
@@ -169,8 +129,7 @@ def test_remove_revokes_before_livekit_failure(settings, client_with_user):
     assert not admission.is_authorized_to_enter(session.slug, user)
 
 
-def test_ban_revokes_admission_and_unban_does_not_restore(settings, setup_room):
-    settings.SERVER_ENFORCED_ADMISSION = True
+def test_ban_revokes_admission_and_unban_does_not_restore(setup_room):
     session, room, keeper, user = setup_room
     attempt = decide(room, keeper, request(session, user))
     room.refresh_from_db()
@@ -221,7 +180,7 @@ def test_watchdog_uses_room_keeper_not_space_author(setup_room, current_keeper_c
     room.save(update_fields=["keeper"])
     connected = {current_keeper.slug} if current_keeper_connected else {author.slug}
     with (
-        patch("totem.rooms.tasks.get_connected_participants", return_value=connected),
+        patch("totem.rooms.tasks.get_admission_participants", return_value=connected),
         patch("totem.rooms.tasks.publish_state"),
     ):
         count = end_sessions_without_keeper()
@@ -288,10 +247,16 @@ def test_keeper_bypass_cannot_complete_after_reassignment(setup_room, permanentl
     assert attempt.status == "granting"
     room.keeper = keeper.slug
     room.save(update_fields=["keeper"])
-    with pytest.raises(admission.AdmissionError) as error:
+    with (
+        patch(
+            "totem.rooms.admission.permissions.verify_current_permissions", return_value=(1, "participant-1")
+        ) as verify,
+        pytest.raises(admission.AdmissionError) as error,
+    ):
         admission.complete_admission(
             session.slug, user, attempt.request_id, attempt.attempt_id, expected_version=attempt.version
         )
+    verify.assert_called_once_with(attempt.admission_id)
     assert error.value.code == "not_eligible"
     attempt.refresh_from_db()
     assert attempt.status == "granting"

@@ -1,17 +1,43 @@
 import datetime
 from unittest.mock import patch
+from uuid import uuid4
 
 import pytest
 from django.test import Client
 from django.utils import timezone
 
-from totem.rooms.livekit import LiveKitConfigurationError
-from totem.rooms.models import Room, RoomEventLog
+from totem.rooms.livekit import LiveKitConfigurationError, LiveKitPermissionError
+from totem.rooms.models import (
+    AdmissionAttempt,
+    AdmissionPermissionSync,
+    AdmissionState,
+    AttemptStatus,
+    Room,
+    RoomEventLog,
+    SessionAdmission,
+)
 from totem.rooms.schemas import EndReason, RemoveReason, RoomStatus, TurnState
 from totem.spaces.models import SessionPrompt, SessionRound, SessionRoundState, Space
 from totem.spaces.tests.factories import SessionFactory
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
+
+
+def _activate_participant(session, user):
+    admission = SessionAdmission.objects.create(session=session, user=user, state=AdmissionState.ADMITTED)
+    sid = f"sid-{user.slug}"
+    AdmissionAttempt.objects.create(
+        admission=admission,
+        request_id=uuid4(),
+        attempt_id=uuid4(),
+        status=AttemptStatus.ADMITTED,
+        expires_at=timezone.now() + datetime.timedelta(minutes=10),
+        participant_sid=sid,
+    )
+    AdmissionPermissionSync.objects.create(
+        admission=admission, desired_admitted=True, revision=1, applied_revision=1, participant_sid=sid
+    )
+    return sid
 
 
 def _post_event(client: Client, session_slug: str, event: dict, version: int):
@@ -631,7 +657,7 @@ class TestReconcileRoom:
         Room.objects.get_or_create_for_session(session)
 
         with (
-            patch("totem.rooms.api.get_connected_participants") as mock_connected,
+            patch("totem.rooms.api.get_room_participant_sids") as mock_connected,
             patch("totem.rooms.api.publish_state") as mock_publish,
         ):
             resp = _post_reconcile(client, session.slug)
@@ -645,7 +671,7 @@ class TestReconcileRoom:
         client, _ = client_with_user
 
         with (
-            patch("totem.rooms.api.get_connected_participants") as mock_connected,
+            patch("totem.rooms.api.get_room_participant_sids") as mock_connected,
             patch("totem.rooms.api.publish_state") as mock_publish,
         ):
             resp = _post_reconcile(client, "nonexistent")
@@ -748,12 +774,14 @@ class TestReconcileRoom:
         original_order = room.talking_order
 
         with (
-            patch("totem.rooms.api.get_connected_participants", return_value=None),
+            patch(
+                "totem.rooms.api.get_room_participant_sids", side_effect=LiveKitPermissionError("timeout", "timeout")
+            ),
             patch("totem.rooms.api.publish_state") as mock_publish,
         ):
             resp = _post_reconcile(client, session.slug)
 
-        assert resp.status_code == 200
+        assert resp.status_code == 500
         room.refresh_from_db()
         assert room.talking_order == original_order
         mock_publish.assert_not_called()
@@ -1161,15 +1189,29 @@ class TestJoinRoom:
 class TestMuteParticipant:
     def test_mute_success(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
-        session = SessionFactory(space__author=keeper)
-        session.attendees.add(keeper)
+        participant = UserFactory()
+        session = _make_joinable_session(keeper, [participant])
         Room.objects.get_or_create_for_session(session)
+        sid = _activate_participant(session, participant)
 
-        with patch("totem.rooms.api.mute_participant") as mock_mute:
-            resp = client.post(f"{BASE}/{session.slug}/mute/some-participant")
+        with (
+            patch("totem.rooms.api.get_room_participant_sids", return_value={participant.slug: sid}),
+            patch("totem.rooms.api.mute_participant") as mock_mute,
+        ):
+            resp = client.post(f"{BASE}/{session.slug}/mute/{participant.slug}")
 
         assert resp.status_code == 200
-        mock_mute.assert_called_once_with(session.slug, "some-participant")
+        mock_mute.assert_called_once_with(session.slug, participant.slug)
+
+        with (
+            patch("totem.rooms.api.get_room_participant_sids", return_value={participant.slug: "replacement-sid"}),
+            patch("totem.rooms.api.mute_participant") as mock_mute,
+        ):
+            resp = client.post(f"{BASE}/{session.slug}/mute/{participant.slug}")
+
+        assert resp.status_code == 403
+        assert resp.json()["code"] == "not_in_room"
+        mock_mute.assert_not_called()
 
     def test_mute_not_keeper(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -1200,15 +1242,19 @@ class TestMuteParticipant:
 class TestMuteAll:
     def test_mute_all_success(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
-        session = SessionFactory(space__author=keeper)
-        session.attendees.add(keeper)
+        participant = UserFactory()
+        session = _make_joinable_session(keeper, [participant])
         Room.objects.get_or_create_for_session(session)
+        sid = _activate_participant(session, participant)
 
-        with patch("totem.rooms.api.mute_all_participants") as mock_mute_all:
+        with (
+            patch("totem.rooms.api.get_room_participant_sids", return_value={participant.slug: sid}),
+            patch("totem.rooms.api.mute_all_participants") as mock_mute_all,
+        ):
             resp = client.post(f"{BASE}/{session.slug}/mute-all")
 
         assert resp.status_code == 200
-        mock_mute_all.assert_called_once_with(session.slug, except_identity=keeper.slug)
+        mock_mute_all.assert_called_once_with(session.slug, except_identity=keeper.slug, identities={participant.slug})
 
     def test_mute_all_not_keeper(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -1275,15 +1321,19 @@ class TestRemoveParticipant:
 class TestDisableCamera:
     def test_disable_camera_success(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
-        session = SessionFactory(space__author=keeper)
-        session.attendees.add(keeper)
+        participant = UserFactory()
+        session = _make_joinable_session(keeper, [participant])
         Room.objects.get_or_create_for_session(session)
+        sid = _activate_participant(session, participant)
 
-        with patch("totem.rooms.api.disable_camera_participant") as mock_disable:
-            resp = client.post(f"{BASE}/{session.slug}/disable-camera/some-participant")
+        with (
+            patch("totem.rooms.api.get_room_participant_sids", return_value={participant.slug: sid}),
+            patch("totem.rooms.api.disable_camera_participant") as mock_disable,
+        ):
+            resp = client.post(f"{BASE}/{session.slug}/disable-camera/{participant.slug}")
 
         assert resp.status_code == 200
-        mock_disable.assert_called_once_with(session.slug, "some-participant")
+        mock_disable.assert_called_once_with(session.slug, participant.slug)
 
     def test_disable_camera_not_keeper(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user

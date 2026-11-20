@@ -16,8 +16,7 @@ from totem.users.tests.factories import UserFactory
 
 
 @pytest.fixture
-def entry(settings, db):
-    settings.SERVER_ENFORCED_ADMISSION = True
+def entry(db):
     session = SessionFactory(
         start=timezone.now() - timedelta(minutes=30), space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT
     )
@@ -84,16 +83,14 @@ def test_pending_continuation_does_not_authorize_a_new_request(entry):
 
 
 @pytest.mark.parametrize(
-    ("enforced", "provider", "joinable"),
+    ("provider", "joinable"),
     [
-        (True, Space.MeetingProviderChoices.LIVEKIT, False),
-        (False, Space.MeetingProviderChoices.LIVEKIT, True),
-        (True, Space.MeetingProviderChoices.GOOGLE_MEET, True),
+        (Space.MeetingProviderChoices.LIVEKIT, False),
+        (Space.MeetingProviderChoices.GOOGLE_MEET, True),
     ],
 )
-def test_inactive_user_joinability(entry, settings, enforced, provider, joinable):
+def test_inactive_user_joinability(entry, provider, joinable):
     session, _, user = entry
-    settings.SERVER_ENFORCED_ADMISSION = enforced
     session.space.meeting_provider = provider
     session.start = timezone.now() - timedelta(minutes=1)
     user.is_active = False
@@ -101,16 +98,14 @@ def test_inactive_user_joinability(entry, settings, enforced, provider, joinable
 
 
 @pytest.mark.parametrize(
-    ("enforced", "provider", "joinable"),
+    ("provider", "joinable"),
     [
-        (True, Space.MeetingProviderChoices.LIVEKIT, False),
-        (False, Space.MeetingProviderChoices.LIVEKIT, True),
-        (True, Space.MeetingProviderChoices.GOOGLE_MEET, True),
+        (Space.MeetingProviderChoices.LIVEKIT, False),
+        (Space.MeetingProviderChoices.GOOGLE_MEET, True),
     ],
 )
-def test_ended_room_joinability_before_session_end_sync(entry, settings, enforced, provider, joinable):
+def test_ended_room_joinability_before_session_end_sync(entry, provider, joinable):
     session, room, user = entry
-    settings.SERVER_ENFORCED_ADMISSION = enforced
     session.space.meeting_provider = provider
     session.start = timezone.now() - timedelta(minutes=1)
     room.status = RoomStatus.ENDED
@@ -164,14 +159,9 @@ def test_signed_link_obeys_decline(entry, client):
     assert not session.joined.filter(pk=user.pk).exists()
 
 
-@pytest.mark.parametrize(
-    ("enforced", "provider"),
-    [(False, Space.MeetingProviderChoices.LIVEKIT), (True, Space.MeetingProviderChoices.GOOGLE_MEET)],
-)
-def test_legacy_browser_records_redirect(entry, client, settings, enforced, provider):
+def test_google_meet_browser_records_redirect(entry, client):
     session, _, user = entry
-    settings.SERVER_ENFORCED_ADMISSION = enforced
-    session.space.meeting_provider = provider
+    session.space.meeting_provider = Space.MeetingProviderChoices.GOOGLE_MEET
     session.space.save(update_fields=["meeting_provider"])
     session.start = timezone.now() - timedelta(minutes=1)
     session.save(update_fields=["start"])

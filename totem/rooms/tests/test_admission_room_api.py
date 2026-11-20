@@ -27,16 +27,13 @@ from totem.users.tests.factories import UserFactory
     LIVEKIT_API_KEY="test-key-test-key-test-key-test-key",
     LIVEKIT_API_SECRET="test-secret-test-secret-test-secret-test-secret",
 )
-@pytest.mark.parametrize("enabled,capacity", [(False, 10), (True, 15)])
-def test_token_room_capacity(enabled, capacity, settings):
-    settings.SERVER_ENFORCED_ADMISSION = enabled
+def test_token_room_capacity():
     token = livekit.create_access_token(SimpleNamespace(slug="user", name="User"), "room")
     claims = jwt.decode(token, options={"verify_signature": False})
-    assert claims["roomConfig"]["maxParticipants"] == capacity
+    assert claims["roomConfig"]["maxParticipants"] == 15
 
 
-def test_presence_is_raw_and_lookup_errors_are_not_empty(settings):
-    settings.SERVER_ENFORCED_ADMISSION = True
+def test_presence_is_raw_and_lookup_errors_are_not_empty():
     with patch("totem.rooms.livekit._get_connected_participants", new=AsyncMock(return_value={"waiting", "member"})):
         assert livekit.get_admission_participants("room") == {"waiting", "member"}
     with patch("totem.rooms.livekit._get_connected_participants", new=AsyncMock(side_effect=TimeoutError)):
@@ -44,8 +41,7 @@ def test_presence_is_raw_and_lookup_errors_are_not_empty(settings):
             livekit.get_admission_participants("room")
 
 
-def test_first_join_proceeds_when_livekit_room_does_not_exist(settings):
-    settings.SERVER_ENFORCED_ADMISSION = True
+def test_first_join_proceeds_when_livekit_room_does_not_exist():
     user = SimpleNamespace(is_active=True, pk=1, slug="keeper")
     session = MagicMock(slug="room")
     session.attendees.filter.return_value.exists.return_value = True
@@ -72,8 +68,7 @@ def test_admission_presence_internal_error_is_not_empty():
     assert exc.value.code == "unavailable"
 
 
-def test_enforced_remove_is_hard_even_when_hint_succeeds(settings):
-    settings.SERVER_ENFORCED_ADMISSION = True
+def test_enforced_remove_is_hard_even_when_hint_succeeds():
     client = MagicMock()
     client.__aenter__ = AsyncMock(return_value=client)
     client.__aexit__ = AsyncMock(return_value=False)
@@ -85,8 +80,7 @@ def test_enforced_remove_is_hard_even_when_hint_succeeds(settings):
     assert client.room.remove_participant.call_args.args[0].revoke_token_ts > 0
 
 
-def test_reconcile_empty_presence_reaches_state_machine(settings):
-    settings.SERVER_ENFORCED_ADMISSION = True
+def test_reconcile_empty_presence_reaches_state_machine():
     request = SimpleNamespace(user=SimpleNamespace(slug="keeper"))
     room = MagicMock()
     state = MagicMock()
@@ -101,8 +95,7 @@ def test_reconcile_empty_presence_reaches_state_machine(settings):
     assert apply.call_args.kwargs["participant_sids"] == {}
 
 
-def test_event_passes_sid_snapshot_to_state_machine_and_projection(settings):
-    settings.SERVER_ENFORCED_ADMISSION = True
+def test_event_passes_sid_snapshot_to_state_machine_and_projection():
     request = SimpleNamespace(user=SimpleNamespace(slug="keeper"))
     body = EventRequest(event=StartRoomEvent(), last_seen_version=0)
     sids = {"keeper": "sid-keeper", "waiting": "sid-waiting"}
@@ -120,8 +113,7 @@ def test_event_passes_sid_snapshot_to_state_machine_and_projection(settings):
     mute.assert_called_once_with("room", except_identity="keeper", identities={"keeper"})
 
 
-def test_unknown_presence_rejects_event_without_state_change(settings):
-    settings.SERVER_ENFORCED_ADMISSION = True
+def test_unknown_presence_rejects_event_without_state_change():
     request = SimpleNamespace(user=SimpleNamespace(slug="keeper"))
     body = EventRequest(event=StartRoomEvent(), last_seen_version=0)
     with (
@@ -136,8 +128,7 @@ def test_unknown_presence_rejects_event_without_state_change(settings):
     apply.assert_not_called()
 
 
-def test_waiting_participant_cannot_be_muted(settings):
-    settings.SERVER_ENFORCED_ADMISSION = True
+def test_waiting_participant_cannot_be_muted():
     request = SimpleNamespace(user=SimpleNamespace(slug="keeper"))
     with (
         patch.object(room_api, "_get_room_and_require_keeper", return_value=MagicMock()),
@@ -176,8 +167,7 @@ def test_livekit_sid_snapshot_filters_disconnected_and_handles_errors():
 
 
 @pytest.mark.django_db
-def test_replaced_connection_cannot_be_muted(settings):
-    settings.SERVER_ENFORCED_ADMISSION = True
+def test_replaced_connection_cannot_be_muted():
     keeper, member = UserFactory(), UserFactory()
     session = SessionFactory(space__author=keeper, start=room_api.timezone.now() - timedelta(minutes=1))
     session.attendees.add(keeper, member)
@@ -215,8 +205,7 @@ def test_replaced_connection_cannot_be_muted(settings):
     mute.assert_called_once_with(session.slug, member.slug)
 
 
-def test_join_passes_raw_presence_without_emitting_analytics(settings):
-    settings.SERVER_ENFORCED_ADMISSION = True
+def test_join_passes_raw_presence_without_emitting_analytics():
     user = SimpleNamespace(is_active=True, pk=1, slug="member")
     session = MagicMock(slug="room")
     session.attendees.filter.return_value.exists.return_value = True
@@ -235,8 +224,7 @@ def test_join_passes_raw_presence_without_emitting_analytics(settings):
     analytics.assert_not_called()
 
 
-def test_remove_ban_passes_domain_flag_and_hard_removes(settings):
-    settings.SERVER_ENFORCED_ADMISSION = True
+def test_remove_ban_passes_domain_flag_and_hard_removes():
     keeper = SimpleNamespace(slug="keeper")
     target = SimpleNamespace(slug="member")
     request = SimpleNamespace(user=keeper)

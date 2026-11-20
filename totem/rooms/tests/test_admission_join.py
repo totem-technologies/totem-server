@@ -1,4 +1,3 @@
-import os
 from datetime import timedelta
 from unittest.mock import patch
 from uuid import UUID, uuid4
@@ -24,7 +23,6 @@ BASE = "/api/mobile/protected/rooms"
 
 @pytest.fixture
 def join_context(client_with_user, settings):
-    settings.SERVER_ENFORCED_ADMISSION = True
     settings.LIVEKIT_API_KEY = KEY
     settings.LIVEKIT_API_SECRET = SECRET
     client, user = client_with_user
@@ -373,20 +371,3 @@ def test_ineligible_join_is_denied(join_context, reason):
     assert response.status_code == 403
     assert "token" not in response.json()
     assert not session.joined.filter(pk=user.pk).exists()
-
-
-def test_admission_flag_defaults_off(settings):
-    if "SERVER_ENFORCED_ADMISSION" in os.environ:
-        pytest.skip("Admission flag explicitly configured in environment")
-    assert settings.SERVER_ENFORCED_ADMISSION is False
-
-
-def test_legacy_join_response_has_no_admission(join_context, settings):
-    client, user, _, session, _, presence = join_context
-    settings.SERVER_ENFORCED_ADMISSION = False
-    with patch("totem.rooms.api.get_connected_participants", return_value=set()):
-        response = join(client, session)
-    assert_token(response, user, session, admitted=True)
-    assert response.json()["admission"] is None
-    assert session.joined.filter(pk=user.pk).exists()
-    presence.assert_not_called()

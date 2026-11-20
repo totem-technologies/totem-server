@@ -30,7 +30,7 @@ class TestEndSessions:
 
         with (
             patch(
-                "totem.rooms.tasks.get_connected_participants",
+                "totem.rooms.tasks.get_admission_participants",
                 return_value=set(session.joined.values_list("slug", flat=True)),
             ),
             patch("totem.rooms.tasks.publish_state"),
@@ -53,7 +53,7 @@ class TestEndSessions:
 
         with (
             patch(
-                "totem.rooms.tasks.get_connected_participants",
+                "totem.rooms.tasks.get_admission_participants",
                 return_value=set(session.joined.values_list("slug", flat=True)),
             ),
             patch("totem.rooms.tasks.publish_state"),
@@ -74,7 +74,7 @@ class TestEndSessions:
 
         with (
             patch(
-                "totem.rooms.tasks.get_connected_participants",
+                "totem.rooms.tasks.get_admission_participants",
                 return_value=set(session.joined.values_list("slug", flat=True)),
             ),
             patch("totem.rooms.tasks.publish_state") as mock_publish,
@@ -92,7 +92,7 @@ class TestEndSessions:
 
         with (
             patch(
-                "totem.rooms.tasks.get_connected_participants",
+                "totem.rooms.tasks.get_admission_participants",
                 return_value=set(session.joined.values_list("slug", flat=True)),
             ),
             patch("totem.rooms.tasks.publish_state"),
@@ -111,7 +111,7 @@ class TestEndSessions:
 
         with (
             patch(
-                "totem.rooms.tasks.get_connected_participants",
+                "totem.rooms.tasks.get_admission_participants",
                 return_value=set(session.joined.values_list("slug", flat=True)),
             ),
             patch("totem.rooms.tasks.publish_state") as mock_publish,
@@ -138,7 +138,7 @@ class TestEndSessions:
                 raise Exception("LiveKit down")
 
         with (
-            patch("totem.rooms.tasks.get_connected_participants", return_value=set()),
+            patch("totem.rooms.tasks.get_admission_participants", return_value=set()),
             patch("totem.rooms.tasks.publish_state", side_effect=flaky_publish),
         ):
             count = end_sessions_without_keeper()
@@ -151,7 +151,7 @@ class TestEndSessions:
         room = Room.objects.get_or_create_for_session(session)
 
         with (
-            patch("totem.rooms.tasks.get_connected_participants", return_value=set()),
+            patch("totem.rooms.tasks.get_admission_participants", return_value=set()),
             patch("totem.rooms.tasks.publish_state") as mock_publish,
         ):
             count = end_sessions_without_keeper()
@@ -170,7 +170,7 @@ class TestEndSessions:
         room = Room.objects.get_or_create_for_session(session)
 
         with (
-            patch("totem.rooms.tasks.get_connected_participants", return_value=None),
+            patch("totem.rooms.tasks.get_admission_participants", return_value=None),
             patch("totem.rooms.tasks.publish_state") as mock_publish,
         ):
             count = end_sessions_without_keeper()

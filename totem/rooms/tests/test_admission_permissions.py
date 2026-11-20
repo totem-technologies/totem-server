@@ -48,14 +48,12 @@ def livekit():
 
 
 @pytest.fixture
-def room_context(settings, livekit):
-    settings.SERVER_ENFORCED_ADMISSION = False
+def room_context(livekit):
     keeper = UserFactory()
     user = UserFactory()
     session = SessionFactory(space__author=keeper, start=timezone.now() - timedelta(minutes=1))
     session.attendees.add(keeper, user)
     room = Room.objects.get_or_create_for_session(session)
-    settings.SERVER_ENFORCED_ADMISSION = True
     return session, room, keeper, user
 
 
@@ -84,11 +82,10 @@ def queue_without_callback(durable):
 
 
 @pytest.fixture
-def queued_grant(settings, room_context):
+def queued_grant(room_context):
     session, room, keeper, user = room_context
-    settings.SERVER_ENFORCED_ADMISSION = False
-    attempt = approve(room, keeper, request(session, user))
-    settings.SERVER_ENFORCED_ADMISSION = True
+    with patch.object(admission, "_queue_permissions"):
+        attempt = approve(room, keeper, request(session, user))
     queue_without_callback(attempt.admission)
     return attempt
 
@@ -518,16 +515,3 @@ def test_completion_rechecks_live_participant_and_journal(room_context, queued_g
     assert error.value.code == "permission_pending"
     attempt.refresh_from_db()
     assert attempt.status == "granting"
-
-
-def test_disabled_flag_does_not_mutate_journal_or_call_livekit(settings, room_context, queued_grant, livekit):
-    sync = AdmissionPermissionSync.objects.get(admission=queued_grant.admission)
-    before = (sync.revision, sync.desired_admitted, sync.applied_revision, sync.checked_at)
-    settings.SERVER_ENFORCED_ADMISSION = False
-    queue_without_callback(queued_grant.admission)
-    admission_permissions.reconcile_admission_permissions(queued_grant.admission_id)
-    assert admission_permissions.reconcile_session_permissions() == 0
-    sync.refresh_from_db()
-    assert (sync.revision, sync.desired_admitted, sync.applied_revision, sync.checked_at) == before
-    for mock in livekit:
-        mock.assert_not_called()

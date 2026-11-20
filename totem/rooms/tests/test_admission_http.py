@@ -22,8 +22,7 @@ BASE = "/api/mobile/protected/rooms"
 
 
 @pytest.fixture
-def context(settings, client_with_user):
-    settings.SERVER_ENFORCED_ADMISSION = True
+def context(client_with_user):
     client, user = client_with_user
     keeper = UserFactory()
     session = SessionFactory(space__author=keeper, start=timezone.now() - timedelta(minutes=1))
@@ -58,8 +57,7 @@ def livekit():
         yield presence
 
 
-def test_request_then_me_returns_own_pending_attempt(settings, client_with_user, livekit):
-    settings.SERVER_ENFORCED_ADMISSION = True
+def test_request_then_me_returns_own_pending_attempt(client_with_user, livekit):
     client, user = client_with_user
     keeper = UserFactory()
     session = SessionFactory(space__author=keeper, start=timezone.now() - timedelta(minutes=1))
@@ -121,14 +119,9 @@ def send(client, method, url, body):
 
 
 @pytest.mark.parametrize("method,suffix,body,keeper_only", endpoint_cases())
-def test_disabled_and_unauthenticated_endpoints(context, settings, method, suffix, body, keeper_only):
-    client, _, _, _, session, _ = context
+def test_unauthenticated_endpoints(context, method, suffix, body, keeper_only):
+    _, _, _, _, session, _ = context
     url = f"{BASE}/{session.slug}/admission{suffix}"
-    settings.SERVER_ENFORCED_ADMISSION = False
-    response = send(client, method, url, body)
-    assert response.status_code == 404
-    assert response.json()["code"] == "feature_disabled"
-    settings.SERVER_ENFORCED_ADMISSION = True
     response = send(Client(), method, url, body)
     assert response.status_code == 401
 

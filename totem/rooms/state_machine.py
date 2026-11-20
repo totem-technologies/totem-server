@@ -16,7 +16,6 @@ from contextlib import contextmanager
 from functools import partial
 from typing import TYPE_CHECKING
 
-from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, Q
 from django.utils import timezone
@@ -89,27 +88,22 @@ def apply_event(
 
         state_before = room.to_state()
 
-        if settings.SERVER_ENFORCED_ADMISSION:
-            from .room_participants import participant_projection
+        from .room_participants import participant_projection
 
-            offline_moderation = isinstance(event, EndRoomEvent | BanParticipantEvent | UnbanParticipantEvent)
-            if (connected is None or participant_sids is None) and not offline_moderation:
-                raise TransitionError(code=ErrorCode.LIVEKIT_ERROR, message="LiveKit presence is unavailable")
-            projection = participant_projection(room, connected or set(), participant_sids)
-            if actor != room.keeper and actor not in projection.connected:
-                raise TransitionError(code=ErrorCode.NOT_IN_ROOM, message="Participant is not activated and connected")
-            if isinstance(event, StartRoomEvent | PassStickEvent | AcceptStickEvent | ForcePassStickEvent):
-                if room.keeper not in projection.connected:
-                    raise TransitionError(
-                        code=ErrorCode.KEEPER_NOT_IN_ROOM, message="Keeper must be activated and connected"
-                    )
-            unverified_connected = (connected or set()) - projection.connected
-            _reconcile_talking_order(room, connected if participant_sids is not None else None, participant_sids)
-            connected = projection.connected
-        else:
-            unverified_connected = set()
-            connected = connected or set()
-            _reconcile_talking_order(room, connected)
+        offline_moderation = isinstance(event, EndRoomEvent | BanParticipantEvent | UnbanParticipantEvent)
+        if (connected is None or participant_sids is None) and not offline_moderation:
+            raise TransitionError(code=ErrorCode.LIVEKIT_ERROR, message="LiveKit presence is unavailable")
+        projection = participant_projection(room, connected or set(), participant_sids)
+        if actor != room.keeper and actor not in projection.connected:
+            raise TransitionError(code=ErrorCode.NOT_IN_ROOM, message="Participant is not activated and connected")
+        if isinstance(event, StartRoomEvent | PassStickEvent | AcceptStickEvent | ForcePassStickEvent):
+            if room.keeper not in projection.connected:
+                raise TransitionError(
+                    code=ErrorCode.KEEPER_NOT_IN_ROOM, message="Keeper must be activated and connected"
+                )
+        unverified_connected = (connected or set()) - projection.connected
+        _reconcile_talking_order(room, connected if participant_sids is not None else None, participant_sids)
+        connected = projection.connected
 
         match event:
             case EmptyRoomEvent():
@@ -155,11 +149,10 @@ def record_join(session: Session, user: User) -> None:
         if user.slug in room.banned_participants:
             raise TransitionError(code=ErrorCode.BANNED, message="You have been banned from this session")
 
-        if settings.SERVER_ENFORCED_ADMISSION:
-            from .room_participants import is_activated_participant
+        from .room_participants import is_activated_participant
 
-            if not is_activated_participant(room, user.slug):
-                raise TransitionError(code=ErrorCode.NOT_JOINABLE, message="Server admission is required")
+        if not is_activated_participant(room, user.slug):
+            raise TransitionError(code=ErrorCode.NOT_JOINABLE, message="Server admission is required")
 
         already_joined = session.joined.filter(pk=user.pk).exists()
         state_before = room.to_state()
@@ -173,7 +166,7 @@ def record_join(session: Session, user: User) -> None:
         elif not already_joined:
             room.talking_order = [slug for slug in room.talking_order if slug != user.slug] + [user.slug]
         session.joined.add(user)
-        if settings.SERVER_ENFORCED_ADMISSION and not already_joined:
+        if not already_joined:
             from totem.users import analytics
 
             transaction.on_commit(partial(analytics.event_joined, user, session))
@@ -320,9 +313,7 @@ def _require_keeper(room: Room, actor: str) -> None:
 def _require_keeper_in_room(room: Room, connected: set[str] | None = None) -> None:
     """Requires the keeper to be in the room to perform an action"""
 
-    if room.keeper not in room.talking_order or (
-        settings.SERVER_ENFORCED_ADMISSION and connected is not None and room.keeper not in connected
-    ):
+    if room.keeper not in room.talking_order or (connected is not None and room.keeper not in connected):
         raise TransitionError(
             code=ErrorCode.KEEPER_NOT_IN_ROOM,
             message="Keeper must be in the room to perform this action",
@@ -455,22 +446,19 @@ def _reconcile_talking_order(
       speaker disconnects
     - Repairs missing speaker assignments
     """
-    if settings.SERVER_ENFORCED_ADMISSION:
-        from .room_participants import participant_projection
+    from .room_participants import participant_projection
 
-        projection = participant_projection(room, connected or set(), participant_sids)
-        room.talking_order = [slug for slug in room.talking_order if slug in projection.retained]
-        if room.current_speaker not in projection.retained:
-            room.current_speaker = None
-        if room.next_speaker not in projection.retained:
-            room.next_speaker = None
-        if connected is None:
-            if room.status == RoomStatus.ACTIVE and room.current_speaker is None:
-                room.turn_state = TurnState.IDLE
-            return
-        connected = projection.connected
-    elif connected is None:
+    projection = participant_projection(room, connected or set(), participant_sids)
+    room.talking_order = [slug for slug in room.talking_order if slug in projection.retained]
+    if room.current_speaker not in projection.retained:
+        room.current_speaker = None
+    if room.next_speaker not in projection.retained:
+        room.next_speaker = None
+    if connected is None:
+        if room.status == RoomStatus.ACTIVE and room.current_speaker is None:
+            room.turn_state = TurnState.IDLE
         return
+    connected = projection.connected
 
     reconciled: list[str] = []
 
@@ -496,7 +484,7 @@ def _reconcile_talking_order(
     # connected. Clearing them would leave no reference point from which a
     # later event could recover the turn.
     if room.status != RoomStatus.ACTIVE or not connected_order:
-        if settings.SERVER_ENFORCED_ADMISSION and room.status == RoomStatus.ACTIVE and room.current_speaker is None:
+        if room.status == RoomStatus.ACTIVE and room.current_speaker is None:
             room.turn_state = TurnState.IDLE
         return
 
@@ -742,20 +730,14 @@ def _handle_ban(
     from .admission import revoke_removed_user
 
     participant = User.objects.filter(slug=participant_slug).first()
-    if settings.SERVER_ENFORCED_ADMISSION and (
-        participant is None
-        or not (
-            room.session.attendees.filter(pk=participant.pk).exists()
-            or room.session.admissions.filter(user=participant).exists()
-        )
+    if participant is None or not (
+        room.session.attendees.filter(pk=participant.pk).exists()
+        or room.session.admissions.filter(user=participant).exists()
     ):
         raise TransitionError(code=ErrorCode.NOT_IN_ROOM, message="Participant is not associated with this session")
     keeper = User.objects.get(slug=actor)
     if participant:
-        if settings.SERVER_ENFORCED_ADMISSION:
-            revoke_removed_user(room.session, keeper, participant, prune=False)
-        else:
-            revoke_removed_user(room.session, keeper, participant)
+        revoke_removed_user(room.session, keeper, participant, prune=False)
 
     room.banned_participants = [*room.banned_participants, participant_slug]
     room.talking_order = [s for s in room.talking_order if s != participant_slug]
@@ -770,7 +752,7 @@ def _handle_ban(
     remaining = connected - {participant_slug}
     _reconcile_talking_order(
         room,
-        remaining if participant_sids is not None or not settings.SERVER_ENFORCED_ADMISSION else None,
+        remaining if participant_sids is not None else None,
         participant_sids,
     )
 

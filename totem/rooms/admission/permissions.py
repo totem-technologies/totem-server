@@ -9,7 +9,6 @@ from datetime import timedelta
 from functools import partial
 from uuid import UUID, uuid4
 
-from django.conf import settings
 from django.db import connection, transaction
 from django.db.models import F, Q
 from django.utils import timezone
@@ -82,8 +81,6 @@ def _requires_disconnect(room: Room, admission: SessionAdmission) -> bool:
 
 def queue_permission_sync(admission: SessionAdmission) -> None:
     """Caller holds the Session lock. Persist intent before scheduling I/O."""
-    if not settings.SERVER_ENFORCED_ADMISSION:
-        return
     room = Room.objects.select_related("session").get(session_id=admission.session_id)
     # Reload: callers may have changed another instance of the same membership.
     admission = SessionAdmission.objects.select_related("user").get(pk=admission.pk)
@@ -170,8 +167,6 @@ def reconcile_admission_permissions(admission_id: int, *, force: bool = False) -
     uncertain grants are restricted again and left dirty; the periodic task
     retries even after process failure. LiveKit has no atomic SID precondition.
     """
-    if not settings.SERVER_ENFORCED_ADMISSION:
-        return
     if connection.in_atomic_block:
         raise RuntimeError("LiveKit reconciliation must run outside database transactions")
     try:
@@ -343,8 +338,6 @@ def reconcile_session_permissions() -> int:
     Live sessions are checked even after an acknowledged denial, since self-hosted
     deployments need reconciliation for replayed unexpired tokens.
     """
-    if not settings.SERVER_ENFORCED_ADMISSION:
-        return 0
     admissions = AdmissionPermissionSync.objects.filter(
         Q(admission__session__ended_at__isnull=True)
         | Q(admission__session__ended_at__gte=timezone.now() - timedelta(minutes=2))

@@ -36,8 +36,7 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
-def room_context(settings):
-    settings.SERVER_ENFORCED_ADMISSION = True
+def room_context():
     keeper, member, pending = UserFactory(), UserFactory(), UserFactory()
     session = SessionFactory(space__author=keeper, start=timezone.now() - timedelta(minutes=1))
     session.attendees.add(keeper, member, pending)
@@ -334,15 +333,6 @@ def test_empty_projection_clears_invalid_speakers_but_keeps_disconnected_members
     assert state.current_speaker is None
     assert state.next_speaker is None
     assert state.turn_state == TurnState.IDLE
-
-
-def test_flag_off_keeps_legacy_raw_presence(room_context, settings):
-    session, room, keeper, member, pending = room_context
-    settings.SERVER_ENFORCED_ADMISSION = False
-    room.talking_order = [keeper.slug]
-    room.save(update_fields=["talking_order"])
-    state = apply_event(session.slug, keeper.slug, EmptyRoomEvent(), None, {keeper.slug, pending.slug})
-    assert state.talking_order == [keeper.slug, pending.slug]
 
 
 def test_join_analytics_only_after_first_committed_activation(room_context, django_capture_on_commit_callbacks):

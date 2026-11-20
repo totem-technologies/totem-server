@@ -1,13 +1,12 @@
 import logging
 from datetime import timedelta
 
-from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 
 from totem.rooms.admission.permissions import reconcile_session_permissions
-from totem.rooms.livekit import get_admission_participants, get_connected_participants, publish_state
+from totem.rooms.livekit import get_admission_participants, publish_state
 from totem.rooms.models import Room
 from totem.rooms.schemas import EndReason, EndRoomEvent, RoomStatus
 from totem.rooms.state_machine import apply_event
@@ -46,7 +45,7 @@ def _end_session(session: Session, connected_participants: set[str]) -> bool:
                         actor=room.keeper,
                         event=EndRoomEvent(reason=reason),
                         last_seen_version=room.state_version,
-                        connected=None if settings.SERVER_ENFORCED_ADMISSION else set(),
+                        connected=None,
                     )
             except Exception:
                 logging.exception("Failed to end room for session %s", session.slug)
@@ -86,11 +85,7 @@ def end_sessions_without_keeper() -> int:
         keeper_slug = room.keeper if room else session.space.author.slug
 
         try:
-            connected_participants = (
-                get_admission_participants(session.slug)
-                if settings.SERVER_ENFORCED_ADMISSION
-                else get_connected_participants(session.slug)
-            )
+            connected_participants = get_admission_participants(session.slug)
         except Exception:
             logging.exception("Skipped session %s because LiveKit presence failed", session.slug)
             continue

@@ -21,7 +21,7 @@ from livekit import api
 
 from totem.users.models import User
 
-from .schemas import RemoveParticipantPayload, RemoveReason, RoomState
+from .schemas import RemoveReason, RoomState
 
 logger = logging.getLogger(__name__)
 
@@ -222,7 +222,7 @@ def create_access_token(
             config=api.RoomConfiguration(
                 name=room_name,
                 empty_timeout=ROOM_EMPTY_TIMEOUT_SECONDS,
-                max_participants=ENFORCED_MAX_PARTICIPANTS if settings.SERVER_ENFORCED_ADMISSION else MAX_PARTICIPANTS,
+                max_participants=ENFORCED_MAX_PARTICIPANTS,
             )
         )
     )
@@ -375,27 +375,9 @@ async def _mute_track_for_all_participants(
 
 
 async def _remove_participant(room_name: str, identity: str, reason: RemoveReason = RemoveReason.REMOVE) -> None:
-    if settings.SERVER_ENFORCED_ADMISSION:
-        # LiveKit has no compare-and-swap by SID; a concurrent explicit re-admission
-        # can race this identity-based removal.
-        await _hard_disconnect_participant(room_name, identity)
-        return
-    async with _get_api() as lkapi:
-        try:
-            await lkapi.room.send_data(
-                api.SendDataRequest(
-                    room=room_name,
-                    topic="lk-participant-removed-topic",
-                    data=RemoveParticipantPayload(identity=identity, reason=reason).model_dump_json().encode(),
-                    destination_identities=[identity],
-                    kind=api.DataPacket.Kind.RELIABLE,
-                )
-            )
-        except Exception:
-            logger.exception(
-                "Failed to send remove data message to %s in room %s, falling back to hard remove", identity, room_name
-            )
-            await lkapi.room.remove_participant(api.RoomParticipantIdentity(room=room_name, identity=identity))
+    # LiveKit has no compare-and-swap by SID; a concurrent explicit re-admission
+    # can race this identity-based removal.
+    await _hard_disconnect_participant(room_name, identity)
 
 
 @async_to_sync

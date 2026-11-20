@@ -22,14 +22,12 @@ pytestmark = pytest.mark.django_db(transaction=True)
 
 @pytest.fixture
 def context(settings):
-    settings.SERVER_ENFORCED_ADMISSION = False
     settings.LIVEKIT_API_KEY = "test-key-test-key-test-key-test-key"
     settings.LIVEKIT_API_SECRET = "test-secret-test-secret-test-secret-test-secret-test-secret"
     keeper = UserFactory()
     session = SessionFactory(space__author=keeper, start=timezone.now() - timedelta(minutes=1))
     session.attendees.add(keeper)
     room = Room.objects.get_or_create_for_session(session)
-    settings.SERVER_ENFORCED_ADMISSION = True
 
     def missing(*args, **kwargs):
         assert not connection.in_atomic_block

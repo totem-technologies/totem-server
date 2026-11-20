@@ -470,7 +470,7 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         """Absolute times between which `user` may join, the single source of
         truth for join timing. A None close means the room stays open for
         rejoining until the session ends, including the overrun backstop."""
-        if settings.SERVER_ENFORCED_ADMISSION and self.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT:
+        if self.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT:
             from totem.rooms.models import AdmissionAttempt, AdmissionState, AttemptStatus, Room, SessionAdmission
 
             room = Room.objects.filter(session=self).first()
@@ -511,7 +511,7 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
     def can_join(self, user: "User | AnonymousUser"):
         if self.cancelled or user not in self.attendees.all():
             return False
-        if settings.SERVER_ENFORCED_ADMISSION and self.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT:
+        if self.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT:
             from totem.rooms.models import AdmissionState, Room, SessionAdmission
             from totem.rooms.schemas import RoomStatus
 

@@ -1,11 +1,14 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from threading import Barrier
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
+from django.contrib.contenttypes.models import ContentType
 from django.db import connections
 from django.utils import timezone
+from livekit import api
 
 from totem.rooms.models import Room
 from totem.rooms.schemas import EndReason, EndRoomEvent
@@ -35,6 +38,28 @@ def context(db):
     session.attendees.add(keeper, user)
     room = Room.objects.get_or_create_for_session(session)
     return session, room, keeper, user
+
+
+@pytest.fixture
+def livekit_permissions():
+    participant = api.ParticipantInfo(
+        sid="participant-1",
+        permission=api.ParticipantPermission(can_publish=True, can_subscribe=True, can_publish_data=True),
+    )
+    with (
+        patch("totem.rooms.admission.permissions.get_participant_snapshot", return_value=participant),
+        patch("totem.rooms.admission.permissions.update_participant_permissions", return_value=participant),
+        patch("totem.rooms.admission.permissions.hard_disconnect_participant"),
+        patch("totem.rooms.state_machine.publish_state"),
+    ):
+        yield
+
+
+@pytest.fixture
+def clear_content_type_cache(transactional_db):
+    ContentType.objects.clear_cache()
+    yield
+    ContentType.objects.clear_cache()
 
 
 def request(admission, session, user):
@@ -116,7 +141,8 @@ def test_keeper_skips_approval_but_not_join_eligibility(admission, context):
     assert not admission.is_authorized_to_enter(session.slug, keeper)
 
 
-def test_approve_grant_and_complete(admission, context):
+@pytest.mark.django_db(transaction=True)
+def test_approve_grant_and_complete(admission, context, livekit_permissions):
     session, room, keeper, user = context
     attempt = request(admission, session, user)
     waiting_deadline = attempt.expires_at
@@ -287,8 +313,11 @@ def test_policy_survives_room_reload_and_keeper_reassignment(admission, context)
     assert not admission.is_authorized_to_enter(session.slug, user)
 
 
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("departure", ["cancelled", "completed"])
-def test_durable_admission_auto_grants_return_after_cancel_or_normal_leave(admission, context, departure):
+def test_durable_admission_auto_grants_return_after_cancel_or_normal_leave(
+    admission, context, departure, livekit_permissions
+):
     session, room, keeper, user = context
     attempt = decide(admission, room, keeper, request(admission, session, user), "approve")
     if departure == "cancelled":
@@ -522,7 +551,7 @@ def run_concurrently(operation):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_concurrent_duplicate_request_is_idempotent(admission):
+def test_concurrent_duplicate_request_is_idempotent(admission, clear_content_type_cache, livekit_permissions):
     keeper = UserFactory()
     user = UserFactory()
     session = SessionFactory(space__author=keeper, start=timezone.now() + timedelta(minutes=5))
@@ -536,7 +565,7 @@ def test_concurrent_duplicate_request_is_idempotent(admission):
 
 
 @pytest.mark.django_db(transaction=True)
-def test_concurrent_conflicting_decisions_have_one_winner(admission):
+def test_concurrent_conflicting_decisions_have_one_winner(admission, clear_content_type_cache, livekit_permissions):
     keeper = UserFactory()
     user = UserFactory()
     session = SessionFactory(space__author=keeper, start=timezone.now() + timedelta(minutes=5))

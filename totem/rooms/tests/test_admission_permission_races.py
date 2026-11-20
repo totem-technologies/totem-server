@@ -21,13 +21,11 @@ pytestmark = pytest.mark.django_db(transaction=True)
 
 
 @pytest.fixture
-def context(settings):
-    settings.SERVER_ENFORCED_ADMISSION = False
+def context():
     keeper, user = UserFactory(), UserFactory()
     session = SessionFactory(space__author=keeper, start=timezone.now() - timedelta(minutes=1))
     session.attendees.add(keeper, user)
     room = Room.objects.get_or_create_for_session(session)
-    settings.SERVER_ENFORCED_ADMISSION = True
     with patch("totem.rooms.state_machine.publish_state"):
         yield session, room, keeper, user
 
@@ -319,12 +317,9 @@ def test_watchdog_rechecks_keeper_changed_during_presence_lookup(context):
         Room.objects.filter(pk=room.pk).update(keeper=user.slug)
         return {user.slug}
 
-    with (
-        patch.object(tasks, "get_admission_participants", side_effect=presence),
-        patch.object(tasks, "get_connected_participants") as legacy,
-    ):
+    with patch.object(tasks, "get_admission_participants", side_effect=presence) as lookup:
         assert tasks.end_sessions_without_keeper() == 0
-    legacy.assert_not_called()
+    lookup.assert_called_once_with(session.slug)
     session.refresh_from_db()
     assert session.ended_at is None
 

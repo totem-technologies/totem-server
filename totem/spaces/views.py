@@ -169,10 +169,7 @@ def join(request, session_slug):
 
     session = _get_session(session_slug)
     if session.can_join(user):
-        if not (
-            settings.SERVER_ENFORCED_ADMISSION
-            and session.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT
-        ):
+        if session.space.meeting_provider != Space.MeetingProviderChoices.LIVEKIT:
             session.joined.add(user)
             analytics.event_joined(user, session)
         return redirect(session.room_url(), permanent=False)

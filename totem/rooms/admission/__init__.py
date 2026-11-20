@@ -13,7 +13,6 @@ from datetime import timedelta
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from django.conf import settings
 from django.db import IntegrityError, transaction
 from django.db.models import Q, QuerySet
 from django.utils import timezone
@@ -61,13 +60,12 @@ def invalidate_pending_admission(session: Session) -> None:
         AdmissionAttempt.objects.filter(admission__session=session, status__in=ACTIVE_STATUSES),
         AttemptStatus.CANCELLED,
     )
-    if settings.SERVER_ENFORCED_ADMISSION:
-        from .permissions import queue_permission_sync
+    from .permissions import queue_permission_sync
 
-        for admission in session.admissions.select_related("permission_sync"):
-            sync = getattr(admission, "permission_sync", None)
-            if sync is None or sync.desired_admitted:
-                queue_permission_sync(admission)
+    for admission in session.admissions.select_related("permission_sync"):
+        sync = getattr(admission, "permission_sync", None)
+        if sync is None or sync.desired_admitted:
+            queue_permission_sync(admission)
 
 
 def _finish_attempts(attempts: QuerySet[AdmissionAttempt], status: AttemptStatus, *, schedule: bool = True) -> None:
@@ -130,10 +128,9 @@ def _set_membership(
 
 
 def _queue_permissions(admission: SessionAdmission) -> None:
-    if settings.SERVER_ENFORCED_ADMISSION:
-        from .permissions import queue_permission_sync
+    from .permissions import queue_permission_sync
 
-        queue_permission_sync(admission)
+    queue_permission_sync(admission)
 
 
 def _set_attempt(
@@ -153,11 +150,10 @@ def _set_attempt(
 
 
 def _approve(attempt: AdmissionAttempt, actor: User | None, *, record_admission: bool = True) -> None:
-    if settings.SERVER_ENFORCED_ADMISSION:
-        from .capacity import ensure_admission_capacity
+    from .capacity import ensure_admission_capacity
 
-        room = Room.objects.select_related("session").get(session_id=attempt.admission.session_id)
-        ensure_admission_capacity(room, attempt.admission.user)
+    room = Room.objects.select_related("session").get(session_id=attempt.admission.session_id)
+    ensure_admission_capacity(room, attempt.admission.user)
     if record_admission:
         _set_membership(attempt.admission, AdmissionState.ADMITTED, actor, schedule=False)
     attempt.session_started = Room.objects.filter(
@@ -170,7 +166,7 @@ def _approve(attempt: AdmissionAttempt, actor: User | None, *, record_admission:
 def _automatic_approval(room: Room, attempt: AdmissionAttempt, actor: User | None = None) -> bool:
     member = attempt.admission
     keeper = member.user.slug == room.keeper
-    removed = settings.SERVER_ENFORCED_ADMISSION and member.state == AdmissionState.REVOKED
+    removed = member.state == AdmissionState.REVOKED
     if not keeper and (removed or member.state == AdmissionState.PERMANENTLY_DECLINED):
         return False
     if not keeper and room.approval_required and member.state != AdmissionState.ADMITTED:
@@ -200,11 +196,7 @@ def request_admission(session_slug: str, user: User, request_id: UUID, attempt_i
                 _automatic_approval(room, existing)
             return existing
         admission, _ = SessionAdmission.objects.get_or_create(session=room.session, user=user)
-        can_request = (
-            _initial_join_window(room, user, admission)
-            if settings.SERVER_ENFORCED_ADMISSION
-            else room.session.can_join(user)
-        )
+        can_request = _initial_join_window(room, user, admission)
         if not _eligible(room, user, check_window=False) or not can_request:
             raise AdmissionError("not_eligible", "User is not eligible to request admission")
         if user.slug != room.keeper and admission.state == AdmissionState.PERMANENTLY_DECLINED:
@@ -333,10 +325,9 @@ def _change_membership(
             _finish_attempts(
                 admission.attempts.filter(status__in=ACTIVE_STATUSES), AttemptStatus.REVOKED, schedule=False
             )
-            if settings.SERVER_ENFORCED_ADMISSION:
-                from ..state_machine import prune_participant
+            from ..state_machine import prune_participant
 
-                prune_participant(room, user.slug, actor=actor.slug)
+            prune_participant(room, user.slug, actor=actor.slug)
         return admission
 
 
@@ -387,7 +378,7 @@ def _participant_transition(
             or (user.slug != room.keeper and attempt.admission.state != AdmissionState.ADMITTED)
         ):
             raise AdmissionError("not_eligible", "User is no longer authorized to complete admission")
-        if status == AttemptStatus.ADMITTED and settings.SERVER_ENFORCED_ADMISSION:
+        if status == AttemptStatus.ADMITTED:
             from ..state_machine import record_join
             from .capacity import ensure_admission_capacity
             from .permissions import permissions_reconciled
@@ -422,30 +413,26 @@ def cancel_admission(
 def complete_admission(
     session_slug: str, user: User, request_id: UUID, attempt_id: UUID, *, expected_version: int
 ) -> AdmissionAttempt:
-    proof = None
-    if settings.SERVER_ENFORCED_ADMISSION:
-        from ..livekit import LiveKitPermissionError
-        from .permissions import verify_current_permissions
+    from ..livekit import LiveKitPermissionError
+    from .permissions import verify_current_permissions
 
-        attempt = AdmissionAttempt.objects.filter(
-            admission__session__slug=session_slug,
-            admission__user=user,
-            request_id=request_id,
-            attempt_id=attempt_id,
-        ).first()
-        if not attempt:
-            raise AdmissionError("invalid_attempt", "No matching owned admission attempt")
-        if attempt.status == AttemptStatus.ADMITTED:
-            return _participant_transition(
-                session_slug, user, request_id, attempt_id, expected_version, AttemptStatus.ADMITTED
-            )
-        _version(attempt.version, expected_version)
-        try:
-            proof = verify_current_permissions(attempt.admission_id)
-        except LiveKitPermissionError as error:
-            raise AdmissionError(
-                "permission_pending", f"LiveKit completion verification failed: {error.code}"
-            ) from error
+    attempt = AdmissionAttempt.objects.filter(
+        admission__session__slug=session_slug,
+        admission__user=user,
+        request_id=request_id,
+        attempt_id=attempt_id,
+    ).first()
+    if not attempt:
+        raise AdmissionError("invalid_attempt", "No matching owned admission attempt")
+    if attempt.status == AttemptStatus.ADMITTED:
+        return _participant_transition(
+            session_slug, user, request_id, attempt_id, expected_version, AttemptStatus.ADMITTED
+        )
+    _version(attempt.version, expected_version)
+    try:
+        proof = verify_current_permissions(attempt.admission_id)
+    except LiveKitPermissionError as error:
+        raise AdmissionError("permission_pending", f"LiveKit completion verification failed: {error.code}") from error
     return _participant_transition(
         session_slug, user, request_id, attempt_id, expected_version, AttemptStatus.ADMITTED, proof
     )
@@ -485,20 +472,15 @@ def record_removal(
 
 def revoke_removed_user(session: Session, actor: User, user: User, *, prune: bool = True) -> None:
     """Record explicit removal, not normal disconnect. Caller holds the Session lock."""
-    member: SessionAdmission | None
-    if settings.SERVER_ENFORCED_ADMISSION:
-        member, _ = SessionAdmission.objects.get_or_create(session=session, user=user)
-    else:
-        member = SessionAdmission.objects.filter(session=session, user=user).first()
-    if member:
-        state = (
-            AdmissionState.PERMANENTLY_DECLINED
-            if member.state == AdmissionState.PERMANENTLY_DECLINED
-            else AdmissionState.REVOKED
-        )
-        _set_membership(member, state, actor)
-        _finish_attempts(member.attempts.filter(status__in=ACTIVE_STATUSES), AttemptStatus.REVOKED, schedule=False)
-    if prune and settings.SERVER_ENFORCED_ADMISSION:
+    member, _ = SessionAdmission.objects.get_or_create(session=session, user=user)
+    state = (
+        AdmissionState.PERMANENTLY_DECLINED
+        if member.state == AdmissionState.PERMANENTLY_DECLINED
+        else AdmissionState.REVOKED
+    )
+    _set_membership(member, state, actor)
+    _finish_attempts(member.attempts.filter(status__in=ACTIVE_STATUSES), AttemptStatus.REVOKED, schedule=False)
+    if prune:
         from ..state_machine import prune_participant
 
         room = Room.objects.get(session=session)
@@ -528,7 +510,7 @@ def is_authorized_to_enter(session_slug: str, user: User) -> bool:
             room.status == RoomStatus.ENDED
             or room.session.cancelled
             or room.session.ended()
-            or not _eligible(room, user, check_window=not settings.SERVER_ENFORCED_ADMISSION)
+            or not _eligible(room, user, check_window=False)
         ):
             return False
         if user.slug == room.keeper:

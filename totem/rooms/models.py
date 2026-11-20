@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, ClassVar
 
-from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
@@ -33,9 +32,7 @@ class RoomManager(models.Manager["Room"]):
             session=session,
             defaults={
                 "keeper": session.space.author.slug,
-                "talking_order": []
-                if settings.SERVER_ENFORCED_ADMISSION
-                else [a.slug for a in session.attendees.all()],
+                "talking_order": [],
             },
         )
         return room

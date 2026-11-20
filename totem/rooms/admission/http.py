@@ -12,7 +12,6 @@ from datetime import datetime
 from typing import Any, cast
 from uuid import UUID
 
-from django.conf import settings
 from django.utils import timezone
 
 from totem.rooms import admission
@@ -49,11 +48,6 @@ from .schemas import (
 
 CommandInput = KeeperDecisionInput | MembershipCommandInput | SettingsCommandInput | BatchCommandInput
 HISTORY_LIMIT = 100
-
-
-def _enabled() -> None:
-    if not settings.SERVER_ENFORCED_ADMISSION:
-        raise AdmissionError("feature_disabled", "Server admission is not enabled")
 
 
 def _read_access(room: Room, actor: User, *, keeper: bool) -> None:
@@ -146,7 +140,6 @@ def _participant(
 def admission_snapshot(
     session_slug: str, actor: User, *, keeper: bool = True
 ) -> AdmissionSnapshot | AdmissionMeSnapshot:
-    _enabled()
     # Authorize before I/O, and again before exposing a snapshot after I/O.
     with admission._locked_room(session_slug) as room:
         _read_access(room, actor, keeper=keeper)
@@ -232,7 +225,6 @@ def _owned_attempt(room: Room, user: User, request_id: UUID, attempt_id: UUID) -
 
 
 def confirm_connection(session_slug: str, user: User, request_id: UUID, attempt_id: UUID) -> AdmissionAttempt:
-    _enabled()
     with admission._locked_room(session_slug) as room:
         admission._require_open(room)
         if not _eligible(room, user):
@@ -273,7 +265,6 @@ def confirm_connection(session_slug: str, user: User, request_id: UUID, attempt_
 
 
 def request_admission_http(session_slug: str, user: User, body: AdmissionRequestInput) -> AdmissionMeSnapshot:
-    _enabled()
     if body.connected:
         confirm_connection(session_slug, user, body.request_id, body.attempt_id)
     else:
@@ -290,7 +281,6 @@ def request_admission_http(session_slug: str, user: User, body: AdmissionRequest
 
 
 def activate_admission_http(session_slug: str, user: User, body: AttemptReceiptInput) -> AdmissionMeSnapshot:
-    _enabled()
     with admission._locked_room(session_slug) as room:
         admission._require_open(room)
         attempt = _owned_attempt(room, user, body.request_id, body.attempt_id)
@@ -303,7 +293,6 @@ def activate_admission_http(session_slug: str, user: User, body: AttemptReceiptI
 
 
 def cancel_admission_http(session_slug: str, user: User, body: AttemptReceiptInput) -> AdmissionMeSnapshot:
-    _enabled()
     admission.cancel_admission(
         session_slug, user, body.request_id, body.attempt_id, expected_version=body.expected_version
     )
@@ -422,7 +411,6 @@ def _apply_command(
 def execute_keeper_command(
     session_slug: str, actor: User, action: str, body: CommandInput, identity: str | None = None
 ) -> AdmissionCommandResponse:
-    _enabled()
     payload = dict(action=action, identity=identity, body=body.model_dump(mode="json", exclude={"command_id"}))
     fingerprint = hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     with admission._locked_room(session_slug) as room:

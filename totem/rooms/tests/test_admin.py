@@ -48,7 +48,7 @@ class TestRoomAdmin:
 
             try:
                 with connection.execute_wrapper(coordinate_event):
-                    apply_event(session.slug, room.keeper, EmptyRoomEvent(), None, set())
+                    apply_event(session.slug, room.keeper, EmptyRoomEvent(), None, set(), participant_sids={})
             finally:
                 connections.close_all()
 

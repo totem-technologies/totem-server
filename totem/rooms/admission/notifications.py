@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 from functools import partial
 
-from django.conf import settings
 from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
@@ -21,13 +20,11 @@ def bump_admission_version(session_id: int, identity: str | None = None, *, noti
     Room.objects.filter(session_id=session_id).update(
         admission_version=F("admission_version") + 1, date_modified=timezone.now()
     )
-    if notify and settings.SERVER_ENFORCED_ADMISSION:
+    if notify:
         transaction.on_commit(partial(_notify, session_id, identity))
 
 
 def _notify(session_id: int, identity: str | None) -> None:
-    if not settings.SERVER_ENFORCED_ADMISSION:
-        return
     room = Room.objects.select_related("session").filter(session_id=session_id).first()
     if not room:
         return
