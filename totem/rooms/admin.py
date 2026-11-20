@@ -116,11 +116,18 @@ class RoomAdmin(StaleDataCheckAdminMixin, admin.ModelAdmin):
         with transaction.atomic():
             # The Session lock serializes this save with room events and prompt edits.
             session = Session.objects.select_for_update().get(pk=obj.session_id)
+            current = Room.objects.get(pk=obj.pk)
+            obj.approval_required = current.approval_required
+            obj.admission_revision = current.admission_revision
+            obj.admission_version = current.admission_version
             super().save_model(request, obj, form, change)
             # Sync session.ended_at when room status changes
             if obj.status == RoomStatus.ENDED and session.ended_at is None:
                 session.ended_at = timezone.now()
                 session.save(update_fields=["ended_at"])
+                from .admission import invalidate_pending_admission
+
+                invalidate_pending_admission(session)
             elif obj.status != RoomStatus.ENDED and session.ended_at is not None:
                 session.ended_at = None
                 session.save(update_fields=["ended_at"])

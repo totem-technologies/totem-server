@@ -461,6 +461,8 @@ SOCIAL_LINKS = {
 
 # LiveKit
 # ------------------------------------------------------------------------------
+# Staged rollout: keep off until admission APIs and clients are deployed together.
+SERVER_ENFORCED_ADMISSION = env.bool("SERVER_ENFORCED_ADMISSION", default=False)
 LIVEKIT_URL = env("LIVEKIT_URL", default=None)
 LIVEKIT_API_KEY = env("LIVEKIT_API_KEY", default=None)
 LIVEKIT_API_SECRET = env("LIVEKIT_API_SECRET", default=None)

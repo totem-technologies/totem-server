@@ -470,6 +470,36 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         """Absolute times between which `user` may join, the single source of
         truth for join timing. A None close means the room stays open for
         rejoining until the session ends, including the overrun backstop."""
+        if settings.SERVER_ENFORCED_ADMISSION and self.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT:
+            from totem.rooms.models import AdmissionAttempt, AdmissionState, AttemptStatus, Room, SessionAdmission
+
+            room = Room.objects.filter(session=self).first()
+            keeper = room.keeper if room else self.space.author.slug
+            is_keeper = user.is_authenticated and user.slug == keeper
+            admission = (
+                SessionAdmission.objects.filter(session=self, user=user).first() if user.is_authenticated else None
+            )
+            returning = is_keeper or (admission is not None and admission.state == AdmissionState.ADMITTED)
+            opens = self.start - datetime.timedelta(minutes=60 if user.is_staff or returning else 15)
+            if returning:
+                return opens, None
+            closes = self.start + (
+                datetime.timedelta(minutes=self.duration_minutes) if user.is_staff else _default_grace_period
+            )
+            if admission:
+                expires_at = (
+                    AdmissionAttempt.objects.filter(
+                        admission=admission,
+                        status__in=[AttemptStatus.PENDING, AttemptStatus.GRANTING],
+                        expires_at__gt=timezone.now(),
+                    )
+                    .values_list("expires_at", flat=True)
+                    .first()
+                )
+                if expires_at:
+                    closes = max(closes, expires_at)
+            return opens, closes
+
         is_joined = user in self.joined.all()
         wide = user.is_staff or is_joined
         opens = self.start - datetime.timedelta(minutes=60 if wide else 15)
@@ -481,6 +511,23 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
     def can_join(self, user: "User | AnonymousUser"):
         if self.cancelled or user not in self.attendees.all():
             return False
+        if settings.SERVER_ENFORCED_ADMISSION and self.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT:
+            from totem.rooms.models import AdmissionState, Room, SessionAdmission
+            from totem.rooms.schemas import RoomStatus
+
+            if not user.is_active:
+                return False
+            room = Room.objects.filter(session=self).first()
+            if room and (room.status == RoomStatus.ENDED or user.slug in room.banned_participants):
+                return False
+            keeper = room.keeper if room else self.space.author.slug
+            if (
+                user.slug != keeper
+                and SessionAdmission.objects.filter(
+                    session=self, user=user, state=AdmissionState.PERMANENTLY_DECLINED
+                ).exists()
+            ):
+                return False
         opens, closes = self.join_window(user)
         now = timezone.now()
         if self.ended():
