@@ -8,7 +8,7 @@ from django.test import TestCase
 from django.utils import timezone
 from PIL import Image, ImageOps
 
-from totem.rooms.models import Room
+from totem.rooms.models import AdmissionState, Room, SessionAdmission
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
 from totem.utils.testing import email_text
@@ -445,10 +445,12 @@ class TestSessionModel:
         assert opens == session.start - timezone.timedelta(minutes=60)
         assert closes == session.start + timezone.timedelta(minutes=60)
 
-        # LiveKit rooms stay open for rejoiners until explicitly ended.
+        # LiveKit requires admission, not legacy attendance, for the returning window.
         session.space.meeting_provider = Space.MeetingProviderChoices.LIVEKIT
         session.space.save()
         Room.objects.get_or_create_for_session(session)
+        assert session.join_window(user)[1] == session.start + timezone.timedelta(minutes=10)
+        SessionAdmission.objects.create(session=session, user=user, state=AdmissionState.ADMITTED)
         opens, closes = session.join_window(user)
         assert closes is None
 
@@ -485,7 +487,8 @@ class TestSessionModel:
 
         assert session.ended()
         assert not session.can_join(user)
-        assert session.join_window(user)[1] == session.end()
+        expected_close = None if is_keeper else session.start + timezone.timedelta(minutes=10)
+        assert session.join_window(user)[1] == expected_close
         assert not Session.objects.not_ended().filter(pk=session.pk).exists()
         assert session.space.next_session(user) is None
 
@@ -511,7 +514,7 @@ class TestSessionModel:
             duration_minutes=60,
         )
         session.attendees.add(user)
-        session.joined.add(user)
+        SessionAdmission.objects.create(session=session, user=user, state=AdmissionState.ADMITTED)
         room = Room.objects.get_or_create_for_session(session)
         room.date_created = session.start
         room.save(update_fields=["date_created"])

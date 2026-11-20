@@ -7,8 +7,10 @@ from the rest of the app. Everything else imports from here.
 
 from __future__ import annotations
 
+from datetime import datetime
 from enum import Enum
 from typing import Annotated, Literal, Optional, Union
+from uuid import UUID
 
 from ninja import Field, Schema, Status
 from pydantic import ConfigDict
@@ -60,6 +62,9 @@ class ErrorCode(str, Enum):
 
     # Join
     NOT_JOINABLE = "not_joinable"
+    ADMISSION_FULL = "admission_full"
+    WAITING_ROOM_FULL = "waiting_full"
+    ROOM_FULL = "room_full"
 
     # LiveKit
     LIVEKIT_ERROR = "livekit_error"
@@ -249,11 +254,32 @@ class EventRequest(Schema):
     last_seen_version: int
 
 
+class AdmissionJoinRequest(Schema):
+    """Explicit fresh attempts must provide both UUIDs; exact retries are idempotent."""
+
+    request_id: UUID
+    attempt_id: UUID
+
+
+class AdmissionJoinState(Schema):
+    request_id: UUID
+    attempt_id: UUID
+    status: str
+    durable_state: str
+    approval_required: bool
+    expires_at: datetime
+    permissions: Literal["waiting", "admitted"]
+    permission_sync: str
+    revision: int
+    admission_block_reason: str | None = None
+
+
 class JoinResponse(Schema):
-    """Token for connecting to a LiveKit room."""
+    """Token and server-owned admission snapshot (absent during legacy rollout)."""
 
     token: str
     is_already_present: bool
+    admission: AdmissionJoinState | None = None
 
 
 class RoomErrorResponse(Schema):
@@ -266,7 +292,7 @@ class RoomErrorResponse(Schema):
     message: str
     detail: Optional[str] = None
 
-    def as_http_response(self) -> tuple[int, RoomErrorResponse]:
+    def as_http_response(self) -> Status[RoomErrorResponse]:
         """Map error codes to HTTP statuses. Defaults to 400."""
         match self.code:
             case (
@@ -281,7 +307,7 @@ class RoomErrorResponse(Schema):
                 return Status(403, self)
             case ErrorCode.NOT_FOUND:
                 return Status(404, self)
-            case ErrorCode.STALE_VERSION:
+            case ErrorCode.STALE_VERSION | ErrorCode.ADMISSION_FULL | ErrorCode.WAITING_ROOM_FULL | ErrorCode.ROOM_FULL:
                 return Status(409, self)
             case ErrorCode.LIVEKIT_ERROR:
                 return Status(500, self)

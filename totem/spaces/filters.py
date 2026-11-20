@@ -1,7 +1,7 @@
 import datetime
 from dataclasses import dataclass
 
-from django.db.models import Count, Exists, OuterRef, Prefetch, Q, prefetch_related_objects
+from django.db.models import Count, Exists, OuterRef, Prefetch, Q, Value, prefetch_related_objects
 from django.urls import reverse
 from django.utils import timezone
 
@@ -25,13 +25,34 @@ def author_circle_count_prefetch(author_path: str = "author") -> Prefetch:
     return Prefetch(f"{author_path}__sessions_joined", queryset=Session.objects.only("id"))
 
 
+def join_listing_relations(user: User | None) -> list[str | Prefetch]:
+    from totem.rooms.models import AdmissionAttempt, AttemptStatus, SessionAdmission
+
+    relations: list[str | Prefetch] = ["room"]
+    if user and user.is_authenticated:
+        attempts = AdmissionAttempt.objects.filter(status__in=[AttemptStatus.PENDING, AttemptStatus.GRANTING])
+        admissions = SessionAdmission.objects.filter(user=user).prefetch_related(
+            Prefetch("attempts", queryset=attempts, to_attr="_join_attempts")
+        )
+        relations.append(Prefetch("admissions", queryset=admissions, to_attr="_join_admissions"))
+    return relations
+
+
+def join_listing_queryset(queryset: SessionQuerySet, user: User | None) -> SessionQuerySet:
+    queryset = queryset.annotate(_join_listing=Value(True))
+    if user and user.is_authenticated:
+        queryset = queryset.annotate(_join_admissions_user_id=Value(user.pk))
+    return queryset.prefetch_related(*join_listing_relations(user))
+
+
 def upcoming_sessions_queryset(user: User | None = None) -> SessionQuerySet:
     """A space's upcoming sessions as shown to this user, soonest first.
 
     Sessions stay visible until they end (even when full) so attendees can
     find them.
     """
-    return Session.objects.visible_to(user).not_ended().order_by("start").prefetch_related("attendees", "joined")
+    sessions = Session.objects.visible_to(user).not_ended().order_by("start").prefetch_related("attendees", "joined")
+    return join_listing_queryset(sessions, user)
 
 
 def get_upcoming_spaces_list(
@@ -138,19 +159,22 @@ def spaces_summary_data(user: User) -> SpacesSummary:
 
     # Sessions the user has registered for that haven't ended yet.
     upcoming = list(
-        Session.objects.visible_to(user)
-        .filter(attendees=user)
-        .not_ended()
-        .select_related("space")
-        .prefetch_related(
-            "space__author",
-            author_circle_count_prefetch("space__author"),
-            "space__categories",
-            "attendees",
-            "joined",
-            "space__subscribed",
+        join_listing_queryset(
+            Session.objects.visible_to(user)
+            .filter(attendees=user)
+            .not_ended()
+            .select_related("space")
+            .prefetch_related(
+                "space__author",
+                author_circle_count_prefetch("space__author"),
+                "space__categories",
+                "attendees",
+                "joined",
+                "space__subscribed",
+            )
+            .order_by("start"),
+            user,
         )
-        .order_by("start")
     )
     upcoming_space_slugs = {session.space.slug for session in upcoming}
 
@@ -258,7 +282,6 @@ def prefetch_session_detail_relations(
     relations: list[str | Prefetch] = [
         "attendees",
         "joined",
-        "room",
         author_circle_count_prefetch("space__author"),
         "space__categories",
         "space__subscribed",
@@ -274,7 +297,11 @@ def prefetch_session_detail_relations(
                 to_attr="rsvp_next_sessions",
             )
         )
+    relations.extend(join_listing_relations(user))
     prefetch_related_objects(sessions, *relations)
+    for session in sessions:
+        session._join_listing = True
+        session._join_admissions_user_id = user.pk
 
 
 def session_conflict_schema(conflicting_sessions: list[Session], user: User) -> SessionConflictSchema:

@@ -11,6 +11,8 @@ from totem.rooms.state_machine import syncing_session_prompts
 from totem.spaces.filters import (
     author_circle_count_prefetch,
     get_upcoming_spaces_list,
+    join_listing_queryset,
+    join_listing_relations,
     spaces_summary_data,
     upcoming_sessions_queryset,
 )
@@ -52,12 +54,15 @@ def _prefetch_session_detail_relations(sessions: list[Session], user: User) -> N
         sessions,
         "attendees",
         "joined",
-        "room",
+        *join_listing_relations(user),
         author_circle_count_prefetch("space__author"),
         "space__categories",
         "space__subscribed",
         Prefetch("space__sessions", queryset=upcoming_sessions, to_attr="upcoming_sessions"),
     )
+    for session in sessions:
+        session._join_listing = True
+        session._join_admissions_user_id = user.pk
 
 
 def _session_conflict_schema(conflicting_sessions: list[Session], user: User) -> SessionConflictSchema:
@@ -219,7 +224,7 @@ def post_session_feedback(request: HttpRequest, event_slug: str, payload: Sessio
 def get_sessions_history(request: HttpRequest):
     user: User = request.user  # type: ignore
 
-    session_history = Session.objects.history_for(user)[0:10]
+    session_history = join_listing_queryset(Session.objects.history_for(user), user)[0:10]
     return [session_detail_schema(session, user) for session in session_history]
 
 

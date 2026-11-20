@@ -2,7 +2,7 @@ from django.db.models import Count, F, Prefetch, Q
 from django.urls import reverse
 from django.utils import timezone
 
-from totem.spaces.filters import author_circle_count_prefetch, upcoming_sessions_queryset
+from totem.spaces.filters import author_circle_count_prefetch, join_listing_queryset, upcoming_sessions_queryset
 from totem.spaces.mobile_api.mobile_schemas import (
     MobileSpaceDetailSchema,
     NextSessionSchema,
@@ -40,7 +40,7 @@ def upcoming_recommended_sessions(user: User | None, categories: list[str] | Non
         events = events.filter(Q(space__categories__slug__in=categories) | Q(space__categories__name__in=categories))
     if author:
         events = events.filter(space__author__slug=author)
-    return events.distinct().order_by("start")
+    return join_listing_queryset(events.distinct().order_by("start"), user)
 
 
 def session_detail_schema(session: Session, user: User):

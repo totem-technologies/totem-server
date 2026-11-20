@@ -9,20 +9,25 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable
+from typing import cast
 
+from django.db import transaction
 from django.http import HttpRequest
 from django.utils import timezone
 from ninja import Router, Status
+from pydantic import ValidationError
 
 from totem.spaces.models import Session, Space
 from totem.users import analytics
 from totem.users.models import User
 
+from .admission.api import router as admission_router
 from .livekit import (
     LiveKitConfigurationError,
-    create_access_token,
+    LiveKitPermissionError,
     disable_camera_participant,
-    get_connected_participants,
+    get_admission_participants,
+    get_room_participant_sids,
     mute_all_participants,
     mute_participant,
     publish_state,
@@ -31,6 +36,7 @@ from .livekit import (
 from .models import Room
 from .schemas import (
     AcceptStickEvent,
+    AdmissionJoinRequest,
     BanParticipantEvent,
     EmptyRoomEvent,
     EndRoomEvent,
@@ -42,13 +48,14 @@ from .schemas import (
     RemoveReason,
     RoomErrorResponse,
     RoomState,
-    RoomStatus,
     StartRoomEvent,
     TransitionError,
+    UnbanParticipantEvent,
 )
-from .state_machine import apply_event, record_join
+from .state_machine import apply_event
 
 router = Router(tags=["rooms"])
+router.add_router("", admission_router)
 
 # ---------------------------------------------------------------------------
 # Endpoints
@@ -82,7 +89,18 @@ def post_event(
 ):
     user: User = request.user  # type: ignore
     actor = user.slug
-    connected = get_connected_participants(session_slug) or set()
+    participant_sids = None
+    try:
+        participant_sids = get_room_participant_sids(session_slug)
+        connected = set(participant_sids)
+    except LiveKitPermissionError as error:
+        if not isinstance(body.event, EndRoomEvent | BanParticipantEvent | UnbanParticipantEvent):
+            return _livekit_error(error)
+        connected = None
+
+    identities = None
+    if connected is not None:
+        identities = cast(set[str], _project_connected(session_slug, connected, participant_sids=participant_sids))
 
     try:
         state = apply_event(
@@ -91,6 +109,7 @@ def post_event(
             event=body.event,
             last_seen_version=body.last_seen_version,
             connected=connected,
+            participant_sids=participant_sids,
         )
     except TransitionError as e:
         return RoomErrorResponse(
@@ -105,16 +124,28 @@ def post_event(
 
     match body.event:
         case StartRoomEvent() | ForcePassStickEvent():
-            mute_all_participants(session_slug, except_identity=state.current_speaker)
+            mute_all_participants(
+                session_slug,
+                except_identity=state.current_speaker,
+                identities=identities,
+            )
         case AcceptStickEvent():
-            mute_all_participants(session_slug, except_identity=actor)
+            mute_all_participants(
+                session_slug,
+                except_identity=actor,
+                identities=identities,
+            )
         case EndRoomEvent():
-            mute_all_participants(session_slug)
+            mute_all_participants(session_slug, identities=identities or set())
         case BanParticipantEvent(participant_slug=slug):
             banned_user = User.objects.filter(slug=slug).first()
             if banned_user is not None:
                 analytics.user_banned_from_room(banned_user, session_slug)
-            remove_participant(session_slug, slug, reason=RemoveReason.BAN)
+            try:
+                remove_participant(session_slug, slug, reason=RemoveReason.BAN)
+            except LiveKitPermissionError as error:
+                if error.code not in {"participant_missing", "room_missing"}:
+                    return _livekit_error(error)
 
     return Status(200, state)
 
@@ -163,14 +194,17 @@ def get_state(request: HttpRequest, session_slug: str):
     ),
 )
 def reconcile_room(request: HttpRequest, session_slug: str):
+    connected: set[str] | None
     user: User = request.user  # type: ignore
     result = _get_room_and_require_keeper(user, session_slug)
     if isinstance(result, RoomErrorResponse):
         return result.as_http_response()
 
-    connected = get_connected_participants(session_slug)
-    if not connected:
-        return Status(200, result.to_state())
+    try:
+        participant_sids = get_room_participant_sids(session_slug)
+        connected = set(participant_sids)
+    except LiveKitPermissionError as error:
+        return _livekit_error(error)
 
     try:
         state = apply_event(
@@ -179,6 +213,7 @@ def reconcile_room(request: HttpRequest, session_slug: str):
             event=EmptyRoomEvent(),
             last_seen_version=None,
             connected=connected,
+            participant_sids=participant_sids,
         )
     except TransitionError as e:
         return RoomErrorResponse(
@@ -202,6 +237,12 @@ def reconcile_room(request: HttpRequest, session_slug: str):
     response={200: JoinResponse, **ERROR_RESPONSES},
     summary="Join a session room",
     description="Returns a LiveKit access token. Creates the Room if needed.",
+    openapi_extra={
+        "requestBody": {
+            "required": False,
+            "content": {"application/json": {"schema": AdmissionJoinRequest.model_json_schema()}},
+        },
+    },
 )
 def join_room(
     request: HttpRequest,
@@ -219,60 +260,90 @@ def join_room(
             ),
         )
 
-    if session.space.meeting_provider != Space.MeetingProviderChoices.LIVEKIT or not session.can_join(user):
+    if session.space.meeting_provider == Space.MeetingProviderChoices.LIVEKIT:
+        body = None
+        # Legacy no-body/form POSTs remain valid. Only explicit JSON supplies IDs.
+        if request.content_type == "application/json" and request.body:
+            try:
+                body = AdmissionJoinRequest.model_validate_json(request.body)
+            except ValidationError:
+                return RoomErrorResponse(
+                    code=ErrorCode.INVALID_TRANSITION, message="Both admission UUIDs are required"
+                ).as_http_response()
+        return _join_with_admission(session, user, body)
+
+    return RoomErrorResponse(
+        code=ErrorCode.NOT_JOINABLE,
+        message="Session is not joinable at this time",
+    ).as_http_response()
+
+
+def _join_with_admission(session: Session, user: User, body: AdmissionJoinRequest | None):
+    from .admission import AdmissionError, prepare_admission_join
+
+    if not user.is_active or not session.attendees.filter(pk=user.pk).exists():
         return RoomErrorResponse(
-            code=ErrorCode.NOT_JOINABLE,
-            message="Session is not joinable at this time",
+            code=ErrorCode.NOT_JOINABLE, message="You are not an eligible attendee"
         ).as_http_response()
-
-    room = Room.objects.get_or_create_for_session(session)
-    if room.status == RoomStatus.ENDED:
-        return RoomErrorResponse(
-            code=ErrorCode.ROOM_ALREADY_ENDED,
-            message="This session has ended",
-        ).as_http_response()
-
-    now = timezone.now()
-    need_participants = (now > session.end() and user != session.space.author) or session.joined.count() > 0
-    connected: set[str] | None = None
-    if need_participants:
-        try:
-            connected = get_connected_participants(session_slug)
-        except Exception:
-            logger.exception("Failed to fetch connected participants from LiveKit")
-
-    if now > session.end() and user != session.space.author:
-        if connected is not None and len(connected) == 0:
-            return RoomErrorResponse(
-                code=ErrorCode.NOT_JOINABLE,
-                message="This session has ended",
-            ).as_http_response()
-
-    if user.slug in room.banned_participants:
-        return RoomErrorResponse(
-            code=ErrorCode.BANNED,
-            message="You have been banned from this session",
-        ).as_http_response()
-
     try:
-        token = create_access_token(user, session.slug)
-    except LiveKitConfigurationError:
-        logger.exception("LiveKit not configured")
+        # Always check presence: waiting token requests are not Session.joined.
+        connected = get_admission_participants(session.slug)
+        room = Room.objects.filter(session=session).first()
+        keeper = room.keeper if room else session.space.author.slug
+        if timezone.now() > session.end() and user.slug != keeper and not connected:
+            return RoomErrorResponse(code=ErrorCode.NOT_JOINABLE, message="This session has ended").as_http_response()
+        response = prepare_admission_join(
+            session.slug,
+            user,
+            request_id=body.request_id if body else None,
+            attempt_id=body.attempt_id if body else None,
+            connected=connected,
+        )
+    except AdmissionError as error:
+        capacity_codes = {
+            "admission_full": "ADMISSION_FULL",
+            "waiting_full": "WAITING_ROOM_FULL",
+            "room_full": "ROOM_FULL",
+        }
+        if error.code in capacity_codes and hasattr(ErrorCode, capacity_codes[error.code]):
+            code = getattr(ErrorCode, capacity_codes[error.code])
+            return Status(409, RoomErrorResponse(code=code, message=str(error), detail=error.code))
+        code = ErrorCode.ROOM_ALREADY_ENDED if error.code == "ended" else ErrorCode.NOT_JOINABLE
+        return RoomErrorResponse(code=code, message=str(error), detail=error.code).as_http_response()
+    except TransitionError as error:
+        return RoomErrorResponse(code=error.code, message=error.message, detail=error.detail).as_http_response()
+    except (LiveKitPermissionError, LiveKitConfigurationError) as error:
         return RoomErrorResponse(
             code=ErrorCode.LIVEKIT_ERROR,
-            message="LiveKit service is not properly configured",
+            message="LiveKit admission service is unavailable",
+            detail=getattr(error, "code", "unavailable"),
         ).as_http_response()
+    response.is_already_present = user.slug in connected
 
-    is_already_connected = bool(connected and user.slug in connected)
+    return Status(200, response)
 
-    try:
-        record_join(session, user)
-    except TransitionError as e:
-        return RoomErrorResponse(code=e.code, message=e.message, detail=e.detail).as_http_response()
 
-    analytics.event_joined(user, session)
+def _livekit_error(error: Exception):
+    return RoomErrorResponse(
+        code=ErrorCode.LIVEKIT_ERROR,
+        message="LiveKit service is unavailable",
+        detail=getattr(error, "code", "unavailable"),
+    ).as_http_response()
 
-    return Status(200, JoinResponse(token=token, is_already_present=is_already_connected))
+
+def _project_connected(
+    session_slug: str, connected: set[str], actor: User | None = None, *, participant_sids: dict[str, str] | None
+):
+    from .room_participants import participant_projection
+
+    with transaction.atomic():
+        session = Session.objects.select_for_update().filter(slug=session_slug).first()
+        room = Room.objects.filter(session=session).first() if session else None
+        if room is None:
+            return RoomErrorResponse(code=ErrorCode.NOT_FOUND, message="Room not found") if actor else set()
+        if actor and room.keeper != actor.slug:
+            return RoomErrorResponse(code=ErrorCode.NOT_KEEPER, message="Only the keeper can perform this action")
+        return participant_projection(room, connected, observed_sids=participant_sids).connected
 
 
 def _get_room_and_require_keeper(user: User, session_slug: str) -> Room | RoomErrorResponse:
@@ -287,15 +358,28 @@ def _get_room_and_require_keeper(user: User, session_slug: str) -> Room | RoomEr
     return room
 
 
-def _keeper_livekit_action(user: User, session_slug: str, action: Callable[[], None]):
+def _keeper_livekit_action(
+    user: User, session_slug: str, action: Callable[[set[str] | None], None], target: str | None = None
+):
     """Helper: verify the user is the keeper, then run a LiveKit call with shared error handling."""
     result = _get_room_and_require_keeper(user, session_slug)
     if isinstance(result, RoomErrorResponse):
         return result.as_http_response()
 
     try:
-        action()
-    except LiveKitConfigurationError:
+        participant_sids = get_room_participant_sids(session_slug)
+    except LiveKitPermissionError as error:
+        return _livekit_error(error)
+    identities = _project_connected(session_slug, set(participant_sids), user, participant_sids=participant_sids)
+    if isinstance(identities, RoomErrorResponse):
+        return identities.as_http_response()
+    if target is not None and target not in identities:
+        return RoomErrorResponse(
+            code=ErrorCode.NOT_IN_ROOM, message="Participant is not activated and connected"
+        ).as_http_response()
+    try:
+        action(identities)
+    except (LiveKitConfigurationError, LiveKitPermissionError):
         return RoomErrorResponse(
             code=ErrorCode.LIVEKIT_ERROR, message="LiveKit service is not properly configured"
         ).as_http_response()
@@ -315,7 +399,12 @@ def mute(
     participant_identity: str,
 ):
     user: User = request.user  # type: ignore
-    return _keeper_livekit_action(user, session_slug, lambda: mute_participant(session_slug, participant_identity))
+    return _keeper_livekit_action(
+        user,
+        session_slug,
+        lambda identities: mute_participant(session_slug, participant_identity),
+        target=participant_identity,
+    )
 
 
 @router.post(
@@ -331,7 +420,10 @@ def disable_camera(
 ):
     user: User = request.user  # type: ignore
     return _keeper_livekit_action(
-        user, session_slug, lambda: disable_camera_participant(session_slug, participant_identity)
+        user,
+        session_slug,
+        lambda identities: disable_camera_participant(session_slug, participant_identity),
+        target=participant_identity,
     )
 
 
@@ -347,7 +439,13 @@ def mute_all(
 ):
     user: User = request.user  # type: ignore
     return _keeper_livekit_action(
-        user, session_slug, lambda: mute_all_participants(session_slug, except_identity=user.slug)
+        user,
+        session_slug,
+        lambda identities: mute_all_participants(
+            session_slug,
+            except_identity=user.slug,
+            identities=identities,
+        ),
     )
 
 
@@ -374,14 +472,33 @@ def remove(
             message="Cannot remove yourself from the room",
         ).as_http_response()
 
+    removed_user = User.objects.filter(slug=participant_identity).first()
+    if not removed_user:
+        return RoomErrorResponse(code=ErrorCode.NOT_JOINABLE, message="Participant is not eligible").as_http_response()
+    from .admission import AdmissionError, record_removal
+
+    try:
+        record_removal(
+            session_slug,
+            user,
+            removed_user,
+            expected_room_version=result.state_version,
+            ban=reason == RemoveReason.BAN,
+        )
+    except AdmissionError as error:
+        code = ErrorCode.NOT_KEEPER if error.code == "not_keeper" else ErrorCode.INVALID_TRANSITION
+        return RoomErrorResponse(code=code, message=str(error)).as_http_response()
+    except TransitionError as error:
+        return RoomErrorResponse(code=error.code, message=error.message, detail=error.detail).as_http_response()
+
     try:
         remove_participant(session_slug, participant_identity, reason=reason)
-    except LiveKitConfigurationError:
-        return RoomErrorResponse(
-            code=ErrorCode.LIVEKIT_ERROR, message="LiveKit service is not properly configured"
-        ).as_http_response()
+    except LiveKitPermissionError as error:
+        if error.code not in {"participant_missing", "room_missing"}:
+            return _livekit_error(error)
+    except LiveKitConfigurationError as error:
+        return _livekit_error(error)
 
-    removed_user = User.objects.filter(slug=participant_identity).first()
     if removed_user:
         analytics.user_removed_from_room(removed_user, session_slug)
 

@@ -1,17 +1,52 @@
 import datetime
 from unittest.mock import patch
+from uuid import uuid4
 
 import pytest
 from django.test import Client
 from django.utils import timezone
 
-from totem.rooms.livekit import LiveKitConfigurationError
-from totem.rooms.models import Room, RoomEventLog
-from totem.rooms.schemas import EndReason, RemoveReason, RoomStatus, TurnState
+from totem.rooms.livekit import LiveKitConfigurationError, LiveKitPermissionError
+from totem.rooms.models import (
+    AdmissionAttempt,
+    AdmissionPermissionSync,
+    AdmissionState,
+    AttemptStatus,
+    Room,
+    RoomEventLog,
+    SessionAdmission,
+)
+from totem.rooms.schemas import EndReason, ErrorCode, RemoveReason, RoomStatus, TransitionError, TurnState
 from totem.spaces.models import SessionPrompt, SessionRound, SessionRoundState, Space
 from totem.spaces.tests.factories import SessionFactory
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
+
+
+def _activate_participant(session, user):
+    admission = SessionAdmission.objects.create(session=session, user=user, state=AdmissionState.ADMITTED)
+    sid = f"sid-{user.slug}"
+    AdmissionAttempt.objects.create(
+        admission=admission,
+        request_id=uuid4(),
+        attempt_id=uuid4(),
+        status=AttemptStatus.ADMITTED,
+        expires_at=timezone.now() + datetime.timedelta(minutes=10),
+        participant_sid=sid,
+    )
+    AdmissionPermissionSync.objects.create(
+        admission=admission, desired_admitted=True, revision=1, applied_revision=1, participant_sid=sid
+    )
+    return sid
+
+
+def _activate_attendees(session):
+    for user in session.attendees.all():
+        _activate_participant(session, user)
+
+
+def _sids(identities):
+    return {identity: f"sid-{identity}" for identity in identities}
 
 
 def _post_event(client: Client, session_slug: str, event: dict, version: int):
@@ -34,12 +69,13 @@ def _post_reconcile(client: Client, session_slug: str):
 class TestPostEvent:
     def test_empty_room_event_is_not_public(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
-        session = SessionFactory(space__author=keeper)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=keeper)
         session.attendees.add(keeper)
         room = Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         with (
-            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug}),
+            patch("totem.rooms.api.get_room_participant_sids", return_value=_sids({keeper.slug})),
             patch("totem.rooms.api.publish_state") as mock_publish,
         ):
             resp = _post_event(client, session.slug, {"type": "empty"}, 0)
@@ -50,14 +86,15 @@ class TestPostEvent:
 
     def test_start_room(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        session = SessionFactory(space__author=user)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=user)
         session.attendees.add(user)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         with (
             patch(
-                "totem.rooms.api.get_connected_participants",
-                return_value={user.slug},
+                "totem.rooms.api.get_room_participant_sids",
+                return_value=_sids({user.slug}),
             ),
             patch("totem.rooms.api.publish_state"),
             patch("totem.rooms.api.mute_all_participants"),
@@ -72,13 +109,14 @@ class TestPostEvent:
 
     def test_start_room_does_not_assign_prepared_prompt_to_round(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        session = SessionFactory(space__author=user)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=user)
         session.attendees.add(user)
         prompt = SessionPrompt.objects.create(session=session, prompt="From the list", position=1)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         with (
-            patch("totem.rooms.api.get_connected_participants", return_value={user.slug}),
+            patch("totem.rooms.api.get_room_participant_sids", return_value=_sids({user.slug})),
             patch("totem.rooms.api.publish_state"),
             patch("totem.rooms.api.mute_all_participants"),
         ):
@@ -94,13 +132,14 @@ class TestPostEvent:
     def test_keeper_pass_without_prompt_preserves_round_prompt(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         participant = UserFactory()
-        session = SessionFactory(space__author=keeper)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=keeper)
         session.attendees.add(keeper, participant)
         prompt = SessionPrompt.objects.create(session=session, prompt="For this round", position=1)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         with (
-            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug, participant.slug}),
+            patch("totem.rooms.api.get_room_participant_sids", return_value=_sids({keeper.slug, participant.slug})),
             patch("totem.rooms.api.publish_state"),
             patch("totem.rooms.api.mute_all_participants"),
         ):
@@ -116,19 +155,20 @@ class TestPostEvent:
         assert response.json()["round_prompt_id"] == prompt.pk
         round = SessionRound.objects.get(session=session, number=1)
         assert round.prompt == "For this round"
-        assert round.prepared_prompt_id == prompt.pk
+        assert round.prepared_prompt == prompt
 
     def test_start_room_with_prompt_does_not_assign_session_prompt(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        session = SessionFactory(space__author=user)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=user)
         session.attendees.add(user)
         prompt = SessionPrompt.objects.create(session=session, prompt="From the list", position=1)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         with (
             patch(
-                "totem.rooms.api.get_connected_participants",
-                return_value={user.slug},
+                "totem.rooms.api.get_room_participant_sids",
+                return_value=_sids({user.slug}),
             ),
             patch("totem.rooms.api.publish_state"),
             patch("totem.rooms.api.mute_all_participants"),
@@ -152,12 +192,13 @@ class TestPostEvent:
 
     def test_start_room_prompt_exceeds_max_length(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        session = SessionFactory(space__author=user)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=user)
         session.attendees.add(user)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         with (
-            patch("totem.rooms.api.get_connected_participants", return_value={user.slug}),
+            patch("totem.rooms.api.get_room_participant_sids", return_value=_sids({user.slug})),
             patch("totem.rooms.api.publish_state"),
         ):
             resp = _post_event(
@@ -172,16 +213,17 @@ class TestPostEvent:
     def test_full_pass_accept_cycle(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         user1 = UserFactory()
-        session = SessionFactory(space__author=keeper)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=keeper)
         session.attendees.add(keeper, user1)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         connected = {keeper.slug, user1.slug}
 
         with (
             patch(
-                "totem.rooms.api.get_connected_participants",
-                return_value=connected,
+                "totem.rooms.api.get_room_participant_sids",
+                return_value=_sids(connected),
             ),
             patch("totem.rooms.api.publish_state"),
             patch("totem.rooms.api.mute_all_participants"),
@@ -197,14 +239,15 @@ class TestPostEvent:
 
     def test_stale_version_returns_409(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        session = SessionFactory(space__author=user)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=user)
         session.attendees.add(user)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         with (
             patch(
-                "totem.rooms.api.get_connected_participants",
-                return_value={user.slug},
+                "totem.rooms.api.get_room_participant_sids",
+                return_value=_sids({user.slug}),
             ),
             patch("totem.rooms.api.publish_state"),
             patch("totem.rooms.api.mute_all_participants"),
@@ -218,14 +261,15 @@ class TestPostEvent:
     def test_non_attendee_returns_403(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         keeper = UserFactory()
-        session = SessionFactory(space__author=keeper)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=keeper)
         session.attendees.add(keeper)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         with (
             patch(
-                "totem.rooms.api.get_connected_participants",
-                return_value={keeper.slug},
+                "totem.rooms.api.get_room_participant_sids",
+                return_value=_sids({keeper.slug}),
             ),
             patch("totem.rooms.api.publish_state"),
         ):
@@ -239,8 +283,8 @@ class TestPostEvent:
 
         with (
             patch(
-                "totem.rooms.api.get_connected_participants",
-                return_value=set(),
+                "totem.rooms.api.get_room_participant_sids",
+                return_value=_sids(set()),
             ),
             patch("totem.rooms.api.publish_state"),
         ):
@@ -252,14 +296,15 @@ class TestPostEvent:
     def test_not_keeper_returns_403(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         keeper = UserFactory()
-        session = SessionFactory(space__author=keeper)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=keeper)
         session.attendees.add(keeper, user)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         with (
             patch(
-                "totem.rooms.api.get_connected_participants",
-                return_value={keeper.slug, user.slug},
+                "totem.rooms.api.get_room_participant_sids",
+                return_value=_sids({keeper.slug, user.slug}),
             ),
             patch("totem.rooms.api.publish_state"),
         ):
@@ -270,14 +315,15 @@ class TestPostEvent:
 
     def test_end_room(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        session = SessionFactory(space__author=user)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=user)
         session.attendees.add(user)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         with (
             patch(
-                "totem.rooms.api.get_connected_participants",
-                return_value={user.slug},
+                "totem.rooms.api.get_room_participant_sids",
+                return_value=_sids({user.slug}),
             ),
             patch("totem.rooms.api.publish_state"),
             patch("totem.rooms.api.mute_all_participants"),
@@ -296,16 +342,17 @@ class TestPostEvent:
 
     def test_end_room_sets_ended_at(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        session = SessionFactory(space__author=user)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=user)
         session.attendees.add(user)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         assert session.ended_at is None
 
         with (
             patch(
-                "totem.rooms.api.get_connected_participants",
-                return_value={user.slug},
+                "totem.rooms.api.get_room_participant_sids",
+                return_value=_sids({user.slug}),
             ),
             patch("totem.rooms.api.publish_state"),
             patch("totem.rooms.api.mute_all_participants"),
@@ -323,14 +370,15 @@ class TestPostEvent:
 
     def test_start_room_mutes_all_except_speaker(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        session = SessionFactory(space__author=user)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=user)
         session.attendees.add(user)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         with (
             patch(
-                "totem.rooms.api.get_connected_participants",
-                return_value={user.slug},
+                "totem.rooms.api.get_room_participant_sids",
+                return_value=_sids({user.slug}),
             ),
             patch("totem.rooms.api.publish_state"),
             patch("totem.rooms.api.mute_all_participants") as mock_mute_all,
@@ -338,20 +386,21 @@ class TestPostEvent:
             resp = _post_event(client, session.slug, {"type": "start_room"}, 0)
 
         assert resp.status_code == 200
-        mock_mute_all.assert_called_once_with(session.slug, except_identity=user.slug)
+        mock_mute_all.assert_called_once_with(session.slug, except_identity=user.slug, identities={user.slug})
 
     def test_keeper_pass_can_include_optional_prompt(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         user1 = UserFactory()
         user2 = UserFactory()
-        session = SessionFactory(space__author=keeper)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=keeper)
         session.attendees.add(keeper, user1, user2)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         connected = {keeper.slug, user1.slug, user2.slug}
 
         with (
-            patch("totem.rooms.api.get_connected_participants", return_value=connected),
+            patch("totem.rooms.api.get_room_participant_sids", return_value=_sids(connected)),
             patch("totem.rooms.api.publish_state"),
             patch("totem.rooms.api.mute_all_participants"),
         ):
@@ -374,16 +423,17 @@ class TestPostEvent:
     def test_keeper_pass_can_consume_prepared_prompt(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         participant = UserFactory()
-        session = SessionFactory(space__author=keeper)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=keeper)
         session.attendees.add(keeper, participant)
         prepared_prompt = SessionPrompt.objects.create(session=session, prompt="From the list", position=1)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         participant_client = Client()
         participant_client.force_login(participant)
 
         with (
-            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug, participant.slug}),
+            patch("totem.rooms.api.get_room_participant_sids", return_value=_sids({keeper.slug, participant.slug})),
             patch("totem.rooms.api.publish_state"),
             patch("totem.rooms.api.mute_all_participants"),
         ):
@@ -413,13 +463,14 @@ class TestPostEvent:
     def test_selecting_same_text_prepared_prompt_changes_room_state(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         participant = UserFactory()
-        session = SessionFactory(space__author=keeper)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=keeper)
         session.attendees.add(keeper, participant)
         prepared_prompt = SessionPrompt.objects.create(session=session, prompt="Same prompt", position=1)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         with (
-            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug, participant.slug}),
+            patch("totem.rooms.api.get_room_participant_sids", return_value=_sids({keeper.slug, participant.slug})),
             patch("totem.rooms.api.publish_state"),
             patch("totem.rooms.api.mute_all_participants"),
         ):
@@ -442,14 +493,15 @@ class TestPostEvent:
     def test_set_prompt(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         user1 = UserFactory()
-        session = SessionFactory(space__author=keeper)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=keeper)
         session.attendees.add(keeper, user1)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         connected = {keeper.slug, user1.slug}
 
         with (
-            patch("totem.rooms.api.get_connected_participants", return_value=connected),
+            patch("totem.rooms.api.get_room_participant_sids", return_value=_sids(connected)),
             patch("totem.rooms.api.publish_state"),
             patch("totem.rooms.api.mute_all_participants"),
         ):
@@ -472,14 +524,15 @@ class TestPostEvent:
     def test_set_prompt_non_keeper_rejected(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         user1 = UserFactory()
-        session = SessionFactory(space__author=keeper)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=keeper)
         session.attendees.add(keeper, user1)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         connected = {keeper.slug, user1.slug}
 
         with (
-            patch("totem.rooms.api.get_connected_participants", return_value=connected),
+            patch("totem.rooms.api.get_room_participant_sids", return_value=_sids(connected)),
             patch("totem.rooms.api.publish_state"),
             patch("totem.rooms.api.mute_all_participants"),
         ):
@@ -489,7 +542,7 @@ class TestPostEvent:
         user1_client.force_login(user1)
 
         with (
-            patch("totem.rooms.api.get_connected_participants", return_value=connected),
+            patch("totem.rooms.api.get_room_participant_sids", return_value=_sids(connected)),
             patch("totem.rooms.api.publish_state"),
         ):
             resp = _post_event(
@@ -505,14 +558,15 @@ class TestPostEvent:
     def test_set_prompt_exceeds_max_length(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         user1 = UserFactory()
-        session = SessionFactory(space__author=keeper)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=keeper)
         session.attendees.add(keeper, user1)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         connected = {keeper.slug, user1.slug}
 
         with (
-            patch("totem.rooms.api.get_connected_participants", return_value=connected),
+            patch("totem.rooms.api.get_room_participant_sids", return_value=_sids(connected)),
             patch("totem.rooms.api.publish_state"),
             patch("totem.rooms.api.mute_all_participants"),
         ):
@@ -532,9 +586,10 @@ class TestPostEvent:
 class TestGetState:
     def test_returns_state(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        session = SessionFactory(space__author=user)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=user)
         session.attendees.add(user)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         resp = _get_state(client, session.slug)
 
@@ -547,12 +602,13 @@ class TestGetState:
     def test_state_request_does_not_reconcile(self, client_with_user: tuple[Client, User]):
         client, attendee = client_with_user
         keeper = UserFactory()
-        session = SessionFactory(space__author=keeper)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=keeper)
         session.attendees.add(attendee)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         with (
-            patch("totem.rooms.api.get_connected_participants") as mock_connected,
+            patch("totem.rooms.api.get_room_participant_sids") as mock_connected,
             patch("totem.rooms.api.publish_state") as mock_publish,
         ):
             resp = _get_state(client, session.slug)
@@ -564,12 +620,13 @@ class TestGetState:
     def test_non_attendee_returns_403(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         keeper = UserFactory()
-        session = SessionFactory(space__author=keeper)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=keeper)
         session.attendees.add(keeper)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         with (
-            patch("totem.rooms.api.get_connected_participants") as mock_connected,
+            patch("totem.rooms.api.get_room_participant_sids") as mock_connected,
             patch("totem.rooms.api.publish_state") as mock_publish,
         ):
             resp = _get_state(client, session.slug)
@@ -583,7 +640,7 @@ class TestGetState:
         client, _ = client_with_user
 
         with (
-            patch("totem.rooms.api.get_connected_participants") as mock_connected,
+            patch("totem.rooms.api.get_room_participant_sids") as mock_connected,
             patch("totem.rooms.api.publish_state") as mock_publish,
         ):
             resp = _get_state(client, "nonexistent")
@@ -595,14 +652,15 @@ class TestGetState:
 
     def test_state_reflects_mutations(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        session = SessionFactory(space__author=user)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=user)
         session.attendees.add(user)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         with (
             patch(
-                "totem.rooms.api.get_connected_participants",
-                return_value={user.slug},
+                "totem.rooms.api.get_room_participant_sids",
+                return_value=_sids({user.slug}),
             ),
             patch("totem.rooms.api.publish_state"),
             patch("totem.rooms.api.mute_all_participants"),
@@ -610,7 +668,7 @@ class TestGetState:
             _post_event(client, session.slug, {"type": "start_room"}, 0)
 
         with (
-            patch("totem.rooms.api.get_connected_participants") as mock_connected,
+            patch("totem.rooms.api.get_room_participant_sids") as mock_connected,
             patch("totem.rooms.api.publish_state") as mock_publish,
         ):
             resp = _get_state(client, session.slug)
@@ -626,12 +684,13 @@ class TestReconcileRoom:
     def test_non_keeper_returns_403_without_calling_livekit(self, client_with_user: tuple[Client, User]):
         client, attendee = client_with_user
         keeper = UserFactory()
-        session = SessionFactory(space__author=keeper)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=keeper)
         session.attendees.add(keeper, attendee)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         with (
-            patch("totem.rooms.api.get_connected_participants") as mock_connected,
+            patch("totem.rooms.api.get_room_participant_sids") as mock_connected,
             patch("totem.rooms.api.publish_state") as mock_publish,
         ):
             resp = _post_reconcile(client, session.slug)
@@ -645,7 +704,7 @@ class TestReconcileRoom:
         client, _ = client_with_user
 
         with (
-            patch("totem.rooms.api.get_connected_participants") as mock_connected,
+            patch("totem.rooms.api.get_room_participant_sids") as mock_connected,
             patch("totem.rooms.api.publish_state") as mock_publish,
         ):
             resp = _post_reconcile(client, "nonexistent")
@@ -658,15 +717,17 @@ class TestReconcileRoom:
     def test_reconciles_and_persists_participants(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         participant = UserFactory()
-        session = SessionFactory(space__author=keeper)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=keeper)
         session.attendees.add(keeper)
         room = Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
         session.attendees.add(participant)
+        _activate_participant(session, participant)
 
         with (
             patch(
-                "totem.rooms.api.get_connected_participants",
-                return_value={keeper.slug, participant.slug},
+                "totem.rooms.api.get_room_participant_sids",
+                return_value=_sids({keeper.slug, participant.slug}),
             ),
             patch("totem.rooms.api.publish_state") as mock_publish,
         ):
@@ -688,14 +749,17 @@ class TestReconcileRoom:
         assert log.actor == keeper.slug
         assert log.snapshot == published_state.model_dump(mode="json")
 
-    def test_noop_does_not_increment_version_log_or_publish(self, client_with_user: tuple[Client, User]):
+    def test_noop_does_not_increment_version_or_log(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
-        session = SessionFactory(space__author=keeper)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=keeper)
         session.attendees.add(keeper)
         room = Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
+        room.talking_order = [keeper.slug]
+        room.save(update_fields=["talking_order"])
 
         with (
-            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug}),
+            patch("totem.rooms.api.get_room_participant_sids", return_value=_sids({keeper.slug})),
             patch("totem.rooms.api.publish_state"),
         ):
             resp = _post_reconcile(client, session.slug)
@@ -710,9 +774,10 @@ class TestReconcileRoom:
         client, keeper = client_with_user
         current_speaker = UserFactory()
         next_speaker = UserFactory()
-        session = SessionFactory(space__author=keeper)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=keeper)
         session.attendees.add(keeper, current_speaker, next_speaker)
         room = Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
         room.talking_order = [keeper.slug, current_speaker.slug, next_speaker.slug]
         room.status = RoomStatus.ACTIVE
         room.turn_state = TurnState.PASSING
@@ -722,8 +787,8 @@ class TestReconcileRoom:
 
         with (
             patch(
-                "totem.rooms.api.get_connected_participants",
-                return_value={keeper.slug, next_speaker.slug},
+                "totem.rooms.api.get_room_participant_sids",
+                return_value=_sids({keeper.slug, next_speaker.slug}),
             ),
             patch("totem.rooms.api.publish_state"),
         ):
@@ -742,18 +807,21 @@ class TestReconcileRoom:
 
     def test_livekit_failure_does_not_mutate_room(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
-        session = SessionFactory(space__author=keeper)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=keeper)
         session.attendees.add(keeper)
         room = Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
         original_order = room.talking_order
 
         with (
-            patch("totem.rooms.api.get_connected_participants", return_value=None),
+            patch(
+                "totem.rooms.api.get_room_participant_sids", side_effect=LiveKitPermissionError("timeout", "timeout")
+            ),
             patch("totem.rooms.api.publish_state") as mock_publish,
         ):
             resp = _post_reconcile(client, session.slug)
 
-        assert resp.status_code == 200
+        assert resp.status_code == 500
         room.refresh_from_db()
         assert room.talking_order == original_order
         mock_publish.assert_not_called()
@@ -761,9 +829,10 @@ class TestReconcileRoom:
     def test_empty_livekit_room_does_not_clear_active_speakers(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         participant = UserFactory()
-        session = SessionFactory(space__author=keeper)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=keeper)
         session.attendees.add(keeper, participant)
         room = Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
         room.talking_order = [keeper.slug, participant.slug]
         room.status = RoomStatus.ACTIVE
         room.turn_state = TurnState.PASSING
@@ -772,7 +841,7 @@ class TestReconcileRoom:
         room.save()
 
         with (
-            patch("totem.rooms.api.get_connected_participants", return_value=set()),
+            patch("totem.rooms.api.get_room_participant_sids", return_value=_sids(set())),
             patch("totem.rooms.api.publish_state") as mock_publish,
         ):
             resp = _post_reconcile(client, session.slug)
@@ -785,7 +854,7 @@ class TestReconcileRoom:
         assert room.current_speaker == participant.slug
         assert room.next_speaker == keeper.slug
         assert room.turn_state == TurnState.PASSING
-        mock_publish.assert_not_called()
+        mock_publish.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
@@ -810,6 +879,14 @@ def _make_joinable_session(keeper: User, attendees: list[User] | None = None):
 
 @pytest.mark.django_db
 class TestJoinRoom:
+    @pytest.fixture(autouse=True)
+    def livekit(self):
+        with (
+            patch("totem.rooms.api.get_admission_participants", return_value=set()),
+            patch("totem.rooms.livekit.create_access_token", return_value="fake-jwt-token"),
+        ):
+            yield
+
     @pytest.mark.parametrize("is_keeper", [False, True])
     def test_google_meet_join_cannot_create_livekit_room(self, client_with_user, is_keeper):
         client, user = client_with_user
@@ -822,8 +899,8 @@ class TestJoinRoom:
         assert session.can_join(user)
 
         with (
-            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token") as token,
-            patch("totem.rooms.api.get_connected_participants") as participants,
+            patch("totem.rooms.livekit.create_access_token", return_value="fake-jwt-token") as token,
+            patch("totem.rooms.api.get_admission_participants") as participants,
         ):
             resp = client.post(f"{BASE}/{session.slug}/join")
 
@@ -850,17 +927,15 @@ class TestJoinRoom:
         room.save(update_fields=["date_created"])
 
         with (
-            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token") as token,
-            patch(
-                "totem.rooms.api.get_connected_participants", side_effect=RuntimeError("Unavailable")
-            ) as participants,
+            patch("totem.rooms.livekit.create_access_token", return_value="fake-jwt-token") as token,
+            patch("totem.rooms.api.get_admission_participants", return_value=set()) as participants,
         ):
             resp = client.post(f"{BASE}/{session.slug}/join")
 
         assert resp.status_code == 403
-        assert resp.json()["code"] == "not_joinable"
+        assert resp.json()["code"] == ("room_already_ended" if is_keeper else "not_joinable")
         token.assert_not_called()
-        participants.assert_not_called()
+        participants.assert_called_once_with(session.slug)
 
     @pytest.mark.parametrize("has_late_room", [False, True])
     @pytest.mark.parametrize("is_keeper", [False, True])
@@ -878,35 +953,34 @@ class TestJoinRoom:
             Room.objects.get_or_create_for_session(session)
 
         with (
-            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token") as token,
-            patch("totem.rooms.api.get_connected_participants", return_value={user.slug}) as participants,
+            patch("totem.rooms.livekit.create_access_token", return_value="fake-jwt-token") as token,
+            patch("totem.rooms.api.get_admission_participants", return_value={user.slug}) as participants,
         ):
             resp = client.post(f"{BASE}/{session.slug}/join")
 
         assert resp.status_code == 403
-        assert resp.json()["code"] == "not_joinable"
-        assert Room.objects.filter(session=session).exists() == has_late_room
+        assert resp.json()["code"] == "room_already_ended"
+        assert Room.objects.filter(session=session).exists()
         token.assert_not_called()
-        participants.assert_not_called()
+        participants.assert_called_once_with(session.slug)
 
     def test_join_success(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         session = _make_joinable_session(user)
 
         with (
-            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),
-            patch("totem.rooms.api.get_connected_participants", return_value={}),
+            patch("totem.rooms.livekit.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.api.get_admission_participants", return_value=set()),
         ):
             resp = client.post(f"{BASE}/{session.slug}/join")
 
         assert resp.status_code == 200
         assert resp.json()["token"] == "fake-jwt-token"
-        assert user in session.joined.all()
+        assert user not in session.joined.all()
+        assert SessionAdmission.objects.filter(session=session, user=user).exists()
         assert Room.objects.filter(session=session).exists()
 
-    def test_join_publishes_changed_order_after_commit(
-        self, client_with_user: tuple[Client, User], django_capture_on_commit_callbacks
-    ):
+    def test_join_token_does_not_change_talking_order(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         participant = UserFactory()
         session = _make_joinable_session(keeper, [participant])
@@ -914,19 +988,11 @@ class TestJoinRoom:
         room.talking_order = [participant.slug, keeper.slug]
         room.save()
 
-        with (
-            patch("totem.rooms.api.create_access_token", return_value="token"),
-            patch("totem.rooms.api.publish_state") as api_publish,
-            patch("totem.rooms.state_machine.publish_state") as state_publish,
-            django_capture_on_commit_callbacks(execute=True) as callbacks,
-        ):
+        with patch("totem.rooms.state_machine.publish_state") as publish:
             assert client.post(f"{BASE}/{session.slug}/join").status_code == 200
-            api_publish.assert_not_called()
-            state_publish.assert_not_called()
-
-        assert len(callbacks) == 1
-        state_publish.assert_called_once()
-        assert state_publish.call_args.args[1].talking_order == [keeper.slug, participant.slug]
+        room.refresh_from_db()
+        assert room.talking_order == [participant.slug, keeper.slug]
+        publish.assert_not_called()
 
     def test_join_not_joinable(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -947,26 +1013,26 @@ class TestJoinRoom:
         assert resp.status_code == 404
         assert resp.json()["code"] == "not_found"
 
-    def test_join_tracks_analytics(self, client_with_user: tuple[Client, User]):
+    def test_join_does_not_track_analytics_before_activation(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         session = _make_joinable_session(user)
 
         with (
-            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.livekit.create_access_token", return_value="fake-jwt-token"),
             patch("totem.rooms.api.analytics") as mock_analytics,
-            patch("totem.rooms.api.get_connected_participants", return_value={}),
+            patch("totem.rooms.api.get_admission_participants", return_value=set()),
         ):
             resp = client.post(f"{BASE}/{session.slug}/join")
 
         assert resp.status_code == 200
-        mock_analytics.event_joined.assert_called_once_with(user, session)
+        mock_analytics.event_joined.assert_not_called()
 
     def test_join_livekit_not_configured(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         session = _make_joinable_session(user)
 
         with patch(
-            "totem.rooms.api.create_access_token",
+            "totem.rooms.livekit.create_access_token",
             side_effect=LiveKitConfigurationError("not configured"),
         ):
             resp = client.post(f"{BASE}/{session.slug}/join")
@@ -985,7 +1051,7 @@ class TestJoinRoom:
         resp = client.post(f"{BASE}/{session.slug}/join")
 
         assert resp.status_code == 403
-        assert resp.json()["code"] == "banned"
+        assert resp.json()["code"] == "not_joinable"
 
     def test_join_already_connected(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -993,8 +1059,8 @@ class TestJoinRoom:
         session.joined.add(user)
 
         with (
-            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),
-            patch("totem.rooms.api.get_connected_participants", return_value={user.slug}),
+            patch("totem.rooms.livekit.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.api.get_admission_participants", return_value={user.slug}),
         ):
             resp = client.post(f"{BASE}/{session.slug}/join")
 
@@ -1019,8 +1085,8 @@ class TestJoinRoom:
         room.save(update_fields=["date_created"])
 
         with (
-            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),
-            patch("totem.rooms.api.get_connected_participants", return_value={}),
+            patch("totem.rooms.livekit.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.api.get_admission_participants", return_value=set()),
         ):
             resp = client.post(f"{BASE}/{session.slug}/join")
 
@@ -1047,7 +1113,7 @@ class TestJoinRoom:
         resp = client.post(f"{BASE}/{session.slug}/join")
 
         assert resp.status_code == 403
-        assert resp.json()["code"] == "not_joinable"
+        assert resp.json()["code"] == "room_already_ended"
 
     def test_join_rejoin_google_meet_after_timeout(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -1079,7 +1145,7 @@ class TestJoinRoom:
         resp = client.post(f"{BASE}/{session.slug}/join")
 
         assert resp.status_code == 403
-        assert resp.json()["code"] == "not_joinable"
+        assert resp.json()["code"] == "room_already_ended"
 
     def test_join_ended_room_rejected(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -1119,14 +1185,14 @@ class TestJoinRoom:
         room.date_created = start
         room.save(update_fields=["date_created"])
 
-        with patch("totem.rooms.api.get_connected_participants", return_value=set()) as participants:
+        with patch("totem.rooms.api.get_admission_participants", return_value=set()) as participants:
             resp = client.post(f"{BASE}/{session.slug}/join")
 
         assert resp.status_code == 403
         assert resp.json()["code"] == "not_joinable"
         participants.assert_called_once_with(session.slug)
 
-    def test_join_populated_room_past_duration_allowed(self, client_with_user: tuple[Client, User]):
+    def test_admitted_user_can_rejoin_populated_room_past_duration(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         keeper = UserFactory()
         start = timezone.now() - datetime.timedelta(minutes=65)
@@ -1142,13 +1208,14 @@ class TestJoinRoom:
         room.date_created = start
         room.save(update_fields=["date_created"])
 
+        _activate_participant(session, user)
         with (
-            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),
-            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug}),
+            patch("totem.rooms.livekit.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.api.get_admission_participants", return_value={keeper.slug}),
         ):
             resp = client.post(f"{BASE}/{session.slug}/join")
 
-        assert resp.status_code == 200
+        assert resp.status_code == 200, resp.content
         assert resp.json()["token"] == "fake-jwt-token"
 
 
@@ -1161,15 +1228,29 @@ class TestJoinRoom:
 class TestMuteParticipant:
     def test_mute_success(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
-        session = SessionFactory(space__author=keeper)
-        session.attendees.add(keeper)
+        participant = UserFactory()
+        session = _make_joinable_session(keeper, [participant])
         Room.objects.get_or_create_for_session(session)
+        sid = _activate_participant(session, participant)
 
-        with patch("totem.rooms.api.mute_participant") as mock_mute:
-            resp = client.post(f"{BASE}/{session.slug}/mute/some-participant")
+        with (
+            patch("totem.rooms.api.get_room_participant_sids", return_value={participant.slug: sid}),
+            patch("totem.rooms.api.mute_participant") as mock_mute,
+        ):
+            resp = client.post(f"{BASE}/{session.slug}/mute/{participant.slug}")
 
         assert resp.status_code == 200
-        mock_mute.assert_called_once_with(session.slug, "some-participant")
+        mock_mute.assert_called_once_with(session.slug, participant.slug)
+
+        with (
+            patch("totem.rooms.api.get_room_participant_sids", return_value={participant.slug: "replacement-sid"}),
+            patch("totem.rooms.api.mute_participant") as mock_mute,
+        ):
+            resp = client.post(f"{BASE}/{session.slug}/mute/{participant.slug}")
+
+        assert resp.status_code == 403
+        assert resp.json()["code"] == "not_in_room"
+        mock_mute.assert_not_called()
 
     def test_mute_not_keeper(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -1200,15 +1281,19 @@ class TestMuteParticipant:
 class TestMuteAll:
     def test_mute_all_success(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
-        session = SessionFactory(space__author=keeper)
-        session.attendees.add(keeper)
+        participant = UserFactory()
+        session = _make_joinable_session(keeper, [participant])
         Room.objects.get_or_create_for_session(session)
+        sid = _activate_participant(session, participant)
 
-        with patch("totem.rooms.api.mute_all_participants") as mock_mute_all:
+        with (
+            patch("totem.rooms.api.get_room_participant_sids", return_value={participant.slug: sid}),
+            patch("totem.rooms.api.mute_all_participants") as mock_mute_all,
+        ):
             resp = client.post(f"{BASE}/{session.slug}/mute-all")
 
         assert resp.status_code == 200
-        mock_mute_all.assert_called_once_with(session.slug, except_identity=keeper.slug)
+        mock_mute_all.assert_called_once_with(session.slug, except_identity=keeper.slug, identities={participant.slug})
 
     def test_mute_all_not_keeper(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -1232,15 +1317,34 @@ class TestMuteAll:
 class TestRemoveParticipant:
     def test_remove_success(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
-        session = SessionFactory(space__author=keeper)
-        session.attendees.add(keeper)
+        participant = UserFactory()
+        session = _make_joinable_session(keeper, [participant])
         Room.objects.get_or_create_for_session(session)
+        _activate_participant(session, participant)
 
         with patch("totem.rooms.api.remove_participant") as mock_remove:
-            resp = client.post(f"{BASE}/{session.slug}/remove/some-participant")
+            resp = client.post(f"{BASE}/{session.slug}/remove/{participant.slug}")
 
         assert resp.status_code == 200
-        mock_remove.assert_called_once_with(session.slug, "some-participant", reason=RemoveReason.REMOVE)
+        mock_remove.assert_called_once_with(session.slug, participant.slug, reason=RemoveReason.REMOVE)
+        assert SessionAdmission.objects.get(session=session, user=participant).state == AdmissionState.REVOKED
+
+    def test_remove_transition_error(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        participant = UserFactory()
+        session = _make_joinable_session(keeper, [participant])
+        Room.objects.get_or_create_for_session(session)
+        error = TransitionError(code=ErrorCode.STALE_VERSION, message="State changed", detail="expected 0, current 1")
+
+        with (
+            patch("totem.rooms.admission.record_removal", side_effect=error),
+            patch("totem.rooms.api.remove_participant") as mock_remove,
+        ):
+            resp = client.post(f"{BASE}/{session.slug}/remove/{participant.slug}")
+
+        assert resp.status_code == 409
+        assert resp.json() == {"code": "stale_version", "message": "State changed", "detail": "expected 0, current 1"}
+        mock_remove.assert_not_called()
 
     def test_remove_not_keeper(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -1275,15 +1379,19 @@ class TestRemoveParticipant:
 class TestDisableCamera:
     def test_disable_camera_success(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
-        session = SessionFactory(space__author=keeper)
-        session.attendees.add(keeper)
+        participant = UserFactory()
+        session = _make_joinable_session(keeper, [participant])
         Room.objects.get_or_create_for_session(session)
+        sid = _activate_participant(session, participant)
 
-        with patch("totem.rooms.api.disable_camera_participant") as mock_disable:
-            resp = client.post(f"{BASE}/{session.slug}/disable-camera/some-participant")
+        with (
+            patch("totem.rooms.api.get_room_participant_sids", return_value={participant.slug: sid}),
+            patch("totem.rooms.api.disable_camera_participant") as mock_disable,
+        ):
+            resp = client.post(f"{BASE}/{session.slug}/disable-camera/{participant.slug}")
 
         assert resp.status_code == 200
-        mock_disable.assert_called_once_with(session.slug, "some-participant")
+        mock_disable.assert_called_once_with(session.slug, participant.slug)
 
     def test_disable_camera_not_keeper(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -1315,12 +1423,13 @@ class TestBanParticipant:
     def test_ban_success(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         participant = UserFactory()
-        session = SessionFactory(space__author=keeper)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=keeper)
         session.attendees.add(keeper, participant)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         with (
-            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug, participant.slug}),
+            patch("totem.rooms.api.get_room_participant_sids", return_value=_sids({keeper.slug, participant.slug})),
             patch("totem.rooms.api.publish_state"),
             patch("totem.rooms.api.remove_participant"),
         ):
@@ -1334,12 +1443,13 @@ class TestBanParticipant:
     def test_ban_calls_remove_participant(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         participant = UserFactory()
-        session = SessionFactory(space__author=keeper)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=keeper)
         session.attendees.add(keeper, participant)
         Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
 
         with (
-            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug, participant.slug}),
+            patch("totem.rooms.api.get_room_participant_sids", return_value=_sids({keeper.slug, participant.slug})),
             patch("totem.rooms.api.publish_state"),
             patch("totem.rooms.api.remove_participant") as mock_remove,
         ):
@@ -1353,14 +1463,15 @@ class TestUnbanParticipant:
     def test_unban_success(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         participant = UserFactory()
-        session = SessionFactory(space__author=keeper)
+        session = SessionFactory(start=timezone.now() - datetime.timedelta(minutes=5), space__author=keeper)
         session.attendees.add(keeper, participant)
         room = Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
         room.banned_participants = [participant.slug]
         room.save()
 
         with (
-            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug}),
+            patch("totem.rooms.api.get_room_participant_sids", return_value=_sids({keeper.slug})),
             patch("totem.rooms.api.publish_state"),
         ):
             resp = _post_event(
@@ -1375,19 +1486,21 @@ class TestUnbanParticipant:
         participant = UserFactory()
         session = _make_joinable_session(keeper, attendees=[participant])
         room = Room.objects.get_or_create_for_session(session)
+        _activate_attendees(session)
         room.banned_participants = [participant.slug]
         room.save()
 
         # Banned user cannot join
         participant_client = Client()
         participant_client.force_login(participant)
-        resp = participant_client.post(f"{BASE}/{session.slug}/join")
+        with patch("totem.rooms.api.get_admission_participants", return_value=set()):
+            resp = participant_client.post(f"{BASE}/{session.slug}/join")
         assert resp.status_code == 403
-        assert resp.json()["code"] == "banned"
+        assert resp.json()["code"] == "not_joinable"
 
         # Keeper unbans the participant
         with (
-            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug}),
+            patch("totem.rooms.api.get_room_participant_sids", return_value=_sids({keeper.slug})),
             patch("totem.rooms.api.publish_state"),
         ):
             unban_resp = _post_event(
@@ -1397,8 +1510,8 @@ class TestUnbanParticipant:
 
         # Unbanned user can now join
         with (
-            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),
-            patch("totem.rooms.api.get_connected_participants", return_value={keeper.slug}),
+            patch("totem.rooms.livekit.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.api.get_admission_participants", return_value={keeper.slug}),
         ):
             join_resp = participant_client.post(f"{BASE}/{session.slug}/join")
 

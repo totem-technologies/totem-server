@@ -52,7 +52,9 @@ def apply_event(
     actor: str,  # user slug
     event: RoomEvent | EmptyRoomEvent,
     last_seen_version: int | None,
-    connected: set[str],  # user slugs currently in the LiveKit room
+    connected: set[str] | None,  # user slugs currently in the LiveKit room
+    *,
+    participant_sids: dict[str, str] | None = None,
 ) -> RoomState:
     """
     The state machine entry point. Acquires the Session row lock,
@@ -86,8 +88,22 @@ def apply_event(
 
         state_before = room.to_state()
 
-        # Reconcile talking order with who's actually connected.
-        _reconcile_talking_order(room, connected)
+        from .room_participants import participant_projection
+
+        offline_moderation = isinstance(event, EndRoomEvent | BanParticipantEvent | UnbanParticipantEvent)
+        if (connected is None or participant_sids is None) and not offline_moderation:
+            raise TransitionError(code=ErrorCode.LIVEKIT_ERROR, message="LiveKit presence is unavailable")
+        projection = participant_projection(room, connected or set(), participant_sids)
+        if actor != room.keeper and actor not in projection.connected:
+            raise TransitionError(code=ErrorCode.NOT_IN_ROOM, message="Participant is not activated and connected")
+        if isinstance(event, StartRoomEvent | PassStickEvent | AcceptStickEvent | ForcePassStickEvent):
+            if room.keeper not in projection.connected:
+                raise TransitionError(
+                    code=ErrorCode.KEEPER_NOT_IN_ROOM, message="Keeper must be activated and connected"
+                )
+        unverified_connected = (connected or set()) - projection.connected
+        _reconcile_talking_order(room, connected if participant_sids is not None else None, participant_sids)
+        connected = projection.connected
 
         match event:
             case EmptyRoomEvent():
@@ -102,13 +118,13 @@ def apply_event(
             case ForcePassStickEvent():
                 _handle_force_pass(room, actor, connected)
             case ReorderEvent(talking_order=new_order):
-                _handle_reorder(room, actor, new_order, connected)
+                _handle_reorder(room, actor, new_order, connected, participant_sids, unverified_connected)
             case SetPromptEvent(prompt=prompt, session_prompt_id=session_prompt_id):
                 _handle_set_prompt(room, actor, prompt, session_prompt_id)
             case EndRoomEvent(reason=reason):
                 _handle_end(room, actor, reason)
             case BanParticipantEvent(participant_slug=slug):
-                _handle_ban(room, actor, slug, connected)
+                _handle_ban(room, actor, slug, connected, participant_sids)
             case UnbanParticipantEvent(participant_slug=slug):
                 _handle_unban(room, actor, slug)
             case _:
@@ -133,6 +149,11 @@ def record_join(session: Session, user: User) -> None:
         if user.slug in room.banned_participants:
             raise TransitionError(code=ErrorCode.BANNED, message="You have been banned from this session")
 
+        from .room_participants import is_activated_participant
+
+        if not is_activated_participant(room, user.slug):
+            raise TransitionError(code=ErrorCode.NOT_JOINABLE, message="Server admission is required")
+
         already_joined = session.joined.filter(pk=user.pk).exists()
         state_before = room.to_state()
         if room.status == RoomStatus.WAITING_ROOM:
@@ -145,7 +166,24 @@ def record_join(session: Session, user: User) -> None:
         elif not already_joined:
             room.talking_order = [slug for slug in room.talking_order if slug != user.slug] + [user.slug]
         session.joined.add(user)
+        if not already_joined:
+            from totem.users import analytics
+
+            transaction.on_commit(partial(analytics.event_joined, user, session))
         persist_room_state_change(room, state_before, "join", user.slug, publish=True)
+
+
+def prune_participant(room: Room, identity: str, *, actor: str) -> None:
+    """Remove an explicitly revoked participant while holding the Session lock."""
+    state_before = room.to_state()
+    room.talking_order = [slug for slug in room.talking_order if slug != identity]
+    if room.current_speaker == identity:
+        room.current_speaker = None
+        if room.status == RoomStatus.ACTIVE:
+            room.turn_state = TurnState.IDLE
+    if room.next_speaker == identity:
+        room.next_speaker = None
+    persist_room_state_change(room, state_before, "participant_revoked", actor, publish=True)
 
 
 def _sort_by_experience(room: Room, session: Session) -> None:
@@ -185,21 +223,21 @@ def syncing_session_prompts(session: Session, actor: str) -> Iterator[None]:
 
     room = _get_room(session)
     state_before = room.to_state() if room else None
-    prompts_before = list(session.discussion_prompts.values_list("pk", "prompt", "position"))
+    prompts_before = list(session.discussion_prompts.values_list("pk", "prompt", "position"))  # pyright: ignore[reportAttributeAccessIssue]
     active_rounds = list(
         SessionRound.objects.filter(session=session, state=SessionRoundState.ACTIVE, prepared_prompt__isnull=False)
     )
 
     yield
 
-    prompts_after = list(session.discussion_prompts.values_list("pk", "prompt", "position"))
+    prompts_after = list(session.discussion_prompts.values_list("pk", "prompt", "position"))  # pyright: ignore[reportAttributeAccessIssue]
     if prompts_after == prompts_before:
         return
 
     prompt_text = {pk: prompt for pk, prompt, _ in prompts_after}
     changed_rounds = []
     for round in active_rounds:
-        text = prompt_text.get(round.prepared_prompt_id, "")
+        text = prompt_text.get(round.prepared_prompt_id, "")  # pyright: ignore[reportAttributeAccessIssue]
         if round.prompt != text:
             round.prompt = text
             round.date_modified = timezone.now()
@@ -230,7 +268,22 @@ def persist_room_state_change(
         return state
 
     room.state_version += 1
-    room.save()
+    # Admission writers can update their own revision within this Session lock.
+    room.save(
+        update_fields=[
+            "status",
+            "turn_state",
+            "keeper",
+            "current_speaker",
+            "next_speaker",
+            "talking_order",
+            "banned_participants",
+            "round_number",
+            "state_version",
+            "end_reason",
+            "date_modified",
+        ]
+    )
     state = state.model_copy(update={"version": room.state_version})
     RoomEventLog.objects.create(
         room=room,
@@ -257,10 +310,10 @@ def _require_keeper(room: Room, actor: str) -> None:
         )
 
 
-def _require_keeper_in_room(room: Room) -> None:
+def _require_keeper_in_room(room: Room, connected: set[str] | None = None) -> None:
     """Requires the keeper to be in the room to perform an action"""
 
-    if room.keeper not in room.talking_order:
+    if room.keeper not in room.talking_order or (connected is not None and room.keeper not in connected):
         raise TransitionError(
             code=ErrorCode.KEEPER_NOT_IN_ROOM,
             message="Keeper must be in the room to perform this action",
@@ -330,7 +383,7 @@ def _set_round_prompt(room: Room, prompt: str | None, session_prompt_id: int | N
         number=room.round_number,
         defaults={"prompt": prompt or "", "prepared_prompt": prepared_prompt},
     )
-    previous_prepared_prompt_id = None if created else round.prepared_prompt_id
+    previous_prepared_prompt_id = None if created else round.prepared_prompt_id  # pyright: ignore[reportAttributeAccessIssue]
     if not created:
         round.prompt = prompt or ""
         round.prepared_prompt = prepared_prompt
@@ -339,7 +392,7 @@ def _set_round_prompt(room: Room, prompt: str | None, session_prompt_id: int | N
         round.save(update_fields=["prompt", "prepared_prompt", "state", "date_modified"])
     # Prepared prompts report which rounds consumed them, so changing a
     # round's prepared prompt changes the prompt list clients cache.
-    if round.prepared_prompt_id != previous_prepared_prompt_id:
+    if round.prepared_prompt_id != previous_prepared_prompt_id:  # pyright: ignore[reportAttributeAccessIssue]
         _bump_prompts_revision(room.session)
 
 
@@ -381,7 +434,9 @@ def _next_in_order(
     return None
 
 
-def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
+def _reconcile_talking_order(
+    room: Room, connected: set[str] | None, participant_sids: dict[str, str] | None = None
+) -> None:
     """
     Reconcile talking_order with connected participants.
     - Keeps disconnected participants in the order (they may reconnect)
@@ -391,6 +446,20 @@ def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
       speaker disconnects
     - Repairs missing speaker assignments
     """
+    from .room_participants import participant_projection
+
+    projection = participant_projection(room, connected or set(), participant_sids)
+    room.talking_order = [slug for slug in room.talking_order if slug in projection.retained]
+    if room.current_speaker not in projection.retained:
+        room.current_speaker = None
+    if room.next_speaker not in projection.retained:
+        room.next_speaker = None
+    if connected is None:
+        if room.status == RoomStatus.ACTIVE and room.current_speaker is None:
+            room.turn_state = TurnState.IDLE
+        return
+    connected = projection.connected
+
     reconciled: list[str] = []
 
     # Keeper always first
@@ -415,6 +484,8 @@ def _reconcile_talking_order(room: Room, connected: set[str]) -> None:
     # connected. Clearing them would leave no reference point from which a
     # later event could recover the turn.
     if room.status != RoomStatus.ACTIVE or not connected_order:
+        if room.status == RoomStatus.ACTIVE and room.current_speaker is None:
+            room.turn_state = TurnState.IDLE
         return
 
     # A missing assignment has no position from which to continue the order,
@@ -471,7 +542,7 @@ def _handle_pass(
     session_prompt_id: int | None,
 ) -> None:
     _require_active(room)
-    _require_keeper_in_room(room)
+    _require_keeper_in_room(room, connected)
 
     prompt = _normalize_prompt(prompt)
     sets_prompt = prompt is not None or session_prompt_id is not None
@@ -519,7 +590,7 @@ def _handle_pass(
 
 def _handle_accept(room: Room, actor: str, connected: set[str]) -> None:
     _require_active(room)
-    _require_keeper_in_room(room)
+    _require_keeper_in_room(room, connected)
 
     if room.turn_state != TurnState.PASSING:
         raise TransitionError(
@@ -572,7 +643,14 @@ def _handle_set_prompt(room: Room, actor: str, prompt: str | None, session_promp
     _set_round_prompt(room, prompt, session_prompt_id)
 
 
-def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set[str]) -> None:
+def _handle_reorder(
+    room: Room,
+    actor: str,
+    new_order: list[str],
+    connected: set[str],
+    participant_sids: dict[str, str] | None = None,
+    unverified_connected: set[str] | None = None,
+) -> None:
     _require_keeper(room, actor)
 
     new_order = list(dict.fromkeys(new_order))
@@ -587,7 +665,7 @@ def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set
     # The client may not know about newly-connected participants (added by
     # _reconcile_talking_order), so we allow the new_order to be a subset
     # and append the remaining slugs at the end.
-    unknown = new_set - set(room.talking_order)
+    unknown = (new_set - set(room.talking_order)) | (new_set & (unverified_connected or set()))
     if unknown:
         raise TransitionError(
             code=ErrorCode.INVALID_PARTICIPANT_ORDER,
@@ -599,7 +677,7 @@ def _handle_reorder(room: Room, actor: str, new_order: list[str], connected: set
     room.talking_order = [*new_order, *remaining]
 
     # Re-establish the keeper-first invariant via the canonical helper.
-    _reconcile_talking_order(room, connected)
+    _reconcile_talking_order(room, connected, participant_sids)
 
     if room.current_speaker:
         room.next_speaker = _next_in_order(room.talking_order, room.current_speaker, connected)
@@ -616,11 +694,22 @@ def _handle_end(room: Room, actor: str, reason: EndReason) -> None:
     room.next_speaker = None
     room.end_reason = reason
 
-    room.session.ended_at = timezone.now()
-    room.session.save(update_fields=["ended_at"])
+    if room.session.ended_at is None:
+        room.session.ended_at = timezone.now()
+        room.session.save(update_fields=["ended_at"])
+
+    from .admission import invalidate_pending_admission
+
+    invalidate_pending_admission(room.session)
 
 
-def _handle_ban(room: Room, actor: str, participant_slug: str, connected: set[str]) -> None:
+def _handle_ban(
+    room: Room,
+    actor: str,
+    participant_slug: str,
+    connected: set[str],
+    participant_sids: dict[str, str] | None = None,
+) -> None:
     _require_keeper(room, actor)
     _require_not_ended(room)
 
@@ -636,6 +725,20 @@ def _handle_ban(room: Room, actor: str, participant_slug: str, connected: set[st
             message="Participant is already banned",
         )
 
+    from totem.users.models import User
+
+    from .admission import revoke_removed_user
+
+    participant = User.objects.filter(slug=participant_slug).first()
+    if participant is None or not (
+        room.session.attendees.filter(pk=participant.pk).exists()
+        or room.session.admissions.filter(user=participant).exists()
+    ):
+        raise TransitionError(code=ErrorCode.NOT_IN_ROOM, message="Participant is not associated with this session")
+    keeper = User.objects.get(slug=actor)
+    if participant:
+        revoke_removed_user(room.session, keeper, participant, prune=False)
+
     room.banned_participants = [*room.banned_participants, participant_slug]
     room.talking_order = [s for s in room.talking_order if s != participant_slug]
 
@@ -646,7 +749,12 @@ def _handle_ban(room: Room, actor: str, participant_slug: str, connected: set[st
         room.current_speaker = None
         room.turn_state = TurnState.SPEAKING
 
-    _reconcile_talking_order(room, connected - {participant_slug})
+    remaining = connected - {participant_slug}
+    _reconcile_talking_order(
+        room,
+        remaining if participant_sids is not None else None,
+        participant_sids,
+    )
 
 
 def _handle_unban(room: Room, actor: str, participant_slug: str) -> None:
