@@ -23,7 +23,8 @@ from ..livekit import (
 )
 from ..models import AdmissionPermissionSync, AdmissionState, AttemptStatus, Room, SessionAdmission
 from ..schemas import RoomStatus
-from .notifications import bump_admission_version
+from . import services
+from .capacity import has_admission_capacity
 
 logger = logging.getLogger(__name__)
 PERMISSION_LEASE_SECONDS = 30
@@ -44,7 +45,6 @@ def desired_permissions(room: Room, admission: SessionAdmission) -> bool:
         return True
     if admission.state != AdmissionState.ADMITTED:
         return False
-    from .capacity import has_admission_capacity
 
     if not has_admission_capacity(room, admission.user):
         return False
@@ -107,7 +107,7 @@ def _locked_sync(admission_id: int) -> Iterator[tuple[Room, SessionAdmission, Ad
         before = _visible_state(sync)
         yield room, admission, sync
         if _visible_state(sync) != before:
-            bump_admission_version(session.pk, admission.user.slug)
+            services.bump_admission_version(session.pk, admission.user.slug)
 
 
 def _visible_state(sync: AdmissionPermissionSync) -> tuple:

@@ -14,6 +14,7 @@ from totem.users.models import User
 
 from ..livekit import ACCESS_TOKEN_TTL_SECONDS, ENFORCED_MAX_PARTICIPANTS, MAX_PARTICIPANTS, WAITING_CONNECTION_LIMIT
 from ..models import AdmissionAttempt, AdmissionState, Room, SessionAdmission
+from .schemas import AdmissionError
 
 
 def admission_limit(room: Room) -> int:
@@ -41,8 +42,6 @@ def has_admission_capacity(room: Room, user: User) -> bool:
 
 
 def ensure_admission_capacity(room: Room, user: User) -> None:
-    from . import AdmissionError
-
     if not has_admission_capacity(room, user):
         raise AdmissionError("admission_full", "This Session has no unreserved admission seats")
 
@@ -73,8 +72,6 @@ def reserve_connection(
     Missing-room presence is empty; failed lookup must never be invented as empty.
     A duplicate identity refresh consumes no additional physical connection slot.
     """
-    from . import AdmissionError
-
     occupied, waiting = connection_reservations(room, raw_connected)
     if not admitted and user.slug not in waiting and len(waiting) >= WAITING_CONNECTION_LIMIT:
         raise AdmissionError("waiting_full", "Restricted waiting connections are full; your request remains queued")

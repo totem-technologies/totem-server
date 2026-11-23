@@ -11,7 +11,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import timedelta
 from functools import partial
-from typing import TYPE_CHECKING, cast, get_args
+from typing import cast, get_args
 from uuid import UUID, uuid4
 
 from django.db import IntegrityError, transaction
@@ -21,20 +21,37 @@ from django.utils import timezone
 from totem.spaces.models import Session, Space
 from totem.users.models import User
 
-from ..models import AdmissionAttempt, AdmissionJoinOperation, AdmissionState, AttemptStatus, Room, SessionAdmission
-from ..schemas import RoomStatus
-from .notifications import bump_admission_version
-
-if TYPE_CHECKING:
-    from ..schemas import JoinResponse
+from ..livekit import LiveKitPermissionError, create_access_token, publish_state
+from ..models import (
+    AdmissionAttempt,
+    AdmissionJoinOperation,
+    AdmissionPermissionSync,
+    AdmissionState,
+    AttemptStatus,
+    Room,
+    SessionAdmission,
+)
+from ..schemas import (
+    AdmissionJoinState,
+    AdmissionReadiness,
+    BanParticipantEvent,
+    JoinResponse,
+    PermissionErrorCode,
+    RoomStatus,
+)
+from ..state_machine import apply_event, prune_participant, record_join
+from .capacity import (
+    admission_limit,
+    admission_slots_used,
+    ensure_admission_capacity,
+    has_admission_capacity,
+    reserve_connection,
+)
+from .permissions import permissions_reconciled, queue_permission_sync, verify_current_permissions
+from .schemas import AdmissionError
+from .services import bump_admission_version, project_readiness
 
 ACTIVE_STATUSES = [AttemptStatus.PENDING, AttemptStatus.GRANTING]
-
-
-class AdmissionError(Exception):
-    def __init__(self, code: str, message: str) -> None:
-        self.code = code
-        super().__init__(message)
 
 
 @contextmanager
@@ -63,7 +80,6 @@ def invalidate_pending_admission(session: Session) -> None:
         AdmissionAttempt.objects.filter(admission__session=session, status__in=ACTIVE_STATUSES),
         AttemptStatus.CANCELLED,
     )
-    from .permissions import queue_permission_sync
 
     for admission in SessionAdmission.objects.filter(session=session).select_related("permission_sync"):
         sync = getattr(admission, "permission_sync", None)
@@ -125,13 +141,13 @@ def _set_membership(
     admission.decision_actor = actor
     admission.decided_at = timezone.now()
     admission.save(update_fields=["state", "version", "decision_actor", "decided_at", "date_modified"])
+
     bump_admission_version(admission.session_id, admission.user.slug, notify=schedule)
     if schedule:
         _queue_permissions(admission)
 
 
 def _queue_permissions(admission: SessionAdmission) -> None:
-    from .permissions import queue_permission_sync
 
     queue_permission_sync(admission)
 
@@ -154,13 +170,13 @@ def _set_attempt(
         attempt.completed_at = timezone.now()
         update_fields.append("completed_at")
     attempt.save(update_fields=update_fields)
+
     bump_admission_version(attempt.admission.session_id, attempt.admission.user.slug, notify=schedule)
     if schedule and status != AttemptStatus.ADMITTED:
         _queue_permissions(attempt.admission)
 
 
 def _approve(attempt: AdmissionAttempt, actor: User | None, *, record_admission: bool = True) -> None:
-    from .capacity import ensure_admission_capacity
 
     room = Room.objects.select_related("session").get(session_id=attempt.admission.session_id)
     ensure_admission_capacity(room, attempt.admission.user)
@@ -295,6 +311,7 @@ def update_approval_required(
             room.approval_required = approval_required
             room.admission_revision += 1
             room.save(update_fields=["approval_required", "admission_revision", "date_modified"])
+
             bump_admission_version(room.session_id)
         if not approval_required:
             pending = (
@@ -341,7 +358,6 @@ def _change_membership(
             _finish_attempts(
                 admission.attempts.filter(status__in=ACTIVE_STATUSES), AttemptStatus.REVOKED, schedule=False
             )
-            from ..state_machine import prune_participant
 
             prune_participant(room, user.slug, actor=actor.slug)
         return admission
@@ -395,10 +411,6 @@ def _participant_transition(
         ):
             raise AdmissionError("not_eligible", "User is no longer authorized to complete admission")
         if status == AttemptStatus.ADMITTED:
-            from ..state_machine import record_join
-            from .capacity import ensure_admission_capacity
-            from .permissions import permissions_reconciled
-
             ensure_admission_capacity(room, user)
             if (
                 permission_proof is None
@@ -429,8 +441,6 @@ def cancel_admission(
 def complete_admission(
     session_slug: str, user: User, request_id: UUID, attempt_id: UUID, *, expected_version: int
 ) -> AdmissionAttempt:
-    from ..livekit import LiveKitPermissionError
-    from .permissions import verify_current_permissions
 
     attempt = AdmissionAttempt.objects.filter(
         admission__session__slug=session_slug,
@@ -468,10 +478,6 @@ def record_removal(
         ):
             raise AdmissionError("not_eligible", "Target does not belong to this Session")
         if ban and user.slug not in room.banned_participants:
-            from ..livekit import publish_state
-            from ..schemas import BanParticipantEvent
-            from ..state_machine import apply_event
-
             state = apply_event(
                 session_slug,
                 actor.slug,
@@ -495,8 +501,6 @@ def revoke_removed_user(session: Session, actor: User, user: User, *, prune: boo
     _set_membership(member, state, actor)
     _finish_attempts(member.attempts.filter(status__in=ACTIVE_STATUSES), AttemptStatus.REVOKED, schedule=False)
     if prune:
-        from ..state_machine import prune_participant
-
         room = Room.objects.get(session=session)
         room.session = session
         prune_participant(room, user.slug, actor=actor.slug)
@@ -582,11 +586,6 @@ def prepare_admission_join(
     The API supplies raw presence observed outside transactions. Token leases
     serialize concurrent issuance even before those connections reach LiveKit.
     """
-    from ..livekit import create_access_token
-    from ..models import AdmissionPermissionSync
-    from ..schemas import AdmissionJoinState, AdmissionReadiness, JoinResponse, PermissionErrorCode
-    from .capacity import admission_limit, admission_slots_used, has_admission_capacity, reserve_connection
-    from .readiness import project_readiness
 
     if connected is None:
         raise AdmissionError("presence_unavailable", "Raw LiveKit presence is required to reserve a connection")

@@ -42,6 +42,12 @@ AdmissionErrorCode = Literal[
 ]
 
 
+class AdmissionError(Exception):
+    def __init__(self, code: str, message: str) -> None:
+        self.code = code
+        super().__init__(message)
+
+
 class AdmissionRequestInput(Schema):
     request_id: UUID
     attempt_id: UUID

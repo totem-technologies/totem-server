@@ -9,7 +9,7 @@ from totem.users.models import User
 
 from ..livekit import LiveKitPermissionError
 from . import AdmissionError
-from . import http as service
+from . import services as service
 from .schemas import (
     AdmissionCommandResponse,
     AdmissionMeSnapshot,

@@ -8,13 +8,17 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from collections.abc import Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import datetime
+from functools import partial
 from typing import Any, cast
 from uuid import UUID
 
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 
 from totem.rooms import admission
@@ -29,16 +33,23 @@ from ..livekit import (
     LiveKitPermissionError,
     get_participant_snapshot,
     get_room_participant_sids,
+    publish_admission_changed,
 )
-from ..models import AdmissionAttempt, AdmissionCommand, AdmissionState, AttemptStatus, Room, SessionAdmission
+from ..models import (
+    AdmissionAttempt,
+    AdmissionCommand,
+    AdmissionPermissionSync,
+    AdmissionState,
+    AttemptStatus,
+    Room,
+    SessionAdmission,
+)
 from ..schemas import AdmissionReadiness, ReadinessReason, ReadinessState, RoomStatus
-from . import AdmissionError
+from . import permissions
 from .capacity import admission_limit, admission_slots_used, connection_reservations
-from .notifications import bump_admission_version
-from .permissions import queue_permission_sync, reconcile_admission_permissions
-from .readiness import project_readiness
 from .schemas import (
     AdmissionCommandResponse,
+    AdmissionError,
     AdmissionHeader,
     AdmissionMeSnapshot,
     AdmissionRequestInput,
@@ -51,6 +62,8 @@ from .schemas import (
     Participant,
     SettingsCommandInput,
 )
+
+logger = logging.getLogger(__name__)
 
 CommandInput = KeeperDecisionInput | MembershipCommandInput | SettingsCommandInput | BatchCommandInput
 HISTORY_LIMIT = 100
@@ -362,11 +375,11 @@ def confirm_connection(session_slug: str, user: User, request_id: UUID, attempt_
             attempt.version += 1
             attempt.save(update_fields=["participant_sid", "connected_at", "version", "date_modified"])
             bump_admission_version(room.session_id, user.slug)
-            queue_permission_sync(attempt.admission)
+            permissions.queue_permission_sync(attempt.admission)
         admission_id = attempt.admission_id
     if not queued_sync:
         # A same-SID retry respects the shared backoff and never creates a new grant.
-        reconcile_admission_permissions(admission_id)
+        permissions.reconcile_admission_permissions(admission_id)
     return attempt
 
 
@@ -550,3 +563,106 @@ def execute_keeper_command(
         partial_failure=partial_failure,
         snapshot=snapshot,
     )
+
+
+def bump_admission_version(session_id: int, identity: str | None = None, *, notify: bool = True) -> None:
+    """Caller holds the Session lock; notifications are sent only after commit."""
+    Room.objects.filter(session_id=session_id).update(
+        admission_version=F("admission_version") + 1, date_modified=timezone.now()
+    )
+    if notify:
+        transaction.on_commit(partial(_notify, session_id, identity))
+
+
+def _notify(session_id: int, identity: str | None) -> None:
+    room = Room.objects.select_related("session").filter(session_id=session_id).first()
+    if not room:
+        return
+    destinations = [room.keeper]
+    if identity:
+        destinations.append(identity)
+    try:
+        publish_admission_changed(room.session.slug, room.admission_version, destinations)
+    except Exception:
+        # A missed event never rolls back a committed admission decision.
+        logger.exception("Admission refresh notification failed for %s", room.session.slug)
+
+
+@dataclass(frozen=True)
+class ReadinessProjection:
+    state: ReadinessState
+    reason: ReadinessReason | None = None
+
+
+def project_readiness(
+    room: Room,
+    durable: SessionAdmission,
+    attempt: AdmissionAttempt | None,
+    sync: AdmissionPermissionSync | None,
+    eligible: bool,
+    capacity: int,
+    slots_used: int,
+    observed_at: datetime,
+    ended: bool,
+) -> ReadinessProjection:
+    """Project the supplied latest attempt without queries, I/O or mutation.
+
+    All inputs must belong to the same snapshot. The caller must supply the
+    latest attempt, not a historical row; this does not validate current presence.
+    """
+    if ended:
+        return ReadinessProjection(ReadinessState.ENDED, ReadinessReason.SESSION_ENDED)
+    if not eligible:
+        return ReadinessProjection(ReadinessState.BLOCKED, ReadinessReason.NOT_ELIGIBLE)
+    keeper = durable.user.slug == room.keeper
+    if not keeper:
+        if durable.state == AdmissionState.REVOKED:
+            return ReadinessProjection(ReadinessState.BLOCKED, ReadinessReason.REQUIRES_REAPPROVAL)
+        if durable.state == AdmissionState.PERMANENTLY_DECLINED:
+            return ReadinessProjection(ReadinessState.BLOCKED, ReadinessReason.PERMANENTLY_DECLINED)
+    if not attempt:
+        return ReadinessProjection(ReadinessState.REQUIRES_NEW_ATTEMPT, ReadinessReason.NO_REQUEST)
+    if attempt.status in (AttemptStatus.PENDING, AttemptStatus.GRANTING) and attempt.expires_at <= observed_at:
+        return ReadinessProjection(ReadinessState.REQUIRES_NEW_ATTEMPT, ReadinessReason.REQUEST_EXPIRED)
+    if attempt.status not in (AttemptStatus.PENDING, AttemptStatus.GRANTING, AttemptStatus.ADMITTED):
+        reasons = {
+            AttemptStatus.DECLINED: ReadinessReason.REQUEST_DECLINED,
+            AttemptStatus.PERMANENTLY_DECLINED: ReadinessReason.REQUEST_PERMANENTLY_DECLINED,
+            AttemptStatus.CANCELLED: ReadinessReason.REQUEST_CANCELLED,
+            AttemptStatus.EXPIRED: ReadinessReason.REQUEST_EXPIRED,
+            AttemptStatus.SUPERSEDED: ReadinessReason.REQUEST_SUPERSEDED,
+            AttemptStatus.REVOKED: ReadinessReason.REQUEST_REVOKED,
+            AttemptStatus.FAILED: ReadinessReason.REQUEST_FAILED,
+        }
+        return ReadinessProjection(
+            ReadinessState.REQUIRES_NEW_ATTEMPT, reasons.get(attempt.status, ReadinessReason.INVALID_REQUEST)
+        )
+
+    if not keeper and (slots_used > capacity or (attempt.status == AttemptStatus.PENDING and slots_used >= capacity)):
+        return ReadinessProjection(ReadinessState.BLOCKED, ReadinessReason.ADMISSION_FULL)
+    if attempt.status == AttemptStatus.PENDING:
+        return ReadinessProjection(ReadinessState.WAITING_FOR_APPROVAL, ReadinessReason.APPROVAL_REQUIRED)
+    if not keeper and durable.state != AdmissionState.ADMITTED:
+        return ReadinessProjection(ReadinessState.BLOCKED, ReadinessReason.NOT_ADMITTED)
+    if not attempt.participant_sid or not attempt.connected_at:
+        if attempt.status == AttemptStatus.ADMITTED:
+            return ReadinessProjection(ReadinessState.REQUIRES_NEW_ATTEMPT, ReadinessReason.CONNECTION_REQUIRED)
+        return ReadinessProjection(ReadinessState.APPLYING_PERMISSIONS, ReadinessReason.CONNECTION_REQUIRED)
+    if (
+        not sync
+        or not sync.desired_admitted
+        or sync.authority_keeper != room.keeper
+        or sync.applied_revision != sync.revision
+        or not sync.participant_sid
+        or sync.last_error
+        or sync.operation_id is not None
+        or sync.lease_until is not None
+    ):
+        return ReadinessProjection(ReadinessState.APPLYING_PERMISSIONS, ReadinessReason.PERMISSION_PENDING)
+    if sync.participant_sid != attempt.participant_sid:
+        if attempt.status == AttemptStatus.ADMITTED:
+            return ReadinessProjection(ReadinessState.REQUIRES_NEW_ATTEMPT, ReadinessReason.CONNECTION_CHANGED)
+        return ReadinessProjection(ReadinessState.APPLYING_PERMISSIONS, ReadinessReason.CONNECTION_CHANGED)
+    if attempt.status == AttemptStatus.ADMITTED:
+        return ReadinessProjection(ReadinessState.ACTIVATED)
+    return ReadinessProjection(ReadinessState.READY_TO_ACTIVATE)

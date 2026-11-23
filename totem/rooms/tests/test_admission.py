@@ -28,8 +28,8 @@ from totem.rooms import admission as capacity_admission
 from totem.rooms import api as room_api
 from totem.rooms import livekit as room_livekit
 from totem.rooms.admission import AdmissionError, request_admission
-from totem.rooms.admission import http as admission_http
 from totem.rooms.admission import permissions as admission_permissions
+from totem.rooms.admission import services as admission_http
 from totem.rooms.admission.capacity import admission_limit
 from totem.rooms.admission.schemas import BatchCommandInput, MembershipCommandInput, SettingsCommandInput
 from totem.rooms.livekit import LiveKitConfigurationError, LiveKitPermissionError
@@ -414,7 +414,7 @@ class TestAdmissionDomain:
         ],
     )
     def test_readiness_snapshot_states(self, readiness_context, change, state, reason):
-        from totem.rooms.admission.readiness import project_readiness
+        from totem.rooms.admission.services import project_readiness
         from totem.rooms.models import AdmissionPermissionSync
 
         _, room, _, user = readiness_context
@@ -499,7 +499,7 @@ class TestAdmissionDomain:
         ],
     )
     def test_readiness_terminal_attempt_reasons_and_membership_precedence(self, readiness_context, status, reason):
-        from totem.rooms.admission.readiness import project_readiness
+        from totem.rooms.admission.services import project_readiness
 
         _, room, keeper, user = readiness_context
         now = timezone.now()
@@ -528,7 +528,7 @@ class TestAdmissionDomain:
     def test_readiness_membership_blocks_missing_or_expired_attempt(
         self, readiness_context, status, membership, reason
     ):
-        from totem.rooms.admission.readiness import project_readiness
+        from totem.rooms.admission.services import project_readiness
 
         _, room, _, user = readiness_context
         now = timezone.now()
@@ -580,7 +580,7 @@ class TestAdmissionDomain:
             )
 
         add_history(durable, 1)
-        with patch("totem.rooms.admission.http.get_room_participant_sids", return_value={}):
+        with patch("totem.rooms.admission.services.get_room_participant_sids", return_value={}):
             with CaptureQueriesContext(connection) as initial_queries:
                 admission_http.admission_snapshot(session.slug, actor, keeper=keeper_view)
             extra_users = UserFactory.create_batch(4)
@@ -626,7 +626,7 @@ class TestAdmissionDomain:
                 status=AttemptStatus.CANCELLED,
                 expires_at=timezone.now() + timedelta(minutes=5),
             )
-        with patch("totem.rooms.admission.http.get_room_participant_sids", return_value={}):
+        with patch("totem.rooms.admission.services.get_room_participant_sids", return_value={}):
             snapshot = admission_http.admission_snapshot(session.slug, keeper)
         expected = {user.slug: not cancelled, inactive.slug: False, removed.slug: False, banned.slug: False}
         assert {item.identity: item.eligible for item in snapshot.participants} == expected
@@ -1699,8 +1699,8 @@ class TestAdmissionHttp:
             return participant(args[0], args[1])
 
         with (
-            patch("totem.rooms.admission.http.get_room_participant_sids", return_value={}) as presence,
-            patch("totem.rooms.admission.http.get_participant_snapshot", side_effect=participant, create=True),
+            patch("totem.rooms.admission.services.get_room_participant_sids", return_value={}) as presence,
+            patch("totem.rooms.admission.services.get_participant_snapshot", side_effect=participant, create=True),
             patch("totem.rooms.admission.permissions.get_participant_snapshot", side_effect=participant),
             patch("totem.rooms.admission.permissions.update_participant_permissions", side_effect=update),
             patch("totem.rooms.admission.permissions.hard_disconnect_participant"),
@@ -1909,7 +1909,7 @@ class TestAdmissionHttp:
 
     @pytest.mark.django_db(transaction=True)
     def test_snapshot_rechecks_access_after_assembling(self, context, livekit):
-        from totem.rooms.admission import http
+        from totem.rooms.admission import services as http
 
         _, _, keeper_client, _, session, room = context
         request_attempt(context)
@@ -1975,7 +1975,7 @@ class TestAdmissionHttp:
 
     @pytest.mark.django_db(transaction=True)
     def test_snapshot_serializes_room_and_admission_reads(self, context, livekit):
-        from totem.rooms.admission import http
+        from totem.rooms.admission import services as http
         from totem.spaces.models import Session
 
         _, _, keeper_client, _, session, room = context
@@ -2146,7 +2146,7 @@ class TestAdmissionHttp:
         url = f"{BASE}/{session.slug}/admission/request"
         livekit.return_value = {"somebody-else": "other-sid"}
         with patch(
-            "totem.rooms.admission.http.get_participant_snapshot",
+            "totem.rooms.admission.services.get_participant_snapshot",
             return_value=api.ParticipantInfo(identity="somebody-else", sid="foreign"),
             create=True,
         ):
@@ -2189,7 +2189,7 @@ class TestAdmissionHttp:
     @pytest.mark.django_db(transaction=True)
     @pytest.mark.parametrize("nested", [False, True])
     def test_connection_receipt_reconciles_once_and_same_sid_retries(self, context, livekit, nested):
-        from totem.rooms.admission.http import confirm_connection
+        from totem.rooms.admission.services import confirm_connection
 
         _, user, _, _, session, _ = context
         ids, _ = request_attempt(context)
@@ -2197,9 +2197,8 @@ class TestAdmissionHttp:
         args = (session.slug, user, UUID(ids["request_id"]), UUID(ids["attempt_id"]))
         participant = api.ParticipantInfo(identity=user.slug, sid="new-sid")
         with (
-            patch("totem.rooms.admission.http.get_participant_snapshot", return_value=participant),
+            patch("totem.rooms.admission.services.get_participant_snapshot", return_value=participant),
             patch("totem.rooms.admission.permissions.reconcile_admission_permissions") as reconcile,
-            patch("totem.rooms.admission.http.reconcile_admission_permissions", new=reconcile),
         ):
             if nested:
                 with transaction.atomic():
@@ -2255,7 +2254,7 @@ class TestAdmissionHttp:
         ids, _ = request_attempt(context)
         url = f"{BASE}/{session.slug}/admission"
         with patch(
-            "totem.rooms.admission.http.get_participant_snapshot", side_effect=LiveKitPermissionError(code, code)
+            "totem.rooms.admission.services.get_participant_snapshot", side_effect=LiveKitPermissionError(code, code)
         ):
             response = post(client, f"{url}/request", {**ids, "connected": True})
         assert response.status_code == 409
@@ -2288,7 +2287,7 @@ class TestAdmissionHttp:
             )
 
         with (
-            patch("totem.rooms.admission.http.get_participant_snapshot", side_effect=replacement),
+            patch("totem.rooms.admission.services.get_participant_snapshot", side_effect=replacement),
             patch("totem.rooms.admission.permissions.get_participant_snapshot", side_effect=replacement),
             patch(
                 "totem.rooms.admission.permissions.update_participant_permissions",
@@ -2354,7 +2353,7 @@ class TestAdmissionHttp:
             "approval_required": False,
         }
         with patch(
-            "totem.rooms.admission.capacity.ensure_admission_capacity",
+            "totem.rooms.admission.ensure_admission_capacity",
             side_effect=admission.AdmissionError("admission_full", "capacity check failed"),
         ):
             response = send(keeper_client, "patch", url, body)
@@ -2559,7 +2558,7 @@ class TestAdmissionHttp:
 
     @pytest.mark.django_db(transaction=True)
     def test_out_of_order_connection_receipt_cannot_overwrite_newer_sid(self, context, livekit):
-        from totem.rooms.admission.http import confirm_connection
+        from totem.rooms.admission.services import confirm_connection
 
         client, user, _, _, session, _ = context
         ids, _ = request_attempt(context)
@@ -2575,7 +2574,7 @@ class TestAdmissionHttp:
                 return api.ParticipantInfo(identity=identity, sid="old-sid")
             return api.ParticipantInfo(identity=identity, sid="new-sid")
 
-        with patch("totem.rooms.admission.http.get_participant_snapshot", side_effect=observe):
+        with patch("totem.rooms.admission.services.get_participant_snapshot", side_effect=observe):
             response = post(client, url, {**ids, "connected": True})
         assert response.status_code == 409, response.content
         assert response.json()["code"] == "stale_version"
@@ -2594,7 +2593,7 @@ class TestAdmissionHttp:
             assert response.status_code == 200, response.content
             return api.ParticipantInfo(identity=identity, sid=f"sid-{identity}")
 
-        with patch("totem.rooms.admission.http.get_participant_snapshot", side_effect=observe):
+        with patch("totem.rooms.admission.services.get_participant_snapshot", side_effect=observe):
             response = post(client, f"{url}/request", {**ids, "connected": True})
         assert response.status_code == 200, response.content
         assert response.json()["me"]["connected_at"] is not None
@@ -2735,7 +2734,7 @@ class TestAdmissionHttp:
             )
 
         with (
-            patch("totem.rooms.admission.http.get_participant_snapshot", side_effect=replacement),
+            patch("totem.rooms.admission.services.get_participant_snapshot", side_effect=replacement),
             patch("totem.rooms.admission.permissions.get_participant_snapshot", side_effect=replacement),
             patch("totem.rooms.admission.permissions.update_participant_permissions", side_effect=replacement),
         ):
@@ -2994,9 +2993,7 @@ class TestAdmissionHttp:
         room.keeper = keeper.slug
         room.save(update_fields=["keeper"])
         with (
-            patch(
-                "totem.rooms.admission.permissions.verify_current_permissions", return_value=(1, "participant-1")
-            ) as verify,
+            patch("totem.rooms.admission.verify_current_permissions", return_value=(1, "participant-1")) as verify,
             pytest.raises(admission.AdmissionError) as error,
         ):
             admission.complete_admission(
