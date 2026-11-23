@@ -4,10 +4,10 @@ from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
-from django.test import Client
+from django.test import Client, override_settings
 from django.utils import timezone
 
-from totem.rooms.livekit import LiveKitConfigurationError, LiveKitPermissionError
+from totem.rooms.livekit import LiveKitPermissionError, create_access_token
 from totem.rooms.models import (
     AdmissionAttempt,
     AdmissionPermissionSync,
@@ -985,7 +985,7 @@ class TestJoinRoom:
     def livekit(self):
         with (
             patch("totem.rooms.api.get_admission_participants", return_value=set()),
-            patch("totem.rooms.livekit.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.admission.create_access_token", return_value="fake-jwt-token"),
         ):
             yield
 
@@ -1001,7 +1001,7 @@ class TestJoinRoom:
         assert session.can_join(user)
 
         with (
-            patch("totem.rooms.livekit.create_access_token", return_value="fake-jwt-token") as token,
+            patch("totem.rooms.admission.create_access_token", return_value="fake-jwt-token") as token,
             patch("totem.rooms.api.get_admission_participants") as participants,
         ):
             resp = client.post(f"{BASE}/{session.slug}/join")
@@ -1029,7 +1029,7 @@ class TestJoinRoom:
         room.save(update_fields=["date_created"])
 
         with (
-            patch("totem.rooms.livekit.create_access_token", return_value="fake-jwt-token") as token,
+            patch("totem.rooms.admission.create_access_token", return_value="fake-jwt-token") as token,
             patch("totem.rooms.api.get_admission_participants", return_value=set()) as participants,
         ):
             resp = client.post(f"{BASE}/{session.slug}/join")
@@ -1055,7 +1055,7 @@ class TestJoinRoom:
             Room.objects.get_or_create_for_session(session)
 
         with (
-            patch("totem.rooms.livekit.create_access_token", return_value="fake-jwt-token") as token,
+            patch("totem.rooms.admission.create_access_token", return_value="fake-jwt-token") as token,
             patch("totem.rooms.api.get_admission_participants", return_value={user.slug}) as participants,
         ):
             resp = client.post(f"{BASE}/{session.slug}/join")
@@ -1071,7 +1071,7 @@ class TestJoinRoom:
         session = _make_joinable_session(user)
 
         with (
-            patch("totem.rooms.livekit.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.admission.create_access_token", return_value="fake-jwt-token"),
             patch("totem.rooms.api.get_admission_participants", return_value=set()),
         ):
             resp = client.post(f"{BASE}/{session.slug}/join")
@@ -1176,7 +1176,7 @@ class TestJoinRoom:
         session = _make_joinable_session(user)
 
         with (
-            patch("totem.rooms.livekit.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.admission.create_access_token", return_value="fake-jwt-token"),
             patch("totem.rooms.api.analytics") as mock_analytics,
             patch("totem.rooms.api.get_admission_participants", return_value=set()),
         ):
@@ -1185,18 +1185,20 @@ class TestJoinRoom:
         assert resp.status_code == 200
         mock_analytics.event_joined.assert_not_called()
 
+    @override_settings(LIVEKIT_API_KEY=None, LIVEKIT_API_SECRET=None)
     def test_join_livekit_not_configured(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         session = _make_joinable_session(user)
 
         with patch(
-            "totem.rooms.livekit.create_access_token",
-            side_effect=LiveKitConfigurationError("not configured"),
+            "totem.rooms.admission.create_access_token",
+            create_access_token,
         ):
             resp = client.post(f"{BASE}/{session.slug}/join")
 
         assert resp.status_code == 500
         assert resp.json()["code"] == "livekit_error"
+        assert resp.json()["detail"] == "unavailable"
 
     def test_join_banned_returns_403(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -1217,7 +1219,7 @@ class TestJoinRoom:
         session.joined.add(user)
 
         with (
-            patch("totem.rooms.livekit.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.admission.create_access_token", return_value="fake-jwt-token"),
             patch("totem.rooms.api.get_admission_participants", return_value={user.slug}),
         ):
             resp = client.post(f"{BASE}/{session.slug}/join")
@@ -1243,7 +1245,7 @@ class TestJoinRoom:
         room.save(update_fields=["date_created"])
 
         with (
-            patch("totem.rooms.livekit.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.admission.create_access_token", return_value="fake-jwt-token"),
             patch("totem.rooms.api.get_admission_participants", return_value=set()),
         ):
             resp = client.post(f"{BASE}/{session.slug}/join")
@@ -1390,7 +1392,7 @@ class TestJoinRoom:
 
         _activate_participant(session, user)
         with (
-            patch("totem.rooms.livekit.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.admission.create_access_token", return_value="fake-jwt-token"),
             patch("totem.rooms.api.get_admission_participants", return_value={keeper.slug}),
         ):
             resp = client.post(f"{BASE}/{session.slug}/join")
@@ -1690,7 +1692,7 @@ class TestUnbanParticipant:
 
         # Unbanned user can now join
         with (
-            patch("totem.rooms.livekit.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.admission.create_access_token", return_value="fake-jwt-token"),
             patch("totem.rooms.api.get_admission_participants", return_value={keeper.slug}),
         ):
             join_resp = participant_client.post(f"{BASE}/{session.slug}/join")

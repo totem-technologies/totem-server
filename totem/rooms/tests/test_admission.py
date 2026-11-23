@@ -3878,7 +3878,7 @@ class TestAdmissionPermissions:
         for mock in livekit:
             mock.reset_mock()
         room.refresh_from_db()
-        with patch("totem.rooms.livekit.create_access_token") as token:
+        with patch("totem.rooms.admission.create_access_token") as token:
             admission.update_approval_required(
                 session.slug,
                 keeper,
