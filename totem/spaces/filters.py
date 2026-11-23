@@ -171,6 +171,7 @@ def spaces_summary_data(user: User) -> SpacesSummary:
                 "attendees",
                 "joined",
                 "space__subscribed",
+                Prefetch("space__sessions", queryset=upcoming_sessions_queryset(user), to_attr="upcoming_sessions"),
             )
             .order_by("start"),
             user,

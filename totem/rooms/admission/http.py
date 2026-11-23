@@ -14,9 +14,11 @@ from datetime import datetime
 from typing import Any, cast
 from uuid import UUID
 
+from django.db import transaction
 from django.utils import timezone
 
 from totem.rooms import admission
+from totem.spaces.filters import author_circle_count_prefetch
 from totem.spaces.models import Session, Space
 from totem.users.models import User
 from totem.users.schemas import PublicUserSchema
@@ -25,15 +27,16 @@ from ..livekit import (
     ENFORCED_MAX_PARTICIPANTS,
     WAITING_CONNECTION_LIMIT,
     LiveKitPermissionError,
-    get_admission_participants,
     get_participant_snapshot,
+    get_room_participant_sids,
 )
 from ..models import AdmissionAttempt, AdmissionCommand, AdmissionState, AttemptStatus, Room, SessionAdmission
-from ..schemas import RoomStatus
+from ..schemas import AdmissionReadiness, ReadinessReason, ReadinessState, RoomStatus
 from . import AdmissionError
 from .capacity import admission_limit, admission_slots_used, connection_reservations
 from .notifications import bump_admission_version
 from .permissions import queue_permission_sync, reconcile_admission_permissions
+from .readiness import project_readiness
 from .schemas import (
     AdmissionCommandResponse,
     AdmissionHeader,
@@ -76,6 +79,12 @@ def _snapshot_room(session_slug: str) -> Room:
 
 
 @contextmanager
+def _locked_snapshot_session(session_slug: str) -> Iterator[None]:
+    Session.objects.select_for_update().get(slug=session_slug)
+    yield
+
+
+@contextmanager
 def _authorized_snapshot_room(session_slug: str, actor: User, *, keeper: bool) -> Iterator[Room]:
     room = _snapshot_room(session_slug)
     _read_access(room, actor, keeper=keeper)
@@ -101,6 +110,9 @@ def _participant(
     slots_used: int,
     observed_at: datetime,
     ended: bool,
+    attendee_ids: set[int],
+    *,
+    current: bool = True,
 ) -> Participant:
     sync = getattr(durable, "permission_sync", None)
     permission_status = "pending"
@@ -135,6 +147,18 @@ def _participant(
             block_reason = "permanently_declined"
         elif slots_used > capacity or (status == AttemptStatus.PENDING and slots_used >= capacity):
             block_reason = "admission_full"
+    eligible = bool(
+        not ended
+        and durable.user.is_authenticated
+        and durable.user.is_active
+        and durable.user.slug not in room.banned_participants
+        and durable.user_id in attendee_ids
+    )
+    readiness = (
+        project_readiness(room, durable, attempt, sync, eligible, capacity, slots_used, observed_at, ended)
+        if current
+        else None
+    )
     return Participant(
         identity=durable.user.slug,
         user=PublicUserSchema.model_validate(durable.user),
@@ -153,7 +177,7 @@ def _participant(
         connected_at=attempt.connected_at if attempt else None,
         connected=present,
         connection_state="unknown" if present is None else "connected" if present else "disconnected",
-        eligible=_eligible(room, durable.user),
+        eligible=eligible,
         returning=attempt.returning if attempt else False,
         session_started=attempt.session_started if attempt else False,
         late_arrival=bool(attempt and attempt.session_started and not attempt.returning),
@@ -164,6 +188,7 @@ def _participant(
         next_retry_at=sync.next_retry_at if sync else None,
         decision_actor=decision_actor.slug if decision_actor else None,
         admission_block_reason=block_reason,
+        readiness=AdmissionReadiness(state=readiness.state, reason=readiness.reason) if readiness else None,
     )
 
 
@@ -175,14 +200,25 @@ def admission_snapshot(
         pass
     presence_error = None
     try:
-        connected: set[str] | None = get_admission_participants(session_slug)
+        participant_sids: dict[str, str] | None = get_room_participant_sids(session_slug)
     except LiveKitPermissionError as error:
-        connected = None
+        participant_sids = None
         presence_error = error.code
     observed_at = timezone.now()
-    with _authorized_snapshot_room(session_slug, actor, keeper=keeper) as room:
+    connected = set(participant_sids) if participant_sids is not None else None
+    # All cooperating room/admission writers take this lock. Presence is an
+    # independent observation made before the lock, never a database guarantee.
+    with (
+        transaction.atomic(),
+        _locked_snapshot_session(session_slug),
+        _authorized_snapshot_room(session_slug, actor, keeper=keeper) as room,
+    ):
         ended = room.status == RoomStatus.ENDED or room.session.cancelled or room.session.ended()
-        memberships = list(room.session.admissions.select_related("user", "decision_actor", "permission_sync"))
+        memberships = list(
+            room.session.admissions.select_related("user", "decision_actor", "permission_sync").prefetch_related(
+                author_circle_count_prefetch("user")
+            )
+        )
         attempts = AdmissionAttempt.objects.filter(admission__session=room.session).select_related("decision_actor")
         latest = {
             attempt.admission_id: attempt
@@ -191,8 +227,12 @@ def admission_snapshot(
         by_id = {item.pk: item for item in memberships}
         capacity = admission_limit(room)
         slots_used = admission_slots_used(room)
+        attendees = list(room.session.attendees.values_list("pk", "slug"))
+        attendee_ids = {pk for pk, _ in attendees}
         participants = [
-            _participant(room, item, latest.get(item.pk), connected, capacity, slots_used, observed_at, ended)
+            _participant(
+                room, item, latest.get(item.pk), connected, capacity, slots_used, observed_at, ended, attendee_ids
+            )
             for item in memberships
         ]
         participant_rows = [item for item in participants if item.identity != room.keeper]
@@ -200,19 +240,37 @@ def admission_snapshot(
             [item for item in participant_rows if item.status == AttemptStatus.PENDING],
             key=lambda item: cast(datetime, item.requested_at),
         )
-        identities = set(room.session.attendees.values_list("slug", flat=True)) | {room.keeper}
+        identities = {slug for _, slug in attendees} | {room.keeper}
 
         occupied, waiting_slots = connection_reservations(room, connected) if connected is not None else (None, None)
+        recipients = None
+        if participant_sids is not None:
+            recipients = sorted(
+                {
+                    item.identity
+                    for membership, item in zip(memberships, participants, strict=True)
+                    if item.identity != room.keeper
+                    and item.admission_state == AdmissionState.ADMITTED
+                    and item.status == "activated"
+                    and item.eligible
+                    and (attempt := latest.get(membership.pk)) is not None
+                    and bool(attempt.participant_sid)
+                    and participant_sids.get(item.identity) == attempt.participant_sid
+                }
+                | ({room.keeper} if room.keeper in participant_sids else set())
+            )
         header = AdmissionHeader(
             session_slug=session_slug,
             keeper=room.keeper,
             room_version=room.state_version,
+            room_state=room.to_state(),
             room_status=room.status,
             approval_required=room.approval_required,
             settings_revision=room.admission_revision,
             version=room.admission_version,
             observed_at=observed_at,
             presence_error=presence_error,
+            admitted_recipients=recipients,
             connected_count=len(connected & identities) if connected is not None else None,
             admitted_count=sum(
                 item.admission_state == AdmissionState.ADMITTED and item.eligible for item in participant_rows
@@ -227,12 +285,28 @@ def admission_snapshot(
             connection_slots_used=len(occupied | {room.keeper}) if occupied is not None else None,
         )
         if not keeper:
-            return AdmissionMeSnapshot(
-                **header.model_dump(), me=next((item for item in participants if item.identity == actor.slug), None)
-            )
+            me = next((item for item in participants if item.identity == actor.slug), None)
+            readiness = me.readiness if me else None
+            if readiness is None:
+                readiness = AdmissionReadiness(
+                    state=ReadinessState.ENDED if ended else ReadinessState.REQUIRES_NEW_ATTEMPT,
+                    reason=ReadinessReason.SESSION_ENDED if ended else ReadinessReason.NO_REQUEST,
+                )
+            return AdmissionMeSnapshot(**header.model_dump(), me=me, readiness=readiness)
         recent = list(attempts.order_by("-date_created", "-pk")[: HISTORY_LIMIT + 1])
         history = [
-            _participant(room, by_id[item.admission_id], item, connected, capacity, slots_used, observed_at, ended)
+            _participant(
+                room,
+                by_id[item.admission_id],
+                item,
+                connected,
+                capacity,
+                slots_used,
+                observed_at,
+                ended,
+                attendee_ids,
+                current=latest.get(item.admission_id) is not None and latest[item.admission_id].pk == item.pk,
+            )
             for item in reversed(recent[:HISTORY_LIMIT])
         ]
         return AdmissionSnapshot(

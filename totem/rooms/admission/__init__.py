@@ -11,17 +11,17 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import timedelta
 from functools import partial
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, cast, get_args
 from uuid import UUID, uuid4
 
 from django.db import IntegrityError, transaction
 from django.db.models import Q, QuerySet
 from django.utils import timezone
 
-from totem.spaces.models import Session
+from totem.spaces.models import Session, Space
 from totem.users.models import User
 
-from ..models import AdmissionAttempt, AdmissionState, AttemptStatus, Room, SessionAdmission
+from ..models import AdmissionAttempt, AdmissionJoinOperation, AdmissionState, AttemptStatus, Room, SessionAdmission
 from ..schemas import RoomStatus
 from .notifications import bump_admission_version
 
@@ -42,6 +42,8 @@ def _locked_room(session_slug: str) -> Iterator[Room]:
     error: AdmissionError | None = None
     with transaction.atomic():
         session = Session.objects.select_for_update().get(slug=session_slug)
+        if session.space.meeting_provider != Space.MeetingProviderChoices.LIVEKIT:
+            raise AdmissionError("not_found", "Session not found")
         room = Room.objects.get_or_create_for_session(session)
         room.session = session
         _expire_attempts(room)
@@ -570,6 +572,8 @@ def prepare_admission_join(
     *,
     request_id: UUID | None = None,
     attempt_id: UUID | None = None,
+    operation_id: UUID | None = None,
+    fresh: bool = False,
     connected: set[str] | None = None,
 ) -> JoinResponse:
     """Persist the request before trying to reserve/sign a connection token.
@@ -580,11 +584,16 @@ def prepare_admission_join(
     """
     from ..livekit import create_access_token
     from ..models import AdmissionPermissionSync
-    from ..schemas import AdmissionJoinState, JoinResponse
-    from .capacity import has_admission_capacity, reserve_connection
+    from ..schemas import AdmissionJoinState, AdmissionReadiness, JoinResponse, PermissionErrorCode
+    from .capacity import admission_limit, admission_slots_used, has_admission_capacity, reserve_connection
+    from .readiness import project_readiness
 
     if connected is None:
         raise AdmissionError("presence_unavailable", "Raw LiveKit presence is required to reserve a connection")
+    if operation_id is not None and (request_id is not None or attempt_id is not None):
+        raise AdmissionError("invalid_attempt", "Operation ID cannot be combined with admission UUIDs")
+    if fresh and operation_id is None:
+        raise AdmissionError("invalid_attempt", "Fresh mode requires an operation ID")
     with _locked_room(session_slug) as room:
         _require_open(room)
         if not _eligible(room, user, check_window=False):
@@ -593,12 +602,34 @@ def prepare_admission_join(
         if member.state == AdmissionState.PERMANENTLY_DECLINED and user.slug != room.keeper:
             raise AdmissionError("permanently_declined", "Admission is permanently declined")
         latest = member.attempts.order_by("-date_created", "-pk").first()
-        if request_id is not None or attempt_id is not None:
+        operation = (
+            AdmissionJoinOperation.objects.select_related("attempt__admission")
+            .filter(operation_id=operation_id)
+            .first()
+            if operation_id is not None
+            else None
+        )
+        if operation:
+            attempt = operation.attempt
+            if attempt.admission_id != member.pk or operation.fresh != fresh:
+                raise AdmissionError("invalid_attempt", "Operation ID cannot be reused")
+        elif operation_id is not None and fresh:
+            attempt = request_admission(session_slug, user, uuid4(), uuid4())
+        elif request_id is not None or attempt_id is not None:
             if request_id is None or attempt_id is None:
                 raise AdmissionError("invalid_attempt", "Both request and attempt UUIDs are required")
             attempt = request_admission(session_slug, user, request_id, attempt_id)
         elif latest and latest.status in ACTIVE_STATUSES:
             attempt = request_admission(session_slug, user, latest.request_id, latest.attempt_id)
+        elif operation_id is not None and latest:
+            if latest.status != AttemptStatus.ADMITTED or (
+                member.state != AdmissionState.ADMITTED and user.slug != room.keeper
+            ):
+                raise AdmissionError("invalid_attempt", "A terminal attempt requires fresh mode")
+            if user.slug in connected:
+                attempt = latest
+            else:
+                attempt = request_admission(session_slug, user, uuid4(), uuid4())
         elif (
             latest
             and latest.status != AttemptStatus.ADMITTED
@@ -609,6 +640,14 @@ def prepare_admission_join(
         else:
             attempt = request_admission(session_slug, user, uuid4(), uuid4())
         _join_candidate(room, user, attempt.request_id, attempt.attempt_id)
+        if operation is not None:
+            attempt = request_admission(session_slug, user, attempt.request_id, attempt.attempt_id)
+        if operation_id is not None and operation is None:
+            try:
+                with transaction.atomic():
+                    AdmissionJoinOperation.objects.create(operation_id=operation_id, attempt=attempt, fresh=fresh)
+            except IntegrityError as error:
+                raise AdmissionError("invalid_attempt", "Operation ID cannot be reused") from error
         request_id, attempt_id = cast(UUID, attempt.request_id), cast(UUID, attempt.attempt_id)
 
     with _locked_room(session_slug) as room:
@@ -632,12 +671,29 @@ def prepare_admission_join(
         sync = AdmissionPermissionSync.objects.filter(admission=member).first()
         permission_state = "pending"
         if sync:
-            permission_state = sync.last_error or ("applied" if sync.applied_revision == sync.revision else "pending")
+            if sync.last_error:
+                permission_state = (
+                    sync.last_error if sync.last_error in get_args(PermissionErrorCode) else "unavailable"
+                )
+            elif sync.applied_revision == sync.revision:
+                permission_state = "applied"
         block_reason = None
         if not admitted and member.state == AdmissionState.REVOKED:
             block_reason = "requires_reapproval"
         elif not admitted and not has_admission_capacity(room, user):
             block_reason = "admission_full"
+        observed_at = timezone.now()
+        readiness = project_readiness(
+            room,
+            member,
+            attempt,
+            sync,
+            _eligible(room, user, check_window=False),
+            admission_limit(room),
+            admission_slots_used(room),
+            observed_at,
+            room.status == RoomStatus.ENDED or room.session.cancelled or room.session.ended(),
+        )
         return JoinResponse(
             token=token,
             is_already_present=user.slug in connected,
@@ -652,5 +708,7 @@ def prepare_admission_join(
                 permission_sync=permission_state,
                 revision=sync.revision if sync else 0,
                 admission_block_reason=block_reason,
+                observed_at=observed_at,
+                readiness=AdmissionReadiness(state=readiness.state, reason=readiness.reason),
             ),
         )

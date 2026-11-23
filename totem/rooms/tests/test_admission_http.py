@@ -1,6 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
-from threading import Barrier
+from threading import Barrier, Event
 from types import SimpleNamespace
 from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -32,6 +32,7 @@ from totem.rooms.models import (
 )
 from totem.rooms.schemas import (
     BanParticipantEvent,
+    EndReason,
     ErrorCode,
     EventRequest,
     RemoveReason,
@@ -80,7 +81,7 @@ def livekit():
         return participant(args[0], args[1])
 
     with (
-        patch("totem.rooms.admission.http.get_admission_participants", return_value=set(), create=True) as presence,
+        patch("totem.rooms.admission.http.get_room_participant_sids", return_value={}) as presence,
         patch("totem.rooms.admission.http.get_participant_snapshot", side_effect=participant, create=True),
         patch("totem.rooms.admission.permissions.get_participant_snapshot", side_effect=participant),
         patch("totem.rooms.admission.permissions.update_participant_permissions", side_effect=update),
@@ -157,6 +158,40 @@ def send(client, method, url, body):
 
 
 @pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("method,suffix,body,keeper_only", [case for case in endpoint_cases() if case[0] != "get"])
+@pytest.mark.parametrize("existing_room", [False, True])
+def test_mutations_reject_non_livekit_without_side_effects(
+    context, livekit, admission_notification_transport, method, suffix, body, keeper_only, existing_room
+):
+    client, user, keeper_client, _, session, room = context
+    if existing_room:
+        request_attempt(context)
+        attempt = AdmissionAttempt.objects.get(admission__session=session)
+        attempt.expires_at = timezone.now() - timedelta(seconds=1)
+        attempt.save(update_fields=["expires_at"])
+    else:
+        room.delete()
+    session.space.meeting_provider = Space.MeetingProviderChoices.GOOGLE_MEET
+    session.space.save(update_fields=["meeting_provider"])
+    models = (Room, SessionAdmission, AdmissionAttempt, AdmissionCommand, AdmissionPermissionSync)
+    before = [list(model.objects.order_by("pk").values()) for model in models]
+    livekit.reset_mock()
+    admission_notification_transport.reset_mock()
+
+    response = send(
+        keeper_client if keeper_only else client,
+        method,
+        f"{BASE}/{session.slug}/admission{suffix.replace('target', user.slug)}",
+        body,
+    )
+
+    assert response.status_code == 404, response.content
+    assert [list(model.objects.order_by("pk").values()) for model in models] == before
+    livekit.assert_not_called()
+    admission_notification_transport.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("method,suffix,body,keeper_only", endpoint_cases())
 def test_unauthenticated_endpoints(context, method, suffix, body, keeper_only):
     _, _, _, _, session, _ = context
@@ -189,6 +224,130 @@ def decision_body(room, ids, attempt, command_id=None):
         "expected_version": attempt["attempt_version"],
         "expected_room_version": room.state_version,
     }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_readiness_no_record_and_pending(context, livekit):
+    client, user, keeper_client, _, session, _ = context
+    url = f"{BASE}/{session.slug}/admission"
+    response = client.get(f"{url}/me")
+    assert response.status_code == 200, response.content
+    assert response.json()["me"] is None
+    assert response.json()["readiness"] == {"state": "requires_new_attempt", "reason": "no_request"}
+
+    ids, _ = request_attempt(context)
+    response = client.get(f"{url}/me")
+    snapshot = keeper_client.get(url)
+    assert response.status_code == snapshot.status_code == 200
+    expected = {"state": "waiting_for_approval", "reason": "approval_required"}
+    assert response.json()["readiness"] == response.json()["me"]["readiness"] == expected
+    participant = next(p for p in snapshot.json()["participants"] if p["identity"] == user.slug)
+    assert participant["request_id"] == ids["request_id"]
+    assert participant["readiness"] == expected
+    assert snapshot.json()["waiting"][0]["readiness"] == expected
+    assert snapshot.json()["requests"][0]["readiness"] == expected
+
+
+@pytest.mark.django_db(transaction=True)
+def test_readiness_grant_revisions_activation_and_revoke(context, livekit):
+    client, user, keeper_client, _, session, room = context
+    url = f"{BASE}/{session.slug}/admission"
+    ids, attempt = request_attempt(context)
+    approved = post(keeper_client, f"{url}/{user.slug}/approve", decision_body(room, ids, attempt))
+    assert approved.status_code == 200, approved.content
+    me = client.get(f"{url}/me").json()
+    assert me["readiness"] == {"state": "applying_permissions", "reason": "connection_required"}
+    assert me["me"]["readiness"] == me["readiness"]
+
+    livekit.return_value = {user.slug: f"sid-{user.slug}"}
+    connected = post(client, f"{url}/request", {**ids, "connected": True})
+    assert connected.status_code == 200, connected.content
+    assert connected.json()["readiness"] == {"state": "ready_to_activate", "reason": None}
+    sync = AdmissionPermissionSync.objects.get(admission__session=session, admission__user=user)
+    assert sync.applied_revision == sync.revision
+    sync.revision += 1
+    sync.save(update_fields=["revision"])
+    me = client.get(f"{url}/me").json()
+    assert me["readiness"] == {"state": "applying_permissions", "reason": "permission_pending"}
+    assert me["me"]["permission_revision"] > me["me"]["applied_permission_revision"]
+    sync.applied_revision = sync.revision
+    sync.save(update_fields=["applied_revision"])
+    me = client.get(f"{url}/me").json()
+    assert me["readiness"] == {"state": "ready_to_activate", "reason": None}
+    activated = post(client, f"{url}/activated", {**ids, "expected_version": me["me"]["attempt_version"]})
+    assert activated.status_code == 200, activated.content
+    assert activated.json()["readiness"] == {"state": "activated", "reason": None}
+
+    membership = SessionAdmission.objects.get(session=session, user=user)
+    room.refresh_from_db()
+    revoked = post(
+        keeper_client,
+        f"{url}/{user.slug}/revoke",
+        {
+            "command_id": str(uuid4()),
+            "expected_version": membership.version,
+            "expected_room_version": room.state_version,
+        },
+    )
+    assert revoked.status_code == 200, revoked.content
+    me = client.get(f"{url}/me").json()
+    assert me["readiness"] == me["me"]["readiness"] == {"state": "blocked", "reason": "requires_reapproval"}
+    room.status = RoomStatus.ENDED
+    room.end_reason = EndReason.KEEPER_ENDED
+    room.save(update_fields=["status", "end_reason"])
+    ended = client.get(f"{url}/me")
+    assert ended.status_code == 200, ended.content
+    assert ended.json()["readiness"] == ended.json()["me"]["readiness"] == {"state": "ended", "reason": "session_ended"}
+
+
+@pytest.mark.django_db(transaction=True)
+def test_readiness_expiry_near_approval(context, livekit):
+    client, user, keeper_client, _, session, room = context
+    url = f"{BASE}/{session.slug}/admission"
+    ids, attempt = request_attempt(context)
+    row = AdmissionAttempt.objects.get(request_id=ids["request_id"])
+    deadline = timezone.now() + timedelta(seconds=30)
+    row.expires_at = deadline
+    row.save(update_fields=["expires_at"])
+    approved = post(keeper_client, f"{url}/{user.slug}/approve", decision_body(room, ids, attempt))
+    assert approved.status_code == 200, approved.content
+    row.refresh_from_db()
+    assert row.expires_at == deadline
+    row.expires_at = timezone.now() - timedelta(seconds=1)
+    row.save(update_fields=["expires_at"])
+    response = client.get(f"{url}/me")
+    assert response.status_code == 200, response.content
+    assert response.json()["me"]["status"] == "expired"
+    assert (
+        response.json()["readiness"]
+        == response.json()["me"]["readiness"]
+        == {
+            "state": "requires_new_attempt",
+            "reason": "request_expired",
+        }
+    )
+    row.refresh_from_db()
+    assert row.status == AttemptStatus.GRANTING
+
+
+@pytest.mark.django_db(transaction=True)
+def test_readiness_current_and_historical_attempts(context, livekit):
+    client, user, keeper_client, _, session, _ = context
+    url = f"{BASE}/{session.slug}/admission"
+    old_ids, attempt = request_attempt(context)
+    cancelled = post(client, f"{url}/cancel", {**old_ids, "expected_version": attempt["attempt_version"]})
+    assert cancelled.status_code == 200, cancelled.content
+    assert cancelled.json()["readiness"] == {"state": "requires_new_attempt", "reason": "request_cancelled"}
+    new_ids, _ = request_attempt(context)
+    snapshot = keeper_client.get(url)
+    assert snapshot.status_code == 200, snapshot.content
+    data = snapshot.json()
+    current = next(p for p in data["participants"] if p["identity"] == user.slug)
+    history = {p["attempt_id"]: p for p in data["requests"] if p["identity"] == user.slug}
+    expected = {"state": "waiting_for_approval", "reason": "approval_required"}
+    assert current["attempt_id"] == new_ids["attempt_id"]
+    assert current["readiness"] == history[new_ids["attempt_id"]]["readiness"] == expected
+    assert history[old_ids["attempt_id"]]["readiness"] is None
 
 
 @pytest.mark.django_db(transaction=True)
@@ -245,7 +404,7 @@ def test_snapshot_rechecks_keeper_after_presence(context, livekit):
 
     def reassign(_slug):
         Room.objects.filter(pk=room.pk).update(keeper=replacement.slug)
-        return set()
+        return {}
 
     livekit.side_effect = reassign
     assert keeper_client.get(f"{BASE}/{session.slug}/admission").status_code == 403
@@ -268,6 +427,94 @@ def test_snapshot_rechecks_access_after_assembling(context, livekit):
     with patch.object(http, "_participant", side_effect=reassign):
         response = keeper_client.get(f"{BASE}/{session.slug}/admission")
     assert response.status_code == 403
+
+
+@pytest.mark.django_db(transaction=True)
+def test_snapshot_recipients_follow_activation_presence_and_revocation(context, livekit):
+    client, user, keeper_client, keeper, session, room = context
+    url = f"{BASE}/{session.slug}/admission"
+    ids, attempt = request_attempt(context)
+    livekit.return_value = {keeper.slug: "keeper-sid", user.slug: f"sid-{user.slug}", "unrecognized": "other-sid"}
+    livekit.reset_mock()
+    before = timezone.now()
+    pending = keeper_client.get(url).json()
+    assert before <= parse_datetime(pending["observed_at"]) <= timezone.now()
+    livekit.assert_called_once_with(session.slug)
+    assert pending["admitted_recipients"] == [keeper.slug]
+    assert pending["room_state"]["version"] == pending["room_version"]
+    assert pending["room_state"]["keeper"] == pending["keeper"]
+
+    assert post(keeper_client, f"{url}/{user.slug}/approve", decision_body(room, ids, attempt)).status_code == 200
+    assert keeper_client.get(url).json()["admitted_recipients"] == [keeper.slug]
+    connected = post(client, f"{url}/request", {**ids, "connected": True}).json()
+    activated = post(client, f"{url}/activated", {**ids, "expected_version": connected["me"]["attempt_version"]})
+    assert activated.status_code == 200, activated.content
+    assert activated.json()["admitted_recipients"] == sorted([keeper.slug, user.slug])
+    # The same identity on a replacement connection is not the activated SID.
+    livekit.return_value = {keeper.slug: "new-keeper-sid", user.slug: "replacement-sid"}
+    replacement = client.get(f"{url}/me").json()
+    assert replacement["me"]["connected"] is True
+    assert replacement["admitted_recipients"] == [keeper.slug]
+    attempt_row = AdmissionAttempt.objects.get(request_id=ids["request_id"])
+    attempt_row.participant_sid = ""
+    attempt_row.save(update_fields=["participant_sid"])
+    livekit.return_value = {keeper.slug: "keeper-sid", user.slug: ""}
+    assert client.get(f"{url}/me").json()["admitted_recipients"] == [keeper.slug]
+    livekit.return_value = {keeper.slug: "keeper-sid"}
+    assert client.get(f"{url}/me").json()["admitted_recipients"] == [keeper.slug]
+    livekit.return_value = {keeper.slug: "keeper-sid", user.slug: f"sid-{user.slug}"}
+    membership = SessionAdmission.objects.get(session=session, user=user)
+    room.refresh_from_db()
+    result = post(
+        keeper_client,
+        f"{url}/{user.slug}/revoke",
+        {
+            "command_id": str(uuid4()),
+            "expected_version": membership.version,
+            "expected_room_version": room.state_version,
+        },
+    )
+    assert result.status_code == 200, result.content
+    assert result.json()["snapshot"]["admitted_recipients"] == [keeper.slug]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_snapshot_serializes_room_and_admission_reads(context, livekit):
+    from totem.rooms.admission import http
+    from totem.spaces.models import Session
+
+    _, _, keeper_client, _, session, room = context
+    request_attempt(context)
+    assembling = Event()
+    attempted = Event()
+    committed = Event()
+    participant = http._participant
+
+    def pause(*args, **kwargs):
+        assembling.set()
+        assert attempted.wait(5)
+        assert not committed.wait(0.2)
+        return participant(*args, **kwargs)
+
+    def writer():
+        close_old_connections()
+        try:
+            assert assembling.wait(5)
+            with transaction.atomic():
+                attempted.set()
+                Session.objects.select_for_update().get(pk=session.pk)
+                Room.objects.filter(pk=room.pk).update(state_version=room.state_version + 1)
+            committed.set()
+        finally:
+            close_old_connections()
+
+    with ThreadPoolExecutor(max_workers=1) as pool, patch.object(http, "_participant", side_effect=pause):
+        future = pool.submit(writer)
+        response = keeper_client.get(f"{BASE}/{session.slug}/admission")
+        future.result(timeout=10)
+    assert response.status_code == 200, response.content
+    assert response.json()["room_version"] == response.json()["room_state"]["version"] == room.state_version
+    assert committed.is_set()
 
 
 @pytest.mark.django_db(transaction=True)
@@ -370,7 +617,9 @@ def test_presence_failure_preserves_snapshot_and_private_me(context, livekit):
     for response in (client.get(f"{url}/me"), keeper_client.get(url)):
         assert response.status_code == 200, response.content
         assert response.json()["connected_count"] is None
+        assert response.json()["admitted_recipients"] is None
         assert response.json()["presence_error"]
+        assert parse_datetime(response.json()["observed_at"]) is not None
     data = client.get(f"{url}/me").json()
     assert data["me"]["identity"] == user.slug
     assert not {"participants", "waiting", "requests"} & data.keys()
@@ -379,7 +628,11 @@ def test_presence_failure_preserves_snapshot_and_private_me(context, livekit):
 @pytest.mark.django_db(transaction=True)
 def test_decision_cannot_target_another_sessions_attempt(context, livekit):
     _, user, keeper_client, keeper, session, room = context
-    other = SessionFactory(space__author=keeper, start=timezone.now() - timedelta(minutes=1))
+    other = SessionFactory(
+        space__author=keeper,
+        space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+        start=timezone.now() - timedelta(minutes=1),
+    )
     other.attendees.add(keeper, user)
     Room.objects.get_or_create_for_session(other)
     attempt = admission.request_admission(other.slug, user, uuid4(), uuid4())
@@ -414,7 +667,7 @@ def test_connected_receipt_requires_matching_identity(context, livekit):
     client, _, _, _, session, _ = context
     ids, _ = request_attempt(context)
     url = f"{BASE}/{session.slug}/admission/request"
-    livekit.return_value = {"somebody-else"}
+    livekit.return_value = {"somebody-else": "other-sid"}
     with patch(
         "totem.rooms.admission.http.get_participant_snapshot",
         return_value=api.ParticipantInfo(identity="somebody-else", sid="foreign"),
@@ -430,7 +683,7 @@ def test_connected_receipt_requires_matching_identity(context, livekit):
 def test_waiting_and_connected_counts_are_distinct(context, livekit):
     _, user, keeper_client, _, session, _ = context
     request_attempt(context)
-    livekit.return_value = {user.slug}
+    livekit.return_value = {user.slug: f"sid-{user.slug}"}
     response = keeper_client.get(f"{BASE}/{session.slug}/admission")
     assert response.status_code == 200, response.content
     data = response.json()
@@ -510,7 +763,7 @@ def test_connected_receipt_activation_and_duplicate_are_idempotent(context, live
     url = f"{BASE}/{session.slug}/admission"
     ids, attempt = request_attempt(context)
     initial_version = client.get(f"{url}/me").json()["version"]
-    livekit.return_value = {user.slug}
+    livekit.return_value = {user.slug: f"sid-{user.slug}"}
     connected = post(client, f"{url}/request", {**ids, "connected": True})
     assert connected.status_code == 200, connected.content
     assert connected.json()["me"]["connected_at"] is not None
@@ -559,7 +812,7 @@ def test_reconnection_receipt_replaces_sid_and_allows_activation(context, liveki
     client, user, keeper_client, _, session, room = context
     ids, _ = request_attempt(context)
     url = f"{BASE}/{session.slug}/admission"
-    livekit.return_value = {user.slug}
+    livekit.return_value = {user.slug: f"sid-{user.slug}"}
     first = post(client, f"{url}/request", {**ids, "connected": True})
     assert first.status_code == 200, first.content
     approved = post(keeper_client, f"{url}/{user.slug}/approve", decision_body(room, ids, first.json()["me"]))
@@ -965,7 +1218,11 @@ def test_connected_request_rejects_unknown_or_cross_session_ids(context, livekit
     client, user, _, keeper, session, _ = context
     attempt = None
     if foreign:
-        other = SessionFactory(space__author=keeper, start=timezone.now() - timedelta(minutes=1))
+        other = SessionFactory(
+            space__author=keeper,
+            space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+            start=timezone.now() - timedelta(minutes=1),
+        )
         other.attendees.add(keeper, user)
         Room.objects.get_or_create_for_session(other)
         attempt = admission.request_admission(other.slug, user, uuid4(), uuid4())
@@ -987,7 +1244,8 @@ def test_ended_snapshot_reads_do_not_reschedule_intents_or_notify(context, livek
     client, user, keeper_client, _, session, room = context
     request_attempt(context)
     room.status = "ended"
-    room.save(update_fields=["status"])
+    room.end_reason = EndReason.KEEPER_ENDED
+    room.save(update_fields=["status", "end_reason"])
     url = f"{BASE}/{session.slug}/admission"
     first = keeper_client.get(url)
     assert first.status_code == 200, first.content
@@ -1007,7 +1265,7 @@ def test_concurrent_duplicate_activation_receipts(context, livekit):
     client, user, keeper_client, _, session, room = context
     ids, _ = request_attempt(context)
     url = f"{BASE}/{session.slug}/admission"
-    livekit.return_value = {user.slug}
+    livekit.return_value = {user.slug: f"sid-{user.slug}"}
     connected = post(client, f"{url}/request", {**ids, "connected": True})
     assert connected.status_code == 200, connected.content
     approved = post(keeper_client, f"{url}/{user.slug}/approve", decision_body(room, ids, connected.json()["me"]))
@@ -1040,12 +1298,14 @@ def test_activated_replacement_uses_a_fresh_attempt_without_reconnecting(context
     client, user, keeper_client, _, session, room = context
     url = f"{BASE}/{session.slug}/admission"
     ids, _ = request_attempt(context)
-    livekit.return_value = {user.slug}
+    livekit.return_value = {user.slug: f"sid-{user.slug}"}
     connected = post(client, f"{url}/request", {**ids, "connected": True})
     approved = post(keeper_client, f"{url}/{user.slug}/approve", decision_body(room, ids, connected.json()["me"]))
     assert approved.status_code == 200
     current = client.get(f"{url}/me").json()["me"]
     assert post(client, f"{url}/activated", {**ids, "expected_version": current["attempt_version"]}).status_code == 200
+    livekit.return_value = {user.slug: "new-activated-sid"}
+    assert client.get(f"{url}/me").json()["admitted_recipients"] == []
 
     def replacement(room_name, identity, **kwargs):
         assert not connection.in_atomic_block
@@ -1071,6 +1331,7 @@ def test_activated_replacement_uses_a_fresh_attempt_without_reconnecting(context
         )
         assert activated.status_code == 200, activated.content
         assert activated.json()["me"]["status"] == "activated"
+        assert activated.json()["admitted_recipients"] == [user.slug]
 
 
 @pytest.mark.django_db(transaction=True)
@@ -1129,7 +1390,11 @@ def test_openapi_exposes_admission_schemas_without_service_import():
 def setup_room(db):
     keeper = UserFactory()
     user = UserFactory()
-    session = SessionFactory(space__author=keeper, start=timezone.now() - timedelta(minutes=1))
+    session = SessionFactory(
+        space__author=keeper,
+        space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+        start=timezone.now() - timedelta(minutes=1),
+    )
     session.attendees.add(keeper, user)
     room = Room.objects.get_or_create_for_session(session)
     return session, room, keeper, user
@@ -1230,7 +1495,11 @@ def test_record_join_admitted_succeeds_but_revoked_cannot_rejoin(setup_room):
 def test_remove_revokes_before_livekit_failure(client_with_user):
     client, keeper = client_with_user
     user = UserFactory()
-    session = SessionFactory(space__author=keeper, start=timezone.now() - timedelta(minutes=1))
+    session = SessionFactory(
+        space__author=keeper,
+        space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+        start=timezone.now() - timedelta(minutes=1),
+    )
     session.attendees.add(keeper, user)
     room = Room.objects.get_or_create_for_session(session)
     decide(room, keeper, request(session, user))
@@ -1604,7 +1873,13 @@ def test_revoked_previous_attendee_needs_fresh_waiting_attempt(join_context):
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "body", ["{", "{}", '{"request_id":"not-a-uuid"}', '{"request_id":"00000000-0000-0000-0000-000000000001"}']
+    "body",
+    [
+        "{",
+        '{"request_id":"not-a-uuid"}',
+        '{"request_id":"00000000-0000-0000-0000-000000000001"}',
+        '{"attempt_id":"00000000-0000-0000-0000-000000000001"}',
+    ],
 )
 def test_invalid_json_join_body_is_rejected(join_context, body):
     client, user, _, session, _, presence = join_context
@@ -1616,11 +1891,14 @@ def test_invalid_json_join_body_is_rejected(join_context, body):
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize("content_type", ["application/json", "application/x-www-form-urlencoded"])
-def test_empty_body_reuses_pending_attempt(join_context, content_type):
+@pytest.mark.parametrize(
+    ("body", "content_type"),
+    [("", "application/json"), ("", "application/x-www-form-urlencoded"), ("{}", "application/json")],
+)
+def test_empty_body_reuses_pending_attempt(join_context, body, content_type):
     client, user, _, session, _, _ = join_context
     first = assert_admission(join(client, session), session, user, status="pending", permissions="waiting")
-    response = client.post(f"{BASE}/{session.slug}/join", data="", content_type=content_type)
+    response = client.post(f"{BASE}/{session.slug}/join", data=body, content_type=content_type)
     retry = assert_admission(response, session, user, status="pending", permissions="waiting")
     assert (retry["request_id"], retry["attempt_id"]) == (first["request_id"], first["attempt_id"])
     assert_token(response, user, session, admitted=False, attempt_id=retry["attempt_id"])
@@ -1783,7 +2061,7 @@ def test_first_join_proceeds_when_livekit_room_does_not_exist():
     user = User(is_active=True, pk=1, slug="keeper")
     session = MagicMock(slug="room")
     session.attendees.filter.return_value.exists.return_value = True
-    session.end.return_value = room_api.timezone.now() + timedelta(hours=1)
+    session.ended.return_value = False
     response = SimpleNamespace(is_already_present=True)
     missing = livekit_api.TwirpError(code="not_found", msg="room not found", status=404)
     with (
@@ -1907,7 +2185,7 @@ def test_livekit_sid_snapshot_filters_disconnected_and_handles_errors():
 @pytest.mark.django_db
 def test_replaced_connection_cannot_be_muted():
     keeper, member = UserFactory(), UserFactory()
-    session = SessionFactory(space__author=keeper, start=room_api.timezone.now() - timedelta(minutes=1))
+    session = SessionFactory(space__author=keeper, start=timezone.now() - timedelta(minutes=1))
     session.attendees.add(keeper, member)
     Room.objects.get_or_create_for_session(session)
     admission = SessionAdmission.objects.create(session=session, user=member, state=AdmissionState.ADMITTED)
@@ -1916,7 +2194,7 @@ def test_replaced_connection_cannot_be_muted():
         request_id=uuid4(),
         attempt_id=uuid4(),
         status=AttemptStatus.ADMITTED,
-        expires_at=room_api.timezone.now() + timedelta(minutes=10),
+        expires_at=timezone.now() + timedelta(minutes=10),
         participant_sid="original-sid",
     )
     AdmissionPermissionSync.objects.create(
@@ -1947,7 +2225,7 @@ def test_join_passes_raw_presence_without_emitting_analytics():
     user = User(is_active=True, pk=1, slug="member")
     session = MagicMock(slug="room")
     session.attendees.filter.return_value.exists.return_value = True
-    session.end.return_value = room_api.timezone.now() + timedelta(hours=1)
+    session.ended.return_value = False
     response = SimpleNamespace(is_already_present=False)
     with (
         patch.object(room_api, "get_admission_participants", return_value={"member", "waiting"}),

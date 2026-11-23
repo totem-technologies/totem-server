@@ -268,4 +268,18 @@ class Migration(migrations.Migration):
             name="authority_keeper",
             field=models.CharField(blank=True, max_length=50),
         ),
+        migrations.CreateModel(
+            name='AdmissionJoinOperation',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('date_created', models.DateTimeField(auto_now_add=True)),
+                ('date_modified', models.DateTimeField(auto_now=True)),
+                ('operation_id', models.UUIDField(unique=True)),
+                ('fresh', models.BooleanField(default=False)),
+                ('attempt', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='join_operations', to='rooms.admissionattempt')),
+            ],
+            options={
+                'abstract': False,
+            },
+        ),
     ]

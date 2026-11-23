@@ -8,7 +8,7 @@ from the rest of the app. Everything else imports from here.
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Annotated, Literal, Optional, Union
 from uuid import UUID
 
@@ -17,9 +17,72 @@ from pydantic import ConfigDict
 
 MAX_PROMPT_LENGTH = 2000
 
+AdmissionStateValue = Literal["none", "admitted", "permanently_declined", "revoked"]
+AttemptStatusValue = Literal[
+    "pending",
+    "granting",
+    "admitted",
+    "declined",
+    "permanently_declined",
+    "cancelled",
+    "expired",
+    "superseded",
+    "revoked",
+    "failed",
+]
+AdmissionBlockReason = Literal["requires_reapproval", "permanently_declined", "admission_full"]
+PermissionErrorCode = Literal[
+    "room_missing",
+    "participant_missing",
+    "unavailable",
+    "timeout",
+    "identity_replaced",
+    "permission_mismatch",
+    "stale_operation",
+    "lease_recovered",
+    "permission_pending",
+]
+
 # ---------------------------------------------------------------------------
 # Enums
 # ---------------------------------------------------------------------------
+
+
+class ReadinessState(StrEnum):
+    WAITING_FOR_APPROVAL = "waiting_for_approval"
+    APPLYING_PERMISSIONS = "applying_permissions"
+    READY_TO_ACTIVATE = "ready_to_activate"
+    ACTIVATED = "activated"
+    BLOCKED = "blocked"
+    ENDED = "ended"
+    REQUIRES_NEW_ATTEMPT = "requires_new_attempt"
+
+
+class ReadinessReason(StrEnum):
+    SESSION_ENDED = "session_ended"
+    NOT_ELIGIBLE = "not_eligible"
+    NO_REQUEST = "no_request"
+    REQUEST_EXPIRED = "request_expired"
+    REQUEST_DECLINED = "request_declined"
+    REQUEST_PERMANENTLY_DECLINED = "request_permanently_declined"
+    REQUEST_CANCELLED = "request_cancelled"
+    REQUEST_SUPERSEDED = "request_superseded"
+    REQUEST_REVOKED = "request_revoked"
+    REQUEST_FAILED = "request_failed"
+    INVALID_REQUEST = "invalid_request"
+    REQUIRES_REAPPROVAL = "requires_reapproval"
+    PERMANENTLY_DECLINED = "permanently_declined"
+    NOT_ADMITTED = "not_admitted"
+    ADMISSION_FULL = "admission_full"
+    APPROVAL_REQUIRED = "approval_required"
+    CONNECTION_REQUIRED = "connection_required"
+    PERMISSION_PENDING = "permission_pending"
+    CONNECTION_CHANGED = "connection_changed"
+
+
+class AdmissionReadiness(Schema):
+    state: ReadinessState
+    reason: ReadinessReason | None = None
 
 
 class RoomStatus(str, Enum):
@@ -255,23 +318,32 @@ class EventRequest(Schema):
 
 
 class AdmissionJoinRequest(Schema):
-    """Explicit fresh attempts must provide both UUIDs; exact retries are idempotent."""
+    """An operation resumes an active attempt by default; fresh starts a new one.
 
-    request_id: UUID
-    attempt_id: UUID
+    A returning admitted user resumes when connected, otherwise starts a new
+    attempt. Retry with the same operation ID and fresh value. Alternatively
+    supply both legacy request/attempt IDs. The response contains canonical IDs.
+    """
+
+    operation_id: UUID | None = None
+    fresh: bool = False
+    request_id: UUID | None = None
+    attempt_id: UUID | None = None
 
 
 class AdmissionJoinState(Schema):
     request_id: UUID
     attempt_id: UUID
-    status: str
-    durable_state: str
+    status: AttemptStatusValue
+    durable_state: AdmissionStateValue
     approval_required: bool
     expires_at: datetime
     permissions: Literal["waiting", "admitted"]
-    permission_sync: str
+    permission_sync: Literal["pending", "applied", PermissionErrorCode]
     revision: int
-    admission_block_reason: str | None = None
+    admission_block_reason: AdmissionBlockReason | None = None
+    observed_at: datetime
+    readiness: AdmissionReadiness
 
 
 class JoinResponse(Schema):

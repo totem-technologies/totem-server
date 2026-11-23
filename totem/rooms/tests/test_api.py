@@ -1,4 +1,5 @@
 import datetime
+import json
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -21,6 +22,107 @@ from totem.spaces.models import SessionPrompt, SessionRound, SessionRoundState, 
 from totem.spaces.tests.factories import SessionFactory
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
+
+
+@pytest.mark.parametrize(
+    ("component", "field", "values"),
+    [
+        (
+            "AdmissionJoinState",
+            "status",
+            {
+                "pending",
+                "granting",
+                "admitted",
+                "declined",
+                "permanently_declined",
+                "cancelled",
+                "expired",
+                "superseded",
+                "revoked",
+                "failed",
+            },
+        ),
+        ("AdmissionJoinState", "durable_state", {"none", "admitted", "permanently_declined", "revoked"}),
+        (
+            "AdmissionJoinState",
+            "permission_sync",
+            {
+                "pending",
+                "applied",
+                "room_missing",
+                "participant_missing",
+                "unavailable",
+                "timeout",
+                "identity_replaced",
+                "permission_mismatch",
+                "stale_operation",
+                "lease_recovered",
+                "permission_pending",
+            },
+        ),
+        (
+            "Participant",
+            "status",
+            {
+                "pending",
+                "granting",
+                "admitted",
+                "declined",
+                "permanently_declined",
+                "cancelled",
+                "expired",
+                "superseded",
+                "revoked",
+                "failed",
+                "no_request",
+                "approved",
+                "activated",
+            },
+        ),
+        ("Participant", "permission_status", {"pending", "in_progress", "error", "applied"}),
+        ("Participant", "admission_block_reason", {"requires_reapproval", "permanently_declined", "admission_full"}),
+        ("CommandResult", "outcome", {"approved", "declined", "permanently_declined", "allowed", "revoked", "skipped"}),
+        (
+            "CommandResult",
+            "error",
+            {
+                "not_keeper",
+                "not_eligible",
+                "permanently_declined",
+                "ended",
+                "not_found",
+                "feature_disabled",
+                "stale_version",
+                "invalid_attempt",
+                "permission_pending",
+                "connection_required",
+                "command_conflict",
+                "admission_full",
+                "waiting_full",
+                "room_full",
+                "presence_unavailable",
+                "room_missing",
+                "participant_missing",
+                "missing",
+                "disconnected",
+                "identity_replaced",
+                "permission_mismatch",
+                "unavailable",
+                "timeout",
+                "requires_reapproval",
+                "approval_required",
+            },
+        ),
+    ],
+)
+def test_admission_openapi_wire_values(component, field, values):
+    from totem.api.api import mobile_api
+
+    schemas = mobile_api.get_openapi_schema()["components"]["schemas"]
+    prop = schemas[component]["properties"][field]
+    variants = prop.get("anyOf", [prop])
+    assert set(next(variant["enum"] for variant in variants if "enum" in variant)) == values
 
 
 def _activate_participant(session, user):
@@ -980,6 +1082,62 @@ class TestJoinRoom:
         assert SessionAdmission.objects.filter(session=session, user=user).exists()
         assert Room.objects.filter(session=session).exists()
 
+    def test_join_operation_and_legacy_resume(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        session = _make_joinable_session(user)
+        url = f"{BASE}/{session.slug}/join"
+        operation = str(uuid4())
+        first = client.post(url, data=json.dumps({"operation_id": operation}), content_type="application/json")
+        retry = client.post(url, data=json.dumps({"operation_id": operation}), content_type="application/json")
+        resumed = client.post(url, data="{}", content_type="application/json")
+        assert first.status_code == retry.status_code == resumed.status_code == 200
+        ids = (first.json()["admission"]["request_id"], first.json()["admission"]["attempt_id"])
+        assert ids == (retry.json()["admission"]["request_id"], retry.json()["admission"]["attempt_id"])
+        assert ids == (resumed.json()["admission"]["request_id"], resumed.json()["admission"]["attempt_id"])
+        assert retry.json()["admission"]["readiness"] == first.json()["admission"]["readiness"]
+
+    def test_join_operation_resume_and_fresh_modes(self, client_with_user):
+        client, user = client_with_user
+        session = _make_joinable_session(user)
+        url = f"{BASE}/{session.slug}/join"
+        first = client.post(url).json()["admission"]
+        operation = str(uuid4())
+        resumed = client.post(url, data=json.dumps({"operation_id": operation}), content_type="application/json")
+        assert resumed.status_code == 200
+        assert resumed.json()["admission"]["attempt_id"] == first["attempt_id"]
+        body = {"operation_id": str(uuid4()), "fresh": True}
+        fresh = client.post(url, data=json.dumps(body), content_type="application/json")
+        retry = client.post(url, data=json.dumps(body), content_type="application/json")
+        assert fresh.status_code == retry.status_code == 200
+        assert fresh.json()["admission"]["attempt_id"] == retry.json()["admission"]["attempt_id"]
+        assert fresh.json()["admission"]["attempt_id"] != first["attempt_id"]
+        stale = client.post(url, data=json.dumps({"operation_id": operation}), content_type="application/json")
+        assert stale.status_code == 403
+
+    def test_join_explicit_id_pair_remains_supported(self, client_with_user):
+        client, user = client_with_user
+        session = _make_joinable_session(user)
+        ids = {"request_id": str(uuid4()), "attempt_id": str(uuid4())}
+        response = client.post(f"{BASE}/{session.slug}/join", data=json.dumps(ids), content_type="application/json")
+        assert response.status_code == 200
+        assert {key: response.json()["admission"][key] for key in ids} == ids
+
+    @pytest.mark.parametrize(
+        "body",
+        [
+            {"operation_id": "not-a-uuid"},
+            {"request_id": str(uuid4())},
+            {"fresh": True},
+            {"operation_id": str(uuid4()), "request_id": str(uuid4()), "attempt_id": str(uuid4())},
+        ],
+    )
+    def test_join_rejects_invalid_id_combinations(self, client_with_user, body):
+        client, user = client_with_user
+        session = _make_joinable_session(user)
+        response = client.post(f"{BASE}/{session.slug}/join", data=json.dumps(body), content_type="application/json")
+        assert response.status_code in (400, 403, 409, 422)
+        assert not AdmissionAttempt.objects.filter(admission__session=session).exists()
+
     def test_join_token_does_not_change_talking_order(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
         participant = UserFactory()
@@ -1191,6 +1349,28 @@ class TestJoinRoom:
         assert resp.status_code == 403
         assert resp.json()["code"] == "not_joinable"
         participants.assert_called_once_with(session.slug)
+
+    def test_admitted_user_can_rejoin_empty_room_during_overrun(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        keeper = UserFactory()
+        start = timezone.now() - datetime.timedelta(minutes=65)
+        session = SessionFactory(
+            space__author=keeper,
+            space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+            start=start,
+            duration_minutes=60,
+        )
+        session.attendees.add(keeper, user)
+        room = Room.objects.get_or_create_for_session(session)
+        room.date_created = start
+        room.save(update_fields=["date_created"])
+        _activate_participant(session, user)
+        assert not session.ended()
+
+        response = client.post(f"{BASE}/{session.slug}/join")
+
+        assert response.status_code == 200
+        assert response.json()["admission"]["durable_state"] == "admitted"
 
     def test_admitted_user_can_rejoin_populated_room_past_duration(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user

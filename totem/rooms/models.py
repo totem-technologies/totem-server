@@ -205,6 +205,14 @@ class AdmissionAttempt(BaseModel):
         indexes = [models.Index(fields=["status", "expires_at"], name="admission_attempt_expiry")]
 
 
+class AdmissionJoinOperation(BaseModel):
+    """Bind a join retry to its original attempt and intent."""
+
+    operation_id = models.UUIDField(unique=True)
+    attempt = models.ForeignKey(AdmissionAttempt, on_delete=models.CASCADE, related_name="join_operations")
+    fresh = models.BooleanField(default=False)
+
+
 class AdmissionPermissionSync(BaseModel):
     """Durable permission reconciliation journal; network calls never hold DB locks."""
 

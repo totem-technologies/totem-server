@@ -466,7 +466,7 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
             return False
         if room is _room_not_provided:
             room = getattr(self, "room", None)
-        return room is not None and room.date_created < self.end()
+        return room is not None and not room._state.adding and room.date_created < self.end()
 
     def _livekit_initial_join_window(self, user, room, admission):
         from totem.rooms.models import AdmissionState

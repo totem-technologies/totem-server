@@ -15,7 +15,7 @@ from totem.rooms.livekit import LiveKitPermissionError
 from totem.rooms.models import AdmissionPermissionSync, AdmissionState, AttemptStatus, Room
 from totem.rooms.schemas import BanParticipantEvent, RoomStatus
 from totem.rooms.state_machine import apply_event
-from totem.spaces.models import Session
+from totem.spaces.models import Session, Space
 from totem.spaces.tests.factories import SessionFactory
 from totem.users.tests.factories import UserFactory
 
@@ -55,7 +55,11 @@ def livekit():
 def room_context(livekit):
     keeper = UserFactory()
     user = UserFactory()
-    session = SessionFactory(space__author=keeper, start=timezone.now() - timedelta(minutes=1))
+    session = SessionFactory(
+        space__author=keeper,
+        space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+        start=timezone.now() - timedelta(minutes=1),
+    )
     session.attendees.add(keeper, user)
     room = Room.objects.get_or_create_for_session(session)
     return session, room, keeper, user
@@ -694,7 +698,7 @@ def test_command_response_reports_current_version_and_retry_status(room_context,
     body = MembershipCommandInput(
         command_id=uuid4(), expected_version=queued_grant.admission.version, expected_room_version=room.state_version
     )
-    with patch.object(admission_http, "get_admission_participants", return_value=set()):
+    with patch.object(admission_http, "get_room_participant_sids", return_value={}):
         response = admission_http.execute_keeper_command(session.slug, keeper, "revoke", body, user.slug)
     sync = AdmissionPermissionSync.objects.get(admission=queued_grant.admission)
     room.refresh_from_db()
@@ -735,7 +739,11 @@ def test_ended_cleanup_reads_do_not_reset_denial_backoff(room_context, queued_gr
 @pytest.fixture
 def context():
     keeper, user = UserFactory(), UserFactory()
-    session = SessionFactory(space__author=keeper, start=timezone.now() - timedelta(minutes=1))
+    session = SessionFactory(
+        space__author=keeper,
+        space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+        start=timezone.now() - timedelta(minutes=1),
+    )
     session.attendees.add(keeper, user)
     room = Room.objects.get_or_create_for_session(session)
     with patch("totem.rooms.state_machine.publish_state"):

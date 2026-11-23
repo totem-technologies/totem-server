@@ -13,7 +13,6 @@ from typing import cast
 
 from django.db import transaction
 from django.http import HttpRequest
-from django.utils import timezone
 from ninja import Router, Status
 from pydantic import ValidationError
 
@@ -268,7 +267,11 @@ def join_room(
                 body = AdmissionJoinRequest.model_validate_json(request.body)
             except ValidationError:
                 return RoomErrorResponse(
-                    code=ErrorCode.INVALID_TRANSITION, message="Both admission UUIDs are required"
+                    code=ErrorCode.INVALID_TRANSITION, message="Invalid join request"
+                ).as_http_response()
+            if (body.request_id is None) != (body.attempt_id is None):
+                return RoomErrorResponse(
+                    code=ErrorCode.INVALID_TRANSITION, message="Both request and attempt UUIDs are required"
                 ).as_http_response()
         return _join_with_admission(session, user, body)
 
@@ -290,13 +293,15 @@ def _join_with_admission(session: Session, user: User, body: AdmissionJoinReques
         connected = get_admission_participants(session.slug)
         room = Room.objects.filter(session=session).first()
         keeper = room.keeper if room else session.space.author.slug
-        if timezone.now() > session.end() and user.slug != keeper and not connected:
+        if session.ended(room=room) and user.slug != keeper and not connected:
             return RoomErrorResponse(code=ErrorCode.NOT_JOINABLE, message="This session has ended").as_http_response()
         response = prepare_admission_join(
             session.slug,
             user,
             request_id=body.request_id if body else None,
             attempt_id=body.attempt_id if body else None,
+            operation_id=body.operation_id if body else None,
+            fresh=body.fresh if body else False,
             connected=connected,
         )
     except AdmissionError as error:

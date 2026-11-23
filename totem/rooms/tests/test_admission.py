@@ -10,6 +10,7 @@ from uuid import uuid4
 import pytest
 from django.contrib.contenttypes.models import ContentType
 from django.db import connection, connections
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from livekit import api
 
@@ -22,8 +23,245 @@ from totem.rooms.livekit import LiveKitPermissionError
 from totem.rooms.models import AdmissionAttempt, AdmissionState, AttemptStatus, Room, SessionAdmission
 from totem.rooms.schemas import EndReason, EndRoomEvent
 from totem.rooms.state_machine import apply_event
+from totem.spaces.models import Space
 from totem.spaces.tests.factories import SessionFactory
 from totem.users.tests.factories import UserFactory
+
+
+def test_join_readiness_openapi_contract():
+    from totem.api.api import mobile_api
+
+    schemas = mobile_api.get_openapi_schema()["components"]["schemas"]
+    join = schemas["AdmissionJoinState"]
+    assert {"readiness", "observed_at"} <= set(join["required"])
+    readiness_ref = {"$ref": "#/components/schemas/AdmissionReadiness"}
+    assert join["properties"]["readiness"] == readiness_ref
+    me = schemas["AdmissionMeSnapshot"]
+    assert "readiness" in me["required"]
+    assert me["properties"]["readiness"] == readiness_ref
+    participant = schemas["Participant"]
+    assert participant["properties"]["readiness"]["anyOf"] == [readiness_ref, {"type": "null"}]
+
+    readiness = schemas["AdmissionReadiness"]
+    assert "state" in readiness["required"]
+    assert readiness["properties"]["state"] == {"$ref": "#/components/schemas/ReadinessState"}
+    assert readiness["properties"]["reason"]["anyOf"] == [
+        {"$ref": "#/components/schemas/ReadinessReason"},
+        {"type": "null"},
+    ]
+    assert schemas["ReadinessState"]["type"] == "string"
+    assert set(schemas["ReadinessState"]["enum"]) == {
+        "waiting_for_approval",
+        "applying_permissions",
+        "ready_to_activate",
+        "activated",
+        "blocked",
+        "ended",
+        "requires_new_attempt",
+    }
+    assert schemas["ReadinessReason"]["type"] == "string"
+    assert set(schemas["ReadinessReason"]["enum"]) == {
+        "session_ended",
+        "not_eligible",
+        "no_request",
+        "request_expired",
+        "request_declined",
+        "request_permanently_declined",
+        "request_cancelled",
+        "request_superseded",
+        "request_revoked",
+        "request_failed",
+        "invalid_request",
+        "requires_reapproval",
+        "permanently_declined",
+        "not_admitted",
+        "admission_full",
+        "approval_required",
+        "connection_required",
+        "permission_pending",
+        "connection_changed",
+    }
+
+
+def test_readiness_loaded_snapshot_needs_no_queries(context, django_assert_num_queries):
+    from totem.rooms.admission.readiness import ReadinessState, project_readiness
+    from totem.rooms.models import AdmissionPermissionSync
+
+    _, room, _, user = context
+    durable = SessionAdmission(session=room.session, user=user, state=AdmissionState.ADMITTED)
+    attempt = AdmissionAttempt(
+        admission=durable,
+        status=AttemptStatus.GRANTING,
+        participant_sid="sid-1",
+        connected_at=timezone.now(),
+        expires_at=timezone.now() + timedelta(minutes=1),
+    )
+    sync = AdmissionPermissionSync(
+        admission=durable,
+        desired_admitted=True,
+        authority_keeper=room.keeper,
+        revision=2,
+        applied_revision=2,
+        participant_sid="sid-1",
+    )
+    with django_assert_num_queries(0):
+        result = project_readiness(room, durable, attempt, sync, True, 5, 2, timezone.now(), False)
+    assert result.state == ReadinessState.READY_TO_ACTIVATE
+    assert result.reason is None
+
+
+@pytest.mark.parametrize(
+    "change,state,reason",
+    [
+        ("pending", "waiting_for_approval", "approval_required"),
+        ("ended", "ended", "session_ended"),
+        ("ineligible", "blocked", "not_eligible"),
+        ("no_attempt", "requires_new_attempt", "no_request"),
+        ("expired", "requires_new_attempt", "request_expired"),
+        ("cancelled", "requires_new_attempt", "request_cancelled"),
+        ("revoked", "blocked", "requires_reapproval"),
+        ("declined", "blocked", "permanently_declined"),
+        ("unadmitted", "blocked", "not_admitted"),
+        ("full", "blocked", "admission_full"),
+        ("no_sid", "applying_permissions", "connection_required"),
+        ("no_receipt", "applying_permissions", "connection_required"),
+        ("no_sync", "applying_permissions", "permission_pending"),
+        ("denied", "applying_permissions", "permission_pending"),
+        ("revision", "applying_permissions", "permission_pending"),
+        ("keeper_changed", "applying_permissions", "permission_pending"),
+        ("operation", "applying_permissions", "permission_pending"),
+        ("lease", "applying_permissions", "permission_pending"),
+        ("error", "applying_permissions", "permission_pending"),
+        ("no_sync_sid", "applying_permissions", "permission_pending"),
+        ("sid_mismatch", "applying_permissions", "connection_changed"),
+        ("activated", "activated", None),
+        ("activated_mismatch", "requires_new_attempt", "connection_changed"),
+    ],
+)
+def test_readiness_snapshot_states(context, change, state, reason):
+    from totem.rooms.admission.readiness import project_readiness
+    from totem.rooms.models import AdmissionPermissionSync
+
+    _, room, _, user = context
+    now = timezone.now()
+    durable = SessionAdmission(session=room.session, user=user, state=AdmissionState.ADMITTED)
+    attempt = AdmissionAttempt(
+        admission=durable,
+        status=AttemptStatus.GRANTING,
+        participant_sid="sid-1",
+        connected_at=now,
+        expires_at=now + timedelta(minutes=1),
+    )
+    sync = AdmissionPermissionSync(
+        admission=durable,
+        desired_admitted=True,
+        authority_keeper=room.keeper,
+        revision=2,
+        applied_revision=2,
+        participant_sid="sid-1",
+    )
+    eligible, capacity, slots_used, ended = True, 5, 2, False
+    if change == "pending":
+        attempt.status = AttemptStatus.PENDING
+    elif change == "ended":
+        ended = True
+    elif change == "ineligible":
+        eligible = False
+    elif change == "no_attempt":
+        attempt = None
+    elif change == "expired":
+        attempt.expires_at = now
+    elif change == "cancelled":
+        attempt.status = AttemptStatus.CANCELLED
+    elif change == "revoked":
+        durable.state = AdmissionState.REVOKED
+    elif change == "declined":
+        durable.state = AdmissionState.PERMANENTLY_DECLINED
+    elif change == "unadmitted":
+        durable.state = AdmissionState.NONE
+    elif change == "full":
+        slots_used = 6
+    elif change == "no_sid":
+        attempt.participant_sid = ""
+    elif change == "no_receipt":
+        attempt.connected_at = None
+    elif change == "no_sync":
+        sync = None
+    elif change == "denied":
+        sync.desired_admitted = False
+    elif change == "revision":
+        sync.applied_revision = 1
+    elif change == "keeper_changed":
+        room.keeper = user.slug
+    elif change == "operation":
+        sync.operation_id = uuid4()
+    elif change == "lease":
+        sync.lease_until = now - timedelta(seconds=1)
+    elif change == "error":
+        sync.last_error = "timeout"
+    elif change == "no_sync_sid":
+        sync.participant_sid = ""
+    elif change == "sid_mismatch":
+        sync.participant_sid = "sid-2"
+    elif change in ("activated", "activated_mismatch"):
+        attempt.status = AttemptStatus.ADMITTED
+        attempt.expires_at = now - timedelta(seconds=1)
+        if change == "activated_mismatch":
+            sync.participant_sid = "sid-2"
+    result = project_readiness(room, durable, attempt, sync, eligible, capacity, slots_used, now, ended)
+    assert result.state == state
+    assert result.reason == reason
+
+
+@pytest.mark.parametrize(
+    "status,reason",
+    [
+        (AttemptStatus.DECLINED, "request_declined"),
+        (AttemptStatus.PERMANENTLY_DECLINED, "request_permanently_declined"),
+        (AttemptStatus.CANCELLED, "request_cancelled"),
+        (AttemptStatus.EXPIRED, "request_expired"),
+        (AttemptStatus.SUPERSEDED, "request_superseded"),
+        (AttemptStatus.REVOKED, "request_revoked"),
+        (AttemptStatus.FAILED, "request_failed"),
+    ],
+)
+def test_readiness_terminal_attempt_reasons_and_membership_precedence(context, status, reason):
+    from totem.rooms.admission.readiness import project_readiness
+
+    _, room, keeper, user = context
+    now = timezone.now()
+    durable = SessionAdmission(session=room.session, user=user, state=AdmissionState.NONE)
+    attempt = AdmissionAttempt(admission=durable, status=status, expires_at=now)
+
+    def project():
+        return project_readiness(room, durable, attempt, None, True, 5, 2, now, False)
+
+    assert (project().state, project().reason) == ("requires_new_attempt", reason)
+    durable.state = AdmissionState.REVOKED
+    assert (project().state, project().reason) == ("blocked", "requires_reapproval")
+    durable.state = AdmissionState.PERMANENTLY_DECLINED
+    assert (project().state, project().reason) == ("blocked", "permanently_declined")
+    durable.user = keeper
+    assert (project().state, project().reason) == ("requires_new_attempt", reason)
+
+
+@pytest.mark.parametrize("status", [None, AttemptStatus.PENDING, AttemptStatus.GRANTING])
+@pytest.mark.parametrize(
+    "membership,reason",
+    [
+        (AdmissionState.REVOKED, "requires_reapproval"),
+        (AdmissionState.PERMANENTLY_DECLINED, "permanently_declined"),
+    ],
+)
+def test_readiness_membership_blocks_missing_or_expired_attempt(context, status, membership, reason):
+    from totem.rooms.admission.readiness import project_readiness
+
+    _, room, _, user = context
+    now = timezone.now()
+    durable = SessionAdmission(session=room.session, user=user, state=membership)
+    attempt = AdmissionAttempt(admission=durable, status=status, expires_at=now) if status else None
+    result = project_readiness(room, durable, attempt, None, True, 5, 2, now, False)
+    assert (result.state, result.reason) == ("blocked", reason)
 
 
 def test_new_room_requires_approval_by_default():
@@ -43,10 +281,98 @@ def admission():
 def context(db):
     keeper = UserFactory()
     user = UserFactory()
-    session = SessionFactory(space__author=keeper, start=timezone.now() + timedelta(minutes=5))
+    session = SessionFactory(
+        space__author=keeper,
+        space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+        start=timezone.now() + timedelta(minutes=5),
+    )
     session.attendees.add(keeper, user)
     room = Room.objects.get_or_create_for_session(session)
     return session, room, keeper, user
+
+
+@pytest.mark.parametrize("keeper_view", [True, False])
+def test_snapshot_query_count_does_not_grow_with_participants_or_history(context, keeper_view):
+    session, room, keeper, user = context
+    session.space.meeting_provider = Space.MeetingProviderChoices.LIVEKIT
+    session.space.save(update_fields=["meeting_provider"])
+    actor = keeper if keeper_view else user
+    durable = SessionAdmission.objects.create(session=session, user=user, version=7)
+    session.joined.add(user)
+    SessionFactory().joined.add(user)
+
+    def add_history(membership, count):
+        AdmissionAttempt.objects.bulk_create(
+            [
+                AdmissionAttempt(
+                    admission=membership,
+                    request_id=uuid4(),
+                    attempt_id=uuid4(),
+                    status=AttemptStatus.CANCELLED,
+                    version=3,
+                    expires_at=timezone.now() + timedelta(minutes=5),
+                )
+                for _ in range(count)
+            ]
+        )
+
+    add_history(durable, 1)
+    with patch("totem.rooms.admission.http.get_room_participant_sids", return_value={}):
+        with CaptureQueriesContext(connection) as initial_queries:
+            admission_http.admission_snapshot(session.slug, actor, keeper=keeper_view)
+        extra_users = UserFactory.create_batch(4)
+        session.attendees.add(*extra_users)
+        for extra in extra_users:
+            membership = SessionAdmission.objects.create(session=session, user=extra)
+            add_history(membership, 4)
+        add_history(durable, 4)
+        with CaptureQueriesContext(connection) as grown_queries:
+            snapshot = admission_http.admission_snapshot(session.slug, actor, keeper=keeper_view)
+
+    assert len(grown_queries) == len(initial_queries)
+    if keeper_view:
+        rows = [item for item in snapshot.participants if item.identity == user.slug]
+        assert len(rows) == 1
+        assert rows[0].eligible and rows[0].admission_version == 7
+        assert rows[0].user.circle_count == 2
+        assert all(item.eligible and item.attempt_version == 3 for item in snapshot.requests)
+        assert all(item.user.circle_count == (2 if item.identity == user.slug else 0) for item in snapshot.requests)
+        assert all(item.user.circle_count == 0 for item in snapshot.participants if item.identity != user.slug)
+    else:
+        assert snapshot.me.eligible and snapshot.me.admission_version == 7
+        assert snapshot.me.user.circle_count == 2
+
+
+@pytest.mark.parametrize("cancelled", [False, True])
+def test_snapshot_eligibility_uses_current_attendance_account_and_bans(context, cancelled):
+    session, room, keeper, user = context
+    session.space.meeting_provider = Space.MeetingProviderChoices.LIVEKIT
+    session.space.save(update_fields=["meeting_provider"])
+    inactive, removed, banned = UserFactory.create_batch(3)
+    session.attendees.add(inactive, removed, banned)
+    inactive.is_active = False
+    inactive.save(update_fields=["is_active"])
+    session.attendees.remove(removed)
+    session.cancelled = cancelled
+    session.save(update_fields=["cancelled"])
+    room.banned_participants = [banned.slug]
+    room.save(update_fields=["banned_participants"])
+    for person in (user, inactive, removed, banned):
+        membership = SessionAdmission.objects.create(session=session, user=person)
+        AdmissionAttempt.objects.create(
+            admission=membership,
+            request_id=uuid4(),
+            attempt_id=uuid4(),
+            status=AttemptStatus.CANCELLED,
+            expires_at=timezone.now() + timedelta(minutes=5),
+        )
+    with patch("totem.rooms.admission.http.get_room_participant_sids", return_value={}):
+        snapshot = admission_http.admission_snapshot(session.slug, keeper)
+    expected = {user.slug: not cancelled, inactive.slug: False, removed.slug: False, banned.slug: False}
+    assert {item.identity: item.eligible for item in snapshot.participants} == expected
+    assert {item.identity: item.eligible for item in snapshot.requests} == expected
+    reason = "session_ended" if cancelled else "not_eligible"
+    assert all(item.readiness.reason == reason for item in snapshot.participants if not item.eligible)
 
 
 @pytest.fixture
@@ -563,7 +889,11 @@ def run_concurrently(operation):
 def test_concurrent_duplicate_request_is_idempotent(admission, clear_content_type_cache, livekit_permissions):
     keeper = UserFactory()
     user = UserFactory()
-    session = SessionFactory(space__author=keeper, start=timezone.now() + timedelta(minutes=5))
+    session = SessionFactory(
+        space__author=keeper,
+        space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+        start=timezone.now() + timedelta(minutes=5),
+    )
     session.attendees.add(keeper, user)
     Room.objects.get_or_create_for_session(session)
     request_id, attempt_id = uuid4(), uuid4()
@@ -577,7 +907,11 @@ def test_concurrent_duplicate_request_is_idempotent(admission, clear_content_typ
 def test_concurrent_conflicting_decisions_have_one_winner(admission, clear_content_type_cache, livekit_permissions):
     keeper = UserFactory()
     user = UserFactory()
-    session = SessionFactory(space__author=keeper, start=timezone.now() + timedelta(minutes=5))
+    session = SessionFactory(
+        space__author=keeper,
+        space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+        start=timezone.now() + timedelta(minutes=5),
+    )
     session.attendees.add(keeper, user)
     room = Room.objects.get_or_create_for_session(session)
     attempt = request(admission, session, user)
@@ -616,7 +950,11 @@ def capacity_context(settings):
     settings.LIVEKIT_API_KEY = "test-key-test-key-test-key-test-key"
     settings.LIVEKIT_API_SECRET = "test-secret-test-secret-test-secret-test-secret-test-secret"
     keeper = UserFactory()
-    session = SessionFactory(space__author=keeper, start=timezone.now() - timedelta(minutes=1))
+    session = SessionFactory(
+        space__author=keeper,
+        space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+        start=timezone.now() - timedelta(minutes=1),
+    )
     session.attendees.add(keeper)
     room = Room.objects.get_or_create_for_session(session)
 
@@ -654,6 +992,186 @@ def approve(room, keeper, attempt):
 
 
 @pytest.mark.django_db(transaction=True)
+def test_join_operation_retries_and_supersession(capacity_context):
+    session, _, _ = capacity_context
+    user, other = add_users(session, 2)
+    operation = uuid4()
+    first = capacity_admission.prepare_admission_join(
+        session.slug, user, operation_id=operation, connected=set()
+    ).admission
+    retry = capacity_admission.prepare_admission_join(
+        session.slug, user, operation_id=operation, connected=set()
+    ).admission
+    resumed = capacity_admission.prepare_admission_join(session.slug, user, connected=set()).admission
+    assert (first.request_id, first.attempt_id) == (retry.request_id, retry.attempt_id)
+    assert (first.request_id, first.attempt_id) == (resumed.request_id, resumed.attempt_id)
+    assert first.readiness.state == "waiting_for_approval"
+    with pytest.raises(capacity_admission.AdmissionError) as error:
+        capacity_admission.prepare_admission_join(session.slug, other, operation_id=operation, connected=set())
+    assert error.value.code == "invalid_attempt"
+    second = capacity_admission.prepare_admission_join(
+        session.slug, user, operation_id=uuid4(), fresh=True, connected=set()
+    ).admission
+    assert second.attempt_id != first.attempt_id
+    with pytest.raises(capacity_admission.AdmissionError) as error:
+        capacity_admission.prepare_admission_join(session.slug, user, operation_id=operation, connected=set())
+    assert error.value.code == "invalid_attempt"
+    assert AdmissionAttempt.objects.filter(admission__session=session, admission__user=user).count() == 2
+
+
+@pytest.mark.django_db(transaction=True)
+def test_join_operation_resumes_canonical_attempt_and_fences_replay(capacity_context):
+    session, _, _ = capacity_context
+    (user,) = add_users(session, 1)
+    existing = capacity_request(session, user)
+    operation = uuid4()
+    resumed = capacity_admission.prepare_admission_join(session.slug, user, operation_id=operation, connected=set())
+    assert (resumed.admission.request_id, resumed.admission.attempt_id) == (existing.request_id, existing.attempt_id)
+    with pytest.raises(capacity_admission.AdmissionError):
+        capacity_admission.prepare_admission_join(
+            session.slug, user, operation_id=operation, fresh=True, connected=set()
+        )
+    new_id = uuid4()
+    fresh = capacity_admission.prepare_admission_join(
+        session.slug, user, operation_id=new_id, fresh=True, connected=set()
+    )
+    retry = capacity_admission.prepare_admission_join(
+        session.slug, user, operation_id=new_id, fresh=True, connected=set()
+    )
+    assert fresh.admission.attempt_id == retry.admission.attempt_id != existing.attempt_id
+    with pytest.raises(capacity_admission.AdmissionError) as error:
+        capacity_admission.prepare_admission_join(session.slug, user, operation_id=operation, connected=set())
+    assert error.value.code == "invalid_attempt"
+    assert AdmissionAttempt.objects.filter(admission__session=session, admission__user=user).count() == 2
+
+
+@pytest.mark.parametrize("is_keeper", [False, True])
+@pytest.mark.parametrize("connected", [False, True])
+@pytest.mark.django_db(transaction=True)
+def test_join_operation_returning_attempt(capacity_context, is_keeper, connected):
+    session, room, keeper = capacity_context
+    user = keeper if is_keeper else add_users(session, 1)[0]
+    existing = capacity_request(session, user)
+    if not is_keeper:
+        existing = approve(room, keeper, existing)
+    existing.status = AttemptStatus.ADMITTED
+    existing.participant_sid = "sid-1"
+    existing.connected_at = timezone.now()
+    existing.save(update_fields=["status", "participant_sid", "connected_at"])
+    operation = uuid4()
+    presence = {user.slug} if connected else set()
+    result = capacity_admission.prepare_admission_join(session.slug, user, operation_id=operation, connected=presence)
+    retry = capacity_admission.prepare_admission_join(session.slug, user, operation_id=operation, connected=set())
+    assert result.admission.attempt_id == retry.admission.attempt_id
+    assert result.admission.request_id == retry.admission.request_id
+    assert (result.admission.attempt_id == existing.attempt_id) == connected
+    assert result.admission.status == (AttemptStatus.ADMITTED if connected else AttemptStatus.GRANTING)
+    assert result.admission.permissions == "admitted"
+    assert AdmissionAttempt.objects.filter(admission=existing.admission).count() == (1 if connected else 2)
+
+
+@pytest.mark.parametrize("status", [AttemptStatus.DECLINED, AttemptStatus.EXPIRED, AttemptStatus.SUPERSEDED])
+@pytest.mark.django_db(transaction=True)
+def test_join_operation_returning_terminal_requires_fresh(capacity_context, status):
+    session, room, keeper = capacity_context
+    (user,) = add_users(session, 1)
+    attempt = approve(room, keeper, capacity_request(session, user))
+    attempt.status = status
+    attempt.save(update_fields=["status"])
+    with pytest.raises(capacity_admission.AdmissionError) as error:
+        capacity_admission.prepare_admission_join(session.slug, user, operation_id=uuid4(), connected=set())
+    assert error.value.code == "invalid_attempt"
+    assert AdmissionAttempt.objects.filter(admission=attempt.admission).count() == 1
+
+
+@pytest.mark.django_db(transaction=True)
+def test_join_operation_survives_capacity_failure(capacity_context):
+    session, _, _ = capacity_context
+    (user,) = add_users(session, 1)
+    operation = uuid4()
+    with pytest.raises(capacity_admission.AdmissionError) as error:
+        capacity_admission.prepare_admission_join(
+            session.slug, user, operation_id=operation, connected={f"waiter-{i}" for i in range(5)}
+        )
+    assert error.value.code == "waiting_full"
+    attempt = AdmissionAttempt.objects.get(admission__session=session, admission__user=user)
+    result = capacity_admission.prepare_admission_join(session.slug, user, operation_id=operation, connected=set())
+    assert result.admission.attempt_id == attempt.attempt_id
+    assert AdmissionAttempt.objects.filter(admission__session=session, admission__user=user).count() == 1
+
+
+@pytest.mark.django_db(transaction=True)
+def test_join_operation_expiry_requires_new_id(capacity_context):
+    session, _, _ = capacity_context
+    (user,) = add_users(session, 1)
+    operation = uuid4()
+    first = capacity_admission.prepare_admission_join(
+        session.slug, user, operation_id=operation, connected=set()
+    ).admission
+    attempt = AdmissionAttempt.objects.get(attempt_id=first.attempt_id)
+    attempt.expires_at = timezone.now() - timedelta(seconds=1)
+    attempt.save(update_fields=["expires_at"])
+    with pytest.raises(capacity_admission.AdmissionError) as error:
+        capacity_admission.prepare_admission_join(session.slug, user, operation_id=operation, connected=set())
+    assert error.value.code == "invalid_attempt"
+    attempt.refresh_from_db()
+    assert attempt.status == AttemptStatus.EXPIRED
+    with pytest.raises(capacity_admission.AdmissionError) as error:
+        capacity_admission.prepare_admission_join(session.slug, user, operation_id=uuid4(), connected=set())
+    assert error.value.code == "invalid_attempt"
+    assert AdmissionAttempt.objects.filter(admission__session=session, admission__user=user).count() == 1
+    fresh = capacity_admission.prepare_admission_join(
+        session.slug, user, operation_id=uuid4(), fresh=True, connected=set()
+    ).admission
+    assert fresh.attempt_id != first.attempt_id
+
+
+@pytest.mark.parametrize("fresh", [False, True])
+@pytest.mark.django_db(transaction=True)
+def test_concurrent_join_operation_is_idempotent(capacity_context, clear_content_type_cache, fresh):
+    session, _, _ = capacity_context
+    (user,) = add_users(session, 1)
+    existing = capacity_request(session, user)
+    operation = uuid4()
+    results = run_concurrently(
+        lambda: capacity_admission.prepare_admission_join(
+            session.slug, user, operation_id=operation, fresh=fresh, connected=set()
+        )
+    )
+    assert results[0].admission.attempt_id == results[1].admission.attempt_id
+    assert (results[0].admission.attempt_id != existing.attempt_id) == fresh
+    assert AdmissionAttempt.objects.filter(admission__session=session, admission__user=user).count() == (
+        2 if fresh else 1
+    )
+
+
+@pytest.mark.django_db(transaction=True)
+def test_concurrent_operation_collision_across_sessions_is_rejected(capacity_context, clear_content_type_cache):
+    session, _, keeper = capacity_context
+    (user,) = add_users(session, 1)
+    other = SessionFactory(
+        space__author=keeper,
+        space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+        start=timezone.now() - timedelta(minutes=1),
+    )
+    other.attendees.add(keeper, user)
+    Room.objects.get_or_create_for_session(other)
+    operation = uuid4()
+    sessions = iter([session, other])
+
+    def join():
+        target = next(sessions)
+        try:
+            capacity_admission.prepare_admission_join(target.slug, user, operation_id=operation, connected=set())
+            return "ok"
+        except capacity_admission.AdmissionError as error:
+            return error.code
+
+    assert sorted(run_concurrently(join)) == ["invalid_attempt", "ok"]
+    assert AdmissionAttempt.objects.filter(admission__session__in=[session, other], admission__user=user).count() == 1
+
+
+@pytest.mark.django_db(transaction=True)
 def test_default_empty_room_requires_approval(capacity_context):
     session, room, _ = capacity_context
     (user,) = add_users(session, 1)
@@ -673,6 +1191,81 @@ def test_keeper_token_does_not_record_join(capacity_context):
     assert result.admission.permissions == "admitted"
     assert result.admission.status == AttemptStatus.GRANTING
     assert not session.joined.filter(pk=keeper.pk).exists()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_join_readiness_requires_current_attempt_connection(capacity_context):
+    from totem.rooms.models import AdmissionPermissionSync
+
+    session, room, keeper = capacity_context
+    (user,) = add_users(session, 1)
+    first = capacity_admission.prepare_admission_join(session.slug, user, connected=set()).admission
+    assert first.readiness.state == "waiting_for_approval"
+    attempt = AdmissionAttempt.objects.get(attempt_id=first.attempt_id)
+    approve(room, keeper, attempt)
+    sync = AdmissionPermissionSync.objects.get(admission=attempt.admission)
+    sync.desired_admitted = True
+    sync.authority_keeper = room.keeper
+    sync.applied_revision = sync.revision
+    sync.participant_sid = "sid-1"
+    sync.last_error = ""
+    sync.operation_id = None
+    sync.lease_until = None
+    sync.save()
+
+    before = timezone.now()
+    unconfirmed = capacity_admission.prepare_admission_join(session.slug, user, connected=set()).admission
+    assert before <= unconfirmed.observed_at <= timezone.now()
+    assert unconfirmed.readiness.model_dump(mode="json") == {
+        "state": "applying_permissions",
+        "reason": "connection_required",
+    }
+
+    attempt.refresh_from_db()
+    attempt.participant_sid = "sid-2"
+    attempt.connected_at = timezone.now()
+    attempt.save(update_fields=["participant_sid", "connected_at"])
+    mismatch = capacity_admission.prepare_admission_join(session.slug, user, connected={user.slug}).admission
+    assert mismatch.readiness.model_dump(mode="json") == {
+        "state": "applying_permissions",
+        "reason": "connection_changed",
+    }
+
+    sync.participant_sid = "sid-2"
+    sync.save(update_fields=["participant_sid"])
+    ready = capacity_admission.prepare_admission_join(session.slug, user, connected={user.slug}).admission
+    assert ready.readiness.model_dump(mode="json") == {"state": "ready_to_activate", "reason": None}
+
+
+@pytest.mark.parametrize(
+    ("error", "expected"), [("unknown_failure", "unavailable"), ("applied", "unavailable"), ("timeout", "timeout")]
+)
+@pytest.mark.django_db(transaction=True)
+def test_join_permission_error_fails_closed(capacity_context, error, expected):
+    from totem.rooms.models import AdmissionPermissionSync
+
+    session, room, keeper = capacity_context
+    first = capacity_admission.prepare_admission_join(session.slug, keeper, connected=set()).admission
+    attempt = AdmissionAttempt.objects.get(attempt_id=first.attempt_id)
+    attempt.participant_sid = "sid-1"
+    attempt.connected_at = timezone.now()
+    attempt.save(update_fields=["participant_sid", "connected_at"])
+    sync, _ = AdmissionPermissionSync.objects.get_or_create(admission=attempt.admission)
+    sync.desired_admitted = True
+    sync.authority_keeper = room.keeper
+    sync.applied_revision = sync.revision
+    sync.participant_sid = "sid-1"
+    sync.operation_id = None
+    sync.lease_until = None
+    sync.last_error = error
+    sync.save()
+
+    result = capacity_admission.prepare_admission_join(session.slug, keeper, connected={keeper.slug}).admission
+    assert result.permission_sync == expected
+    assert result.readiness.state == "applying_permissions"
+    assert result.readiness.reason == "permission_pending"
+    sync.refresh_from_db()
+    assert sync.last_error == error
 
 
 @pytest.mark.django_db(transaction=True)
@@ -741,7 +1334,9 @@ def test_batch_capacity_reports_per_person_and_snapshot_excludes_waiters(capacit
             expected_revision=room.admission_revision,
             approval_required=False,
         )
-    with patch.object(admission_http, "get_admission_participants", return_value={first.slug, second.slug}):
+    with patch.object(
+        admission_http, "get_room_participant_sids", return_value={first.slug: "first", second.slug: "second"}
+    ):
         response = admission_http.execute_keeper_command(session.slug, keeper, action, body)
     results = {item.identity: item for item in response.results}
     assert results[first.slug].outcome == "approved"
