@@ -1,10 +1,13 @@
 import os
+from typing import Any
 
 from django.http import HttpRequest
 from django.middleware.csrf import get_token
 from ninja import File, NinjaAPI, Router, Schema, Status
 from ninja.files import UploadedFile
+from ninja.openapi.schema import OpenAPISchema
 
+from totem.notifications.schemas import SessionNotificationPayload
 from totem.spaces.api import router as spaces_router
 from totem.users.models import User
 from totem.users.schemas import ProfileAvatarTypeEnum, PublicUserSchema
@@ -16,7 +19,22 @@ api = NinjaAPI(title="Totem API", version="1")
 dev_api = Router()
 api.add_router("/dev/", dev_api)
 api.add_router("/spaces/", spaces_router)
-mobile_api = NinjaAPI(title="Totem Mobile API", version="1", urls_namespace="mobile-api")
+
+
+class MobileAPI(NinjaAPI):
+    def get_openapi_schema(
+        self, *, path_prefix: str | None = None, path_params: dict[str, Any] | None = None
+    ) -> OpenAPISchema:
+        schema = super().get_openapi_schema(path_prefix=path_prefix, path_params=path_params)
+        # Push payloads have no HTTP operation for Ninja to discover their schemas.
+        payload = SessionNotificationPayload.model_json_schema(ref_template="#/components/schemas/{model}")
+        components = schema["components"]["schemas"]
+        components.update(payload.pop("$defs", {}))
+        components["SessionNotificationPayload"] = payload
+        return schema
+
+
+mobile_api = MobileAPI(title="Totem Mobile API", version="1", urls_namespace="mobile-api")
 mobile_api.add_router("/protected/", mobile_router)
 mobile_api.add_router("/auth/", auth_router)
 

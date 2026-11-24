@@ -1,8 +1,11 @@
+from totem.notifications.schemas import SessionNotificationPayload
 from totem.notifications.services import send_notification_to_user
 from totem.users.models import User
 
 
-def notify_users(users: list[User], title: str, body: str, data: dict[str, str] | None = None) -> dict[int, bool]:
+def notify_users(
+    users: list[User], title: str, body: str, data: SessionNotificationPayload | None = None
+) -> dict[int, bool]:
     """
     Send a notification to multiple users
 

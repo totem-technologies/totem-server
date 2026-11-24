@@ -1,0 +1,17 @@
+[
+  {
+    "type": "session_starting",
+    "space_slug": "example-space",
+    "session_slug": "example-session"
+  },
+  {
+    "type": "session_advertisement",
+    "space_slug": "example-space",
+    "session_slug": "example-session"
+  },
+  {
+    "type": "missed_session",
+    "space_slug": "example-space",
+    "session_slug": "example-session"
+  }
+]

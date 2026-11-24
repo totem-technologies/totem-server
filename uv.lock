@@ -2275,7 +2275,7 @@ requires-dist = [
     { name = "django-timezone-field", specifier = "<8" },
     { name = "dynimg", specifier = "<=0.4.0" },
     { name = "environs", extras = ["django"], specifier = "<16" },
-    { name = "firebase-admin", specifier = ">=6.8.0" },
+    { name = "firebase-admin", specifier = ">=7.5.0" },
     { name = "google-api-python-client", specifier = "<3" },
     { name = "google-auth-oauthlib", specifier = "<2" },
     { name = "granian", specifier = "<3" },

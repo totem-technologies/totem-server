@@ -42,7 +42,6 @@
             <thead>
               <tr>
                 <th>{% trans "User" %}</th>
-                <th>{% trans "Token" %}</th>
                 <th>{% trans "Last Used" %}</th>
               </tr>
             </thead>
@@ -50,7 +49,6 @@
               {% for device in devices %}
                 <tr>
                   <td>{{ device.user }}</td>
-                  <td>{{ device.token|truncatechars:20 }}</td>
                   <td>{{ device.last_used|default:"-" }}</td>
                 </tr>
               {% endfor %}

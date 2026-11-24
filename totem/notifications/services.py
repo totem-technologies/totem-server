@@ -1,17 +1,21 @@
+from __future__ import annotations
+
 import logging
 
 import firebase_admin
 from django.conf import settings
+from django.db.models import QuerySet
 from django.utils import timezone
 from firebase_admin import credentials, messaging
 
 from totem.notifications.models import FCMDevice
+from totem.notifications.schemas import SessionNotificationPayload
 from totem.users.models import User
 
 logger = logging.getLogger(__name__)
 
 
-def initialize_firebase():
+def initialize_firebase() -> bool:
     """
     Initialize Firebase Admin SDK if not already initialized.
     Uses Firebase's built-in app detection instead of a manual flag.
@@ -34,11 +38,13 @@ def initialize_firebase():
         logger.info("Firebase initialized")
         return True
     except Exception as e:
-        logger.error("Failed to initialize Firebase: %s", e)
+        logger.error("Failed to initialize Firebase (%s)", type(e).__name__)
         return False
 
 
-def send_notification_to_user(user: User, title: str, body: str, data: dict[str, str] | None = None) -> bool:
+def send_notification_to_user(
+    user: User, title: str, body: str, data: SessionNotificationPayload | None = None
+) -> bool:
     """
     Send notification to all active devices of a specific user
 
@@ -52,20 +58,31 @@ def send_notification_to_user(user: User, title: str, body: str, data: dict[str,
         bool: True if notification was sent to at least one device
     """
 
-    devices = FCMDevice.objects.filter(user=user, active=True)
-    if not devices.exists():
+    return send_notification_to_devices(FCMDevice.objects.filter(user=user, active=True), title, body, data)
+
+
+def send_notification_to_devices(
+    devices: QuerySet[FCMDevice], title: str, body: str, data: SessionNotificationPayload | None = None
+) -> bool:
+    active_devices = list(devices.filter(active=True))
+    if not active_devices:
         return False
-
-    tokens = list(devices.values_list("token", flat=True))
-    return send_notification(tokens, title, body, data)
+    return send_notification([device.fid for device in active_devices], title, body, data, devices=active_devices)
 
 
-def send_notification(tokens: list[str], title: str, body: str, data: dict[str, str] | None = None) -> bool:
+def send_notification(
+    fids: list[str],
+    title: str,
+    body: str,
+    data: SessionNotificationPayload | None = None,
+    *,
+    devices: list[FCMDevice] | None = None,
+) -> bool:
     """
-    Send notification to specific FCM tokens
+    Send notification to specific Firebase Installation IDs
 
     Args:
-        tokens: list of FCM tokens
+        fids: list of Firebase Installation IDs
         title: Notification title
         body: Notification body
         data: Additional data payload
@@ -73,51 +90,67 @@ def send_notification(tokens: list[str], title: str, body: str, data: dict[str, 
     Returns:
         bool: True if notification was sent to at least one device
     """
-    if not tokens:
+    if not fids:
+        return False
+
+    try:
+        data_payload = data.model_dump(mode="json", exclude_none=True) if data is not None else {}
+        if not isinstance(data_payload, dict) or any(
+            not isinstance(key, str)
+            or not isinstance(value, str)
+            or key in {"from", "message_type", "collapse_key"}
+            or key.startswith(("google.", "gcm."))
+            for key, value in data_payload.items()
+        ):
+            raise ValueError("Invalid FCM data")
+        size = sum(len(key.encode("utf-8")) + len(value.encode("utf-8")) for key, value in data_payload.items())
+        size += len("title") + len(title.encode("utf-8")) + len("body") + len(body.encode("utf-8"))
+        if size > 4096:
+            raise ValueError("FCM payload exceeds size limit")
+    except Exception as e:
+        logger.error("Invalid FCM notification data (%s)", type(e).__name__)
         return False
 
     if not initialize_firebase():
         return False
 
-    notification = messaging.Notification(
-        title=title,
-        body=body,
-    )
-    data_payload = data or {}
+    if devices is None:
+        devices = list(FCMDevice.objects.filter(fid__in=fids, active=True))
 
-    success_count = 0
-    invalid_tokens = []  # Tokens that are no longer valid (should be deactivated)
-    successful_tokens = []
+    successful_fids: set[str] = set()
+    invalid_fids: set[str] = set()
 
-    for token in tokens:
-        message = messaging.Message(notification=notification, data=data_payload, token=token)
-
+    for fid in fids:
         try:
+            message = messaging.Message(
+                notification=messaging.Notification(title=title, body=body), data=data_payload, fid=fid
+            )
             messaging.send(message)
-            success_count += 1
-            successful_tokens.append(token)
+            successful_fids.add(fid)
         except messaging.UnregisteredError:
-            # Token is no longer valid - mark for deactivation
-            invalid_tokens.append(token)
-            logger.info("FCM token invalid and marked as inactive: %s...", token[:20])
+            invalid_fids.add(fid)
+            logger.info("Unregistered FCM device marked inactive")
         except messaging.SenderIdMismatchError:
-            # Token was registered with a different sender - mark for deactivation
-            invalid_tokens.append(token)
-            logger.warning("FCM token sender mismatch: %s...", token[:20])
+            logger.error("FCM sender ID mismatch; check Firebase project credentials")
         except messaging.ThirdPartyAuthError:
-            # APNs or Web Push auth error - token's platform has invalid auth config
-            # These tokens will never work, so deactivate them
-            invalid_tokens.append(token)
-            logger.warning("FCM token has third-party auth error (APNs/Web Push): %s...", token[:20])
+            # This is a server configuration problem, not an invalid device.
+            logger.error("FCM third-party authentication failed (APNs/Web Push)")
         except Exception as e:
-            # Don't deactivate token for server-side errors (network, quota, etc.)
-            logger.error("Failed to send FCM notification (%s): %s", type(e).__name__, e)
+            # Do not deactivate devices for server-side errors.
+            logger.error("Failed to send FCM notification (%s)", type(e).__name__)
 
-    # Bulk update the device records to avoid individual DB queries
-    if successful_tokens:
-        FCMDevice.objects.filter(token__in=successful_tokens).update(last_used=timezone.now())
+    for device in devices:
+        # Registration may have changed while the network request was in flight.
+        current = FCMDevice.objects.filter(
+            pk=device.pk,
+            user_id=device.user_id,
+            fid=device.fid,
+            updated_at=device.updated_at,
+            active=True,
+        )
+        if device.fid in successful_fids:
+            current.update(last_used=timezone.now())
+        elif device.fid in invalid_fids:
+            current.update(active=False)
 
-    if invalid_tokens:
-        FCMDevice.objects.filter(token__in=invalid_tokens).update(active=False)
-
-    return success_count > 0
+    return bool(successful_fids)

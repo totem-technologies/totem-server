@@ -2,6 +2,7 @@ from unittest.mock import patch
 
 import pytest
 
+from totem.notifications.schemas import NotificationType, SessionNotificationPayload
 from totem.notifications.utils import notify_users
 from totem.users.tests.factories import UserFactory
 
@@ -20,7 +21,10 @@ class TestNotificationUtils:
         mock_send.side_effect = [True, True, False]
 
         # Call the function
-        result = notify_users(users, "Test Title", "Test Body", {"key": "value"})
+        payload = SessionNotificationPayload(
+            type=NotificationType.SESSION_STARTING, space_slug="space", session_slug="session"
+        )
+        result = notify_users(users, "Test Title", "Test Body", payload)
 
         # Verify the result dictionary
         assert len(result) == 3
@@ -33,7 +37,7 @@ class TestNotificationUtils:
 
         # Check the arguments for each call
         for i, user in enumerate(users):
-            mock_send.assert_any_call(user, "Test Title", "Test Body", {"key": "value"})
+            mock_send.assert_any_call(user, "Test Title", "Test Body", payload)
 
     @patch("totem.notifications.utils.send_notification_to_user")
     def test_notify_users_empty_list(self, mock_send):

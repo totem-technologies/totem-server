@@ -4,12 +4,10 @@ from totem.users.models import User
 
 
 class FCMDevice(models.Model):
-    """
-    Model to store FCM tokens for mobile devices.
-    """
+    """Store a Firebase Installation ID for a mobile device."""
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="fcm_devices")
-    token = models.TextField(verbose_name="FCM Registration Token")
+    fid = models.CharField(max_length=512, unique=True, verbose_name="Firebase Installation ID")
     active = models.BooleanField(default=True)
     last_used = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -18,7 +16,6 @@ class FCMDevice(models.Model):
     class Meta:
         verbose_name = "FCM Device"
         verbose_name_plural = "FCM Devices"
-        unique_together = ("token", "user")
 
-    def __str__(self):
-        return f"{self.user.email} - ({self.token[:10]}...)"
+    def __str__(self) -> str:
+        return f"FCM device {self.pk}"
