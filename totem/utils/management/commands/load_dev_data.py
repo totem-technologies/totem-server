@@ -356,7 +356,7 @@ def _create_content(
     for index, participant in enumerate(participants[:6]):
         FCMDevice.objects.create(
             user=participant,
-            token=f"development-fcm-token-{index + 1}",
+            fid=f"development-fid-{index + 1}",
             active=index < 5,
             last_used=now - timedelta(days=index),
         )

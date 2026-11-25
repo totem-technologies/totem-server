@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib import admin, messages
+from django.db import models
 from django.db.models import QuerySet
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
@@ -7,7 +8,7 @@ from django.urls import path, reverse
 from django.utils.translation import gettext_lazy as _
 
 from .models import FCMDevice
-from .services import send_notification
+from .services import send_notification_to_devices
 
 
 class FCMMessageForm(forms.Form):
@@ -19,25 +20,24 @@ class FCMMessageForm(forms.Form):
 
 @admin.register(FCMDevice)
 class FCMDeviceAdmin(admin.ModelAdmin):
-    list_display = ("user__email", "token_truncated", "active", "last_used", "created_at")
+    list_display = ("user__email", "identifier_display", "active", "last_used", "created_at")
     list_filter = ("active", "created_at", "updated_at", "last_used")
-    search_fields = ("user__username", "user__email", "token")
-    readonly_fields = ("created_at", "updated_at")
+    search_fields = ("user__name", "user__email", "fid")
+    readonly_fields = ("identifier_display", "created_at", "updated_at")
+    formfield_overrides = {models.TextField: {"widget": forms.PasswordInput}}
     raw_id_fields = ("user",)
     actions = ["send_fcm_message_action"]
 
-    fieldsets = (
-        (None, {"fields": ("user", "token", "active")}),
-        (_("Timestamps"), {"fields": ("last_used", "created_at", "updated_at"), "classes": ("collapse",)}),
-    )
+    def get_fieldsets(self, request, obj=None):
+        identifier_field = "identifier_display" if obj else "fid"
+        return (
+            (None, {"fields": ("user", identifier_field, "active")}),
+            (_("Timestamps"), {"fields": ("last_used", "created_at", "updated_at"), "classes": ("collapse",)}),
+        )
 
-    def token_truncated(self, obj):
-        """Display a truncated version of the token for readability"""
-        if obj.token:
-            return f"{obj.token[:15]}..."
-        return "-"
-
-    token_truncated.short_description = _("Token")  # type: ignore
+    @admin.display(description=_("Identifier"))
+    def identifier_display(self, obj: FCMDevice) -> str:
+        return "••••••" if obj.fid else "-"
 
     @admin.action(description="Send FCM message to selected devices")
     def send_fcm_message_action(self, request, queryset: QuerySet):
@@ -88,14 +88,10 @@ class FCMDeviceAdmin(admin.ModelAdmin):
             if form.is_valid():
                 title = form.cleaned_data["title"]
                 body = form.cleaned_data["body"]
-                tokens = list(queryset.values_list("token", flat=True))
-                success = send_notification(tokens, title, body)
+                success = send_notification_to_devices(queryset, title, body)
 
                 if success:
-                    count = len(tokens)
-                    self.message_user(
-                        request, _("FCM message successfully sent to %(count)d device(s).") % {"count": count}
-                    )
+                    self.message_user(request, _("FCM message successfully sent to at least one device."))
                 else:
                     self.message_user(request, _("Failed to send FCM message."), level=messages.ERROR)
 
