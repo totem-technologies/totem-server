@@ -117,12 +117,29 @@ class SessionInline(StaleDataCheckAdminMixin, admin.StackedInline):
 @admin.register(Space)
 class SpaceAdmin(admin.ModelAdmin):
     save_on_top = True
-    list_display = ("title", "slug", "published")
-    readonly_fields = ("subscribed_list", "feedback_report_link", "date_created", "date_modified")
+    list_display = ("title", "author_name", "published")
+    list_select_related = ("author",)
+    ordering = ("title",)
+    readonly_fields = ("slug", "subscribed_list", "feedback_report_link", "date_created", "date_modified")
     autocomplete_fields = ["subscribed", "categories"]
     inlines = [
         SessionInline,
     ]
+
+    @override
+    def get_fields(
+        self, request: HttpRequest, obj: Space | None = None
+    ) -> tuple[str | list[str] | tuple[str, ...], ...]:
+        fields = [field for field in super().get_fields(request, obj) if field != "slug"]
+        # An unsaved space has no slug worth showing: the add form would display
+        # a freshly generated default that differs from the one eventually saved.
+        if obj is not None:
+            fields.insert(fields.index("title") + 1, "slug")
+        return tuple(fields)
+
+    @admin.display(description="Author", ordering="author__name")
+    def author_name(self, obj: Space) -> str:
+        return obj.author.name
 
     @admin.display(description="Session feedback report")
     def feedback_report_link(self, obj: Space | None) -> str:

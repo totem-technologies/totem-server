@@ -179,6 +179,35 @@ class TestSessionAdmin:
         assert list(copied_session.discussion_prompts.values_list("prompt", flat=True)) == ["First", "Second"]
 
 
+class TestSpaceAdmin:
+    def test_list_is_sorted_by_title(self, admin_client: Client) -> None:
+        for title in ("Cherry", "Apple", "Banana"):
+            SpaceFactory(title=title)
+        response = admin_client.get(reverse("admin:spaces_space_changelist"))
+        assert [space.title for space in response.context["cl"].result_list] == ["Apple", "Banana", "Cherry"]
+
+    def test_list_shows_author_name(self, admin_client: Client) -> None:
+        SpaceFactory(author=UserFactory(name="Keeper Kim"))
+        content = admin_client.get(reverse("admin:spaces_space_changelist")).content.decode()
+        assert '<td class="field-author_name">Keeper Kim</td>' in content
+
+    def test_list_omits_slug(self, admin_client: Client) -> None:
+        SpaceFactory()
+        content = admin_client.get(reverse("admin:spaces_space_changelist")).content.decode()
+        assert "field-slug" not in content
+
+    def test_change_page_shows_slug_below_title(self, admin_client: Client) -> None:
+        space = SpaceFactory()
+        content = admin_client.get(reverse("admin:spaces_space_change", args=[space.pk])).content.decode()
+        assert f'<div class="readonly">{space.slug}</div>' in content
+        assert content.index("field-title") < content.index("field-slug") < content.index("field-subtitle")
+
+    def test_add_page_omits_slug(self, admin_client: Client) -> None:
+        content = admin_client.get(reverse("admin:spaces_space_add")).content.decode()
+        assert "field-title" in content
+        assert "field-slug" not in content
+
+
 @pytest.mark.django_db
 class TestSessionParticipantsView:
     def test_shows_participant_details(self, admin_client):
