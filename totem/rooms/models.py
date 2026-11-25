@@ -32,7 +32,7 @@ class RoomManager(models.Manager["Room"]):
             session=session,
             defaults={
                 "keeper": session.space.author.slug,
-                "talking_order": [a.slug for a in session.attendees.all()],
+                "talking_order": [],
             },
         )
         return room
@@ -46,12 +46,16 @@ class Room(BaseModel):
     User references are stored as slugs (short public IDs) rather than
     FKs, since this is transient state and we don't need referential integrity.
 
-    current_speaker and next_speaker are null only when the room is not active
-    (lobby or ended). While active, both are always set — if there's only one
-    participant, they can be the same person.
+    With enforced admission, an active room can temporarily have no speaker
+    assignments when no eligible activated participant can hold a turn. Valid
+    disconnected assignments/order are retained; pending users are never used
+    to fill gaps. A solo eligible participant can hold both assignments.
     """
 
     objects: ClassVar[RoomManager] = RoomManager()  # type: ignore[assignment]
+
+    if TYPE_CHECKING:
+        session_id: int
 
     session = models.OneToOneField(
         "spaces.Session",
@@ -75,6 +79,9 @@ class Room(BaseModel):
     banned_participants = ArrayField(models.CharField(max_length=50), default=list)  # user slugs
     round_number = models.PositiveIntegerField(default=0)
     state_version = models.PositiveIntegerField(default=0)
+    approval_required = models.BooleanField(default=True)
+    admission_revision = models.PositiveIntegerField(default=0)
+    admission_version = models.PositiveIntegerField(default=0)
     end_reason = models.CharField(
         max_length=20,
         choices=[(r.value, r.value) for r in EndReason],
@@ -116,8 +123,130 @@ class Room(BaseModel):
             banned_participants=self.banned_participants,
             round_number=self.round_number,
             round_message=round.prompt or None if round else None,
-            round_prompt_id=round.prepared_prompt_id if round else None,
+            round_prompt_id=round.prepared_prompt_id if round else None,  # pyright: ignore[reportAttributeAccessIssue]
         )
+
+
+class AdmissionState(models.TextChoices):
+    NONE = "none"
+    ADMITTED = "admitted"
+    PERMANENTLY_DECLINED = "permanently_declined"
+    REVOKED = "revoked"
+
+
+class SessionAdmission(BaseModel):
+    """Durable authorization, independent of any connection or Keeper device."""
+
+    if TYPE_CHECKING:
+        session_id: int
+        user_id: int
+
+        @property
+        def attempts(self) -> models.Manager[AdmissionAttempt]: ...
+
+    session = models.ForeignKey("spaces.Session", on_delete=models.CASCADE, related_name="admissions")
+    user = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="session_admissions")
+    state = models.CharField(max_length=24, choices=AdmissionState.choices, default=AdmissionState.NONE)
+    version = models.PositiveIntegerField(default=0)
+    decision_actor = models.ForeignKey("users.User", on_delete=models.SET_NULL, null=True, related_name="+")
+    decided_at = models.DateTimeField(null=True)
+
+    class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]
+        constraints = [
+            models.UniqueConstraint(fields=["session", "user"], name="unique_session_admission"),
+            models.CheckConstraint(condition=models.Q(state__in=AdmissionState.values), name="valid_admission_state"),
+        ]
+
+
+class AttemptStatus(models.TextChoices):
+    PENDING = "pending"
+    GRANTING = "granting"
+    ADMITTED = "admitted"
+    DECLINED = "declined"
+    PERMANENTLY_DECLINED = "permanently_declined"
+    CANCELLED = "cancelled"
+    EXPIRED = "expired"
+    SUPERSEDED = "superseded"
+    REVOKED = "revoked"
+    FAILED = "failed"
+
+
+class AdmissionAttempt(BaseModel):
+    """One idempotent request/connection attempt; terminal attempts never reopen."""
+
+    if TYPE_CHECKING:
+        admission_id: int
+        decision_actor_id: int | None
+
+    admission = models.ForeignKey(SessionAdmission, on_delete=models.CASCADE, related_name="attempts")
+    request_id = models.UUIDField(unique=True)
+    attempt_id = models.UUIDField(unique=True)
+    status = models.CharField(max_length=24, choices=AttemptStatus.choices, default=AttemptStatus.PENDING)
+    version = models.PositiveIntegerField(default=0)
+    expires_at = models.DateTimeField()
+    decision_actor = models.ForeignKey("users.User", on_delete=models.SET_NULL, null=True, related_name="+")
+    decided_at = models.DateTimeField(null=True)
+    completed_at = models.DateTimeField(null=True)
+    connected_at = models.DateTimeField(null=True)
+    participant_sid = models.CharField(max_length=64, blank=True)
+    token_expires_at = models.DateTimeField(null=True)
+    returning = models.BooleanField(default=False)
+    session_started = models.BooleanField(default=False)
+
+    class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["admission"],
+                condition=models.Q(status__in=["pending", "granting"]),
+                name="one_active_admission_attempt",
+            ),
+            models.CheckConstraint(condition=models.Q(status__in=AttemptStatus.values), name="valid_attempt_status"),
+        ]
+        indexes = [models.Index(fields=["status", "expires_at"], name="admission_attempt_expiry")]
+
+
+class AdmissionJoinOperation(BaseModel):
+    """Bind a join retry to its original attempt and intent."""
+
+    operation_id = models.UUIDField(unique=True)
+    attempt = models.ForeignKey(AdmissionAttempt, on_delete=models.CASCADE, related_name="join_operations")
+    fresh = models.BooleanField(default=False)
+
+
+class AdmissionPermissionSync(BaseModel):
+    """Durable permission reconciliation journal; network calls never hold DB locks."""
+
+    admission = models.OneToOneField(SessionAdmission, on_delete=models.CASCADE, related_name="permission_sync")
+    revision = models.PositiveIntegerField(default=0)
+    desired_admitted = models.BooleanField(default=False)
+    authority_keeper = models.CharField(max_length=50, blank=True)
+    applied_revision = models.PositiveIntegerField(null=True)
+    participant_sid = models.CharField(max_length=64, blank=True)
+    operation_id = models.UUIDField(null=True)
+    lease_until = models.DateTimeField(null=True)
+    checked_at = models.DateTimeField(null=True)
+    last_error = models.CharField(max_length=32, blank=True)
+    retry_count = models.PositiveIntegerField(default=0)
+    next_retry_at = models.DateTimeField(null=True)
+
+
+class AdmissionCommand(BaseModel):
+    """Idempotency receipt, never replayed as authorization or a permission grant."""
+
+    if TYPE_CHECKING:
+        actor_id: int
+
+    session = models.ForeignKey("spaces.Session", on_delete=models.CASCADE, related_name="admission_commands")
+    command_id = models.UUIDField()
+    actor = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="+")
+    action = models.CharField(max_length=24)
+    payload_hash = models.CharField(max_length=64)
+    result = models.JSONField(default=list)
+
+    class Meta:  # pyright: ignore[reportIncompatibleVariableOverride]
+        constraints = [
+            models.UniqueConstraint(fields=["session", "command_id"], name="unique_session_admission_command"),
+        ]
 
 
 class RoomEventLog(BaseModel):

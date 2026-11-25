@@ -12,7 +12,7 @@ from django.utils import timezone
 from totem.api.auth import generate_jwt_token
 from totem.email.exceptions import EmailBounced
 from totem.onboard.tests.factories import OnboardModelFactory
-from totem.rooms.models import Room
+from totem.rooms.models import Room, SessionAdmission
 from totem.rooms.schemas import RoomStatus
 from totem.spaces.mobile_api.mobile_filters import space_detail_schema
 from totem.spaces.models import (
@@ -1877,9 +1877,12 @@ class TestListQueryCounts:
     @staticmethod
     def _seed(n: int, attendee: User) -> None:
         for _ in range(n):
-            session = SessionFactory(space=SpaceFactory(author=UserFactory()))
-            session.attendees.add(UserFactory())
+            session = SessionFactory(
+                space=SpaceFactory(author=UserFactory(), meeting_provider=Space.MeetingProviderChoices.LIVEKIT)
+            )
+            session.attendees.add(attendee)
             session.joined.add(attendee)
+            SessionAdmission.objects.create(session=session, user=attendee)
 
     @pytest.mark.parametrize(
         "url_name",

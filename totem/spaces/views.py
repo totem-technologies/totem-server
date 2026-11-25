@@ -169,8 +169,9 @@ def join(request, session_slug):
 
     session = _get_session(session_slug)
     if session.can_join(user):
-        session.joined.add(user)
-        analytics.event_joined(user, session)
+        if session.space.meeting_provider != Space.MeetingProviderChoices.LIVEKIT:
+            session.joined.add(user)
+            analytics.event_joined(user, session)
         return redirect(session.room_url(), permanent=False)
 
     if session.started():

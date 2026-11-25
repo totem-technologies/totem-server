@@ -27,6 +27,10 @@
       "schedule": "*/10 * * * *"
     },
     {
+      "command": "./manage.py reconcile_admission_permissions",
+      "schedule": "* * * * *"
+    },
+    {
       "command": "./manage.py clearsessions",
       "schedule": "@daily"
     }

@@ -1,14 +1,30 @@
+import json
 from datetime import timedelta
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 from django.utils import timezone
 
+from totem.rooms.admission.permissions import reconcile_session_permissions
 from totem.rooms.models import Room
 from totem.rooms.schemas import EndReason, RoomStatus, TurnState
 from totem.rooms.tasks import end_sessions_without_keeper
 from totem.spaces.tests.factories import SessionFactory, SpaceFactory
 from totem.users.tests.factories import UserFactory
+from totem.utils.management.commands.totem_tasks import ALL_TASKS
+
+
+def test_permission_reconciliation_has_one_minute_schedule():
+    app_config = json.loads((Path(__file__).resolve().parents[3] / "app.json").read_text())
+    cron = app_config["cron"]
+    assert [job["schedule"] for job in cron if job["command"] == "./manage.py reconcile_admission_permissions"] == [
+        "* * * * *"
+    ]
+    assert [job["schedule"] for job in cron if job["command"] == "./manage.py totem_tasks"] == ["*/10 * * * *"]
+    scheduled_tasks = [task for tasks in ALL_TASKS for task in tasks]
+    assert end_sessions_without_keeper in scheduled_tasks
+    assert reconcile_session_permissions not in scheduled_tasks
 
 
 def _make_active_session_without_keeper():
@@ -30,7 +46,7 @@ class TestEndSessions:
 
         with (
             patch(
-                "totem.rooms.tasks.get_connected_participants",
+                "totem.rooms.tasks.get_admission_participants",
                 return_value=set(session.joined.values_list("slug", flat=True)),
             ),
             patch("totem.rooms.tasks.publish_state"),
@@ -53,7 +69,7 @@ class TestEndSessions:
 
         with (
             patch(
-                "totem.rooms.tasks.get_connected_participants",
+                "totem.rooms.tasks.get_admission_participants",
                 return_value=set(session.joined.values_list("slug", flat=True)),
             ),
             patch("totem.rooms.tasks.publish_state"),
@@ -74,7 +90,7 @@ class TestEndSessions:
 
         with (
             patch(
-                "totem.rooms.tasks.get_connected_participants",
+                "totem.rooms.tasks.get_admission_participants",
                 return_value=set(session.joined.values_list("slug", flat=True)),
             ),
             patch("totem.rooms.tasks.publish_state") as mock_publish,
@@ -92,7 +108,7 @@ class TestEndSessions:
 
         with (
             patch(
-                "totem.rooms.tasks.get_connected_participants",
+                "totem.rooms.tasks.get_admission_participants",
                 return_value=set(session.joined.values_list("slug", flat=True)),
             ),
             patch("totem.rooms.tasks.publish_state"),
@@ -111,7 +127,7 @@ class TestEndSessions:
 
         with (
             patch(
-                "totem.rooms.tasks.get_connected_participants",
+                "totem.rooms.tasks.get_admission_participants",
                 return_value=set(session.joined.values_list("slug", flat=True)),
             ),
             patch("totem.rooms.tasks.publish_state") as mock_publish,
@@ -138,7 +154,7 @@ class TestEndSessions:
                 raise Exception("LiveKit down")
 
         with (
-            patch("totem.rooms.tasks.get_connected_participants", return_value=set()),
+            patch("totem.rooms.tasks.get_admission_participants", return_value=set()),
             patch("totem.rooms.tasks.publish_state", side_effect=flaky_publish),
         ):
             count = end_sessions_without_keeper()
@@ -151,7 +167,7 @@ class TestEndSessions:
         room = Room.objects.get_or_create_for_session(session)
 
         with (
-            patch("totem.rooms.tasks.get_connected_participants", return_value=set()),
+            patch("totem.rooms.tasks.get_admission_participants", return_value=set()),
             patch("totem.rooms.tasks.publish_state") as mock_publish,
         ):
             count = end_sessions_without_keeper()
@@ -170,7 +186,7 @@ class TestEndSessions:
         room = Room.objects.get_or_create_for_session(session)
 
         with (
-            patch("totem.rooms.tasks.get_connected_participants", return_value=None),
+            patch("totem.rooms.tasks.get_admission_participants", return_value=None),
             patch("totem.rooms.tasks.publish_state") as mock_publish,
         ):
             count = end_sessions_without_keeper()
