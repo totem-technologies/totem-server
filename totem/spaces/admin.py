@@ -19,7 +19,7 @@ from django.utils.html import format_html
 
 from totem.reporting.facts import beneficiary_feedback
 from totem.rooms.models import Room
-from totem.rooms.state_machine import syncing_session_prompts
+from totem.rooms.state_machine import sync_space_keeper, syncing_session_prompts
 from totem.users.models import User
 from totem.utils.admin import StaleDataCheckAdminMixin
 from totem.utils.exports import csv_response
@@ -136,6 +136,18 @@ class SpaceAdmin(admin.ModelAdmin):
         form.base_fields["author"].initial = request.user  # type: ignore
         form.base_fields["subscribed"].initial = [request.user]  # type: ignore
         return form
+
+    @override
+    def save_model(self, request: HttpRequest, obj: Space, form: Any, change: bool) -> None:
+        with transaction.atomic():
+            previous_author_id = None
+            if change:
+                previous_author_id = Space.objects.select_for_update().get(pk=obj.pk).author_id
+            super().save_model(request, obj, form, change)
+            if not change or previous_author_id == obj.author_id:
+                return
+
+            sync_space_keeper(obj, request.user.slug)
 
     def save_formset(self, request: HttpRequest, form: Any, formset: Any, change: bool) -> None:
         if change:

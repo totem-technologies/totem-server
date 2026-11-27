@@ -43,7 +43,7 @@ from .schemas import (
 )
 
 if TYPE_CHECKING:
-    from totem.spaces.models import Session
+    from totem.spaces.models import Session, Space
     from totem.users.models import User
 
 
@@ -214,6 +214,21 @@ def syncing_session_prompts(session: Session, actor: str) -> Iterator[None]:
 def _bump_prompts_revision(session: Session) -> None:
     session.prompts_revision += 1
     session.save(update_fields=["prompts_revision", "date_modified"])
+
+
+def sync_space_keeper(space: Space, actor: str) -> None:
+    """Update existing rooms while the caller holds the Space lock and transaction."""
+    from totem.spaces.models import Session
+
+    sessions = Session.objects.filter(space=space, room__isnull=False).order_by("pk")
+    for session in sessions.select_for_update(of=("self",)):
+        room = Room.objects.get(session=session)
+        if room.status == RoomStatus.ENDED or room.keeper == space.author.slug:
+            continue
+        state_before = room.to_state()
+        session.attendees.add(space.author)
+        room.keeper = space.author.slug
+        persist_room_state_change(room, state_before, "keeper_changed", actor, publish=True)
 
 
 def persist_room_state_change(
