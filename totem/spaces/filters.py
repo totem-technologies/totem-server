@@ -50,7 +50,7 @@ def get_upcoming_spaces_list(
     upcoming_sessions = upcoming_sessions_queryset(user)
     spaces = (
         Space.objects.filter(Exists(upcoming_sessions.filter(space=OuterRef("pk"))))
-        .select_related("author")
+        .select_related("author__keeper_profile__user")
         .prefetch_related(
             "categories",
             "subscribed",
@@ -100,7 +100,9 @@ def all_upcoming_recommended_sessions(user: User | None, category: str | None = 
         sessions = sessions.filter(Q(space__categories__slug=category) | Q(space__categories__name=category))
     if author:
         sessions = sessions.filter(space__author__slug=author)
-    return sessions.prefetch_related("space__author", author_circle_count_prefetch("space__author"))
+    return sessions.select_related("space__author__keeper_profile__user").prefetch_related(
+        author_circle_count_prefetch("space__author")
+    )
 
 
 def upcoming_attending_sessions(user: User, limit: int = 10):
@@ -141,7 +143,7 @@ def spaces_summary_data(user: User) -> SpacesSummary:
         Session.objects.visible_to(user)
         .filter(attendees=user)
         .not_ended()
-        .select_related("space")
+        .select_related("space__author__keeper_profile__user")
         .prefetch_related(
             "space__author",
             author_circle_count_prefetch("space__author"),

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, ClassVar
 
 from django.contrib.postgres.fields import ArrayField
-from django.db import models
+from django.db import models, transaction
 
 from totem.utils.models import BaseModel
 
@@ -28,14 +28,18 @@ class RoomManager(models.Manager["Room"]):
 
     def get_or_create_for_session(self, session: Session) -> Room:
         """Get or create a Room for a Session, initializing from Session data."""
-        room, _created = self.get_or_create(
-            session=session,
-            defaults={
-                "keeper": session.space.author.slug,
-                "talking_order": [a.slug for a in session.attendees.all()],
-            },
-        )
-        return room
+        from totem.spaces.models import Space
+
+        with transaction.atomic():
+            space = Space.objects.select_for_update(of=("self",)).select_related("author").get(pk=session.space_id)
+            room, _created = self.get_or_create(
+                session=session,
+                defaults={
+                    "keeper": space.author.slug,
+                    "talking_order": [a.slug for a in session.attendees.all()],
+                },
+            )
+            return room
 
 
 class Room(BaseModel):

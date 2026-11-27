@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from enum import Enum
 
 from ninja import Field, ModelSchema, Schema
@@ -69,15 +71,17 @@ class KeeperProfileSchema(ModelSchema):
     bio_html: str | None = None
 
     @staticmethod
-    def resolve_circle_count(obj: KeeperProfile) -> int:
-        return obj.user.circle_count
+    def resolve_circle_count(obj: KeeperProfile | KeeperProfileSchema) -> int:
+        return obj.circle_count if isinstance(obj, KeeperProfileSchema) else obj.user.circle_count
 
     @staticmethod
-    def resolve_month_joined(obj: KeeperProfile) -> str:
-        return obj.user.month_joined()
+    def resolve_month_joined(obj: KeeperProfile | KeeperProfileSchema) -> str:
+        return obj.month_joined if isinstance(obj, KeeperProfileSchema) else obj.user.month_joined()
 
     @staticmethod
-    def resolve_bio_html(obj: KeeperProfile) -> str | None:
+    def resolve_bio_html(obj: KeeperProfile | KeeperProfileSchema) -> str | None:
+        if isinstance(obj, KeeperProfileSchema):
+            return obj.bio_html
         if obj.bio:
             return obj.render_markdown(obj.bio)
         return None

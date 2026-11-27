@@ -54,6 +54,7 @@ def _prefetch_session_detail_relations(sessions: list[Session], user: User) -> N
         "attendees",
         "joined",
         "room",
+        "space__author__keeper_profile__user",
         author_circle_count_prefetch("space__author"),
         "space__categories",
         "space__subscribed",
@@ -85,7 +86,11 @@ def unsubscribe_to_space(request: HttpRequest, space_slug: str):
 
 @spaces_router.get("/subscribe", response={200: list[SpaceSchema]}, url_name="spaces_subscriptions")
 def list_subscriptions(request: HttpRequest):
-    return Space.objects.filter(subscribed=request.user)
+    return (
+        Space.objects.filter(subscribed=request.user)
+        .select_related("author__keeper_profile__user")
+        .prefetch_related(author_circle_count_prefetch("author"))
+    )
 
 
 @spaces_router.get("/", response={200: list[MobileSpaceDetailSchema]}, url_name="mobile_spaces_list")
@@ -100,7 +105,8 @@ def list_spaces(request):
 def get_space_detail(request: HttpRequest, space_slug: str):
     user: User = request.user  # type: ignore
     space = get_object_or_404(
-        Space.objects.prefetch_related(
+        Space.objects.select_related("author__keeper_profile__user").prefetch_related(
+            author_circle_count_prefetch("author"),
             Prefetch("sessions", queryset=upcoming_sessions_queryset(user), to_attr="upcoming_sessions"),
         ),
         slug=space_slug,
@@ -121,7 +127,8 @@ def get_keeper_spaces(request: HttpRequest, slug: str):
 def get_session_detail(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
     session = get_object_or_404(
-        Session.objects.select_related("space__author", "room").prefetch_related(
+        Session.objects.select_related("space__author__keeper_profile__user", "room").prefetch_related(
+            author_circle_count_prefetch("space__author"),
             Prefetch("space__sessions", queryset=upcoming_sessions_queryset(user), to_attr="upcoming_sessions"),
         ),
         slug=event_slug,
@@ -221,7 +228,11 @@ def post_session_feedback(request: HttpRequest, event_slug: str, payload: Sessio
 def get_sessions_history(request: HttpRequest):
     user: User = request.user  # type: ignore
 
-    session_history = Session.objects.history_for(user)[0:10]
+    session_history = (
+        Session.objects.history_for(user)
+        .select_related("space__author__keeper_profile__user")
+        .prefetch_related(author_circle_count_prefetch("space__author"))[0:10]
+    )
     return [session_detail_schema(session, user) for session in session_history]
 
 

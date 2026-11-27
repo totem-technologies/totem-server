@@ -14,9 +14,22 @@ from totem.rooms.models import Room
 from totem.rooms.schemas import EmptyRoomEvent, EndReason, RoomStatus
 from totem.rooms.state_machine import apply_event
 from totem.spaces.tests.factories import SessionFactory
+from totem.users.tests.factories import UserFactory
 
 
 class TestRoomAdmin:
+    @pytest.mark.django_db
+    def test_room_creation_uses_current_space_author_for_stale_session(self):
+        session = SessionFactory()
+        old_author = session.space.author
+        new_author = UserFactory()
+        type(session.space).objects.filter(pk=session.space_id).update(author=new_author)
+
+        room = Room.objects.get_or_create_for_session(session)
+
+        assert room.keeper == new_author.slug
+        assert room.keeper != old_author.slug
+
     def test_add_page_is_disabled(self, admin_client):
         response = admin_client.get(reverse("admin:rooms_room_add"))
 
