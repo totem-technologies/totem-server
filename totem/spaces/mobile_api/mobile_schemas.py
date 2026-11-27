@@ -6,11 +6,17 @@ from ninja import Field, ModelSchema, Schema
 from pydantic import StringConstraints
 
 from totem.spaces.models import MAX_PREPARED_PROMPT_LENGTH, Session, SessionFeedbackOptions, Space
-from totem.users.schemas import PublicUserSchema
+from totem.users.schemas import KeeperProfileSchema, PublicUserSchema
 
 
 class SpaceSchema(ModelSchema):
     author: PublicUserSchema
+    keeper_profile: KeeperProfileSchema | None = None
+
+    @staticmethod
+    def resolve_keeper_profile(obj: Space):
+        profile = getattr(obj.author, "keeper_profile", None)
+        return KeeperProfileSchema.model_validate(profile) if profile else None
 
     class Meta:
         model = Space
@@ -61,6 +67,7 @@ class MobileSpaceDetailSchema(Schema):
     short_description: str
     content: str
     author: PublicUserSchema
+    keeper_profile: KeeperProfileSchema | None = None
     category: str | None
     subscribers: int
     recurring: str | None
@@ -71,6 +78,7 @@ class MobileSpaceDetailSchema(Schema):
 class SessionDetailSchema(Schema):
     slug: str
     title: str
+    keeper: str
     space: MobileSpaceDetailSchema
     content: str
     seats_left: int

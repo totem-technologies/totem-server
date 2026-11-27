@@ -452,6 +452,40 @@ class TestSessionModel:
         opens, closes = session.join_window(user)
         assert closes is None
 
+    def test_keeper_join_window_uses_room_keeper_or_space_author(self, db):
+        keeper = UserFactory()
+        participant = UserFactory()
+        session = SessionFactory(
+            space__author=keeper,
+            space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+            start=timezone.now() + timezone.timedelta(minutes=30),
+            duration_minutes=60,
+        )
+        session.attendees.add(keeper, participant)
+
+        assert session.can_join(keeper)
+        assert not session.can_join(participant)
+
+        room = Room.objects.get_or_create_for_session(session)
+        room.keeper = participant.slug
+        room.save(update_fields=["keeper"])
+        session.refresh_from_db()
+
+        assert not session.can_join(keeper)
+        assert session.can_join(participant)
+
+    def test_keeper_can_join_during_late_grace_without_prior_join(self, db):
+        keeper = UserFactory()
+        session = SessionFactory(
+            space__author=keeper,
+            space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+            start=timezone.now() - timezone.timedelta(minutes=20),
+            duration_minutes=60,
+        )
+        session.attendees.add(keeper)
+
+        assert session.can_join(keeper)
+
     def test_can_join_matches_join_window(self, db):
         user = UserFactory()
         session = SessionFactory(start=timezone.now() + timezone.timedelta(minutes=5), duration_minutes=60)

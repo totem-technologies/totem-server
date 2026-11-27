@@ -7,6 +7,7 @@ from ninja import Query, Router, Status
 from ninja.errors import AuthorizationError, HttpError
 from ninja.pagination import paginate
 
+from totem.rooms.models import Room
 from totem.rooms.state_machine import syncing_session_prompts
 from totem.spaces.filters import (
     author_circle_count_prefetch,
@@ -53,6 +54,7 @@ def _prefetch_session_detail_relations(sessions: list[Session], user: User) -> N
         "attendees",
         "joined",
         "room",
+        "space__author__keeper_profile__user",
         author_circle_count_prefetch("space__author"),
         "space__categories",
         "space__subscribed",
@@ -84,7 +86,11 @@ def unsubscribe_to_space(request: HttpRequest, space_slug: str):
 
 @spaces_router.get("/subscribe", response={200: list[SpaceSchema]}, url_name="spaces_subscriptions")
 def list_subscriptions(request: HttpRequest):
-    return Space.objects.filter(subscribed=request.user)
+    return (
+        Space.objects.filter(subscribed=request.user)
+        .select_related("author__keeper_profile__user")
+        .prefetch_related(author_circle_count_prefetch("author"))
+    )
 
 
 @spaces_router.get("/", response={200: list[MobileSpaceDetailSchema]}, url_name="mobile_spaces_list")
@@ -99,7 +105,8 @@ def list_spaces(request):
 def get_space_detail(request: HttpRequest, space_slug: str):
     user: User = request.user  # type: ignore
     space = get_object_or_404(
-        Space.objects.prefetch_related(
+        Space.objects.select_related("author__keeper_profile__user").prefetch_related(
+            author_circle_count_prefetch("author"),
             Prefetch("sessions", queryset=upcoming_sessions_queryset(user), to_attr="upcoming_sessions"),
         ),
         slug=space_slug,
@@ -120,7 +127,8 @@ def get_keeper_spaces(request: HttpRequest, slug: str):
 def get_session_detail(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
     session = get_object_or_404(
-        Session.objects.select_related("space", "room").prefetch_related(
+        Session.objects.select_related("space__author__keeper_profile__user", "room").prefetch_related(
+            author_circle_count_prefetch("space__author"),
             Prefetch("space__sessions", queryset=upcoming_sessions_queryset(user), to_attr="upcoming_sessions"),
         ),
         slug=event_slug,
@@ -144,7 +152,8 @@ def _session_for_keeper(request: HttpRequest, event_slug: str, *, lock: bool = F
     if lock:
         queryset = queryset.select_for_update(of=("self",))
     session = get_object_or_404(queryset, slug=event_slug)
-    if session.space.author_id != request.user.pk:
+    room_keeper = Room.objects.filter(session=session).values_list("keeper", flat=True).first()
+    if request.user.slug != (room_keeper if room_keeper is not None else session.space.author.slug):
         raise AuthorizationError(message="Only the keeper can manage session prompts.")
     return session
 
@@ -219,7 +228,11 @@ def post_session_feedback(request: HttpRequest, event_slug: str, payload: Sessio
 def get_sessions_history(request: HttpRequest):
     user: User = request.user  # type: ignore
 
-    session_history = Session.objects.history_for(user)[0:10]
+    session_history = (
+        Session.objects.history_for(user)
+        .select_related("space__author__keeper_profile__user")
+        .prefetch_related(author_circle_count_prefetch("space__author"))[0:10]
+    )
     return [session_detail_schema(session, user) for session in session_history]
 
 
@@ -278,7 +291,7 @@ def rsvp_confirm(request: HttpRequest, event_slug: str):
 def rsvp_resolve_conflicts(request: HttpRequest, event_slug: str, payload: ResolveConflictsSchema):
     user: User = request.user  # type: ignore
     session = get_object_or_404(
-        Session.objects.select_related("space", "space__author", "room").prefetch_related("attendees"),
+        Session.objects.select_related("space__author", "room").prefetch_related("attendees"),
         slug=event_slug,
     )
     if not session.can_view(user):

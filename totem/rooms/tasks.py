@@ -8,15 +8,14 @@ from totem.rooms.models import Room
 from totem.rooms.schemas import EndReason, EndRoomEvent, RoomStatus
 from totem.rooms.state_machine import apply_event
 from totem.spaces.models import Session
-from totem.users.models import User
 
 
 def _end_session(session: Session, connected_participants: set[str]):
-    keeper = session.space.author
     session.ended_at = timezone.now()
     session.save(update_fields=["ended_at"])
 
     room = Room.objects.for_session(session.slug).first()
+    keeper_slug = room.keeper if room else session.space.author.slug
     if room and room.status != RoomStatus.ENDED:
         try:
             if connected_participants:
@@ -26,7 +25,7 @@ def _end_session(session: Session, connected_participants: set[str]):
 
             state = apply_event(
                 session_slug=session.slug,
-                actor=keeper.slug,
+                actor=keeper_slug,
                 event=EndRoomEvent(reason=reason),
                 last_seen_version=room.state_version,
                 connected=set(),
@@ -57,14 +56,15 @@ def end_sessions_without_keeper() -> int:
     )
     ended_count = 0
     for session in sessions_to_check:
-        keeper: User = session.space.author
+        room = Room.objects.for_session(session.slug).first()
+        keeper_slug = room.keeper if room else session.space.author.slug
 
         connected_participants = get_connected_participants(session.slug)
         if connected_participants is None:
             logging.warning("Skipped session %s because LiveKit participants could not be fetched", session.slug)
             continue
 
-        keeper_in_livekit = keeper.slug in connected_participants
+        keeper_in_livekit = keeper_slug in connected_participants
         if keeper_in_livekit:
             continue
 

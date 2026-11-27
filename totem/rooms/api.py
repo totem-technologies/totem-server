@@ -233,7 +233,8 @@ def join_room(
         ).as_http_response()
 
     now = timezone.now()
-    need_participants = (now > session.end() and user != session.space.author) or session.joined.count() > 0
+    is_keeper = user.slug == room.keeper
+    need_participants = (now > session.end() and not is_keeper) or session.joined.count() > 0
     connected: set[str] | None = None
     if need_participants:
         try:
@@ -241,7 +242,7 @@ def join_room(
         except Exception:
             logger.exception("Failed to fetch connected participants from LiveKit")
 
-    if now > session.end() and user != session.space.author:
+    if now > session.end() and not is_keeper:
         if connected is not None and len(connected) == 0:
             return RoomErrorResponse(
                 code=ErrorCode.NOT_JOINABLE,

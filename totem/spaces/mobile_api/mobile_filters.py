@@ -3,13 +3,10 @@ from django.urls import reverse
 from django.utils import timezone
 
 from totem.spaces.filters import author_circle_count_prefetch, upcoming_sessions_queryset
-from totem.spaces.mobile_api.mobile_schemas import (
-    MobileSpaceDetailSchema,
-    NextSessionSchema,
-    SessionDetailSchema,
-)
+from totem.spaces.mobile_api.mobile_schemas import MobileSpaceDetailSchema, NextSessionSchema, SessionDetailSchema
 from totem.spaces.models import Session, Space
 from totem.users.models import User
+from totem.users.schemas import KeeperProfileSchema
 
 
 def upcoming_recommended_sessions(user: User | None, categories: list[str] | None = None, author: str | None = None):
@@ -21,11 +18,10 @@ def upcoming_recommended_sessions(user: User | None, categories: list[str] | Non
         .filter(attendee_count__lt=F("seats"))
         .visible_to(user)
         .filter(start__gte=timezone.now())
-        .select_related("space")
+        .select_related("space__author__keeper_profile__user", "room")
         .prefetch_related(
             "attendees",
             "joined",
-            "space__author",
             author_circle_count_prefetch("space__author"),
             "space__categories",
             "space__subscribed",
@@ -55,6 +51,7 @@ def session_detail_schema(session: Session, user: User):
     else:
         subscribed = None
     ended = session.ended()
+    room = getattr(session, "room", None)
 
     if hasattr(session, "_prefetched_objects_cache") and "attendees" in session._prefetched_objects_cache:
         attending = any(attendee.pk == user.pk for attendee in session.attendees.all())
@@ -64,6 +61,7 @@ def session_detail_schema(session: Session, user: User):
     return SessionDetailSchema(
         slug=session.slug,
         title=session.title,
+        keeper=room.keeper if room else space.author.slug,
         space=space_detail_schema(space, user),
         content=session.content_html,
         seats_left=session.seats_left(),
@@ -128,6 +126,8 @@ def space_detail_schema(space: Space, user: User):
     else:
         subscribers = space.subscribed.count()
 
+    keeper_profile = getattr(space.author, "keeper_profile", None)
+
     return MobileSpaceDetailSchema(
         slug=space.slug,
         title=space.title,
@@ -135,6 +135,7 @@ def space_detail_schema(space: Space, user: User):
         short_description=space.short_description,
         content=space.content_html,
         author=space.author,
+        keeper_profile=KeeperProfileSchema.model_validate(keeper_profile) if keeper_profile else None,
         category=category_name,
         subscribers=subscribers,
         price=space.price,

@@ -27,7 +27,7 @@ from totem.spaces.models import (
 )
 from totem.spaces.tests.factories import SessionFactory, SpaceCategoryFactory, SpaceFactory
 from totem.users.models import User
-from totem.users.tests.factories import UserFactory
+from totem.users.tests.factories import KeeperProfileFactory, UserFactory
 
 
 @pytest.mark.django_db
@@ -66,7 +66,8 @@ class TestMobileApiSpaces:
 
     def test_list_subscriptions(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
-        space1 = SpaceFactory(published=True)
+        profile = KeeperProfileFactory(username="subscription_keeper")
+        space1 = SpaceFactory(published=True, author=profile.user)
         space2 = SpaceFactory(published=True)
         SpaceFactory(published=True)
 
@@ -82,6 +83,24 @@ class TestMobileApiSpaces:
         slugs = {item["slug"] for item in data}
         assert space1.slug in slugs
         assert space2.slug in slugs
+        space_data = next(item for item in data if item["slug"] == space1.slug)
+        assert space_data["keeper_profile"]["username"] == profile.username
+
+    def test_list_spaces_includes_optional_keeper_profile(self, client_with_user: tuple[Client, User]):
+        client, _ = client_with_user
+        profile = KeeperProfileFactory(username="space_keeper")
+        session = SessionFactory(space__author=profile.user)
+        session.save()
+        missing_profile_session = SessionFactory()
+        missing_profile_session.save()
+
+        response = client.get(reverse("mobile-api:mobile_spaces_list"))
+
+        assert response.status_code == 200
+        spaces = {item["slug"]: item for item in response.json()["items"]}
+        assert spaces[session.space.slug]["keeper_profile"]["username"] == profile.username
+        assert spaces[missing_profile_session.space.slug]["keeper_profile"] is None
+        assert spaces[session.space.slug]["author"]["slug"] == profile.user.slug
 
     def test_list_spaces(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
@@ -207,6 +226,80 @@ class TestMobileApiSpaces:
         data = response.json()
         assert data["slug"] == event.slug
         assert data["space"]["slug"] == space.slug
+        assert data["keeper"] == space.author.slug
+        assert data["space"]["keeper_profile"] is None
+
+        profile = KeeperProfileFactory(
+            user=space.author,
+            username="session_keeper",
+            title="Community keeper",
+            bio="A welcoming **space**.",
+            location="Toronto",
+            languages="English, French",
+            instagram_username="session_keeper",
+            website="https://example.com",
+            x_username="session_x",
+            bluesky_username="session.bsky.social",
+        )
+        response = client.get(url)
+        embedded = response.json()["space"]["keeper_profile"]
+        assert embedded == {
+            "username": profile.username,
+            "title": profile.title,
+            "bio": profile.bio,
+            "location": profile.location,
+            "languages": profile.languages,
+            "instagram_username": profile.instagram_username,
+            "website": profile.website,
+            "x_username": profile.x_username,
+            "bluesky_username": profile.bluesky_username,
+            "circle_count": 0,
+            "month_joined": space.author.month_joined(),
+            "bio_html": "\n<p>A welcoming <strong>space</strong>.</p>",
+            "user": {
+                "name": space.author.name,
+                "slug": space.author.slug,
+                "is_staff": space.author.is_staff,
+                "profile_avatar_seed": str(space.author.profile_avatar_seed),
+                "profile_image": None,
+                "date_created": embedded["user"]["date_created"],
+                "profile_avatar_type": space.author.profile_avatar_type,
+                "circle_count": 0,
+            },
+        }
+        assert set(embedded) == {
+            "username",
+            "title",
+            "bio",
+            "location",
+            "languages",
+            "instagram_username",
+            "website",
+            "x_username",
+            "bluesky_username",
+            "circle_count",
+            "month_joined",
+            "bio_html",
+            "user",
+        }
+        assert set(embedded["user"]) == {
+            "name",
+            "slug",
+            "is_staff",
+            "profile_avatar_seed",
+            "profile_image",
+            "date_created",
+            "profile_avatar_type",
+            "circle_count",
+        }
+
+        room = Room.objects.get_or_create_for_session(event)
+        room_keeper = UserFactory()
+        room.keeper = room_keeper.slug
+        room.save(update_fields=["keeper"])
+        response = client.get(url)
+        assert response.json()["keeper"] == room.keeper
+        assert response.json()["space"]["keeper_profile"]["username"] == profile.username
 
     def test_keeper_can_manage_and_navigate_session_prompts(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
@@ -305,6 +398,30 @@ class TestMobileApiSpaces:
         assert room.to_state().round_prompt_id == second.pk
         assert mock_publish.called
         assert not SessionPrompt.objects.filter(pk=first.pk).exists()
+
+    def test_room_keeper_can_manage_session_prompts_instead_of_space_author(
+        self, client_with_user: tuple[Client, User]
+    ):
+        client, author = client_with_user
+        session = SessionFactory(space__author=author)
+        room_keeper = UserFactory()
+        url = reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug})
+
+        with patch("totem.spaces.mobile_api.mobile_api.Room.objects.filter") as room_lookup:
+            room_lookup.return_value.values_list.return_value.first.return_value = room_keeper.slug
+
+            assert client.get(url).status_code == 403
+
+            room_keeper_client = Client(HTTP_AUTHORIZATION=f"Bearer {generate_jwt_token(room_keeper)}")
+            assert room_keeper_client.get(url).status_code == 200
+            response = room_keeper_client.put(
+                url,
+                data={"expected_revision": 0, "prompts": [{"prompt": "Room keeper prompt"}]},
+                content_type="application/json",
+            )
+
+        assert response.status_code == 200
+        assert list(session.discussion_prompts.values_list("prompt", flat=True)) == ["Room keeper prompt"]
 
     def test_non_keeper_cannot_manage_session_prompts(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
@@ -614,7 +731,17 @@ class TestMobileApiSpaces:
 
     def test_get_space_detail(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
-        space = SpaceFactory(published=True)
+        profile = KeeperProfileFactory(
+            username="detail_keeper",
+            bio="A helpful keeper.",
+            location="Vancouver",
+            languages="English",
+            instagram_username="detail_keeper",
+            website="https://example.com",
+            x_username="detail_x",
+            bluesky_username="detail.bsky.social",
+        )
+        space = SpaceFactory(published=True, author=profile.user)
 
         url = reverse("mobile-api:spaces_detail", kwargs={"space_slug": space.slug})
         response = client.get(url)
@@ -624,6 +751,35 @@ class TestMobileApiSpaces:
         assert data["slug"] == space.slug
         assert data["title"] == space.title
         assert data["slug"] == space.slug
+        embedded = data["keeper_profile"]
+        assert embedded["username"] == profile.username
+        assert embedded["bio_html"] == "\n<p>A helpful keeper.</p>"
+        assert embedded["user"]["slug"] == profile.user.slug
+        assert set(embedded["user"]) == {
+            "name",
+            "slug",
+            "is_staff",
+            "profile_avatar_seed",
+            "profile_image",
+            "date_created",
+            "profile_avatar_type",
+            "circle_count",
+        }
+        assert set(embedded) == {
+            "username",
+            "title",
+            "bio",
+            "location",
+            "languages",
+            "instagram_username",
+            "website",
+            "x_username",
+            "bluesky_username",
+            "circle_count",
+            "month_joined",
+            "bio_html",
+            "user",
+        }
 
     def test_get_space_detail_excludes_banned_from_next_events(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -966,6 +1122,26 @@ class TestMobileApiSpaces:
 
         assert len(data["upcoming"]) == 1
         assert data["upcoming"][0]["slug"] == attending_event.slug
+
+    def test_summary_upcoming_session_includes_space_keeper_profile(self, client_with_user: tuple[Client, User]):
+        client, user = client_with_user
+        profile = KeeperProfileFactory(username="summary_keeper", website="https://example.com")
+        session = SessionFactory(
+            space__published=True,
+            space__author=profile.user,
+            start=timezone.now() + timedelta(days=5),
+        )
+        session.attendees.add(user)
+
+        response = client.get(reverse("mobile-api:spaces_summary"))
+
+        assert response.status_code == 200
+        upcoming = response.json()["upcoming"]
+        assert len(upcoming) == 1
+        embedded = upcoming[0]["space"]["keeper_profile"]
+        assert embedded["username"] == profile.username
+        assert embedded["website"] == profile.website
+        assert embedded["user"]["slug"] == profile.user.slug
 
     def test_upcoming_session_includes_in_progress_and_future(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
@@ -1877,7 +2053,9 @@ class TestListQueryCounts:
     @staticmethod
     def _seed(n: int, attendee: User) -> None:
         for _ in range(n):
-            session = SessionFactory(space=SpaceFactory(author=UserFactory()))
+            author = UserFactory()
+            KeeperProfileFactory(user=author)
+            session = SessionFactory(space=SpaceFactory(author=author))
             session.attendees.add(UserFactory())
             session.joined.add(attendee)
 

@@ -471,7 +471,9 @@ class Session(AdminURLMixin, MarkdownMixin, SluggedModel):
         truth for join timing. A None close means the room stays open for
         rejoining until the session ends, including the overrun backstop."""
         is_joined = user in self.joined.all()
-        wide = user.is_staff or is_joined
+        room = getattr(self, "room", None)
+        is_keeper = getattr(user, "slug", None) == room.keeper if room else user == self.space.author
+        wide = user.is_staff or is_joined or is_keeper
         opens = self.start - datetime.timedelta(minutes=60 if wide else 15)
         if is_joined and self._livekit_room_opened_in_time():
             return opens, None

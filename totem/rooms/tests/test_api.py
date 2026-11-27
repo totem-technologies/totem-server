@@ -889,6 +889,21 @@ class TestJoinRoom:
         token.assert_not_called()
         participants.assert_not_called()
 
+    def test_keeper_can_join_early_before_room_creation(self, client_with_user: tuple[Client, User]):
+        client, keeper = client_with_user
+        session = SessionFactory(
+            space__author=keeper,
+            space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+            start=timezone.now() + datetime.timedelta(minutes=30),
+        )
+        session.attendees.add(keeper)
+
+        with patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"):
+            resp = client.post(f"{BASE}/{session.slug}/join")
+
+        assert resp.status_code == 200
+        assert Room.objects.filter(session=session).exists()
+
     def test_join_success(self, client_with_user: tuple[Client, User]):
         client, user = client_with_user
         session = _make_joinable_session(user)
@@ -1124,6 +1139,35 @@ class TestJoinRoom:
 
         assert resp.status_code == 403
         assert resp.json()["code"] == "not_joinable"
+        participants.assert_called_once_with(session.slug)
+
+    def test_room_keeper_can_join_late_without_other_connected_participants(
+        self, client_with_user: tuple[Client, User]
+    ):
+        client, keeper = client_with_user
+        author = UserFactory()
+        start = timezone.now() - datetime.timedelta(minutes=65)
+        session = SessionFactory(
+            space__author=author,
+            space__meeting_provider=Space.MeetingProviderChoices.LIVEKIT,
+            start=start,
+            duration_minutes=60,
+        )
+        session.attendees.add(author, keeper)
+        session.joined.add(keeper)
+        room = Room.objects.get_or_create_for_session(session)
+        room.keeper = keeper.slug
+        room.date_created = start
+        room.save(update_fields=["keeper", "date_created"])
+
+        with (
+            patch("totem.rooms.api.create_access_token", return_value="fake-jwt-token"),
+            patch("totem.rooms.api.get_connected_participants", return_value=set()) as participants,
+        ):
+            resp = client.post(f"{BASE}/{session.slug}/join")
+
+        assert resp.status_code == 200
+        assert resp.json()["token"] == "fake-jwt-token"
         participants.assert_called_once_with(session.slug)
 
     def test_join_populated_room_past_duration_allowed(self, client_with_user: tuple[Client, User]):

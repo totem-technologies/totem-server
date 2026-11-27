@@ -1,23 +1,126 @@
 import csv
 import datetime
 import io
+from unittest.mock import patch
 
 import pytest
-from django.test import Client
+from django.contrib.admin.sites import AdminSite
+from django.db import transaction
+from django.test import Client, RequestFactory
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.utils.html import escape
 
 from totem.reporting.metrics import session_metrics
 from totem.reporting.periods import ReportPeriod
-from totem.rooms.models import Room
-from totem.rooms.schemas import RoomStatus
-from totem.spaces.admin import SessionPromptInlineForm
+from totem.rooms.models import Room, RoomEventLog
+from totem.rooms.schemas import ErrorCode, RoomStatus, StartRoomEvent, TransitionError
+from totem.rooms.state_machine import apply_event
+from totem.spaces.admin import SessionPromptInlineForm, SpaceAdmin
 from totem.spaces.models import Session, SessionFeedback, SessionPrompt, SessionRound, SessionRoundState
 from totem.users.models import User
 from totem.users.tests.factories import UserFactory
 
 from .factories import SessionFactory, SpaceFactory
+
+
+class TestSpaceAdminKeeperReassignment:
+    @pytest.mark.django_db(transaction=True)
+    def test_changing_author_syncs_existing_active_room_and_broadcasts_on_commit(self) -> None:
+        old_author = UserFactory()
+        new_author = UserFactory()
+        space = SpaceFactory(author=old_author)
+        session = SessionFactory(space=space)
+        room = Room.objects.get_or_create_for_session(session)
+        room.status = RoomStatus.ACTIVE
+        room.save(update_fields=["status"])
+        request = RequestFactory().post("/")
+        request.user = new_author
+        space.author = new_author
+        model_admin = SpaceAdmin(type(space), AdminSite())
+
+        with patch("totem.rooms.state_machine.publish_state") as publish_state:
+            with transaction.atomic():
+                model_admin.save_model(request, space, None, True)
+                room.refresh_from_db()
+                assert room.keeper == new_author.slug
+                assert session.attendees.filter(pk=new_author.pk).exists()
+                assert room.state_version == 1
+                publish_state.assert_not_called()
+
+        assert room.keeper == new_author.slug
+        assert room.state_version == 1
+        event = RoomEventLog.objects.get(room=room)
+        assert event.version == 1
+        assert event.snapshot["keeper"] == new_author.slug
+        publish_state.assert_called_once()
+        assert publish_state.call_args.args[0] == session.slug
+        assert publish_state.call_args.args[1].keeper == new_author.slug
+
+    def test_keeper_change_updates_who_can_perform_keeper_actions(self, db) -> None:
+        old_author = UserFactory()
+        new_author = UserFactory()
+        participant = UserFactory()
+        space = SpaceFactory(author=old_author)
+        session = SessionFactory(space=space)
+        session.attendees.add(old_author, new_author, participant)
+        room = Room.objects.get_or_create_for_session(session)
+        room.talking_order = [old_author.slug, new_author.slug, participant.slug]
+        room.save(update_fields=["talking_order"])
+        request = RequestFactory().post("/")
+        request.user = new_author
+        space.author = new_author
+
+        SpaceAdmin(type(space), AdminSite()).save_model(request, space, None, True)
+
+        connected = {old_author.slug, new_author.slug, participant.slug}
+        with pytest.raises(TransitionError) as exc_info:
+            apply_event(session.slug, old_author.slug, StartRoomEvent(), 1, connected)
+        assert exc_info.value.code == ErrorCode.NOT_KEEPER
+
+        state = apply_event(session.slug, new_author.slug, StartRoomEvent(), 1, connected)
+
+        assert state.keeper == new_author.slug
+        assert state.status == RoomStatus.ACTIVE
+        assert state.version == 2
+
+    def test_changing_author_does_not_create_rooms_or_update_ended_rooms(self, db) -> None:
+        old_author = UserFactory()
+        new_author = UserFactory()
+        space = SpaceFactory(author=old_author)
+        no_room_session = SessionFactory(space=space)
+        ended_session = SessionFactory(space=space)
+        ended_room = Room.objects.get_or_create_for_session(ended_session)
+        ended_room.status = RoomStatus.ENDED
+        ended_room.save(update_fields=["status"])
+        request = RequestFactory().post("/")
+        request.user = new_author
+        space.author = new_author
+
+        SpaceAdmin(type(space), AdminSite()).save_model(request, space, None, True)
+
+        assert not Room.objects.filter(session=no_room_session).exists()
+        ended_room.refresh_from_db()
+        assert ended_room.keeper == old_author.slug
+        assert ended_room.state_version == 0
+        assert not RoomEventLog.objects.filter(room=ended_room).exists()
+
+    def test_saving_unchanged_author_does_not_update_existing_room(self, db) -> None:
+        author = UserFactory()
+        space = SpaceFactory(author=author)
+        session = SessionFactory(space=space)
+        room = Room.objects.get_or_create_for_session(session)
+        request = RequestFactory().post("/")
+        request.user = author
+
+        with patch("totem.rooms.state_machine.publish_state") as publish_state:
+            SpaceAdmin(type(space), AdminSite()).save_model(request, space, None, True)
+
+        room.refresh_from_db()
+        assert room.keeper == author.slug
+        assert room.state_version == 0
+        assert not RoomEventLog.objects.filter(room=room).exists()
+        publish_state.assert_not_called()
 
 
 class TestSessionAdmin:
