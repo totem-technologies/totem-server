@@ -71,6 +71,7 @@ class MobileSpaceDetailSchema(Schema):
 class SessionDetailSchema(Schema):
     slug: str
     title: str
+    keeper: str
     space: MobileSpaceDetailSchema
     content: str
     seats_left: int

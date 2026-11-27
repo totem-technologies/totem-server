@@ -5,9 +5,11 @@ from decimal import Decimal
 
 import pytest
 
+from totem.reporting.facts import load_session_facts
 from totem.reporting.metrics import session_metrics
 from totem.reporting.periods import ReportPeriod
 from totem.reporting.types import MetricResult, ReportFilters
+from totem.rooms.models import Room
 from totem.spaces.models import SessionFeedback, SessionFeedbackOptions
 from totem.spaces.tests.factories import SessionFactory, SpaceCategoryFactory, SpaceFactory
 from totem.users.tests.factories import UserFactory
@@ -150,6 +152,28 @@ def test_filters_by_human_readable_slugs():
         metrics = _metrics_by_name(period=period, as_of=as_of, filters=filters)
         assert metrics["elapsed_session_slots"].value == 1
         assert metrics["service_units"].value == 1
+
+
+def test_session_facts_use_room_keeper_and_fall_back_to_space_author():
+    period = ReportPeriod.calendar_quarter(2026, 3, "UTC")
+    author = UserFactory(is_staff=True)
+    room_keeper = UserFactory(is_staff=True)
+    participant = UserFactory()
+    space = SpaceFactory(author=author)
+    with_room = SessionFactory(space=space, slug="with-room", start=period.start + timedelta(days=1))
+    without_room = SessionFactory(space=space, slug="without-room", start=period.start + timedelta(days=2))
+    Room.objects.create(session=with_room, keeper=room_keeper.slug)
+    with_room.joined.add(author, room_keeper, participant)
+    without_room.joined.add(author, participant)
+
+    facts = load_session_facts(period=period, filters=ReportFilters())
+    by_slug = {fact.session_slug: fact for fact in facts}
+
+    assert by_slug["with-room"].keeper_slug == room_keeper.slug
+    assert by_slug["with-room"].keeper_joined
+    assert by_slug["with-room"].beneficiary_attendance_ids == frozenset({author.id, participant.id})
+    assert by_slug["without-room"].keeper_slug == author.slug
+    assert by_slug["without-room"].beneficiary_attendance_ids == frozenset({participant.id})
 
 
 def test_rates_are_unknown_when_their_cohort_is_empty():

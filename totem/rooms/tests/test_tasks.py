@@ -45,6 +45,40 @@ class TestEndSessions:
         assert room.next_speaker is None
         assert room.end_reason == EndReason.ROOM_EMPTY
 
+    def test_uses_room_keeper_to_check_livekit_presence(self):
+        session, _space_author = _make_active_session_without_keeper()
+        room_keeper = UserFactory()
+        room = Room.objects.get_or_create_for_session(session)
+        room.keeper = room_keeper.slug
+        room.save(update_fields=["keeper"])
+
+        with (
+            patch("totem.rooms.tasks.get_connected_participants", return_value={room_keeper.slug}),
+            patch("totem.rooms.tasks.publish_state"),
+        ):
+            count = end_sessions_without_keeper()
+
+        assert count == 0
+        session.refresh_from_db()
+        assert session.ended_at is None
+
+    def test_uses_room_keeper_as_end_event_actor(self):
+        session, _space_author = _make_active_session_without_keeper()
+        room_keeper = UserFactory()
+        room = Room.objects.get_or_create_for_session(session)
+        room.keeper = room_keeper.slug
+        room.save(update_fields=["keeper"])
+
+        with (
+            patch("totem.rooms.tasks.get_connected_participants", return_value=set()),
+            patch("totem.rooms.tasks.publish_state"),
+        ):
+            count = end_sessions_without_keeper()
+
+        assert count == 1
+        event = room.events.get()
+        assert event.actor == room_keeper.slug
+
     def test_ends_room_when_keeper_absent(self):
         session, keeper = _make_active_session_without_keeper()
         other_user = UserFactory()

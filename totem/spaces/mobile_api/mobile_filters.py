@@ -21,11 +21,10 @@ def upcoming_recommended_sessions(user: User | None, categories: list[str] | Non
         .filter(attendee_count__lt=F("seats"))
         .visible_to(user)
         .filter(start__gte=timezone.now())
-        .select_related("space")
+        .select_related("space__author", "room")
         .prefetch_related(
             "attendees",
             "joined",
-            "space__author",
             author_circle_count_prefetch("space__author"),
             "space__categories",
             "space__subscribed",
@@ -55,6 +54,7 @@ def session_detail_schema(session: Session, user: User):
     else:
         subscribed = None
     ended = session.ended()
+    room = getattr(session, "room", None)
 
     if hasattr(session, "_prefetched_objects_cache") and "attendees" in session._prefetched_objects_cache:
         attending = any(attendee.pk == user.pk for attendee in session.attendees.all())
@@ -64,6 +64,7 @@ def session_detail_schema(session: Session, user: User):
     return SessionDetailSchema(
         slug=session.slug,
         title=session.title,
+        keeper=room.keeper if room else space.author.slug,
         space=space_detail_schema(space, user),
         content=session.content_html,
         seats_left=session.seats_left(),

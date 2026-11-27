@@ -7,6 +7,7 @@ from ninja import Query, Router, Status
 from ninja.errors import AuthorizationError, HttpError
 from ninja.pagination import paginate
 
+from totem.rooms.models import Room
 from totem.rooms.state_machine import syncing_session_prompts
 from totem.spaces.filters import (
     author_circle_count_prefetch,
@@ -120,7 +121,7 @@ def get_keeper_spaces(request: HttpRequest, slug: str):
 def get_session_detail(request: HttpRequest, event_slug: str):
     user: User = request.user  # type: ignore
     session = get_object_or_404(
-        Session.objects.select_related("space", "room").prefetch_related(
+        Session.objects.select_related("space__author", "room").prefetch_related(
             Prefetch("space__sessions", queryset=upcoming_sessions_queryset(user), to_attr="upcoming_sessions"),
         ),
         slug=event_slug,
@@ -144,7 +145,8 @@ def _session_for_keeper(request: HttpRequest, event_slug: str, *, lock: bool = F
     if lock:
         queryset = queryset.select_for_update(of=("self",))
     session = get_object_or_404(queryset, slug=event_slug)
-    if session.space.author_id != request.user.pk:
+    room_keeper = Room.objects.filter(session=session).values_list("keeper", flat=True).first()
+    if request.user.slug != (room_keeper if room_keeper is not None else session.space.author.slug):
         raise AuthorizationError(message="Only the keeper can manage session prompts.")
     return session
 
@@ -278,7 +280,7 @@ def rsvp_confirm(request: HttpRequest, event_slug: str):
 def rsvp_resolve_conflicts(request: HttpRequest, event_slug: str, payload: ResolveConflictsSchema):
     user: User = request.user  # type: ignore
     session = get_object_or_404(
-        Session.objects.select_related("space", "space__author", "room").prefetch_related("attendees"),
+        Session.objects.select_related("space__author", "room").prefetch_related("attendees"),
         slug=event_slug,
     )
     if not session.can_view(user):

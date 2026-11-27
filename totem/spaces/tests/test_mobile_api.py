@@ -207,6 +207,13 @@ class TestMobileApiSpaces:
         data = response.json()
         assert data["slug"] == event.slug
         assert data["space"]["slug"] == space.slug
+        assert data["keeper"] == space.author.slug
+
+        room = Room.objects.get_or_create_for_session(event)
+        room.keeper = UserFactory().slug
+        room.save(update_fields=["keeper"])
+        response = client.get(url)
+        assert response.json()["keeper"] == room.keeper
 
     def test_keeper_can_manage_and_navigate_session_prompts(self, client_with_user: tuple[Client, User]):
         client, keeper = client_with_user
@@ -305,6 +312,30 @@ class TestMobileApiSpaces:
         assert room.to_state().round_prompt_id == second.pk
         assert mock_publish.called
         assert not SessionPrompt.objects.filter(pk=first.pk).exists()
+
+    def test_room_keeper_can_manage_session_prompts_instead_of_space_author(
+        self, client_with_user: tuple[Client, User]
+    ):
+        client, author = client_with_user
+        session = SessionFactory(space__author=author)
+        room_keeper = UserFactory()
+        url = reverse("mobile-api:session_prompts", kwargs={"event_slug": session.slug})
+
+        with patch("totem.spaces.mobile_api.mobile_api.Room.objects.filter") as room_lookup:
+            room_lookup.return_value.values_list.return_value.first.return_value = room_keeper.slug
+
+            assert client.get(url).status_code == 403
+
+            room_keeper_client = Client(HTTP_AUTHORIZATION=f"Bearer {generate_jwt_token(room_keeper)}")
+            assert room_keeper_client.get(url).status_code == 200
+            response = room_keeper_client.put(
+                url,
+                data={"expected_revision": 0, "prompts": [{"prompt": "Room keeper prompt"}]},
+                content_type="application/json",
+            )
+
+        assert response.status_code == 200
+        assert list(session.discussion_prompts.values_list("prompt", flat=True)) == ["Room keeper prompt"]
 
     def test_non_keeper_cannot_manage_session_prompts(self, client_with_user: tuple[Client, User]):
         client, _ = client_with_user
