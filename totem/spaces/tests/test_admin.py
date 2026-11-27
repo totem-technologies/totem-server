@@ -24,7 +24,7 @@ from totem.users.tests.factories import UserFactory
 from .factories import SessionFactory, SpaceFactory
 
 
-class TestSpaceAdmin:
+class TestSpaceAdminKeeperReassignment:
     @pytest.mark.django_db(transaction=True)
     def test_changing_author_syncs_existing_active_room_and_broadcasts_on_commit(self) -> None:
         old_author = UserFactory()
